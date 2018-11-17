@@ -6,10 +6,11 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "dev": "nodemon index.js",
+        "dev": "NODE_ENV=dev nodemon index.js",
         "test": "jest"
     },
     "dependencies": {
+        "body-parser": "^1.18.3",
         "dotenv": "^6.1.0",
         "express": "^4.16.4",
         "ioredis": "^4.2.0"
