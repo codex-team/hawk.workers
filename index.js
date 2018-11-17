@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+const morgan = require('morgan');
 const api = require('./api');
 
 const app = express();
@@ -13,6 +14,13 @@ app.use((error, req, res, next) => {
   console.error(error);
   res.status(error.status || 500).json({ error });
 });
+
+// Serve frontend if working in dev environment and set up logging
+if (process.env.NODE_ENV === 'dev') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
 
 app.use('/api', api);
 

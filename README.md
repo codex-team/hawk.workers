@@ -2,6 +2,25 @@
 
 Workers system task manager
 
+## Getting started
+
+Required software:
+
+- Node.js >= 10 (tested on 10 and 11)
+- Redis >= 3 (tested on 3.2.12 and 5.0.1)
+
+Start in production:
+
+- Rename `.env.sample` to `.env` and edit vartiables
+- Install dependencies
+  ```bash
+  yarn install
+  ```
+- Start server
+  ```bash
+  yarn start # or `yarn dev` for development mode
+  ```
+
 ## API
 
 ##### `GET /api/popTask/:workerName` - Pop task for `workerName`. Returns json-formatted task.
