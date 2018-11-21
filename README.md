@@ -22,7 +22,7 @@ Start in production:
   yarn start # or `yarn dev` for development mode
   ```
 
-Alternativly you can use `run.sh` script which keeps server in screen.
+Alternatively you can use `run.sh` script which keeps server in screen.
 
 Systemd service:
 
