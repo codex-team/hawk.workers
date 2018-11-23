@@ -28,18 +28,18 @@ In second, systemd is responsible for restarting on failure and on reboot. Easy 
   yarn start # or `yarn dev` for development mode
   ```
 
-Alternatively you can use `run.sh` script which keeps server in screen.
+Alternatively you can use `bin/run.sh` script which keeps server in screen.
 
 ##### Systemd service
 
 Easy way:
 
-- Run `install.service.sh` (It will automatically create new user if not exists and write node path to service)
+- Run `bin/install-service.sh` (It will automatically create new user if not exists and write node path to service)
 - Fix permissions for new user `chown -R registry:registry .`
 
 Manual way:
 
-- Copy `registry.service` to `/lib/systemd/system/`
+- Copy `bin/registry.service` to `/lib/systemd/system/`
 - Create user `registry`
 - Make sure new user have permissions to files/node binary (`git clone` to `/home/registry`)
 - Edit `registry.service` for your node and index.js paths

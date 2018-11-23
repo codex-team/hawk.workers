@@ -2,7 +2,7 @@
 
 screen -X -S Registry quit
 
-cd /root/registry
+cd $(dirname "$0")/../
 git pull
 
 yarn
