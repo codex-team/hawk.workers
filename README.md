@@ -8,8 +8,15 @@ Required software:
 
 - Node.js >= 10 (tested on 10 and 11)
 - Redis >= 3 (tested on 3.2.12 and 5.0.1)
+- Systemd if you want to have a service
 
-Start in production:
+You can choose to either run it in screen or as a systemd service.
+
+In first, screen keeps server opened and nodemon reloads on all changes. Logs are written to file in folder.
+
+In second, systemd is responsible for restarting on failure and on reboot. Easy control commands are also available, e.g. `service registry stop/restart/stop/status`. Logs are written to linux's `syslog`.
+
+##### Start
 
 - Rename `.env.sample` to `.env` and edit vartiables
 - Install dependencies
@@ -20,6 +27,25 @@ Start in production:
   ```bash
   yarn start # or `yarn dev` for development mode
   ```
+
+Alternatively you can use `bin/run.sh` script which keeps server in screen.
+
+##### Systemd service
+
+Easy way:
+
+- Run `bin/install-service.sh` (It will automatically create new user if not exists and write node path to service)
+- Fix permissions for new user `chown -R registry:registry .`
+
+Manual way:
+
+- Copy `bin/registry.service` to `/lib/systemd/system/`
+- Create user `registry`
+- Make sure new user have permissions to files/node binary (`git clone` to `/home/registry`)
+- Edit `registry.service` for your node and index.js paths
+- Run. `systemctl start registry`
+
+We recommend using [nvm](https://github.com/creationix/nvm) to install latest node for new user.
 
 ## API
 
