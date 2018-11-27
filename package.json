@@ -6,7 +6,7 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "start": "NODE_ENV=production index.js",
+        "start": "NODE_ENV=production node index.js",
         "dev": "NODE_ENV=dev nodemon index.js",
         "test": "jest"
     },
