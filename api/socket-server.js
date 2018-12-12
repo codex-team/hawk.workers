@@ -1,5 +1,7 @@
 const net = require('net');
 const registry = require('../helpers/registry');
+
+let rooms = {};
 const utils = {
   /**
    * Convert buffer data to JSON
@@ -40,7 +42,6 @@ const utils = {
     return result;
   }
 };
-let rooms = {};
 
 let server = net.createServer((socket) => {
   // 'connection' listener
@@ -53,53 +54,57 @@ let server = net.createServer((socket) => {
     }
 
     datas.forEach((data) => {
-    console.log('signal', data);    
-    if (data.type == 'INIT') {
-      console.log('oninit');
-      socket.room = data.message.room;
-      socket.id = data.message.id;
-      socket.isFree = true;
+      console.log('signal', data);
+      if (data.type == 'INIT') {
+        console.log('oninit');
+        socket.room = data.message.room;
+        socket.id = data.message.id;
+        socket.isFree = true;
 
-      if (rooms[data.message.worker]) {
-        rooms[socket.room].push(socket);
-      } else {
-        rooms[socket.room] = [ socket ];
+        if (rooms[data.message.worker]) {
+          rooms[socket.room].push(socket);
+        } else {
+          rooms[socket.room] = [ socket ];
+        }
+
+        if (data.message.singleton) {
+          let buf = utils.jsonToBuffer({
+            type: 'POP_TASK',
+            message: {}
+          });
+
+          socket.write(buf);
+        } else {
+          onFree(socket);
+        }
       }
 
-      if (data.message.singleton) {
-        let buf = utils.jsonToBuffer({ type: 'POP_TASK', message: {} });
-        socket.write(buf);
-      } else {
-        onFree(socket);
-      }
-    }
-
-    if (data.type == 'FREE') {
-      let room = data.message.worker;
-      let id = data.message.id;
-      let s = rooms[room].find((item) => {
-        return item.id == id;
-      });
-
-      onFree(s);
-    }
-
-    if (data.type == 'ADD_TASK') {
-      let room = data.message.worker;
-      let s = findFreeSocketInRoom(room);
-
-      if (s != null) {
-        s.isFree = false;
-        let buff = utils.jsonToBuffer({
-          type: 'POP_TASK',
-          message: { task: data.message.task }
+      if (data.type == 'FREE') {
+        let room = data.message.worker;
+        let id = data.message.id;
+        let s = rooms[room].find((item) => {
+          return item.id == id;
         });
 
-        s.write(buff);
-      } else {
-        onPush(room, data.message.task);
+        onFree(s);
       }
-    }
+
+      if (data.type == 'ADD_TASK') {
+        let room = data.message.worker;
+        let s = findFreeSocketInRoom(room);
+
+        if (s != null) {
+          s.isFree = false;
+          let buff = utils.jsonToBuffer({
+            type: 'POP_TASK',
+            message: { task: data.message.task }
+          });
+
+          s.write(buff);
+        } else {
+          onPush(room, data.message.task);
+        }
+      }
     });
   });
 
@@ -137,6 +142,7 @@ async function onFree(s) {
   console.log('onfree');
   try {
     const task = await registry.popTask(s.room);
+
     console.log('task');
     if (task) {
       let buff = utils.jsonToBuffer({
@@ -191,11 +197,11 @@ async function onPush(room, task) {
  * @returns {net.Socket | null}
  */
 function findFreeSocketInRoom(room) {
-  if (!rooms[room] || !rooms[room].length)
+  if (!rooms[room] || !rooms[room].length) {
     return null;
+  }
 
   return rooms[room].find((item) => {
     return item.isFree == true;
   });
 }
-
