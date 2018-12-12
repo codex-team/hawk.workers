@@ -1,21 +1,61 @@
 const net = require('net');
 const registry = require('../helpers/registry');
-const server = net.createServer();
+const utils = {
+  /**
+   * Convert buffer data to JSON
+   * (for sockets)
+   * @param {Buffer} message in buffer view
+   * @returns {object|null}
+   */
+  bufferToJson: function (buff) {
+    let result;
+    let str;
 
+    try {
+      str = '[' + buff.toString().slice(0, -1) + ']';
+      console.log(str);
+      result = JSON.parse(str);
+    } catch (err) {
+      result = null;
+    }
+
+    return result;
+  },
+
+  /**
+   * Convert JSON to buffer data
+   * (for sockets)
+   * @param {object} JSON message
+   * @returns {Buffer|null}
+   */
+  jsonToBuffer: function (obj) {
+    let result;
+
+    try {
+      result = Buffer.from(JSON.stringify(obj));
+    } catch (err) {
+      result = null;
+    }
+
+    return result;
+  }
+};
 let rooms = {};
 
-server.on('connected', (socket) => {
+let server = net.createServer((socket) => {
   // 'connection' listener
   console.log('client connected');
 
-  socket.on('data', (data) => {
-    data = utils.bufferToJson(data);
-
-    if (!data) {
+  socket.on('data', (datas) => {
+    datas = utils.bufferToJson(datas);
+    if (!datas) {
       return;
     }
 
+    datas.forEach((data) => {
+    console.log('signal', data);    
     if (data.type == 'INIT') {
+      console.log('oninit');
       socket.room = data.message.room;
       socket.id = data.message.id;
       socket.isFree = true;
@@ -26,7 +66,12 @@ server.on('connected', (socket) => {
         rooms[socket.room] = [ socket ];
       }
 
-      onFree(socket);
+      if (data.message.singleton) {
+        let buf = utils.jsonToBuffer({ type: 'POP_TASK', message: {} });
+        socket.write(buf);
+      } else {
+        onFree(socket);
+      }
     }
 
     if (data.type == 'FREE') {
@@ -55,13 +100,12 @@ server.on('connected', (socket) => {
         onPush(room, data.message.task);
       }
     }
-
-    console.log(data);
+    });
   });
 
   socket.on('end', () => {
     // save current task if error ???
-    rooms[socket.room].splise(rooms.indexOf(socket));
+    rooms[socket.room].splice(rooms[socket.room].indexOf(socket), 1);
     console.log('client disconnected');
   });
 
@@ -69,6 +113,7 @@ server.on('connected', (socket) => {
     // save current task if error ???
     // rm from rooms
     console.log('socket error', err);
+    console.log(socket.room);
   });
 
   // socket.write('{"url":"example.com"}');
@@ -80,7 +125,7 @@ server.on('error', (err) => {
   // throw err;
 });
 
-server.listen(8125, () => {
+server.listen(8126, () => {
   console.log('server bound');
 });
 
@@ -89,9 +134,10 @@ server.listen(8125, () => {
  * @param {net.Socket} s
  */
 async function onFree(s) {
+  console.log('onfree');
   try {
     const task = await registry.popTask(s.room);
-
+    console.log('task');
     if (task) {
       let buff = utils.jsonToBuffer({
         type: 'POP_TASK',
@@ -145,46 +191,11 @@ async function onPush(room, task) {
  * @returns {net.Socket | null}
  */
 function findFreeSocketInRoom(room) {
+  if (!rooms[room] || !rooms[room].length)
+    return null;
+
   return rooms[room].find((item) => {
     return item.isFree == true;
   });
 }
 
-const utils = {
-  /**
-   * Convert buffer data to JSON
-   * (for sockets)
-   * @param {Buffer} message in buffer view
-   * @returns {object|null}
-   */
-  jsonFromBuffer: function (buff) {
-    let result;
-
-    try {
-      result = JSON.parse(buff.toString());
-    } catch (err) {
-      result = null;
-    }
-
-    return result;
-  },
-
-  /**
-   * Convert JSON to buffer data
-   * (for sockets)
-   * @param {object} JSON message
-   * @returns {Buffer|null}
-   */
-  jsonToBuffer: function (obj) {
-    let result;
-
-    try {
-      result = Buffer.from(JSON.stringify(obj));
-    } catch (err) {
-      result = null;
-    }
-
-    return result;
-  }
-
-};
