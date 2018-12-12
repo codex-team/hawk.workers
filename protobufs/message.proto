@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "struct.proto";
+
+package registry;
+
+enum Type {
+  INIT = 0;
+  PUSH_TASK = 1;
+  POP_TASK = 2;
+  READY = 3;
+}
+
+message Packet {
+  Type type = 1;
+  message Message {
+    string worker = 1;
+    string id = 2;
+    google.protobuf.Struct task = 3;
+  }
+  Message message = 2;
+}
