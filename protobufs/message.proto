@@ -1,22 +1,32 @@
+/**
+ * Registry-Worker tcp binary protocol
+ */
 syntax = "proto3";
-
-import "struct.proto";
 
 package registry;
 
-enum Type {
-  INIT = 0;
-  PUSH_TASK = 1;
-  POP_TASK = 2;
-  READY = 3;
+/**
+ * Represents packet type
+ */
+enum PacketType {
+  INIT = 0; /// New worker connect
+  PUSH_TASK = 1; /// Push task to registry
+  POP_TASK = 2; /// Pop task from registry
+  READY = 3; /// Ready for receiving tasks
 }
 
+/**
+ * Represents protocol packet
+ */
 message Packet {
-  Type type = 1;
-  message Message {
-    string worker = 1;
-    string id = 2;
-    google.protobuf.Struct task = 3;
+  PacketType type = 1; /// Type of packet(action)
+  /**
+   * Represents packet payload
+   */
+  message Payload {
+    string worker = 1; /// Worker name
+    string id = 2; /// Worker id
+    map<string, string> task = 3; /// Worker task
   }
-  Message message = 2;
+  Payload message = 2; /// Packet message
 }

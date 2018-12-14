@@ -16,7 +16,8 @@
         "express": "^4.16.4",
         "generic-pool": "^3.4.2",
         "ioredis": "^4.2.0",
-        "morgan": "^1.9.1"
+        "morgan": "^1.9.1",
+        "protobufjs": "^6.8.8"
     },
     "devDependencies": {
         "eslint": "^5.9.0",
