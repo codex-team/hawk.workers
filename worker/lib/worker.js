@@ -81,7 +81,7 @@ class Worker {
    *
    * @param {Object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
-   * @memberof TestWorker
+   * @memberof Worker
    */
   async handle(msg) {
     if (msg) {
