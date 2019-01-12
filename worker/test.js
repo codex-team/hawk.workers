@@ -1,23 +1,59 @@
-const { Worker } = require('./src/');
-const debug = require('debug')('worker:test');
-
-const w = new Worker('test', '127.0.0.1', 4000);
+const { Worker } = require('./lib');
 
 /**
  *
  *
- * @param {*} ms
- * @returns
+ * @class TestWorker
+ * @extends {Worker}
  */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+class TestWorker extends Worker {
+  /**
+   * Async sleep
+   *
+   * @param {number} ms
+   * @returns Promise
+   * @memberof TestWorker
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Message handle function
+   *
+   * @param {Object} msg Message object from consume method
+   * @param {Buffer} msg.content Message content
+   * @memberof TestWorker
+   */
+  async handle(msg) {
+    console.log(msg);
+    if (msg) {
+      console.log('Doing hard work');
+      await this.sleep(5000);
+      console.log(msg.content.toString());
+      console.log('Done');
+      this.channel.ack(msg);
+    }
+  }
 }
 
-w.on('task', task => {
-  debug('done');
-  w.emit('done', {
-    id: 1232131,
-    success: true,
-    data: ''
+/**
+ * Main
+ */
+async function main() {
+  const w = new TestWorker('amqp://localhost', 'test');
+
+  process.on('SIGINT', async () => {
+    console.log('Exiting...');
+    try {
+      await w.disconnect();
+    } catch (e) {
+      console.error(e);
+    }
+    process.exit(0);
   });
-});
+
+  await w.start();
+}
+
+main();
