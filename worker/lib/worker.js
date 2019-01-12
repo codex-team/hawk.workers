@@ -55,6 +55,8 @@ class Worker {
 
     await this.channel.assertQueue(this.queueName);
     await this.channel.prefetch(1);
+
+    this.connected = true;
   }
 
   /**
@@ -63,9 +65,13 @@ class Worker {
    * @memberof Worker
    */
   async disconnect() {
-    await this.channel.cancel(this.consumerTag);
+    if (this.consumerTag) {
+      await this.channel.cancel(this.consumerTag);
+    }
     await this.channel.close();
     await this.conn.close();
+
+    this.connected = false;
   }
 
   /**

@@ -8,7 +8,8 @@
     "scripts": {
         "start": "NODE_ENV=production node index.js",
         "dev": "NODE_ENV=dev nodemon index.js",
-        "test": "jest"
+        "test": "jest",
+        "test:worker": "jest worker/"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
