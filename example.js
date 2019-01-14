@@ -1,4 +1,4 @@
-const { Worker } = require('./lib');
+const { Worker } = require('./lib/worker');
 
 /**
  *
