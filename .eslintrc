@@ -1,9 +1,0 @@
-{
-    "extends": "codex",
-    "rules": {
-        "object-curly-newline": ["error", { "minProperties": 2 }]
-    },
-    "env": {
-        "jest": true
-    }
-}
