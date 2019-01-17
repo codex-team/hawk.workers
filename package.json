@@ -1,29 +1,21 @@
 {
-    "name": "registry",
+    "name": "hawk.workers",
     "version": "0.0.1",
-    "description": "Workers system task manager",
+    "description": "Hawk workers",
     "main": "index.js",
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "start": "NODE_ENV=production node index.js",
-        "dev": "NODE_ENV=dev nodemon index.js",
-        "test": "jest",
-        "build:proto": "pbjs -t static-module -w commonjs -o protobufs/message.js protobufs/message.proto"
+        "test:base": "jest lib/"
     },
     "dependencies": {
-        "body-parser": "^1.18.3",
-        "dotenv": "^6.1.0",
-        "express": "^4.16.4",
-        "generic-pool": "^3.4.2",
-        "ioredis": "^4.2.0",
-        "morgan": "^1.9.1",
-        "protobufjs": "^6.8.8"
+        "amqplib": "^0.5.3",
+        "dotenv": "^6.2.0"
     },
     "devDependencies": {
-        "eslint": "^5.9.0",
+        "eslint": "^5.12.0",
         "eslint-config-codex": "github:codex-team/eslint-config",
         "jest": "^23.6.0",
-        "nodemon": "^1.18.7"
+        "nodemon": "^1.18.9"
     }
 }
