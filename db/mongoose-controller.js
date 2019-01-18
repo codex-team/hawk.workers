@@ -31,7 +31,7 @@ async function saveEvent(obj) {
 }
 
 async function close() {
-  mongoose.connection.close();
+  return mongoose.connection.close();
 }
 
 module.exports = {
