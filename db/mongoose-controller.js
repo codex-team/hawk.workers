@@ -3,6 +3,11 @@ const Event = require('./models/event');
 
 mongoose.Promise = Promise;
 
+/**
+ * Connect mongoose to database
+ *
+ * @param {string} url - MongoDB connection URL
+ */
 async function connect(url) {
   mongoose.connection.on('connected', () => {
     console.log('Connection Established');
@@ -24,12 +29,27 @@ async function connect(url) {
   }
 }
 
+/**
+ * Save event to dayabase
+ *
+ * @param {Object} obj - Event object
+ * @param {string} obj.token - Hawk JWT token
+ * @param {object} obj.sender - Sender info
+ * @param {string} obj.sender.ip - Sender ip
+ * @param {string} obj.catcher_type - Hawk catcher type
+ * @param {Object} obj.payload - Event payload
+ */
 async function saveEvent(obj) {
   let event = new Event(obj);
 
   await Event.save(event);
 }
 
+/**
+ * Close mongoose connection
+ *
+ * @returns Promise<void>
+ */
 async function close() {
   return mongoose.connection.close();
 }
