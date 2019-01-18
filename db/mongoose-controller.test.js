@@ -19,7 +19,7 @@ const CATCHER_SENDER = process.env.CATCHER_SENDER || '127.0.0.1';
  * Cather type — nodejs
  * @constant
  */
-const CATCHER_TYPE = 'errors/nodejs';
+const CATCHER_TYPE = 'error_nodejs';
 
 /**
  * Hawk test event
@@ -46,10 +46,10 @@ describe('DB Controller', async () => {
   });
 
   it('saves event', async () => {
-    expect(db.saveEvent(TEST_EVENT)).resolves.not.toThrowError();
+    await expect(db.saveEvent(TEST_EVENT)).resolves.not.toThrowError();
   });
 
   it('closes connection', async () => {
-    expect(db.close()).resolves.not.toThrowError();
+    await expect(db.close()).resolves.not.toThrowError();
   });
 });
