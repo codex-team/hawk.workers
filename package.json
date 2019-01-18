@@ -12,7 +12,8 @@
     },
     "dependencies": {
         "amqplib": "^0.5.3",
-        "dotenv": "^6.2.0"
+        "dotenv": "^6.2.0",
+        "mongoose": "^5.4.4"
     },
     "devDependencies": {
         "eslint": "^5.12.0",
