@@ -20,6 +20,7 @@ async function connect(url) {
     await mongoose.connect(url);
   } catch (err) {
     console.log('ERROR when connected to mongo');
+    process.exit(1);
   }
 }
 
