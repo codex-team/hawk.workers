@@ -1,4 +1,8 @@
-const { Worker } = require('../worker');
+const { Worker } = require('../../lib/worker');
+const db = require('../../db/mongoose-controller');
+const path = require('path');
+
+require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 
 /**
  * Worker for parsing and saving PHP errors
@@ -36,12 +40,23 @@ class PhpWorker extends Worker {
   }
 
   /**
+   * Start consuming messages and connect to db
+   *
+   * @memberof Worker
+   */
+  async start() {
+    super.start();
+
+    db.connect(process.env.DB_CONNECT_URL);
+  }
+
+  /**
    * Saving to DB function
    *
    * @param {Object} obj - Object to save
    */
   _saveToDataBase(obj) {
-
+    db.saveEvent(obj);
   }
 
   /**
