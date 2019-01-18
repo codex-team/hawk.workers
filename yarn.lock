@@ -38,11 +38,6 @@
   dependencies:
     defer-to-connect "^1.0.1"
 
-"@zeit/ncc@^0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@zeit/ncc/-/ncc-0.9.0.tgz#895c1c2efcd3b400d002afd5f57cd3ced9f92cb3"
-  integrity sha512-+dPp3ro8zy5lk12gQIRUwaQ2aFothladE1Ur/ppVJCRq7BjUYy4+zrqtQGZHlnb1M2VXBxVmHvDXBO9HJgeQow==
-
 abab@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/abab/-/abab-2.0.0.tgz#aba0ab4c5eee2d4c79d3487d85450fb2376ebb0f"
