@@ -6,7 +6,9 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "test:base": "jest lib/"
+        "test:base": "jest lib/",
+        "lint": "./node_modules/.bin/eslint \"./**/*.js\"",
+        "lint:fix": "./node_modules/.bin/eslint \"./**/*.js\" --fix"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
