@@ -22,7 +22,7 @@ const CATCHER_TYPE = 'errors/nodejs';
 /**
  * MongoDB connection URL
  */
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/hawk-dev';
 
 /**
  * Hawk test event
