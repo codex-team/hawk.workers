@@ -19,7 +19,17 @@ let eventSchema = new Schema({
    */
   'catcher_type': {
     type: String,
-    enum: ['unknown', 'error_nodejs', 'error_javascript', 'error_php', 'log_nodejs', 'log_javascript', 'log_php', 'access_log', 'metrika_touch'],
+    enum: [
+      'unknown',
+      'errors/nodejs',
+      'errors/javascript',
+      'errors/php',
+      'log/nodejs',
+      'log/javascript',
+      'log/php',
+      'access/log',
+      'metrika/touch'
+    ],
     default: 'unknown'
   },
 
