@@ -131,7 +131,13 @@ let eventSchema = new Schema({
      * Source code version identifier
      * Version, modify timestamp or both of them combined
      */
-    'release': String
+    'release': String,
+
+    /**
+     * @optional
+     * Custom comments
+     */
+    'comment': Schema.Types.Mixed
   }
 });
 

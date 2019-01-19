@@ -17,7 +17,7 @@ const CATCHER_SENDER = process.env.CATCHER_SENDER || '127.0.0.1';
  * Cather type — nodejs
  * @constant
  */
-const CATCHER_TYPE = 'error/nodejs';
+const CATCHER_TYPE = 'errors/nodejs';
 
 /**
  * MongoDB connection URL
