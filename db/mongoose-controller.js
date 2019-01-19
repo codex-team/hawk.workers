@@ -42,7 +42,7 @@ async function connect(url) {
 async function saveEvent(obj) {
   let event = new Event(obj);
 
-  return await event.save();
+  await event.save();
 }
 
 /**

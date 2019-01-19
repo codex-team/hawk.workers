@@ -1,9 +1,7 @@
+const { resolve } = require('path');
 const db = require('./mongoose-controller');
 
-/**
- * Hawk catcher url
- */
-const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/catcher';
+require('dotenv').config({path: resolve(__dirname, '..', '.env')});
 
 /**
  * Hawk token
@@ -19,7 +17,12 @@ const CATCHER_SENDER = process.env.CATCHER_SENDER || '127.0.0.1';
  * Cather type — nodejs
  * @constant
  */
-const CATCHER_TYPE = 'error_nodejs';
+const CATCHER_TYPE = 'error/nodejs';
+
+/**
+ * MongoDB connection URL
+ */
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017';
 
 /**
  * Hawk test event
@@ -42,7 +45,7 @@ const TEST_EVENT = {
 
 describe('DB Controller', async () => {
   it('connects to db', async () => {
-    expect(db.connect('mongodb://localhost:27017/hawk')).resolves.not.toThrowError();
+    expect(db.connect(MONGO_URL)).resolves.not.toThrowError();
   });
 
   it('saves event', async () => {
