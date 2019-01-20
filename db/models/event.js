@@ -5,11 +5,10 @@ let Schema = mongoose.Schema;
  * Hawk event format
  */
 let eventSchema = new Schema({
-
   /**
    * Project's JWT
    */
-  'token': {
+  token: {
     type: String,
     required: true
   },
@@ -17,83 +16,64 @@ let eventSchema = new Schema({
   /**
    * Type of an event
    */
-  'catcher_type': {
+  // eslint-disable-next-line camelcase
+  catcher_type: {
     type: String,
-    enum: [
-      'unknown',
-      'errors/nodejs',
-      'errors/javascript',
-      'errors/php',
-      'log/nodejs',
-      'log/javascript',
-      'log/php',
-      'access/log',
-      'metrika/touch'
-    ],
     default: 'unknown'
-  },
-
-  /**
-   * Main sender info
-   */
-  'sender': {
-    /**
-     * @optional (?)
-     * Server of client address
-     */
-    'ip': String
   },
 
   /**
    * Event data
    */
-  'payload': {
+  payload: {
     /**
      * Event title
      */
-    'title': String,
+    title: String,
 
     /**
      * Event datetime
      */
-    'timestamp': Number,
+    timestamp: Date,
 
     /**
      * Event severity level
      */
-    'severity': Number,
+    severity: Number,
 
     /**
      * @optional
      * Event stack array from the latest call to the earliest
      */
-    'backtrace': [
+    backtrace: [
       {
         /**
          * Source filepath
          */
-        'file': String,
+        file: String,
 
         /**
          * Called line
          */
-        'line': Number,
+        line: Number,
 
         /**
          * @optional
          * Part of source code file near the called line
          */
-        'source_code': [
+        // eslint-disable-next-line camelcase
+        source_code: [
           {
             /**
              * Line's number
              */
-            'line_number': Number,
+            // eslint-disable-next-line camelcase
+            line_number: Number,
 
             /**
              * Line's content
              */
-            'content': String
+            content: String
           }
         ]
       }
@@ -101,18 +81,18 @@ let eventSchema = new Schema({
 
     /**
      * @optional
-     * Any additional data to be showen on the event's page
+     * Any additional data to be shown on the event's page
      */
-    'get': {
+    get: {
       type: Map,
       of: Schema.Types.Mixed
     },
 
     /**
      * @optional
-     * Any additional data to be showen on the event's page
+     * Any additional data to be shown on the event's page
      */
-    'post': {
+    post: {
       type: Map,
       of: Schema.Types.Mixed
     },
@@ -121,7 +101,7 @@ let eventSchema = new Schema({
      * @optional
      * HTTP headers
      */
-    'headers': {
+    headers: {
       type: Map,
       of: Schema.Types.Mixed
     },
@@ -131,13 +111,13 @@ let eventSchema = new Schema({
      * Source code version identifier
      * Version, modify timestamp or both of them combined
      */
-    'release': String,
+    release: String,
 
     /**
      * @optional
      * Custom comments
      */
-    'comment': Schema.Types.Mixed
+    comment: Schema.Types.Mixed
   }
 });
 

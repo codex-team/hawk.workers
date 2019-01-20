@@ -1,3 +1,4 @@
+const debug = require('debug')('db-controller');
 const mongoose = require('mongoose');
 const Event = require('./models/event');
 
@@ -10,32 +11,30 @@ mongoose.Promise = Promise;
  */
 async function connect(url) {
   mongoose.connection.on('connected', () => {
-    console.log('Connection Established');
+    debug('Connection Established');
   });
 
   mongoose.connection.on('close', () => {
-    console.log('Connection Closed');
+    debug('Connection Closed');
   });
 
-  mongoose.connection.on('error', (error) => {
-    console.log('Mongoose error: ' + error);
+  mongoose.connection.on('error', error => {
+    debug('Mongoose error: ' + error);
   });
 
   try {
     await mongoose.connect(url);
   } catch (err) {
-    console.log('ERROR when connected to mongo');
+    debug('ERROR when connected to mongo');
     process.exit(1);
   }
 }
 
 /**
- * Save event to dayabase
+ * Save event to database
  *
  * @param {Object} obj - Event object
  * @param {string} obj.token - Hawk JWT token
- * @param {object} obj.sender - Sender info
- * @param {string} obj.sender.ip - Sender ip
  * @param {string} obj.catcher_type - Hawk catcher type
  * @param {Object} obj.payload - Event payload
  */

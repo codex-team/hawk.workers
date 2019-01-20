@@ -8,11 +8,12 @@
     "scripts": {
         "test:base": "jest lib/",
         "test:db": "jest db/",
-        "lint": "./node_modules/.bin/eslint \"./**/*.js\"",
-        "lint:fix": "./node_modules/.bin/eslint \"./**/*.js\" --fix"
+        "lint": "eslint \"./**/*.js\"",
+        "lint:fix": "eslint \"./**/*.js\" --fix"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
+        "debug": "^4.1.1",
         "dotenv": "^6.2.0",
         "mongoose": "^5.4.4"
     },
