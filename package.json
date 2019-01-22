@@ -6,11 +6,16 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "test:base": "jest lib/"
+        "test:base": "jest lib/",
+        "test:db": "jest db/",
+        "lint": "eslint \"./**/*.js\"",
+        "lint:fix": "eslint \"./**/*.js\" --fix"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
-        "dotenv": "^6.2.0"
+        "debug": "^4.1.1",
+        "dotenv": "^6.2.0",
+        "mongoose": "^5.4.4"
     },
     "devDependencies": {
         "@codexteam/hawk.nodejs": "git+https://github.com/codex-team/hawk.nodejs.git#hawk2.0",
