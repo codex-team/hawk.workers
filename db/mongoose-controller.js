@@ -35,8 +35,7 @@ async function connect() {
  * Save event to database
  *
  * @param {Object} obj - Event object
- * @param {string} obj.token - Hawk JWT token
- * @param {string} obj.catcher_type - Hawk catcher type
+ * @param {string} obj.catcherType - Hawk catcher type
  * @param {Object} obj.payload - Event payload
  * @returns Promise<Object | null> - Created event
  */
