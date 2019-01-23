@@ -5,10 +5,4 @@ module.exports = {
         "jest": true
     },
     "extends": ["codex"],
-    "rules": {
-        "object-curly-newline": [
-            "error", 
-            { "minProperties": 2 }
-        ]
-    }
 };
