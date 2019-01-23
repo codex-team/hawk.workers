@@ -1,3 +1,6 @@
+const path = require('path');
+
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const debug = require('debug')('db-controller');
 const mongoose = require('mongoose');
 const Event = require('./models/event');
@@ -6,10 +9,8 @@ mongoose.Promise = Promise;
 
 /**
  * Connect mongoose to database
- *
- * @param {string} url - MongoDB connection URL
  */
-async function connect(url) {
+async function connect() {
   mongoose.connection.on('connected', () => {
     debug('Connection Established');
   });
@@ -23,7 +24,7 @@ async function connect(url) {
   });
 
   try {
-    await mongoose.connect(url);
+    await mongoose.connect(process.env.MONGO_URL);
   } catch (err) {
     debug('ERROR when connected to mongo');
     process.exit(1);
@@ -37,6 +38,7 @@ async function connect(url) {
  * @param {string} obj.token - Hawk JWT token
  * @param {string} obj.catcher_type - Hawk catcher type
  * @param {Object} obj.payload - Event payload
+ * @returns Promise<Object | null> - Created event
  */
 async function saveEvent(obj) {
   let event = new Event(obj);
