@@ -1,8 +1,9 @@
 const path = require('path');
 
-require('dotenv').config({path: path.resolve(__dirname, '.env')});
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const { Worker } = require('../../lib/worker');
+const db = require('../../db/mongoose-controller');
 
 /**
  *
@@ -12,11 +13,33 @@ const { Worker } = require('../../lib/worker');
  */
 class NodeJSWorker extends Worker {
   /**
+   * Start consuming messages
+   *
+   * @memberof NodeJSWorker
+   */
+  async start() {
+    await super.start();
+
+    await db.connect();
+  }
+
+  /**
+   * Finish everything
+   *
+   * @memberof NodeJSWorker
+   */
+  async finish() {
+    await super.finish();
+
+    await db.close();
+  }
+
+  /**
    * @typedef {Object} ParsedLine
-   * @property {string} file - Error file path
-   * @property {string} func - Error function
-   * @property {number} line - Error line number
-   * @property {number} pos - Error position on line
+   * @property {string} [file] - Error file path
+   * @property {string} [func] - Error function
+   * @property {number} [line] - Error line number
+   * @property {number} [pos] - Error position on line
    */
 
   /**
@@ -33,18 +56,16 @@ class NodeJSWorker extends Worker {
     let match;
 
     while ((match = parseRegexp.exec(trace)) !== null) {
-      let [
-        file, line, pos
-      ] = match[2].split(':');
+      let [file, line, pos] = match[2].split(':');
 
       line = parseInt(line);
       pos = parseInt(pos);
 
       parsed.push({
-        func: match[1],
+        // func: match[1],
         file,
-        line,
-        pos
+        line
+        // pos
       });
     }
 
@@ -60,15 +81,15 @@ class NodeJSWorker extends Worker {
    */
   async handle(msg) {
     const eventRaw = JSON.parse(msg.content.toString());
-    const event = {
+    const payload = {
       title: eventRaw.message,
       timestamp: new Date(eventRaw.time).getTime(),
-      type: eventRaw.type,
+      // type: eventRaw.type,
       backtrace: this.parseTrace(eventRaw.trace),
-      comment: eventRaw.comment
+      context: eventRaw.comment
     };
 
-    // TODO: Send event to db
+    await db.saveEvent({ catcherType: 'errors/nodej', payload });
   }
 }
 
