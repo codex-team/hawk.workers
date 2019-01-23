@@ -11,7 +11,6 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
  * @extends {Worker}
  */
 class PhpWorker extends Worker {
-
   /**
    * Message handle function
    *
@@ -30,12 +29,18 @@ class PhpWorker extends Worker {
         phpError = null;
       }
 
-      if (phpError === null) 
+      if (phpError === null) {
         return;
+      }
 
-      let data = this._parseData(phpError);
+      let data = this.parseData(phpError);
 
-      this._saveToDataBase(data);
+      try {
+        await this._saveToDataBase(data);
+      } catch(err) {
+        // @todo Send unprocessed msg back to queue?
+        console.log('Error saving PhpWorker payload', err);
+      }
     }
   }
 
@@ -47,32 +52,34 @@ class PhpWorker extends Worker {
   async start() {
     super.start();
 
-    db.connect(process.env.DB_CONNECT_URL);
+    db.connect(process.env.MONGO_URL);
   }
 
   /**
-   * Saving to DB function
+   * Finish everything
    *
-   * @param {Object} obj - Object to save
+   * @memberof Worker
    */
-  _saveToDataBase(obj) {
-    db.saveEvent(obj);
+  async finish() {
+    super.finish();
+
+    await db.close();
   }
 
   /**
-   * Parse php error from hawk.catcher format 
+   * Parse php error from hawk.catcher format
    * to new universal format
    *
    * @param {Object} obj - Object to parse
    * @returns {Obejct}
    */
-  _parseData(obj) {
+  parseData(obj) {
     let data = {
       payload: {},
       meta: {}
     };
 
-    data.payload.title = obj.error_description || '';
+    data.payload.title = obj['error_description'] || '';
 
     data.payload.level = -1;
 
@@ -86,7 +93,7 @@ class PhpWorker extends Worker {
       data.payload.backtrace = [];
       obj['debug_backtrace'].forEach((item) => {
         if (item.file && item.line) {
-          data.payload.backtrace.add({
+          data.payload.backtrace.push({
             file: item.file,
             line: item.line
           });
@@ -94,9 +101,18 @@ class PhpWorker extends Worker {
       });
     }
 
-    return obj;
+    return data;
+  }
+
+  /**
+   * Saving to DB function
+   *
+   * @param {Object} obj - Object to save
+   * @returns {Promise}
+   */
+  _saveToDataBase(obj) {
+    return db.savePayloadData(obj);
   }
 }
-
 
 module.exports = { PhpWorker };
