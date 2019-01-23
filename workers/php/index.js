@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 
 /**
- * Worker for parsing and saving PHP errors
+ * Worker for saving PHP errors from catcher
  *
  * @class PhpWorker
  * @extends {Worker}
@@ -64,9 +64,36 @@ class PhpWorker extends Worker {
    * to new universal format
    *
    * @param {Object} obj - Object to parse
-   * @returns {Obect}
+   * @returns {Obejct}
    */
   _parseData(obj) {
+    let data = {
+      payload: {},
+      meta: {}
+    };
+
+    data.payload.title = obj.error_description || '';
+
+    data.payload.level = -1;
+
+    if (obj['http_params'] && obj['http_params']['REQUEST_TIME']) {
+      data.payload.timestamp = obj['http_params']['REQUEST_TIME'];
+    } else {
+      data.payload.timestamp = (new Date()).getTime();
+    }
+
+    if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
+      data.payload.backtrace = [];
+      obj['debug_backtrace'].forEach((item) => {
+        if (item.file && item.line) {
+          data.payload.backtrace.add({
+            file: item.file,
+            line: item.line
+          });
+        }
+      });
+    }
+
     return obj;
   }
 }
