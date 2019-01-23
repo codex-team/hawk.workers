@@ -11,7 +11,7 @@ let dataSchema = new Schema({
   payload: {
     type: Schema.Types.Mixed,
     required: true
-  }
+  },
 
   /**
    * @optional
