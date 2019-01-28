@@ -38,7 +38,7 @@ const TEST_EVENT = {
     timestamp: new Date().toISOString(),
 
     // custom params
-    comment: 'Test event'
+    context: 'Test event'
   }
 };
 
@@ -62,7 +62,6 @@ describe('DB Controller', async () => {
     try {
       await db.saveEvent(badEvent);
     } catch (err) {
-      console.log(err);
       await expect(err).toBeInstanceOf(MongooseError.ValidationError);
       await expect(err.errors['payload.timestamp'].value).toBe(
         badEvent.payload.timestamp
