@@ -24,7 +24,10 @@ async function connect() {
   });
 
   try {
-    await mongoose.connect(process.env.MONGO_URL);
+    await mongoose.connect(
+      process.env.MONGO_URL,
+      { useNewUrlParser: true }
+    );
   } catch (err) {
     debug('ERROR when connected to mongo');
     process.exit(1);
