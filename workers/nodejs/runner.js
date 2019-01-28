@@ -14,6 +14,7 @@ const main = async () => {
 
   try {
     await worker.start();
+    console.log(`Worker nodejs started PID:${process.pid}`);
   } catch (e) {
     console.error(e);
     exitHandler();

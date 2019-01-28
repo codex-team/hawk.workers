@@ -2,6 +2,7 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
+const debug = require('debug')('NodeJSWorker');
 const { Worker } = require('../../lib/worker');
 const db = require('../../db/mongoose-controller');
 
@@ -80,11 +81,7 @@ class NodeJSWorker extends Worker {
   async handle(msg) {
     const eventRaw = JSON.parse(msg.content.toString());
 
-    console.log(eventRaw);
-
-    let backtrace = await this.parseTrace(eventRaw.trace);
-
-    console.log(`backtrace: ${backtrace}`);
+    let backtrace = await this.parseTrace(eventRaw.stack);
 
     backtrace = backtrace.map(el => {
       return { file: el.file, line: el.line }; // Take only file and line field for schema
@@ -98,7 +95,9 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    await db.saveEvent({ catcherType: 'errors/nodej', payload });
+    const event = await db.saveEvent({ catcherType: 'errors/nodej', payload });
+
+    debug(event);
   }
 }
 
