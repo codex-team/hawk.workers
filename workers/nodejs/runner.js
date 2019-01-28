@@ -1,13 +1,26 @@
 const { NodeJSWorker } = require('./index');
 
-const exitHandler = () => {
-  console.log('Exiting...');
-  worker.finish();
+const main = async () => {
+  const exitHandler = () => {
+    console.log('Exiting...');
+    try {
+      worker.finish();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const worker = new NodeJSWorker();
+
+  try {
+    await worker.start();
+  } catch (e) {
+    console.error(e);
+    exitHandler();
+  }
+
+  process.on('SIGINT', exitHandler);
+  process.on('SIGTERM', exitHandler);
 };
 
-const worker = new NodeJSWorker();
-
-worker.start();
-
-process.on('SIGINT', exitHandler);
-process.on('SIGTERM', exitHandler);
+main();

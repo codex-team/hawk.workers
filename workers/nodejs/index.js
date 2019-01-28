@@ -18,9 +18,9 @@ class NodeJSWorker extends Worker {
    * @memberof NodeJSWorker
    */
   async start() {
-    await super.start();
-
     await db.connect();
+
+    await super.start();
   }
 
   /**
@@ -29,9 +29,7 @@ class NodeJSWorker extends Worker {
    * @memberof NodeJSWorker
    */
   async finish() {
-    await super.finish();
-
-    await db.close();
+    await Promise.all([super.finish(), db.close()]);
   }
 
   /**
@@ -62,10 +60,10 @@ class NodeJSWorker extends Worker {
       pos = parseInt(pos);
 
       parsed.push({
-        // func: match[1],
+        func: match[1],
         file,
-        line
-        // pos
+        line,
+        pos
       });
     }
 
@@ -81,11 +79,22 @@ class NodeJSWorker extends Worker {
    */
   async handle(msg) {
     const eventRaw = JSON.parse(msg.content.toString());
+
+    console.log(eventRaw);
+
+    let backtrace = await this.parseTrace(eventRaw.trace);
+
+    console.log(`backtrace: ${backtrace}`);
+
+    backtrace = backtrace.map(el => {
+      return { file: el.file, line: el.line }; // Take only file and line field for schema
+    });
+
     const payload = {
       title: eventRaw.message,
       timestamp: new Date(eventRaw.time).getTime(),
-      // type: eventRaw.type,
-      backtrace: this.parseTrace(eventRaw.trace),
+      // type: eventRaw.type // TODO: request to add to schema
+      backtrace,
       context: eventRaw.comment
     };
 
