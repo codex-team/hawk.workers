@@ -8,8 +8,10 @@
     "scripts": {
         "test:base": "jest lib/",
         "test:db": "jest db/",
+        "test:nodejs": "jest workers/nodejs",
         "lint": "eslint \"./**/*.js\"",
-        "lint:fix": "eslint \"./**/*.js\" --fix"
+        "lint:fix": "eslint \"./**/*.js\" --fix",
+        "worker:nodejs": "node workers/nodejs/runner.js"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
