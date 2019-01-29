@@ -8,9 +8,9 @@ services:
 before_install:
   - chmod +x ./shells/env-config.sh
   - ./shells/env-config.sh
-  - npm i -g jest
+  - yarn add global jest
 install:
-  - npm install
+  - yarn install
 script:
-  - npm run lint
+  - yarn lint
   - jest . --coverage
