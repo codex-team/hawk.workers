@@ -2,13 +2,17 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-const debug = require('debug')('NodeJSWorker');
 const { Worker } = require('../../lib/worker');
 const db = require('../../lib/db/mongoose-controller');
 
 /**
- *
- *
+ * Simple class for parsing errors
+ * @class ParsingError
+ * @extends {Error}
+ */
+class ParsingError extends Error {}
+
+/**
  * @class NodeJSWorker
  * @extends {Worker}
  */
@@ -79,25 +83,42 @@ class NodeJSWorker extends Worker {
    * @memberof NodeJSWorker
    */
   async handle(msg) {
-    const eventRaw = JSON.parse(msg.content.toString());
+    let eventRaw;
 
-    let backtrace = await this.parseTrace(eventRaw.stack);
+    try {
+      eventRaw = JSON.parse(msg.content.toString());
+    } catch (e) {
+      throw new ParsingError('Message parsing error');
+    }
 
-    backtrace = backtrace.map(el => {
-      return { file: el.file, line: el.line }; // Take only file and line field for schema
-    });
+    let backtrace;
+
+    try {
+      backtrace = await this.parseTrace(eventRaw.stack);
+
+      backtrace = backtrace.map(el => {
+        return { file: el.file, line: el.line }; // Take only file and line field for schema
+      });
+    } catch (e) {
+      throw new ParsingError('Stack parsing error');
+    }
+
+    let timestamp;
+
+    try {
+      timestamp = new Date(eventRaw.time).getTime();
+    } catch (e) {
+      throw new ParsingError('Time parsing error');
+    }
 
     const payload = {
       title: eventRaw.message,
-      timestamp: new Date(eventRaw.time).getTime(),
-      // type: eventRaw.type // TODO: request to add to schema
+      timestamp,
       backtrace,
       context: eventRaw.comment
     };
 
-    const event = await db.saveEvent({ catcherType: 'errors/nodejs', payload });
-
-    debug(event);
+    await db.saveEvent({ catcherType: 'errors/nodejs', payload });
   }
 }
 
