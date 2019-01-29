@@ -1,0 +1,16 @@
+dist: trusty
+language: node_js
+node_js:
+  - "10"
+services:
+  - mongodb
+  - rabbitmq
+before_install:
+  - chmod +x ./shells/env-config.sh
+  - ./shells/env-config.sh
+  - npm i -g jest
+install:
+  - npm install
+script:
+  - npm run lint
+  - jest . --coverage
