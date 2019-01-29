@@ -4,6 +4,8 @@ Workers for handling hawk's payloads
 
 Registry - RabbitMQ
 
+> More info on setting up Registry [here](https://github.com/codex-team/hawk.registry)
+
 ## Getting started
 
 - Inherit from `Worker` class and implement `handle` method (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
@@ -48,6 +50,8 @@ You can tweak it (add schemas, etc) and use it in your workers to handle databas
 
 ```javascript
 const db = require("lib/db/mongoose-controller");
+
+await db.connect("mongodb://localhost:27017");
 
 await db.saveEvent(event);
 ```
