@@ -2,9 +2,7 @@
 
 Workers for handling hawk's payloads
 
-Messaging system - RabbitMQ
-
-Database - MongoDB
+Registry - RabbitMQ
 
 ## Getting started
 
@@ -16,12 +14,12 @@ Database - MongoDB
 
 ## Env vars
 
-| Variable           | Description                                                             | Default value                      |
-| ------------------ | ----------------------------------------------------------------------- | ---------------------------------- |
-| RABBIT_URL         | RabbitMQ connection URL                                                 | amqp://localhost                   |
-| RABBIT_QUEUE_NAME  | RabbitMQ queue name                                                     | test                               |
-| SIMULTANEOUS_TASKS | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                                  |
-| MONGO_URL          | MongoDB connection URL                                                  | mongodb://localhost:27017/hawk-dev |
+| Variable            | Description                                                             | Default value                      |
+| ------------------- | ----------------------------------------------------------------------- | ---------------------------------- |
+| REGISTRY_URL        | RabbitMQ connection URL                                                 | amqp://localhost                   |
+| REGISRTY_QUEUE_NAME | RabbitMQ queue name                                                     | test                               |
+| SIMULTANEOUS_TASKS  | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                                  |
+| MONGO_URL           | MongoDB connection URL                                                  | mongodb://localhost:27017/hawk-dev |
 
 **IMPORTANT**
 

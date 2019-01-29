@@ -95,7 +95,7 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    const event = await db.saveEvent({ catcherType: 'errors/nodej', payload });
+    const event = await db.saveEvent({ catcherType: 'errors/nodejs', payload });
 
     debug(event);
   }
