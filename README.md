@@ -1,6 +1,6 @@
 # Hawk workers
 
-Workers for handling hawk's payloads
+Workers for processing hawk's background tasks
 
 Registry - RabbitMQ
 
