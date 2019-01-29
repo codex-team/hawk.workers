@@ -4,7 +4,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const debug = require('debug')('NodeJSWorker');
 const { Worker } = require('../../lib/worker');
-const db = require('../../db/mongoose-controller');
+const db = require('../../lib/db/mongoose-controller');
 
 /**
  *

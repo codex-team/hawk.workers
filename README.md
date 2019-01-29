@@ -14,12 +14,11 @@ Registry - RabbitMQ
 
 ## Env vars
 
-| Variable            | Description                                                             | Default value                      |
-| ------------------- | ----------------------------------------------------------------------- | ---------------------------------- |
-| REGISTRY_URL        | RabbitMQ connection URL                                                 | amqp://localhost                   |
-| REGISRTY_QUEUE_NAME | RabbitMQ queue name                                                     | test                               |
-| SIMULTANEOUS_TASKS  | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                                  |
-| MONGO_URL           | MongoDB connection URL                                                  | mongodb://localhost:27017/hawk-dev |
+| Variable            | Description                                                             | Default value    |
+| ------------------- | ----------------------------------------------------------------------- | ---------------- |
+| REGISTRY_URL        | RabbitMQ connection URL                                                 | amqp://localhost |
+| REGISRTY_QUEUE_NAME | RabbitMQ queue name                                                     | test             |
+| SIMULTANEOUS_TASKS  | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                |
 
 **IMPORTANT**
 
@@ -37,5 +36,28 @@ Registry - RabbitMQ
 | Component                       | Command            | Requirements |
 | ------------------------------- | ------------------ | ------------ |
 | Base worker(`lib`)              | `yarn test:base`   | - RabbitMQ   |
-| DB controller(`db`)             | `yarn test:db`     | - MongoDB    |
 | NodeJS worker(`workers/nodejs`) | `yarn test:nodejs` | None         |
+
+## Database controller
+
+MongoDB controller is bundled(see [`lib/db`](lib/db))
+
+You can tweak it (add schemas, etc) and use it in your workers to handle database communication
+
+### Example
+
+```javascript
+const db = require("lib/db/mongoose-controller");
+
+await db.saveEvent(event);
+```
+
+### Env vars
+
+| Variable  | Description            | Default value                      |
+| --------- | ---------------------- | ---------------------------------- |
+| MONGO_URL | MongoDB connection URL | mongodb://localhost:27017/hawk-dev |
+
+### Testing
+
+`yarn test:db`

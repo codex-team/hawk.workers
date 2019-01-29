@@ -7,7 +7,7 @@
     "license": "MIT",
     "scripts": {
         "test:base": "jest lib/",
-        "test:db": "jest db/",
+        "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
         "lint": "eslint \"./**/*.js\"",
         "lint:fix": "eslint \"./**/*.js\" --fix",
