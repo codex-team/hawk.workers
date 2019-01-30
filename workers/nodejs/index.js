@@ -18,6 +18,17 @@ class ParsingError extends Error {}
  */
 class NodeJSWorker extends Worker {
   /**
+   * Returns worker type
+   *
+   * @readonly
+   * @static
+   * @memberof NodeJSWorker
+   */
+  static get type() {
+    return 'errors/nodejs';
+  }
+
+  /**
    * Start consuming messages
    *
    * @memberof NodeJSWorker
@@ -97,7 +108,13 @@ class NodeJSWorker extends Worker {
       backtrace = await this.parseTrace(eventRaw.stack);
 
       backtrace = backtrace.map(el => {
-        return { file: el.file, line: el.line }; // Take only file and line field for schema
+        return {
+          file: el.file,
+          line: el.line
+          // TODO: add nodejs specific event fields to schema
+          // func: el.func,
+          // pos: el.pos
+        }; // Take only file and line field for schema
       });
     } catch (e) {
       throw new ParsingError('Stack parsing error');
@@ -118,7 +135,7 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    await db.saveEvent({ catcherType: 'errors/nodejs', payload });
+    await db.saveEvent({ catcherType: this.type, payload });
   }
 }
 

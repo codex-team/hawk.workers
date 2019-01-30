@@ -5,10 +5,10 @@ const { NodeJSWorker } = require('.');
  * Test message
  */
 const TEST_MSG = {
-  message: 'ReferenceError: kek is not defined',
+  message: 'ReferenceError: nonexistant_func is not defined',
   type: 'ReferenceError',
   stack:
-    'ReferenceError: kek is not defined\n    at namedFunc (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:43:7)\n    at main (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:61:5)\n    at Object.<anonymous> (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:71:1)\n    at Module._compile (internal/modules/cjs/loader.js:736:30)\n    at Object.Module._extensions..js (internal/modules/cjs/loader.js:747:10)\n    at Module.load (internal/modules/cjs/loader.js:628:32)\n    at tryModuleLoad (internal/modules/cjs/loader.js:568:12)\n    at Function.Module._load (internal/modules/cjs/loader.js:560:3)\n    at Function.Module.runMain (internal/modules/cjs/loader.js:801:12)\n    at executeUserCode (internal/bootstrap/node.js:526:15)',
+    'ReferenceError: nonexistant_func is not defined\n    at namedFunc (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:43:7)\n    at main (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:61:5)\n    at Object.<anonymous> (/home/nick/stuff/hawk.workers/tools/nodejs/bomber.js:71:1)\n    at Module._compile (internal/modules/cjs/loader.js:736:30)\n    at Object.Module._extensions..js (internal/modules/cjs/loader.js:747:10)\n    at Module.load (internal/modules/cjs/loader.js:628:32)\n    at tryModuleLoad (internal/modules/cjs/loader.js:568:12)\n    at Function.Module._load (internal/modules/cjs/loader.js:560:3)\n    at Function.Module.runMain (internal/modules/cjs/loader.js:801:12)\n    at executeUserCode (internal/bootstrap/node.js:526:15)',
   time: '2019-01-28T13:59:49.995Z',
   context: 'Exception in namedFunc'
 };

@@ -8,7 +8,7 @@ Registry - RabbitMQ
 
 ## Getting started
 
-- Inherit from `Worker` class and implement `handle` method (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
+- Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
 
 - Edit `.env` file (see more below)
 
