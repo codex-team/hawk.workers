@@ -7,6 +7,7 @@ let worker;
 
 describe('PHP Worker', async () => {
   beforeAll(() => {
+  	console.log('started');
     worker = new PhpWorker();
   });
 
