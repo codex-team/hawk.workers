@@ -1,5 +1,4 @@
-const mongoose = require('mongoose');
-const { NodeJSWorker } = require('.');
+const { NodeJSWorker } = require('./index');
 
 /**
  * Test message

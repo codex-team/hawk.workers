@@ -111,7 +111,7 @@ class NodeJSWorker extends Worker {
         return {
           file: el.file,
           line: el.line
-          // TODO: add nodejs specific event fields to schema
+          /** @todo Add nodejs specific event fields to schema */
           // func: el.func,
           // pos: el.pos
         }; // Take only file and line field for schema
@@ -135,7 +135,7 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    await db.saveEvent({ catcherType: this.type, payload });
+    await db.saveEvent({ catcherType: NodeJSWorker.type, payload });
   }
 }
 
