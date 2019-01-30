@@ -1,0 +1,16 @@
+dist: trusty
+language: node_js
+node_js:
+  - "11"
+services:
+  - mongodb
+  - rabbitmq
+before_install:
+  - chmod +x ./bin/env-config.sh
+  - ./bin/env-config.sh
+  - yarn add global jest
+install:
+  - yarn install
+script:
+  - yarn lint
+  - jest . --coverage
