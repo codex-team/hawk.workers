@@ -6,8 +6,8 @@ services:
   - mongodb
   - rabbitmq
 before_install:
-  - chmod +x ./shells/env-config.sh
-  - ./shells/env-config.sh
+  - chmod +x ./bin/env-config.sh
+  - ./bin/env-config.sh
   - yarn add global jest
 install:
   - yarn install
