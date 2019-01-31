@@ -5,63 +5,37 @@ require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
 
 let worker;
 
-describe('PHP Worker', async () => {
+describe('PHP Worker parsing', () => {
   beforeAll(() => {
-  	console.log('started');
     worker = new PhpWorker();
   });
 
-  it.skip('should started successfully', async () => {
-    await expect(worker.start()).resolves.not.toThrowError();
+  it('anyway returns right fields in payload', () => {
+    let payload = worker.parseData({});
+
+    expect(payload).toHaveProperty('title');
+    expect(payload).toHaveProperty('timestamp');
+    expect(payload).toHaveProperty('level');
   });
 
-  it.skip('should finished successfully', async () => {
-    await expect(worker.finish()).resolves.not.toThrowError();
-  });
-
-  describe('Parsing', () => {
-    beforeAll(() => {
-      worker = new PhpWorker();
-      worker.start();
+  it('returns right backtrace when it is detected', () => {
+    let payload = worker.parseData({
+      'debug_backtrace': [
+        {
+          file: 'a',
+          line: 1
+        },
+        {
+          any: {}
+        }
+      ]
     });
 
-    afterAll(() => {
-      worker.finish();
-    });
-
-    it('returns cascade when give wrong input', () => {
-      let obj = worker.parseData({});
-
-      expect(obj).toHaveProperty('meta');
-      expect(obj).toHaveProperty('payload');
-    });
-
-    it('anyway returns right fields in payload', () => {
-      let obj = worker.parseData({});
-
-      expect(obj.payload).toHaveProperty('title');
-      expect(obj.payload).toHaveProperty('timestamp');
-      expect(obj.payload).toHaveProperty('level');
-    });
-
-    it('returns right backtrace when it is detected', () => {      
-      let obj = worker.parseData({
-        'debug_backtrace': [
-          {
-            file: 'a',
-            line: 1
-          },
-          {
-            any: {}
-          }
-        ]
-      });
-
-      expect(obj.payload.backtrace).toHaveLength(1);
-      expect(obj.payload.backtrace).toContainEqual({
-        file: 'a',
-        line: 1
-      });
+    expect(payload.backtrace).toHaveLength(1);
+    expect(payload.backtrace).toContainEqual({
+      file: 'a',
+      line: 1,
+      sourceCode: []
     });
   });
 });

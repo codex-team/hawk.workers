@@ -1,5 +1,5 @@
 const { Worker } = require('../../lib/worker');
-const db = require('../../db/mongoose-controller');
+const db = require('../../lib/db/mongoose-controller');
 const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
@@ -11,6 +11,17 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
  * @extends {Worker}
  */
 class PhpWorker extends Worker {
+  /**
+   * Worker type (will pull tasks from Registry queue with the same name)
+   *
+   * @readonly
+   * @static
+   * @memberof PhpWorker
+   */
+  get type() {
+    return 'errors/php';
+  }
+
   /**
    * Message handle function
    *
@@ -37,7 +48,7 @@ class PhpWorker extends Worker {
 
       try {
         await this._saveToDataBase(data);
-      } catch(err) {
+      } catch (err) {
         // @todo Send unprocessed msg back to queue?
         console.log('Error saving PhpWorker payload', err);
       }
@@ -50,20 +61,16 @@ class PhpWorker extends Worker {
    * @memberof Worker
    */
   async start() {
-    super.start();
-
-    db.connect(process.env.MONGO_URL);
+    await db.connect();
+    await super.start();
   }
-
   /**
    * Finish everything
    *
    * @memberof Worker
    */
   async finish() {
-    super.finish();
-
-    await db.close();
+    await Promise.all([super.finish(), db.close()]);
   }
 
   /**
@@ -74,44 +81,42 @@ class PhpWorker extends Worker {
    * @returns {Obejct}
    */
   parseData(obj) {
-    let data = {
-      payload: {},
-      meta: {}
-    };
+    let payload = { };
 
-    data.payload.title = obj['error_description'] || '';
+    payload.title = obj['error_description'] || '';
 
-    data.payload.level = -1;
+    payload.level = -1;
 
     if (obj['http_params'] && obj['http_params']['REQUEST_TIME']) {
-      data.payload.timestamp = obj['http_params']['REQUEST_TIME'];
+      payload.timestamp = obj['http_params']['REQUEST_TIME'];
     } else {
-      data.payload.timestamp = (new Date()).getTime();
+      payload.timestamp = (new Date()).getTime();
     }
 
     if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
-      data.payload.backtrace = [];
+      payload.backtrace = [];
       obj['debug_backtrace'].forEach((item) => {
         if (item.file && item.line) {
-          data.payload.backtrace.push({
+          payload.backtrace.push({
             file: item.file,
-            line: item.line
+            line: item.line,
+            sourceCode: (item.trace && item.trace.length) ? item.trace : []
           });
         }
       });
     }
 
-    return data;
+    return payload;
   }
 
   /**
    * Saving to DB function
    *
-   * @param {Object} obj - Object to save
+   * @param {Object} payload - Object to save
    * @returns {Promise}
    */
-  _saveToDataBase(obj) {
-    return db.savePayloadData(obj);
+  _saveToDataBase(payload) {
+    return db.saveEvent({ catcherType: this.type, payload });
   }
 }
 
