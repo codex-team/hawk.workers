@@ -1,0 +1,16 @@
+{
+    "name": "todo",
+    "description": "PHP errors Catcher module for Hawk.so",
+    "license": "MIT",
+    "require": {
+        "codex-team/hawk.php": "^1.2",
+        "monolog/monolog": "1.0.*",
+        "vlucas/phpdotenv": "^3.3"
+    },
+
+    "autoload": {
+        "psr-4": {
+          "App\\": ""
+        }
+    }
+}
