@@ -10,17 +10,18 @@ Registry - RabbitMQ
 
 - Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
 
+- Define `queueName`, which is Registry queue where worker pulls tasks, in your new class
+
 - Edit `.env` file (see more below)
 
 - Use `worker.start()` to start your worker. You may write a simple runner like [this](workers/nodejs/runner.js)
 
 ## Env vars
 
-| Variable            | Description                                                             | Default value    |
-| ------------------- | ----------------------------------------------------------------------- | ---------------- |
-| REGISTRY_URL        | RabbitMQ connection URL                                                 | amqp://localhost |
-| REGISRTY_QUEUE_NAME | RabbitMQ queue name                                                     | test             |
-| SIMULTANEOUS_TASKS  | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                |
+| Variable           | Description                                                             | Default value    |
+| ------------------ | ----------------------------------------------------------------------- | ---------------- |
+| REGISTRY_URL       | RabbitMQ connection URL                                                 | amqp://localhost |
+| SIMULTANEOUS_TASKS | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                |
 
 **IMPORTANT**
 

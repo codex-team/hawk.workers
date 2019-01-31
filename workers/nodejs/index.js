@@ -29,6 +29,17 @@ class NodeJSWorker extends Worker {
   }
 
   /**
+   * Registry queue name
+   *
+   * @readonly
+   * @static
+   * @memberof NodeJSWorker
+   */
+  get queueName() {
+    return NodeJSWorker.type;
+  }
+
+  /**
    * Start consuming messages
    *
    * @memberof NodeJSWorker
