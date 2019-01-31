@@ -8,9 +8,9 @@ services:
 before_install:
   - chmod +x ./bin/env-config.sh
   - ./bin/env-config.sh
-  - yarn add global jest
+  - yarn add global jest codecov
 install:
   - yarn install
 script:
   - yarn lint
-  - jest . --coverage
+  - jest --coverage && codecov

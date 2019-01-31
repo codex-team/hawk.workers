@@ -6,10 +6,12 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
-        "test:base": "jest lib/",
-        "test:db": "jest db/",
+        "test:base": "jest lib/worker",
+        "test:db": "jest lib/db/",
+        "test:nodejs": "jest workers/nodejs",
         "lint": "eslint \"./**/*.js\"",
-        "lint:fix": "eslint \"./**/*.js\" --fix"
+        "lint:fix": "eslint \"./**/*.js\" --fix",
+        "worker:nodejs": "node workers/nodejs/runner.js"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
@@ -18,7 +20,7 @@
         "mongoose": "^5.4.4"
     },
     "devDependencies": {
-        "@codexteam/hawk.nodejs": "git+https://github.com/codex-team/hawk.nodejs.git#hawk2.0",
+        "@codexteam/hawk.nodejs": "github:codex-team/hawk.nodejs#hawk2.0",
         "eslint": "^5.12.0",
         "eslint-config-codex": "github:codex-team/eslint-config",
         "jest": "^23.6.0",
