@@ -18,25 +18,14 @@ class ParsingError extends Error {}
  */
 class NodeJSWorker extends Worker {
   /**
-   * Returns worker type
+   * Worker type (will pull tasks from Registry queue with the same name)
    *
    * @readonly
    * @static
    * @memberof NodeJSWorker
    */
-  static get type() {
+  get type() {
     return 'errors/nodejs';
-  }
-
-  /**
-   * Registry queue name
-   *
-   * @readonly
-   * @static
-   * @memberof NodeJSWorker
-   */
-  get queueName() {
-    return NodeJSWorker.type;
   }
 
   /**
@@ -146,7 +135,7 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    await db.saveEvent({ catcherType: NodeJSWorker.type, payload });
+    await db.saveEvent({ catcherType: this.type, payload });
   }
 }
 
