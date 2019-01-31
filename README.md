@@ -6,11 +6,15 @@ Registry - RabbitMQ
 
 > More info on setting up Registry [here](https://github.com/codex-team/hawk.registry)
 
+## Requirements
+
+- [Registry](https://github.com/codex-team/hawk.registry)
+
 ## Getting started
 
 - Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
 
-- Define `queueName`, which is Registry queue where worker pulls tasks, in your new class
+- Define `type` - worker type (e.g `errors/nodejs`), which is also a Registry queue from where worker pulls tasks
 
 - Edit `.env` file (see more below)
 
@@ -29,7 +33,7 @@ Registry - RabbitMQ
 >
 > If some variable is present in root `.env` file, it is **NOT** overwritten by local `.env` in worker's folder
 >
-> This allows to set global MongoDB or/and RabbitMQ connection settings while leaving option to set local queue name for each worker
+> This allows to set global MongoDB or/and RabbitMQ connection settings while leaving possibility to set local options for each worker
 
 ## Testing
 
