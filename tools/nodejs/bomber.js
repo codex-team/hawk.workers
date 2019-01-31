@@ -13,11 +13,10 @@ var argv = require('yargs')
   .example('$0 interval 5', 'send error every 5 seconds')
   .demandCommand(1, 'You need at least one command before moving on')
   .help('h')
-  .alias('h', 'help')
-  .argv;
+  .alias('h', 'help').argv;
 const path = require('path');
 
-require('dotenv').config({path: path.resolve(__dirname, '.env')});
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const Hawk = require('@codexteam/hawk.nodejs');
 
 /**
@@ -40,18 +39,22 @@ const main = async () => {
     try {
       console.log('Named func');
       /* eslint-disable-next-line */
-      kek();
+      nonexistant_func();
       return true;
     } catch (e) {
-      hawkCatcher.catchException(e, {comment: 'Exception in namedFunc'}, (error, response, body) => {
-        if (error) {
-          console.log('error:', error); // Print the error if one occurred
+      hawkCatcher.catchException(
+        e,
+        { comment: 'Exception in namedFunc' },
+        (error, response, body) => {
+          if (error) {
+            console.log('error:', error); // Print the error if one occurred
+          }
+          console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+          if (body) {
+            console.log('body:', body); // Print the HTML for the Google homepage.
+          }
         }
-        console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-        if (body) {
-          console.log('body:', body); // Print the HTML for the Google homepage.
-        }
-      });
+      );
     }
   }
 
