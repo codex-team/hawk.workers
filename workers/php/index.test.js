@@ -5,9 +5,16 @@ require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
 
 let worker;
 
+const WRONG_MSG = 'not a json';
+
 describe('PHP Worker parsing', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     worker = new PhpWorker();
+    await worker.start();
+  });
+
+  afterAll(async () => {
+    await worker.finish();
   });
 
   it('anyway returns right fields in payload', () => {
@@ -37,5 +44,9 @@ describe('PHP Worker parsing', () => {
       line: 1,
       sourceCode: []
     });
+  });
+
+  it('correct handle wrong message', async () => {
+    await expect(worker.handle(WRONG_MSG)).resolves.not.toThrowError();
   });
 });
