@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/codex-team/hawk.workers.svg?branch=master)](https://travis-ci.com/codex-team/hawk.workers) [![Coverage Status](https://codecov.io/gh/codex-team/hawk.workers/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/codex-team/hawk.workers)
+[![Build Status](https://travis-ci.com/codex-team/hawk.workers.svg?branch=master)](https://travis-ci.com/codex-team/hawk.workers) [![Coverage Status](https://codecov.io/gh/codex-team/hawk.workers/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/codex-team/hawk.workers) [![Total alerts](https://img.shields.io/lgtm/alerts/g/codex-team/hawk.workers.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/codex-team/hawk.workers/alerts/) [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/codex-team/hawk.workers.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/codex-team/hawk.workers/context:javascript)
 
 # Hawk workers
 
