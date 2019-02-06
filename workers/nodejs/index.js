@@ -2,15 +2,8 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-const { Worker } = require('../../lib/worker');
+const { Worker, ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/mongoose-controller');
-
-/**
- * Simple class for parsing errors
- * @class ParsingError
- * @extends {Error}
- */
-class ParsingError extends Error {}
 
 /**
  * @class NodeJSWorker

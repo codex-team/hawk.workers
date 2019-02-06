@@ -1,4 +1,4 @@
-const { Worker } = require('../../lib/worker');
+const { Worker, ParsingError, DataStructError, DatabaseError } = require('../../lib/worker');
 const db = require('../../lib/db/mongoose-controller');
 const path = require('path');
 
@@ -31,27 +31,30 @@ class PhpWorker extends Worker {
    * @memberof PhpWorker
    */
   async handle(msg) {
-    let phpError;
+    let phpError, payload;
+    console.log(msg.content.toString());
 
     if (msg && msg.content) {
       try {
         phpError = JSON.parse(msg.content.toString());
       } catch (err) {
-        phpError = null;
+        throw new ParsingError('Message parsing error', err);
       }
-
-      if (phpError === null) {
-        return;
-      }
-
-      let data = this.parseData(phpError);
 
       try {
-        await this._saveToDataBase(data);
+        payload = this.parseData(phpError);
+      } catch (err) {
+        throw new ParsingError('Data parsing error', err);
+      }
+
+      try {
+        await db.saveEvent({ catcherType: this.type, payload });
       } catch (err) {
         // @todo Send unprocessed msg back to queue?
-        console.log('Error saving PhpWorker payload', err);
+        throw new DatabaseError('Saving event to database error', err);
       }
+    } else {
+      throw new DataStructError('Could not find msg.content field in object ' + msg.toString());
     }
   }
 
@@ -85,12 +88,14 @@ class PhpWorker extends Worker {
 
     payload.title = obj['error_description'] || '';
 
+    // @todo откуда это брать?
     payload.level = -1;
 
-    if (obj['http_params'] && obj['http_params']['REQUEST_TIME']) {
-      payload.timestamp = obj['http_params']['REQUEST_TIME'];
-    } else {
-      payload.timestamp = (new Date()).getTime();
+    try {
+      let timestamp = obj['http_params']['REQUEST_TIME'];
+      payload.timestamp = (new Date(timestamp)).getTime();
+    } catch (err) {
+      throw new ParsingError('Time parsing error', err);
     }
 
     if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
@@ -102,21 +107,17 @@ class PhpWorker extends Worker {
             line: item.line,
             sourceCode: (item.trace && item.trace.length) ? item.trace : []
           });
+
+          if (!item.trace) {
+            console.error('no trace found for ' + item.toString());
+          }
         }
       });
+    } else {
+      console.error('no debug backtrace found for ' + obj.toString());
     }
 
     return payload;
-  }
-
-  /**
-   * Saving to DB function
-   *
-   * @param {Object} payload - Object to save
-   * @returns {Promise}
-   */
-  _saveToDataBase(payload) {
-    return db.saveEvent({ catcherType: this.type, payload });
   }
 }
 
