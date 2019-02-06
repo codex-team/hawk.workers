@@ -32,7 +32,6 @@ class PhpWorker extends Worker {
    */
   async handle(msg) {
     let phpError, payload;
-    console.log(msg.content.toString());
 
     if (msg && msg.content) {
       try {
@@ -67,6 +66,7 @@ class PhpWorker extends Worker {
     await db.connect();
     await super.start();
   }
+
   /**
    * Finish everything
    *
@@ -93,6 +93,7 @@ class PhpWorker extends Worker {
 
     try {
       let timestamp = obj['http_params']['REQUEST_TIME'];
+
       payload.timestamp = (new Date(timestamp)).getTime();
     } catch (err) {
       throw new ParsingError('Time parsing error', err);

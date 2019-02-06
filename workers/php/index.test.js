@@ -1,4 +1,5 @@
 const { PhpWorker } = require('./index');
+const { DataStructError, ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
 
 require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
@@ -7,7 +8,32 @@ let worker;
 
 const WRONG_MSG = 'not a json';
 
-describe.skip('PHP Worker parsing', () => {
+const TITLE_OBJ = {
+  'error_description': 'Some error'
+};
+
+const TIMESTAMP_OBJ = {
+    'http_params': {
+    'REQUEST_TIME': '2019-01-28T13:59:49.995Z'
+  }
+};
+
+const DEBUG_STACK_OBJ = {
+  'debug_backtrace': [
+    {
+      file: 'a.php',
+      line: 1,
+      trace: [
+        {
+          line: 1,
+          content: 'echo $Error'
+        }
+      ]
+    }
+  ]
+}
+
+describe('PHP Worker parsing', () => {
   beforeAll(async () => {
     worker = new PhpWorker();
     await worker.start();
@@ -17,39 +43,49 @@ describe.skip('PHP Worker parsing', () => {
     await worker.finish();
   });
 
-  it('anyway returns right fields in payload', () => {
-    let payload = worker.parseData({});
+  it('correct handle right message', async() => {
+    let obj = {...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ};
+    let msg = { content: JSON.stringify(obj) };
+
+    await expect(worker.handle(msg)).resolves.not.toThrowError();
+  });
+
+  it('returns right fields in payload', () => {
+    let obj = {...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ};
+    let payload = worker.parseData(obj);
 
     expect(payload).toHaveProperty('title');
     expect(payload).toHaveProperty('timestamp');
     expect(payload).toHaveProperty('level');
+    expect(payload).toHaveProperty('backtrace');
+  });
+
+
+  it('correct handle wrong message', async () => {
+    await expect(worker.handle(WRONG_MSG)).rejects.toThrow(DataStructError);
+  });
+
+  it('throwing parsing error with wrong params in message', () => {
+    expect(() => { worker.parseData({}) }).toThrow(ParsingError);
   });
 
   it('returns right backtrace when it is detected', () => {
     let payload = worker.parseData({
-      'http_params': {
-        'REQUEST_TIME': '2019-01-28T13:59:49.995Z'
-      },
-      'debug_backtrace': [
-        {
-          file: 'a',
-          line: 1
-        },
-        {
-          any: {}
-        }
-      ]
+      ...TITLE_OBJ,
+      ...TIMESTAMP_OBJ,
+      ...DEBUG_STACK_OBJ
     });
 
     expect(payload.backtrace).toHaveLength(1);
     expect(payload.backtrace).toContainEqual({
-      file: 'a',
+      file: 'a.php',
       line: 1,
-      sourceCode: []
+      sourceCode: [
+        {
+          line: 1,
+          content: 'echo $Error'
+        }
+      ]
     });
-  });
-
-  it('correct handle wrong message', async () => {
-    await expect(worker.handle(WRONG_MSG)).resolves.not.toThrowError();
   });
 });
