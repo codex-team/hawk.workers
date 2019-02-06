@@ -99,6 +99,7 @@ class PhpWorker extends Worker {
       throw new ParsingError('Time parsing error', err);
     }
 
+    // Check optional field 'backtrace'
     if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
       payload.backtrace = [];
       obj['debug_backtrace'].forEach((item) => {
@@ -110,12 +111,12 @@ class PhpWorker extends Worker {
           });
 
           if (!item.trace) {
-            console.error('no trace found for ' + item.toString());
+            console.log('no trace found for ' + item.toString());
           }
         }
       });
     } else {
-      console.error('no debug backtrace found for ' + obj.toString());
+      console.log('no debug backtrace found for ' + obj.toString());
     }
 
     return payload;
