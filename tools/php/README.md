@@ -1,6 +1,6 @@
 # Php bomber
 
-Script for throwing php error to catcher.
+Script for sending PHP errors to the Hawk catcher.
 
 ## How to run
 
@@ -8,7 +8,7 @@ Prepare `.env` config
 
     cp .env.sample .env
 
-You can run in two modes: one-time error(once) and non-stop with interval
+You can run the script in two modes: single run (`once`) and periodic run (`interval`)
 
 ### Run once
 
