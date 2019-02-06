@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/codex-team/hawk.workers.svg?branch=master)](https://travis-ci.com/codex-team/hawk.workers)[![Coverage Status](https://codecov.io/gh/codex-team/hawk.workers/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/codex-team/hawk.workers)
+[![Build Status](https://travis-ci.com/codex-team/hawk.workers.svg?branch=master)](https://travis-ci.com/codex-team/hawk.workers) [![Coverage Status](https://codecov.io/gh/codex-team/hawk.workers/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/codex-team/hawk.workers)
 
 # Hawk workers
 
