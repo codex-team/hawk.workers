@@ -13,7 +13,7 @@ const TITLE_OBJ = {
 };
 
 const TIMESTAMP_OBJ = {
-    'http_params': {
+  'http_params': {
     'REQUEST_TIME': '2019-01-28T13:59:49.995Z'
   }
 };
@@ -31,7 +31,7 @@ const DEBUG_STACK_OBJ = {
       ]
     }
   ]
-}
+};
 
 describe('PHP Worker parsing', () => {
   beforeAll(async () => {
@@ -43,7 +43,7 @@ describe('PHP Worker parsing', () => {
     await worker.finish();
   });
 
-  it('correct handle right message', async() => {
+  it('correct handle right message', async () => {
     let obj = {...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ};
     let msg = { content: JSON.stringify(obj) };
 
@@ -60,13 +60,14 @@ describe('PHP Worker parsing', () => {
     expect(payload).toHaveProperty('backtrace');
   });
 
-
   it('correct handle wrong message', async () => {
     await expect(worker.handle(WRONG_MSG)).rejects.toThrow(DataStructError);
   });
 
   it('throwing parsing error with wrong params in message', () => {
-    expect(() => { worker.parseData({}) }).toThrow(ParsingError);
+    expect(() => {
+      worker.parseData({});
+    }).toThrow(ParsingError);
   });
 
   it('returns right backtrace when it is detected', () => {
