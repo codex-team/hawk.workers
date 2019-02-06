@@ -1,9 +1,15 @@
 {
-    "name": "todo",
-    "description": "PHP errors Catcher module for Hawk.so",
+    "name": "php-bomber",
+    "description": "PHP errors Bomber for Hawk 2.0",
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/codex-team/hawk.php.git"
+        }
+    ],
     "require": {
-        "codex-team/hawk.php": "^1.2",
+        "codex-team/hawk.php": "dev-hawk2.0",
         "monolog/monolog": "1.0.*",
         "vlucas/phpdotenv": "^3.3"
     },
