@@ -52,8 +52,6 @@ class PhpWorker extends Worker {
         // @todo Send unprocessed msg back to queue?
         throw new DatabaseError('Saving event to database error', err);
       }
-    } else {
-      throw new DataStructError('Could not find msg.content field in object ' + msg.toString());
     }
   }
 
