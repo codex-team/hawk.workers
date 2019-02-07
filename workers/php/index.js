@@ -1,4 +1,4 @@
-const { Worker, ParsingError, DataStructError, DatabaseError } = require('../../lib/worker');
+const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
 const db = require('../../lib/db/mongoose-controller');
 const path = require('path');
 

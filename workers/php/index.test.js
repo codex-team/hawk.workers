@@ -1,12 +1,10 @@
 const { PhpWorker } = require('./index');
-const { DataStructError, ParsingError } = require('../../lib/worker');
+const { ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
 
 require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
 
 let worker;
-
-const WRONG_MSG = 'not a json';
 
 const TITLE_OBJ = {
   'error_description': 'Some error'
