@@ -6,9 +6,6 @@ services:
   - mongodb
 addons:
   apt:
-    sources:
-      - sourceline: "deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ xenial main"
-        key_url: "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey"
     packages:
       - rabbitmq-server
 before_install:
