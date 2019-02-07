@@ -60,10 +60,6 @@ describe('PHP Worker parsing', () => {
     expect(payload).toHaveProperty('backtrace');
   });
 
-  it('correct handle wrong message', async () => {
-    await expect(worker.handle(WRONG_MSG)).rejects.toThrow(DataStructError);
-  });
-
   it('throwing parsing error with wrong params in message', () => {
     expect(() => {
       worker.parseData({});
