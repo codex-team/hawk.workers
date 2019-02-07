@@ -4,7 +4,13 @@ node_js:
   - "11"
 services:
   - mongodb
-  - rabbitmq
+addons:
+  apt:
+    sources:
+      - sourceline: "deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ xenial main"
+        key_url: "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey"
+    packages:
+      - rabbitmq-server
 before_install:
   - chmod +x ./bin/env-config.sh
   - ./bin/env-config.sh
