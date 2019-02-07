@@ -22,12 +22,15 @@ Registry - RabbitMQ
 
 - Use `worker.start()` to start your worker. You may write a simple runner like [this](workers/nodejs/runner.js)
 
+- Set `LOG_LEVEL` to `verbose` if you want message logs
+
 ## Env vars
 
-| Variable           | Description                                                             | Default value    |
-| ------------------ | ----------------------------------------------------------------------- | ---------------- |
-| REGISTRY_URL       | RabbitMQ connection URL                                                 | amqp://localhost |
-| SIMULTANEOUS_TASKS | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously) | 1                |
+| Variable           | Description                                                                                              | Default value      |
+| ------------------ | -------------------------------------------------------------------------------------------------------- | ------------------ |
+| REGISTRY_URL       | RabbitMQ connection URL                                                                                  | `amqp://localhost` |
+| SIMULTANEOUS_TASKS | RabbitMQ Consumer prefetch value (How many tasks can do simultaneously)                                  | 1                  |
+| LOG_LEVEL          | Log level (error,warn,info,versobe,debug,silly) [See more](https://github.com/winstonjs/winston#logging) | `info`             |
 
 **IMPORTANT**
 
