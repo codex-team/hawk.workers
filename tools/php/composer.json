@@ -1,0 +1,22 @@
+{
+    "name": "php-bomber",
+    "description": "PHP errors Bomber for Hawk 2.0",
+    "license": "MIT",
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/codex-team/hawk.php.git"
+        }
+    ],
+    "require": {
+        "codex-team/hawk.php": "dev-hawk2.0",
+        "monolog/monolog": "1.0.*",
+        "vlucas/phpdotenv": "^3.3"
+    },
+
+    "autoload": {
+        "psr-4": {
+          "App\\": ""
+        }
+    }
+}
