@@ -24,6 +24,34 @@ Registry - RabbitMQ
 
 - Set `LOG_LEVEL` to `verbose` if you want message logs
 
+  > Also you can use `worker.logger` which is [`winston.Logger`](https://github.com/winstonjs/winston) to log something
+
+## Running workers with PM2
+
+- Install PM2
+
+  ```bash
+  yarn global add pm2
+  OR
+  npm i -g pm2
+  ```
+
+- If you've written your worker add it to `ecosystem.config.js` like the existing ones
+
+- Edit `.env` files
+
+- Run it
+
+  ```bash
+  # Run all workers
+  pm2 start
+
+  # Run specific worker, e.g. nodejs
+  pm2 start nodejs
+  ```
+
+> Feel free to tune your setting in `ecosystem.config.js` file, [more info](https://pm2.io/doc/en/runtime/reference/ecosystem-file/)
+
 ## Env vars
 
 | Variable           | Description                                                                                              | Default value      |
