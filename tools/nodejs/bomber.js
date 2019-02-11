@@ -14,7 +14,10 @@ var argv = require('yargs')
   .demandCommand(1, 'You need at least one command before moving on')
   .help('h')
   .alias('h', 'help').argv;
+const fs = require('fs');
 const path = require('path');
+const assert = require('assert');
+const EventEmitter = require('events');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const Hawk = require('@codexteam/hawk.nodejs');
@@ -22,24 +25,88 @@ const Hawk = require('@codexteam/hawk.nodejs');
 /**
  * Hawk catcher url
  */
-const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/catcher';
+const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/';
 
 /**
  * Hawk token
  */
 const CATCHER_TOKEN = process.env.CATCHER_TOKEN || 'randomtoken';
 
+/**
+ * Errors type in randomize function
+ * @type {number}
+ */
+const ERRORS_TYPE_COUNT = 9;
+
+let errorEmitter = new EventEmitter();
+
 const hawkCatcher = Hawk({
   url: CATCHER_URL,
   accessToken: CATCHER_TOKEN
 });
 
+class MyError extends Error {}
+
 const main = async () => {
   function namedFunc() {
     try {
-      console.log('Named func');
-      /* eslint-disable-next-line */
-      nonexistant_func();
+      let ind = Math.floor(Math.random() * ERRORS_TYPE_COUNT);
+
+      switch (ind) {
+        case 0: {
+          // Simple Error
+          throw new Error('simple error');
+        }
+        case 1: {
+          // Reference Error
+          console.log('Named func');
+          /* eslint-disable-next-line */
+          nonexistant_func();
+          break;
+        }
+        case 2: {
+          // Range Error
+          /* eslint-disable-next-line */
+          new Array(-1);
+          break;
+        }
+        case 3: {
+          // Syntax Error
+          /* eslint-disable-next-line */
+          JSON.parse('not a json');
+          break;
+        }
+        case 4: {
+          // Type Error
+          /* eslint-disable-next-line */
+          null.f();
+          break;
+        }
+        case 5: {
+          // Assertion Error
+          assert.strictEqual(1, 2);
+          break;
+        }
+        case 6: {
+          // Error from EventEmitter
+          errorEmitter.emit('error');
+          break;
+        }
+        case 7: {
+          // System Error example: ENOENT
+          fs.accessSync('./unknown-dir');
+          break;
+        }
+        case 8: {
+          // Custom Error
+          throw new MyError('custom error');
+        }
+        case 9: {
+          // Error from EventEmitter with custom Error
+          errorEmitter.emit('error', new MyError('error from EventEmitter'));
+          break;
+        }
+      }
       return true;
     } catch (e) {
       hawkCatcher.catchException(
