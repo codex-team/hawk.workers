@@ -36,7 +36,7 @@ const CATCHER_TOKEN = process.env.CATCHER_TOKEN || 'randomtoken';
  * Errors type in randomize function
  * @type {number}
  */
-const ERRORS_TYPE_COUNT = 9;
+const ERRORS_TYPE_COUNT = 10;
 
 let errorEmitter = new EventEmitter();
 
