@@ -9,15 +9,16 @@
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
-        "lint": "eslint \"./**/*.js\"",
-        "lint:fix": "eslint \"./**/*.js\" --fix",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
         "worker:nodejs": "node workers/nodejs/runner.js"
     },
     "dependencies": {
         "amqplib": "^0.5.3",
         "debug": "^4.1.1",
         "dotenv": "^6.2.0",
-        "mongoose": "^5.4.4"
+        "mongoose": "^5.4.4",
+        "winston": "^3.2.1"
     },
     "devDependencies": {
         "@codexteam/hawk.nodejs": "github:codex-team/hawk.nodejs#hawk2.0",

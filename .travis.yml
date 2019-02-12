@@ -1,10 +1,13 @@
-dist: trusty
+dist: xenial
 language: node_js
 node_js:
   - "11"
 services:
   - mongodb
-  - rabbitmq
+addons:
+  apt:
+    packages:
+      - rabbitmq-server
 before_install:
   - chmod +x ./bin/env-config.sh
   - ./bin/env-config.sh

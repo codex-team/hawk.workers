@@ -82,6 +82,7 @@ class NodeJSWorker extends Worker {
   /**
    * Message handle function
    *
+   * @override
    * @param {Object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    * @memberof NodeJSWorker
