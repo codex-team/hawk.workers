@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const EventEmitter = require('events');
-var randomWords = require('random-words');
+const randomWords = require('random-words');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const Hawk = require('@codexteam/hawk.nodejs');
