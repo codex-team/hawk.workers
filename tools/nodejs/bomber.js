@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const EventEmitter = require('events');
+var randomWords = require('random-words');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const Hawk = require('@codexteam/hawk.nodejs');
@@ -55,55 +56,49 @@ const main = async () => {
       switch (ind) {
         case 0: {
           // Simple Error
-          throw new Error('simple error');
+          throw new Error(getRandomText());
         }
         case 1: {
-          // Reference Error
-          console.log('Named func');
-          /* eslint-disable-next-line */
-          nonexistant_func();
-          break;
+          throw new ReferenceError(getRandomText());
         }
         case 2: {
           // Range Error
-          /* eslint-disable-next-line */
-          new Array(-1);
-          break;
+          throw new RangeError(getRandomText());
         }
         case 3: {
           // Syntax Error
           /* eslint-disable-next-line */
-          JSON.parse('not a json');
+          JSON.parse(getRandomText());
           break;
         }
         case 4: {
           // Type Error
-          /* eslint-disable-next-line */
-          null.f();
-          break;
+          throw new TypeError(getRandomText());
         }
         case 5: {
           // Assertion Error
-          assert.strictEqual(1, 2);
+          let x = Math.random() * 1000;
+
+          assert.strictEqual(1, x);
           break;
         }
         case 6: {
           // Error from EventEmitter
-          errorEmitter.emit('error');
+          errorEmitter.emit('error', new Error(getRandomText()));
           break;
         }
         case 7: {
           // System Error example: ENOENT
-          fs.accessSync('./unknown-dir');
+          fs.accessSync(getRandomText());
           break;
         }
         case 8: {
           // Custom Error
-          throw new MyError('custom error');
+          throw new MyError(getRandomText());
         }
         case 9: {
           // Error from EventEmitter with custom Error
-          errorEmitter.emit('error', new MyError('error from EventEmitter'));
+          errorEmitter.emit('error', new MyError(getRandomText()));
           break;
         }
       }
@@ -137,5 +132,9 @@ const main = async () => {
     }
   }
 };
+
+function getRandomText() {
+  return randomWords({min: 3, max: 10}).join(' ');
+}
 
 main();
