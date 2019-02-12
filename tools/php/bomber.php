@@ -4,6 +4,8 @@ require __DIR__ . '/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::create(__DIR__);
 $dotenv->load();
 
+$faker = Faker\Factory::create();
+
 function main()
 {
   \Hawk\HawkCatcher::instance($_ENV['CATCHER_TOKEN'], $_ENV['CATCHER_URL']);
@@ -16,13 +18,13 @@ function main()
       case 0:
         {
           // Simple Exception
-          throw new Exception('Error Processing Request', 1);
+          throw new Exception(get_random_text(), 1);
           break;
         }
       case 1:
         {
           // Simple Error
-          throw new Error('Error');
+          throw new Error(get_random_text());
           break;
         }
       case 2:
@@ -34,40 +36,39 @@ function main()
       case 3:
         {
           // ArithmeticError
-          $i = 0;
+          $i = rand(0, 10000);
           $x = $i << -1;
           break;
         }
       case 4:
         {
-          // ParseError
-          eval('not a php code');
+          throw new ParseError(get_random_text());
           break;
         }
       case 5:
         {
           // TypeError
-          test_type_error('string');
+          test_type_error(get_random_text());
         }
       case 6:
         {
           // Custom Exception
-          throw new MyException('error msg');
+          throw new MyException(get_random_text());
         }
       case 7:
         {
           // Simple OutOfRangeException
-          throw new OutOfRangeException();
+          throw new OutOfRangeException(get_random_text());
         }
       case 8:
         {
           // Simple RuntimeException
-          throw new RuntimeException();
+          throw new RuntimeException(get_random_text());
         }
       case 9:
         {
           // Simple ErrorException
-          throw new ErrorException();
+          throw new ErrorException(get_random_text());
         }
     }
   } catch (Throwable $e) {
@@ -98,6 +99,11 @@ function setInterval($f, $seconds)
 function test_type_error(int $val)
 {
   return $val;
+}
+
+function get_random_text() {
+  global $faker;
+  return $faker->text(20);
 }
 
 class MyException extends Exception {}
