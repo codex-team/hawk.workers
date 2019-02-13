@@ -104,7 +104,7 @@ class NodeJSWorker extends Worker {
       backtrace = backtrace.map(el => {
         return {
           file: el.file,
-          line: el.line
+          line: isNaN(el.line) ? undefined : el.line
           /** @todo Add nodejs specific event fields to schema */
           // func: el.func,
           // pos: el.pos
