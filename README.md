@@ -20,7 +20,7 @@ Registry - RabbitMQ
 
 - Edit `.env` file (see more below)
 
-- Use `worker.start()` to start your worker. You may write a simple runner like [this](workers/nodejs/runner.js)
+- Use `worker.start()` to start your worker. You **should** write a simple runner like [this](workers/nodejs/runner.js)
 
 - Set `LOG_LEVEL` to `verbose` if you want message logs
 
