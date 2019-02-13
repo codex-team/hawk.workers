@@ -38,8 +38,8 @@ const main = async () => {
 
   process.on('SIGINT', exitHandler);
   process.on('SIGTERM', exitHandler);
-  process.on('uncaughtException', exceptionHandler);
-  process.on('unhandledRejection', exceptionHandler);
+  // process.on('uncaughtException', exceptionHandler);
+  // process.on('unhandledRejection', exceptionHandler);
 };
 
 main();
