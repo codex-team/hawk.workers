@@ -9,7 +9,7 @@ addons:
     packages:
       - rabbitmq-server
 before_install:
-  - rabbitmq-plugins enable rabbitmq_management
+  - sudo rabbitmq-plugins enable rabbitmq_management
   - curl -O http://localhost:15672/cli/rabbitmqadmin
   - chmod +x rabbitmqadmin
   - curl -O https://raw.githubusercontent.com/codex-team/hawk.registry/master/config/rabbit.definitions.json
