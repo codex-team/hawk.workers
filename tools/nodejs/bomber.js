@@ -22,7 +22,7 @@ const Hawk = require('@codexteam/hawk.nodejs');
 /**
  * Hawk catcher url
  */
-const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/catcher';
+const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/';
 
 /**
  * Hawk token
