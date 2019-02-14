@@ -9,6 +9,8 @@ addons:
     packages:
       - rabbitmq-server
 before_install:
+  - curl -O https://raw.githubusercontent.com/codex-team/hawk.registry/master/config/rabbit.definitions.json
+  - rabbitmqadmin -q import rabbit.definitions.json
   - chmod +x ./bin/env-config.sh
   - ./bin/env-config.sh
   - yarn add global jest codecov
