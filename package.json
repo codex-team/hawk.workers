@@ -26,6 +26,7 @@
         "eslint-config-codex": "github:codex-team/eslint-config",
         "jest": "^23.6.0",
         "nodemon": "^1.18.9",
+        "random-words": "^1.1.0",
         "yargs": "^12.0.5"
     }
 }

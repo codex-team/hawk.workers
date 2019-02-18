@@ -14,7 +14,11 @@ var argv = require('yargs')
   .demandCommand(1, 'You need at least one command before moving on')
   .help('h')
   .alias('h', 'help').argv;
+const fs = require('fs');
 const path = require('path');
+const assert = require('assert');
+const EventEmitter = require('events');
+const randomWords = require('random-words');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const Hawk = require('@codexteam/hawk.nodejs');
@@ -22,24 +26,82 @@ const Hawk = require('@codexteam/hawk.nodejs');
 /**
  * Hawk catcher url
  */
-const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/catcher';
+const CATCHER_URL = process.env.CATCHER_URL || 'http://localhost:3000/';
 
 /**
  * Hawk token
  */
 const CATCHER_TOKEN = process.env.CATCHER_TOKEN || 'randomtoken';
 
+/**
+ * Errors type in randomize function
+ * @type {number}
+ */
+const ERRORS_TYPE_COUNT = 10;
+
+let errorEmitter = new EventEmitter();
+
 const hawkCatcher = Hawk({
   url: CATCHER_URL,
   accessToken: CATCHER_TOKEN
 });
 
+class MyError extends Error {}
+
 const main = async () => {
   function namedFunc() {
     try {
-      console.log('Named func');
-      /* eslint-disable-next-line */
-      nonexistant_func();
+      let ind = Math.floor(Math.random() * ERRORS_TYPE_COUNT);
+
+      switch (ind) {
+        case 0: {
+          // Simple Error
+          throw new Error(getRandomText());
+        }
+        case 1: {
+          throw new ReferenceError(getRandomText());
+        }
+        case 2: {
+          // Range Error
+          throw new RangeError(getRandomText());
+        }
+        case 3: {
+          // Syntax Error
+          /* eslint-disable-next-line */
+          JSON.parse(getRandomText());
+          break;
+        }
+        case 4: {
+          // Type Error
+          throw new TypeError(getRandomText());
+        }
+        case 5: {
+          // Assertion Error
+          let x = Math.random() * 1000;
+
+          assert.strictEqual(1, x);
+          break;
+        }
+        case 6: {
+          // Error from EventEmitter
+          errorEmitter.emit('error', new Error(getRandomText()));
+          break;
+        }
+        case 7: {
+          // System Error example: ENOENT
+          fs.accessSync(getRandomText());
+          break;
+        }
+        case 8: {
+          // Custom Error
+          throw new MyError(getRandomText());
+        }
+        case 9: {
+          // Error from EventEmitter with custom Error
+          errorEmitter.emit('error', new MyError(getRandomText()));
+          break;
+        }
+      }
       return true;
     } catch (e) {
       hawkCatcher.catchException(
@@ -70,5 +132,9 @@ const main = async () => {
     }
   }
 };
+
+function getRandomText() {
+  return randomWords({min: 3, max: 10}).join(' ');
+}
 
 main();

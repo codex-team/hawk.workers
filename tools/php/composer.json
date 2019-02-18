@@ -11,7 +11,8 @@
     "require": {
         "codex-team/hawk.php": "dev-hawk2.0",
         "monolog/monolog": "1.0.*",
-        "vlucas/phpdotenv": "^3.3"
+        "vlucas/phpdotenv": "^3.3",
+        "fzaninotto/faker": "^1.8"
     },
 
     "autoload": {
