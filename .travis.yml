@@ -19,7 +19,7 @@ before_script:
   - curl -O http://localhost:15672/cli/rabbitmqadmin
   - chmod +x rabbitmqadmin
   - curl -O https://raw.githubusercontent.com/codex-team/hawk.registry/master/config/rabbit.definitions.json
-  - ./rabbitmqadmin import rabbit.definitions.json
+  - sudo ./rabbitmqadmin import rabbit.definitions.json
 script:
   - yarn lint
   - jest --coverage && codecov
