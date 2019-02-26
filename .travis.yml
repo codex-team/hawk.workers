@@ -9,16 +9,17 @@ addons:
     packages:
       - rabbitmq-server
 before_install:
-  - sudo rabbitmq-plugins enable rabbitmq_management
-  - curl -O http://localhost:15672/cli/rabbitmqadmin
-  - chmod +x rabbitmqadmin
-  - curl -O https://raw.githubusercontent.com/codex-team/hawk.registry/master/config/rabbit.definitions.json
-  - ./rabbitmqadmin -q import rabbit.definitions.json
   - chmod +x ./bin/env-config.sh
   - ./bin/env-config.sh
   - yarn add global jest codecov
 install:
   - yarn install
+before_script:
+  - sudo rabbitmq-plugins enable rabbitmq_management
+  - curl -O http://localhost:15672/cli/rabbitmqadmin
+  - chmod +x rabbitmqadmin
+  - curl -O https://raw.githubusercontent.com/codex-team/hawk.registry/master/config/rabbit.definitions.json
+  - ./rabbitmqadmin import rabbit.definitions.json
 script:
   - yarn lint
   - jest --coverage && codecov
