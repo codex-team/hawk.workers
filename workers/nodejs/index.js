@@ -132,7 +132,7 @@ class NodeJSWorker extends Worker {
     try {
       await db.saveEvent({ catcherType: this.type, payload });
     } catch (e) {
-      throw DatabaseError(e);
+      throw new DatabaseError(e);
     }
   }
 }
