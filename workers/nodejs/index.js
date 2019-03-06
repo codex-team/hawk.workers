@@ -2,7 +2,7 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-const { Worker, ParsingError } = require('../../lib/worker');
+const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
 const db = require('../../lib/db/mongoose-controller');
 
 /**
@@ -129,7 +129,11 @@ class NodeJSWorker extends Worker {
       context: eventRaw.comment
     };
 
-    await db.saveEvent({ catcherType: this.type, payload });
+    try {
+      await db.saveEvent({ catcherType: this.type, payload });
+    } catch (e) {
+      throw new DatabaseError(e);
+    }
   }
 }
 

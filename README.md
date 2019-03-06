@@ -20,7 +20,7 @@ Registry - RabbitMQ
 
 - Edit `.env` file (see more below)
 
-- Use `worker.start()` to start your worker. You may write a simple runner like [this](workers/nodejs/runner.js)
+- Use `worker.start()` to start your worker. You **should** write a simple runner like [this](workers/nodejs/runner.js)
 
 - Set `LOG_LEVEL` to `verbose` if you want message logs
 
@@ -51,6 +51,14 @@ Registry - RabbitMQ
   ```
 
 > Feel free to tune your setting in `ecosystem.config.js` file, [more info](https://pm2.io/doc/en/runtime/reference/ecosystem-file/)
+
+## Error handling
+
+If an error is thrown inside `handle` method it will be ignored, except if it is `CriticalError` or `NonCriticalError`
+
+On `CriticalError` the currently processing message will be requeued to the same queue in Registry using `Worker.requeue` method
+
+On `NonCriticalError` the currently processing message will be queued to stash queue in Registry using `Worker.sendToStash` method
 
 ## Env vars
 

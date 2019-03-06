@@ -23,7 +23,7 @@ const main = async () => {
     } else {
       console.error('Uncaught exception:');
     }
-    console.error(err);
+    worker.logger.error(err);
     exitHandler();
   };
 
