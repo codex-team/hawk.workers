@@ -50,7 +50,7 @@ class PhpWorker extends Worker {
       }
 
       try {
-        payload = this.parseData(phpError);
+        payload = this.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }

@@ -105,10 +105,12 @@ class NodeJSWorker extends Worker {
       throw new ParsingError("Can't decode token", err);
     }
 
+    const event = eventRaw.payload;
+
     let backtrace;
 
     try {
-      backtrace = await this.parseTrace(eventRaw.stack);
+      backtrace = await this.parseTrace(event.stack);
 
       backtrace = backtrace.map(el => {
         return {
@@ -126,16 +128,16 @@ class NodeJSWorker extends Worker {
     let timestamp;
 
     try {
-      timestamp = new Date(eventRaw.time).getTime();
+      timestamp = new Date(event.time).getTime();
     } catch (e) {
       throw new ParsingError('Time parsing error');
     }
 
     const payload = {
-      title: eventRaw.message,
+      title: event.message,
       timestamp,
       backtrace,
-      context: eventRaw.comment
+      context: event.comment
     };
 
     try {
