@@ -3,7 +3,8 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
-const db = require('../../lib/db/mongoose-controller');
+const db = require('../../lib/db/controller');
+const { decode } = require('jsonwebtoken');
 
 /**
  * @class NodeJSWorker
@@ -96,6 +97,14 @@ class NodeJSWorker extends Worker {
       throw new ParsingError('Message parsing error');
     }
 
+    let projectId;
+
+    try {
+      projectId = decode(eventRaw.token);
+    } catch (err) {
+      throw new ParsingError("Can't decode token", err);
+    }
+
     let backtrace;
 
     try {
@@ -130,7 +139,7 @@ class NodeJSWorker extends Worker {
     };
 
     try {
-      await db.saveEvent({ catcherType: this.type, payload });
+      await db.saveEvent(projectId, { catcherType: this.type, payload });
     } catch (e) {
       throw new DatabaseError(e);
     }
