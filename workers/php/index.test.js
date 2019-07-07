@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 const { PhpWorker } = require('./index');
 const { ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
