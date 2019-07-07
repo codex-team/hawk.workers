@@ -44,7 +44,7 @@ class PhpWorker extends Worker {
       let projectId;
 
       try {
-        projectId = decode(phpError.token);
+        projectId = decode(phpError.token).projectId;
       } catch (err) {
         throw new ParsingError("Can't decode token", err);
       }

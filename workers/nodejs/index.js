@@ -100,7 +100,7 @@ class NodeJSWorker extends Worker {
     let projectId;
 
     try {
-      projectId = decode(eventRaw.token);
+      projectId = decode(eventRaw.token).projectId;
     } catch (err) {
       throw new ParsingError("Can't decode token", err);
     }
