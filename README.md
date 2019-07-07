@@ -111,3 +111,17 @@ await db.saveEvent(event);
 ### Testing
 
 `yarn test:db`
+
+### Worker message format
+
+```jsonc
+{
+  // Access token with `projectId` in payload
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  // Worker specific payload
+  "payload": {
+    "title": "Error: ..."
+    // other fields
+  }
+}
+```
