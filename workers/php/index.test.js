@@ -49,9 +49,11 @@ describe('PHP Worker parsing', () => {
   it('correct handle right message', async () => {
     let obj = {
       token: TOKEN,
-      ...TITLE_OBJ,
-      ...TIMESTAMP_OBJ,
-      ...DEBUG_STACK_OBJ
+      payload: {
+        ...TITLE_OBJ,
+        ...TIMESTAMP_OBJ,
+        ...DEBUG_STACK_OBJ
+      }
     };
     let msg = { content: JSON.stringify(obj) };
 
