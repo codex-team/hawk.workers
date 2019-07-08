@@ -2,6 +2,7 @@ const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
 const path = require('path');
 const { decode } = require('jsonwebtoken');
+const { ValidationError } = require('yup');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 
@@ -58,8 +59,11 @@ class PhpWorker extends Worker {
       try {
         await db.saveEvent(projectId, { catcherType: this.type, payload });
       } catch (err) {
+        if (err instanceof ValidationError)
         // @todo Send unprocessed msg back to queue?
-        throw new DatabaseError('Saving event to database error', err);
+        {
+          throw new DatabaseError('Saving event to database error', err);
+        }
       }
     }
   }
@@ -101,7 +105,7 @@ class PhpWorker extends Worker {
     try {
       let timestamp = obj['http_params']['REQUEST_TIME'];
 
-      payload.timestamp = new Date(timestamp).getTime();
+      payload.timestamp = new Date(timestamp);
     } catch (err) {
       throw new ParsingError('Time parsing error', err);
     }
