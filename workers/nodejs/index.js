@@ -137,14 +137,15 @@ class NodeJSWorker extends Worker {
       title: event.message,
       timestamp,
       backtrace,
-      context: event.comment
+      context: event.context
     };
 
-    try {
-      await db.saveEvent(projectId, { catcherType: this.type, payload });
-    } catch (e) {
-      throw new DatabaseError(e);
-    }
+    const insertedId = await db.saveEvent(projectId, {
+      catcherType: this.type,
+      payload
+    });
+
+    this.logger.debug('Inserted event: ' + insertedId);
   }
 }
 

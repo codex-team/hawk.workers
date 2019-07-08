@@ -59,9 +59,8 @@ class PhpWorker extends Worker {
       try {
         await db.saveEvent(projectId, { catcherType: this.type, payload });
       } catch (err) {
-        if (err instanceof ValidationError)
-        // @todo Send unprocessed msg back to queue?
-        {
+        if (err instanceof ValidationError) {
+          // @todo Send unprocessed msg back to queue?
           throw new DatabaseError('Saving event to database error', err);
         }
       }
