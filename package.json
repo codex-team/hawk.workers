@@ -19,7 +19,6 @@
         "dotenv": "^6.2.0",
         "jsonwebtoken": "^8.5.1",
         "mongodb": "^3.2.7",
-        "mongoose": "^5.4.4",
         "winston": "^3.2.1",
         "yup": "^0.27.0"
     },
