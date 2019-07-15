@@ -97,7 +97,7 @@ You can tweak it (add schemas, etc) and use it in your workers to handle databas
 ```javascript
 const db = require("lib/db/mongoose-controller");
 
-await db.connect("mongodb://localhost:27017");
+await db.connect(); // Requires `MONGO_URL`
 
 await db.saveEvent(event);
 ```
@@ -111,3 +111,17 @@ await db.saveEvent(event);
 ### Testing
 
 `yarn test:db`
+
+### Worker message format
+
+```jsonc
+{
+  // Access token with `projectId` in payload
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  // Worker specific payload
+  "payload": {
+    "title": "Error: ..."
+    // other fields
+  }
+}
+```

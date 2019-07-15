@@ -1,6 +1,8 @@
 const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
-const db = require('../../lib/db/mongoose-controller');
+const db = require('../../lib/db/controller');
 const path = require('path');
+const { decode } = require('jsonwebtoken');
+const { ValidationError } = require('yup');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 
@@ -40,17 +42,27 @@ class PhpWorker extends Worker {
         throw new ParsingError('Message parsing error', err);
       }
 
+      let projectId;
+
       try {
-        payload = this.parseData(phpError);
+        projectId = decode(phpError.token).projectId;
+      } catch (err) {
+        throw new ParsingError("Can't decode token", err);
+      }
+
+      try {
+        payload = this.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }
 
       try {
-        await db.saveEvent({ catcherType: this.type, payload });
+        await db.saveEvent(projectId, { catcherType: this.type, payload });
       } catch (err) {
-        // @todo Send unprocessed msg back to queue?
-        throw new DatabaseError('Saving event to database error', err);
+        if (err instanceof ValidationError) {
+          // @todo Send unprocessed msg back to queue?
+          throw new DatabaseError('Saving event to database error', err);
+        }
       }
     }
   }
@@ -82,7 +94,7 @@ class PhpWorker extends Worker {
    * @returns {Obejct}
    */
   parseData(obj) {
-    let payload = { };
+    let payload = {};
 
     payload.title = obj['error_description'] || '';
 
@@ -92,7 +104,7 @@ class PhpWorker extends Worker {
     try {
       let timestamp = obj['http_params']['REQUEST_TIME'];
 
-      payload.timestamp = (new Date(timestamp)).getTime();
+      payload.timestamp = new Date(timestamp);
     } catch (err) {
       throw new ParsingError('Time parsing error', err);
     }
@@ -100,12 +112,12 @@ class PhpWorker extends Worker {
     // Check optional field 'backtrace'
     if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
       payload.backtrace = [];
-      obj['debug_backtrace'].forEach((item) => {
+      obj['debug_backtrace'].forEach(item => {
         if (item.file && item.line) {
           payload.backtrace.push({
             file: item.file,
             line: item.line,
-            sourceCode: (item.trace && item.trace.length) ? item.trace : []
+            sourceCode: item.trace && item.trace.length ? item.trace : []
           });
 
           if (!item.trace) {

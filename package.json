@@ -17,8 +17,10 @@
         "amqplib": "^0.5.3",
         "debug": "^4.1.1",
         "dotenv": "^6.2.0",
-        "mongoose": "^5.4.4",
-        "winston": "^3.2.1"
+        "jsonwebtoken": "^8.5.1",
+        "mongodb": "^3.2.7",
+        "winston": "^3.2.1",
+        "yup": "^0.27.0"
     },
     "devDependencies": {
         "@codexteam/hawk.nodejs": "github:codex-team/hawk.nodejs#hawk2.0",
