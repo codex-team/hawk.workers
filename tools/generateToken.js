@@ -4,7 +4,7 @@
 /**
  * Generate token tool
  * Used to generate valid token for catcher for specific `projectId`
- * Convinient for testing purposes, e.g. setting token for bombers
+ * Convenient for testing purposes, e.g. setting token for bombers
  */
 
 const argv = require('yargs')
