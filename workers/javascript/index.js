@@ -1,11 +1,11 @@
 const { Worker, ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
-const jwt = require('jsonwebtoken');
+const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 
 /**
  * Worker for handling Javascript events
  */
-class JavascriptWorker extends Worker {
+class JavascriptWorker extends tokenVerifierMixin(Worker) {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -54,59 +54,45 @@ class JavascriptWorker extends Worker {
    * @param {Object} event - Message object from consume method
    */
   static async handle(event) {
-    // let projectId;
-    //
-    // try {
-    //   projectId = jwt.verify(eventRaw.token, process.env.JWT_SECRET).projectId;
-    // } catch (err) {
-    //   throw new ParsingError('Can\'t decode token', err);
-    // }
-    //
-    // const event = eventRaw.payload;
-    //
-    // let backtrace;
-    //
-    // try {
-    //   backtrace = await JavascriptWorker.parseTrace(event.stack);
-    //
-    //   backtrace = backtrace.map(el => {
-    //     return {
-    //       file: el.file,
-    //       line: isNaN(el.line) ? undefined : el.line
-    //     };
-    //   });
-    // } catch (e) {
-    //   throw new ParsingError('Stack parsing error');
-    // }
-    //
-    // let timestamp;
-    //
-    // try {
-    //   timestamp = new Date(event.timestamp).getTime();
-    // } catch (e) {
-    //   throw new ParsingError('Time parsing error');
-    // }
-    //
-    // const payload = {
-    //   title: event.message,
-    //   timestamp,
-    //   backtrace,
-    //   context: event.context
-    // };
+    await super.handle(event);
+
+    let backtrace;
+
+    try {
+      backtrace = await JavascriptWorker.parseTrace(event.stack);
+
+      backtrace = backtrace.map(el => {
+        return {
+          file: el.file,
+          line: isNaN(el.line) ? undefined : el.line
+        };
+      });
+    } catch (e) {
+      throw new ParsingError('Stack parsing error');
+    }
+
+    let timestamp;
+
+    try {
+      timestamp = new Date(event.payload.timestamp);
+    } catch (e) {
+      throw new ParsingError('Time parsing error');
+    }
 
     const payload = {
-      title: 'lol',
-      timestamp: new Date(),
-      backtrace: {},
-      context: {}
+      title: event.payload.message,
+      timestamp,
+      backtrace,
+      context: event.context
     };
-    // const insertedId = await db.saveEvent(projectId, {
-    //   catcherType: JavascriptWorker.type,
-    //   payload
-    // });
-    //
-    // this.logger.debug('Inserted event: ' + insertedId);
+
+    const insertedId = await db.saveEvent(event.projectId, {
+      catcherType: JavascriptWorker.type,
+      payload
+    });
+
+    this.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
-module.exports = {JavascriptWorker};
+module.exports = { JavascriptWorker };
