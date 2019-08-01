@@ -13,7 +13,7 @@ class JavascriptWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  get type() {
+  static get type() {
     return 'errors/javascript';
   }
 
@@ -59,7 +59,6 @@ class JavascriptWorker extends Worker {
    * @param {Buffer} msg.content - Message content
    */
   async handle(msg) {
-    console.log(msg)
     let eventRaw;
 
     try {
@@ -77,7 +76,7 @@ class JavascriptWorker extends Worker {
     }
 
     const event = eventRaw.payload;
-    console.log(event)
+
     let backtrace;
 
     try {
