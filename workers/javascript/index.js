@@ -80,7 +80,7 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
     }
 
     const payload = {
-      title: event.payload.message,
+      title: event.payload.event.message,
       timestamp,
       backtrace,
       context: event.context
@@ -91,7 +91,7 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
       payload
     });
 
-    this.logger.debug('Inserted event: ' + insertedId);
+    JavascriptWorker.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
