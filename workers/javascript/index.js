@@ -17,7 +17,6 @@ class JavascriptWorker extends Worker {
    * Start consuming messages
    */
   async start() {
-    console.log(this.constructor.type)
     await db.connect();
 
     await super.start();
@@ -52,64 +51,61 @@ class JavascriptWorker extends Worker {
    * Message handle function
    *
    * @override
-   * @param {Object} msg - Message object from consume method
-   * @param {Buffer} msg.content - Message content
+   * @param {Object} event - Message object from consume method
    */
-  static async handle(msg) {
-    let eventRaw;
-
-    try {
-      eventRaw = JSON.parse(msg.content.toString());
-    } catch (e) {
-      throw new ParsingError('Message parsing error');
-    }
-
-    let projectId;
-
-    try {
-      projectId = jwt.verify(eventRaw.token, process.env.JWT_SECRET).projectId;
-    } catch (err) {
-      throw new ParsingError('Can\'t decode token', err);
-    }
-
-    const event = eventRaw.payload;
-
-    let backtrace;
-
-    try {
-      backtrace = await JavascriptWorker.parseTrace(event.stack);
-
-      backtrace = backtrace.map(el => {
-        return {
-          file: el.file,
-          line: isNaN(el.line) ? undefined : el.line
-        };
-      });
-    } catch (e) {
-      throw new ParsingError('Stack parsing error');
-    }
-
-    let timestamp;
-
-    try {
-      timestamp = new Date(event.timestamp).getTime();
-    } catch (e) {
-      throw new ParsingError('Time parsing error');
-    }
+  static async handle(event) {
+    // let projectId;
+    //
+    // try {
+    //   projectId = jwt.verify(eventRaw.token, process.env.JWT_SECRET).projectId;
+    // } catch (err) {
+    //   throw new ParsingError('Can\'t decode token', err);
+    // }
+    //
+    // const event = eventRaw.payload;
+    //
+    // let backtrace;
+    //
+    // try {
+    //   backtrace = await JavascriptWorker.parseTrace(event.stack);
+    //
+    //   backtrace = backtrace.map(el => {
+    //     return {
+    //       file: el.file,
+    //       line: isNaN(el.line) ? undefined : el.line
+    //     };
+    //   });
+    // } catch (e) {
+    //   throw new ParsingError('Stack parsing error');
+    // }
+    //
+    // let timestamp;
+    //
+    // try {
+    //   timestamp = new Date(event.timestamp).getTime();
+    // } catch (e) {
+    //   throw new ParsingError('Time parsing error');
+    // }
+    //
+    // const payload = {
+    //   title: event.message,
+    //   timestamp,
+    //   backtrace,
+    //   context: event.context
+    // };
 
     const payload = {
-      title: event.message,
-      timestamp,
-      backtrace,
-      context: event.context
+      title: 'lol',
+      timestamp: new Date(),
+      backtrace: {},
+      context: {}
     };
-
-    const insertedId = await db.saveEvent(projectId, {
-      catcherType: JavascriptWorker.type,
-      payload
-    });
-
-    this.logger.debug('Inserted event: ' + insertedId);
+    // const insertedId = await db.saveEvent(projectId, {
+    //   catcherType: JavascriptWorker.type,
+    //   payload
+    // });
+    //
+    // this.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
