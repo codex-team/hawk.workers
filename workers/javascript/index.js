@@ -1,11 +1,14 @@
 const path = require('path');
 
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const { Worker, ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
-const { decode } = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
+/**
+ * Worker for handling Javascript events
+ */
 class JavascriptWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
@@ -56,6 +59,7 @@ class JavascriptWorker extends Worker {
    * @param {Buffer} msg.content - Message content
    */
   async handle(msg) {
+    console.log(msg)
     let eventRaw;
 
     try {
@@ -67,13 +71,13 @@ class JavascriptWorker extends Worker {
     let projectId;
 
     try {
-      projectId = decode(eventRaw.token).projectId;
+      projectId = jwt.verify(eventRaw.token, process.env.JWT_SECRET).projectId;
     } catch (err) {
       throw new ParsingError('Can\'t decode token', err);
     }
 
     const event = eventRaw.payload;
-
+    console.log(event)
     let backtrace;
 
     try {
@@ -105,7 +109,7 @@ class JavascriptWorker extends Worker {
     };
 
     const insertedId = await db.saveEvent(projectId, {
-      catcherType: this.type,
+      catcherType: Worker.type,
       payload
     });
 

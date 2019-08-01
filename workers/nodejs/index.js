@@ -7,25 +7,18 @@ const db = require('../../lib/db/controller');
 const { decode } = require('jsonwebtoken');
 
 /**
- * @class NodeJSWorker
- * @extends {Worker}
+ * Worker for handling Node.js events
  */
 class NodeJSWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
-   *
-   * @readonly
-   * @static
-   * @memberof NodeJSWorker
    */
-  get type() {
+  static get type() {
     return 'errors/nodejs';
   }
 
   /**
    * Start consuming messages
-   *
-   * @memberof NodeJSWorker
    */
   async start() {
     await db.connect();
@@ -35,8 +28,6 @@ class NodeJSWorker extends Worker {
 
   /**
    * Finish everything
-   *
-   * @memberof NodeJSWorker
    */
   async finish() {
     await Promise.all([super.finish(), db.close()]);
@@ -54,7 +45,6 @@ class NodeJSWorker extends Worker {
    * Parses error trace
    *
    * @param {string} trace - Raw NodeJS error trace
-   * @memberof NodeJSWorker
    * @returns {ParsedLine[]} - Parsed trace
    */
   async parseTrace(trace) {
@@ -86,7 +76,6 @@ class NodeJSWorker extends Worker {
    * @override
    * @param {Object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
-   * @memberof NodeJSWorker
    */
   async handle(msg) {
     let eventRaw;
@@ -141,7 +130,7 @@ class NodeJSWorker extends Worker {
     };
 
     const insertedId = await db.saveEvent(projectId, {
-      catcherType: this.type,
+      catcherType: Worker.type,
       payload
     });
 
