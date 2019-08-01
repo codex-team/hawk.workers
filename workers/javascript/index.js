@@ -1,7 +1,3 @@
-const path = require('path');
-
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-
 const { Worker, ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
 const jwt = require('jsonwebtoken');
@@ -21,6 +17,7 @@ class JavascriptWorker extends Worker {
    * Start consuming messages
    */
   async start() {
+    console.log(this.constructor.type)
     await db.connect();
 
     await super.start();
@@ -47,7 +44,7 @@ class JavascriptWorker extends Worker {
    * @param {string} trace - Raw NodeJS error trace
    * @returns {ParsedLine[]} - Parsed trace
    */
-  async parseTrace(trace) {
+  static async parseTrace(trace) {
     return [];
   }
 
@@ -58,7 +55,7 @@ class JavascriptWorker extends Worker {
    * @param {Object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
-  async handle(msg) {
+  static async handle(msg) {
     let eventRaw;
 
     try {
@@ -80,7 +77,7 @@ class JavascriptWorker extends Worker {
     let backtrace;
 
     try {
-      backtrace = await this.parseTrace(event.stack);
+      backtrace = await JavascriptWorker.parseTrace(event.stack);
 
       backtrace = backtrace.map(el => {
         return {
@@ -95,7 +92,7 @@ class JavascriptWorker extends Worker {
     let timestamp;
 
     try {
-      timestamp = new Date(event.time).getTime();
+      timestamp = new Date(event.timestamp).getTime();
     } catch (e) {
       throw new ParsingError('Time parsing error');
     }
@@ -108,7 +105,7 @@ class JavascriptWorker extends Worker {
     };
 
     const insertedId = await db.saveEvent(projectId, {
-      catcherType: Worker.type,
+      catcherType: JavascriptWorker.type,
       payload
     });
 
