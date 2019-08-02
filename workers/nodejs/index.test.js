@@ -79,10 +79,8 @@ const BACKTRACE_VALID = [
 ];
 
 describe('NodeJSWorker', async () => {
-  const worker = new NodeJSWorker();
-
   it('should parse backtrace', async () => {
-    const parsed = await worker.parseTrace(TEST_MSG.stack);
+    const parsed = await NodeJSWorker.parseTrace(TEST_MSG.stack);
 
     expect(parsed).toEqual(BACKTRACE_VALID);
   });

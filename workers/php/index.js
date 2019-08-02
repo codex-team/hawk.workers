@@ -24,7 +24,7 @@ class PhpWorker extends Worker {
    * @param {Object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
    */
-  async handle(msg) {
+  static async handle(msg) {
     let phpError, payload;
 
     if (msg && msg.content) {
@@ -43,13 +43,15 @@ class PhpWorker extends Worker {
       }
 
       try {
-        payload = this.parseData(phpError.payload);
+        payload = PhpWorker.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }
 
       try {
-        await db.saveEvent(projectId, { catcherType: Worker.type, payload });
+        await db.saveEvent(projectId, {
+          catcherType: PhpWorker.type, payload
+        });
       } catch (err) {
         if (err instanceof ValidationError) {
           // @todo Send unprocessed msg back to queue?
@@ -81,8 +83,8 @@ class PhpWorker extends Worker {
    * @param {Object} obj - Object to parse
    * @returns {Object}
    */
-  parseData(obj) {
-    let payload = {};
+  static parseData(obj) {
+    const payload = {};
 
     payload.title = obj['error_description'] || '';
 
@@ -90,7 +92,7 @@ class PhpWorker extends Worker {
     payload.level = -1;
 
     try {
-      let timestamp = obj['http_params']['REQUEST_TIME'];
+      const timestamp = obj['http_params']['REQUEST_TIME'];
 
       payload.timestamp = new Date(timestamp);
     } catch (err) {
