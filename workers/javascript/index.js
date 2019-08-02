@@ -26,7 +26,8 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * Finish everything
    */
   async finish() {
-    await Promise.all([super.finish(), db.close()]);
+    await super.finish();
+    await db.close();
   }
 
   /**
