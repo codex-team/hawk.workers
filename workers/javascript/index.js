@@ -18,7 +18,6 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    */
   async start() {
     await db.connect();
-
     await super.start();
   }
 
@@ -39,12 +38,12 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    */
 
   /**
-   * Parses error trace
+   * Parses error trace (not implemented yet)
    *
-   * @param {string} trace - Raw NodeJS error trace
-   * @returns {ParsedLine[]} - Parsed trace
+   * @param {string} trace - Javascript error trace
+   * @returns {[]} - Parsed trace
    */
-  static async parseTrace(trace) {
+  static parseTrace(trace) {
     return [];
   }
 
