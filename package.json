@@ -6,6 +6,7 @@
     "repository": "git@github.com:codex-team/registry.git",
     "license": "MIT",
     "scripts": {
+        "test": "jest --coverage --silent",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
