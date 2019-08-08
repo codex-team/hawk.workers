@@ -39,7 +39,7 @@ const CATCHER_TOKEN = process.env.CATCHER_TOKEN || 'randomtoken';
  */
 const ERRORS_TYPE_COUNT = 10;
 
-let errorEmitter = new EventEmitter();
+const errorEmitter = new EventEmitter();
 
 const hawkCatcher = Hawk({
   url: CATCHER_URL,
@@ -51,7 +51,7 @@ class MyError extends Error {}
 const main = async () => {
   function namedFunc() {
     try {
-      let ind = Math.floor(Math.random() * ERRORS_TYPE_COUNT);
+      const ind = Math.floor(Math.random() * ERRORS_TYPE_COUNT);
 
       switch (ind) {
         case 0: {
@@ -77,7 +77,7 @@ const main = async () => {
         }
         case 5: {
           // Assertion Error
-          let x = Math.random() * 1000;
+          const x = Math.random() * 1000;
 
           assert.strictEqual(1, x);
           break;
@@ -134,7 +134,7 @@ const main = async () => {
 };
 
 function getRandomText() {
-  return randomWords({min: 3, max: 10}).join(' ');
+  return randomWords({ min: 3, max: 10 }).join(' ');
 }
 
 main();

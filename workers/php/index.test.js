@@ -47,7 +47,7 @@ describe('PHP Worker parsing', () => {
   });
 
   it('correct handle right message', async () => {
-    let obj = {
+    const obj = {
       token: TOKEN,
       payload: {
         ...TITLE_OBJ,
@@ -55,14 +55,14 @@ describe('PHP Worker parsing', () => {
         ...DEBUG_STACK_OBJ
       }
     };
-    let msg = { content: JSON.stringify(obj) };
+    const content = JSON.stringify(obj);
 
-    await expect(worker.handle(msg)).resolves.not.toThrowError();
+    await expect(PhpWorker.handle(content)).resolves.not.toThrowError();
   });
 
   it('returns right fields in payload', () => {
-    let obj = { ...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ };
-    let payload = worker.parseData(obj);
+    const obj = { ...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ };
+    const payload = PhpWorker.parseData(obj);
 
     expect(payload).toHaveProperty('title');
     expect(payload).toHaveProperty('timestamp');
@@ -72,12 +72,12 @@ describe('PHP Worker parsing', () => {
 
   it('throwing parsing error with wrong params in message', () => {
     expect(() => {
-      worker.parseData({});
+      PhpWorker.parseData({});
     }).toThrow(ParsingError);
   });
 
   it('returns right backtrace when it is detected', () => {
-    let payload = worker.parseData({
+    const payload = PhpWorker.parseData({
       ...TITLE_OBJ,
       ...TIMESTAMP_OBJ,
       ...DEBUG_STACK_OBJ

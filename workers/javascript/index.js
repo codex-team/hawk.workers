@@ -1,16 +1,15 @@
-const path = require('path');
-
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-
 const { Worker, ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
-const { decode } = require('jsonwebtoken');
+const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 
-class JavascriptWorker extends Worker {
+/**
+ * Worker for handling Javascript events
+ */
+class JavascriptWorker extends tokenVerifierMixin(Worker) {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  get type() {
+  static get type() {
     return 'errors/javascript';
   }
 
@@ -19,7 +18,6 @@ class JavascriptWorker extends Worker {
    */
   async start() {
     await db.connect();
-
     await super.start();
   }
 
@@ -27,7 +25,8 @@ class JavascriptWorker extends Worker {
    * Finish everything
    */
   async finish() {
-    await Promise.all([super.finish(), db.close()]);
+    await super.finish();
+    await db.close();
   }
 
   /**
@@ -39,12 +38,12 @@ class JavascriptWorker extends Worker {
    */
 
   /**
-   * Parses error trace
+   * Parses error trace (not implemented yet)
    *
-   * @param {string} trace - Raw NodeJS error trace
-   * @returns {ParsedLine[]} - Parsed trace
+   * @param {string} trace - Javascript error trace
+   * @returns {[]} - Parsed trace
    */
-  async parseTrace(trace) {
+  static parseTrace(trace) {
     return [];
   }
 
@@ -52,32 +51,15 @@ class JavascriptWorker extends Worker {
    * Message handle function
    *
    * @override
-   * @param {Object} msg - Message object from consume method
-   * @param {Buffer} msg.content - Message content
+   * @param {Object} event - Message object from consume method
    */
-  async handle(msg) {
-    let eventRaw;
-
-    try {
-      eventRaw = JSON.parse(msg.content.toString());
-    } catch (e) {
-      throw new ParsingError('Message parsing error');
-    }
-
-    let projectId;
-
-    try {
-      projectId = decode(eventRaw.token).projectId;
-    } catch (err) {
-      throw new ParsingError('Can\'t decode token', err);
-    }
-
-    const event = eventRaw.payload;
+  static async handle(event) {
+    await super.handle(event);
 
     let backtrace;
 
     try {
-      backtrace = await this.parseTrace(event.stack);
+      backtrace = await JavascriptWorker.parseTrace(event.stack);
 
       backtrace = backtrace.map(el => {
         return {
@@ -92,25 +74,25 @@ class JavascriptWorker extends Worker {
     let timestamp;
 
     try {
-      timestamp = new Date(event.time).getTime();
+      timestamp = new Date(event.payload.timestamp);
     } catch (e) {
       throw new ParsingError('Time parsing error');
     }
 
     const payload = {
-      title: event.message,
+      title: event.payload.event.message,
       timestamp,
       backtrace,
       context: event.context
     };
 
-    const insertedId = await db.saveEvent(projectId, {
-      catcherType: this.type,
+    const insertedId = await db.saveEvent(event.projectId, {
+      catcherType: JavascriptWorker.type,
       payload
     });
 
-    this.logger.debug('Inserted event: ' + insertedId);
+    JavascriptWorker.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
-module.exports = {JavascriptWorker};
+module.exports = { JavascriptWorker };

@@ -7,25 +7,18 @@ const db = require('../../lib/db/controller');
 const { decode } = require('jsonwebtoken');
 
 /**
- * @class NodeJSWorker
- * @extends {Worker}
+ * Worker for handling Node.js events
  */
 class NodeJSWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
-   *
-   * @readonly
-   * @static
-   * @memberof NodeJSWorker
    */
-  get type() {
+  static get type() {
     return 'errors/nodejs';
   }
 
   /**
    * Start consuming messages
-   *
-   * @memberof NodeJSWorker
    */
   async start() {
     await db.connect();
@@ -35,11 +28,10 @@ class NodeJSWorker extends Worker {
 
   /**
    * Finish everything
-   *
-   * @memberof NodeJSWorker
    */
   async finish() {
-    await Promise.all([super.finish(), db.close()]);
+    await super.finish();
+    await db.close();
   }
 
   /**
@@ -54,13 +46,12 @@ class NodeJSWorker extends Worker {
    * Parses error trace
    *
    * @param {string} trace - Raw NodeJS error trace
-   * @memberof NodeJSWorker
    * @returns {ParsedLine[]} - Parsed trace
    */
-  async parseTrace(trace) {
+  static async parseTrace(trace) {
     const parseRegexp = /at (.*) \((.*)\)/gm;
 
-    let parsed = [];
+    const parsed = [];
     let match;
 
     while ((match = parseRegexp.exec(trace)) !== null) {
@@ -86,9 +77,8 @@ class NodeJSWorker extends Worker {
    * @override
    * @param {Object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
-   * @memberof NodeJSWorker
    */
-  async handle(msg) {
+  static async handle(msg) {
     let eventRaw;
 
     try {
@@ -110,15 +100,17 @@ class NodeJSWorker extends Worker {
     let backtrace;
 
     try {
-      backtrace = await this.parseTrace(event.stack);
+      backtrace = await NodeJSWorker.parseTrace(event.stack);
 
       backtrace = backtrace.map(el => {
         return {
           file: el.file,
           line: isNaN(el.line) ? undefined : el.line
           /** @todo Add nodejs specific event fields to schema */
-          // func: el.func,
-          // pos: el.pos
+          /*
+           * func: el.func,
+           * pos: el.pos
+           */
         }; // Take only file and line field for schema
       });
     } catch (e) {
@@ -141,11 +133,11 @@ class NodeJSWorker extends Worker {
     };
 
     const insertedId = await db.saveEvent(projectId, {
-      catcherType: this.type,
+      catcherType: NodeJSWorker.type,
       payload
     });
 
-    this.logger.debug('Inserted event: ' + insertedId);
+    NodeJSWorker.logger.debug('Inserted event: ' + insertedId);
   }
 }
 

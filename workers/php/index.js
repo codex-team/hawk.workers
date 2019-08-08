@@ -8,19 +8,12 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 
 /**
  * Worker for saving PHP errors from catcher
- *
- * @class PhpWorker
- * @extends {Worker}
  */
 class PhpWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
-   *
-   * @readonly
-   * @static
-   * @memberof PhpWorker
    */
-  get type() {
+  static get type() {
     return 'errors/php';
   }
 
@@ -30,9 +23,8 @@ class PhpWorker extends Worker {
    * @override
    * @param {Object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
-   * @memberof PhpWorker
    */
-  async handle(msg) {
+  static async handle(msg) {
     let phpError, payload;
 
     if (msg && msg.content) {
@@ -51,13 +43,15 @@ class PhpWorker extends Worker {
       }
 
       try {
-        payload = this.parseData(phpError.payload);
+        payload = PhpWorker.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }
 
       try {
-        await db.saveEvent(projectId, { catcherType: this.type, payload });
+        await db.saveEvent(projectId, {
+          catcherType: PhpWorker.type, payload
+        });
       } catch (err) {
         if (err instanceof ValidationError) {
           // @todo Send unprocessed msg back to queue?
@@ -69,8 +63,6 @@ class PhpWorker extends Worker {
 
   /**
    * Start consuming messages and connect to db
-   *
-   * @memberof Worker
    */
   async start() {
     await db.connect();
@@ -79,8 +71,6 @@ class PhpWorker extends Worker {
 
   /**
    * Finish everything
-   *
-   * @memberof Worker
    */
   async finish() {
     await Promise.all([super.finish(), db.close()]);
@@ -91,10 +81,10 @@ class PhpWorker extends Worker {
    * to new universal format
    *
    * @param {Object} obj - Object to parse
-   * @returns {Obejct}
+   * @returns {Object}
    */
-  parseData(obj) {
-    let payload = {};
+  static parseData(obj) {
+    const payload = {};
 
     payload.title = obj['error_description'] || '';
 
@@ -102,7 +92,7 @@ class PhpWorker extends Worker {
     payload.level = -1;
 
     try {
-      let timestamp = obj['http_params']['REQUEST_TIME'];
+      const timestamp = obj['http_params']['REQUEST_TIME'];
 
       payload.timestamp = new Date(timestamp);
     } catch (err) {
