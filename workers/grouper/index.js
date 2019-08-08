@@ -5,12 +5,12 @@ const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 /**
  * Worker for handling Javascript events
  */
-class JavascriptWorker extends tokenVerifierMixin(Worker) {
+class GrouperWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
   static get type() {
-    return 'errors/javascript';
+    return 'grouper';
   }
 
   /**
@@ -56,45 +56,9 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
   async handle(event) {
     await super.handle(event);
 
-    let backtrace;
-
-    try {
-      backtrace = await JavascriptWorker.parseTrace(event.stack);
-
-      backtrace = backtrace.map(el => {
-        return {
-          file: el.file,
-          line: isNaN(el.line) ? undefined : el.line
-        };
-      });
-    } catch (e) {
-      throw new ParsingError('Stack parsing error');
-    }
-
-    let timestamp;
-
-    try {
-      timestamp = new Date(event.payload.timestamp);
-    } catch (e) {
-      throw new ParsingError('Time parsing error');
-    }
-
-    const payload = {
-      title: event.payload.event.message,
-      timestamp,
-      backtrace,
-      context: event.context
-    };
-
-    // console.log('delegating...');
-    await this.delegate(payload);
-    // const insertedId = await db.saveEvent(event.projectId, {
-    //   catcherType: JavascriptWorker.type,
-    //   payload
-    // });
-
-    // JavascriptWorker.logger.debug('Inserted event: ' + insertedId);
+    console.log('event');
+    console.log(event);
   }
 }
 
-module.exports = { JavascriptWorker };
+module.exports = { GrouperWorker };
