@@ -17,7 +17,6 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * Start consuming messages
    */
   async start() {
-    await db.connect();
     await super.start();
   }
 
@@ -26,7 +25,6 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    */
   async finish() {
     await super.finish();
-    await db.close();
   }
 
   /**
@@ -86,14 +84,11 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
       context: event.context
     };
 
-    // console.log('delegating...');
-    await this.delegate(payload);
-    // const insertedId = await db.saveEvent(event.projectId, {
-    //   catcherType: JavascriptWorker.type,
-    //   payload
-    // });
-
-    // JavascriptWorker.logger.debug('Inserted event: ' + insertedId);
+    await this.delegate({
+      projectId: event.projectId,
+      catcherType: JavascriptWorker.type,
+      payload
+    });
   }
 }
 

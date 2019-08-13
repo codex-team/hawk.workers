@@ -1,6 +1,6 @@
-const { Worker, ParsingError } = require('../../lib/worker');
+const { Worker } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
-const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
+const crypto = require('crypto');
 
 /**
  * Worker for handling Javascript events
@@ -30,24 +30,6 @@ class GrouperWorker extends Worker {
   }
 
   /**
-   * @typedef {Object} ParsedLine
-   * @property {string} [file] - Error file path
-   * @property {string} [func] - Error function
-   * @property {number} [line] - Error line number
-   * @property {number} [pos] - Error position on line
-   */
-
-  /**
-   * Parses error trace (not implemented yet)
-   *
-   * @param {string} trace - Javascript error trace
-   * @returns {[]} - Parsed trace
-   */
-  static parseTrace(trace) {
-    return [];
-  }
-
-  /**
    * Message handle function
    *
    * @override
@@ -56,8 +38,37 @@ class GrouperWorker extends Worker {
   async handle(event) {
     await super.handle(event);
 
-    console.log('event');
-    console.log(event);
+    const uniqueEventHash = crypto.createHmac('sha256', 'hell')
+      .update(event.catcherType + event.payload.title)
+      .digest('hex');
+
+    const uniqueEvent = await db.getEvent(event.projectId, {
+      groupHash: uniqueEventHash
+    });
+
+    if (!uniqueEvent) {
+      /**
+       * insert new event
+       */
+      await db.saveEvent(event.projectId, {
+        groupHash: uniqueEventHash,
+        count: 1,
+        catcherType: event.catcherType,
+        payload: event.payload
+      });
+    } else {
+      /**
+       * increment existed event's counter
+       */
+      await db.incrementEventCounter(event.projectId, {
+        groupHash: uniqueEventHash
+      });
+
+      /**
+       * save event's repetitions
+       */
+      // some code
+    }
   }
 }
 
