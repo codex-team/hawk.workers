@@ -1,5 +1,6 @@
 const { Worker } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
+const utils = require('../../lib/utils');
 const crypto = require('crypto');
 
 /**
@@ -19,6 +20,8 @@ class GrouperWorker extends Worker {
   async start() {
     await db.connect();
     await super.start();
+
+    testDiffs();
   }
 
   /**
@@ -69,6 +72,37 @@ class GrouperWorker extends Worker {
        */
       // some code
     }
+  }
+
+  /**
+   * Testing...
+   */
+  testDiffs() {
+    const a = {
+      a: 3,
+      d: 1,
+      b: {
+        c: {
+          d: 6,
+          e: []
+        }
+      }
+    };
+
+    const b = {
+      a: 2,
+      b: {
+        c: {
+          d: 5,
+          e: [1, 1, 2]
+        }
+      }
+    };
+
+    const c = utils.deepDiff(a, b);
+    console.log('c:', c);
+
+    console.log(utils.deepMerge(a, c)); // restore full object
   }
 }
 
