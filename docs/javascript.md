@@ -16,12 +16,12 @@
     "message": "Unexpected ';' at line 1",
     // Error type
     "type": "SyntaxError",
-    // TODO
-    "isTrusted": "todo",
+    // Real event? (false if was invoked by user)
+    "isTrusted": true,
     // Error object
     "error": {
       // Error message
-      "message": "todo",
+      "message": "Different error message",
       // Error stacktrace
       "stack": "at func ..."
     }
