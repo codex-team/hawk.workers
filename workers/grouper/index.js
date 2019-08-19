@@ -39,7 +39,7 @@ class GrouperWorker extends Worker {
   async handle(event) {
     await super.handle(event);
 
-    const uniqueEventHash = crypto.createHmac('sha256', 'hell')
+    const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
       .update(event.catcherType + event.payload.title)
       .digest('hex');
 
