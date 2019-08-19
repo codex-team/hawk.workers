@@ -20,8 +20,6 @@ class GrouperWorker extends Worker {
   async start() {
     await db.connect();
     await super.start();
-
-    testDiffs();
   }
 
   /**
@@ -50,9 +48,7 @@ class GrouperWorker extends Worker {
     });
 
     if (!uniqueEvent) {
-      /**
-       * insert new event
-       */
+      // insert new event
       await db.saveEvent(event.projectId, {
         groupHash: uniqueEventHash,
         count: 1,
@@ -60,49 +56,16 @@ class GrouperWorker extends Worker {
         payload: event.payload
       });
     } else {
-      /**
-       * increment existed event's counter
-       */
+      // increment existed event's counter
       await db.incrementEventCounter(event.projectId, {
         groupHash: uniqueEventHash
       });
 
-      /**
-       * save event's repetitions
-       */
-      // some code
+      // save event's repetitions
+      const diff = utils.deepDiff(uniqueEvent.payload, event.payload);
+
+      await db.saveRepetition(event.projectId, diff);
     }
-  }
-
-  /**
-   * Testing...
-   */
-  testDiffs() {
-    const a = {
-      a: 3,
-      d: 1,
-      b: {
-        c: {
-          d: 6,
-          e: []
-        }
-      }
-    };
-
-    const b = {
-      a: 2,
-      b: {
-        c: {
-          d: 5,
-          e: [1, 1, 2]
-        }
-      }
-    };
-
-    const c = utils.deepDiff(a, b);
-    console.log('c:', c);
-
-    console.log(utils.deepMerge(a, c)); // restore full object
   }
 }
 
