@@ -37,7 +37,7 @@ const main = async () => {
 
   try {
     await worker.start();
-    console.log(`Worker javascript started PID: ${process.pid}`);
+    console.log(`Worker grouper started PID: ${process.pid}`);
   } catch (e) {
     exceptionHandler(e);
   }
