@@ -25,8 +25,7 @@ const eventContent = {
 };
 
 describe('JavascriptWorker', () => {
-  let worker;
-
+  const worker = new JavascriptWorker();
   test('should return right worker type', () => {
     expect(JavascriptWorker.type).toEqual('errors/javascript');
   });
@@ -36,12 +35,11 @@ describe('JavascriptWorker', () => {
   });
 
   test('should start correctly', async () => {
-    worker = new JavascriptWorker();
     await worker.start();
   });
 
   test('should handle right messages', async () => {
-    await JavascriptWorker.handle(eventContent);
+    await worker.handle(eventContent);
   });
 
   test('should finish correctly', async () => {
