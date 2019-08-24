@@ -1,4 +1,5 @@
 const { Worker, ParsingError } = require('../../lib/worker');
+const { WorkerNames } = require('../../lib/workerNames');
 const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 
 /**
@@ -83,7 +84,7 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
       context: event.context
     };
 
-    await this.delegate({
+    await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
       catcherType: JavascriptWorker.type,
       payload

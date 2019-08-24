@@ -64,6 +64,7 @@ class GrouperWorker extends Worker {
       // save event's repetitions
       const diff = utils.deepDiff(uniqueEvent.payload, event.payload);
 
+      diff.groupHash = uniqueEventHash;
       await db.saveRepetition(event.projectId, diff);
     }
   }
