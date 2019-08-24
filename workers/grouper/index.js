@@ -67,6 +67,8 @@ class GrouperWorker extends Worker {
       diff.groupHash = uniqueEventHash;
       await db.saveRepetition(event.projectId, diff);
     }
+
+    await db.saveDailyEvents(event.projectId, uniqueEventHash);
   }
 }
 
