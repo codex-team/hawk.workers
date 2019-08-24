@@ -1,5 +1,5 @@
 const { Worker, ParsingError } = require('../../lib/worker');
-const { WorkerNames } = require('../../lib/workerNames');
+const WorkerNames = require('../../lib/workerNames');
 const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 
 /**
