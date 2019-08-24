@@ -1,5 +1,5 @@
 const { Worker, ParsingError } = require('../../lib/worker');
-const db = require('../../lib/db/controller');
+const WorkerNames = require('../../lib/workerNames');
 const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
 
 /**
@@ -17,7 +17,6 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * Start consuming messages
    */
   async start() {
-    await db.connect();
     await super.start();
   }
 
@@ -26,7 +25,6 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    */
   async finish() {
     await super.finish();
-    await db.close();
   }
 
   /**
@@ -53,7 +51,7 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * @override
    * @param {Object} event - Message object from consume method
    */
-  static async handle(event) {
+  async handle(event) {
     await super.handle(event);
 
     let backtrace;
@@ -86,12 +84,11 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
       context: event.context
     };
 
-    const insertedId = await db.saveEvent(event.projectId, {
+    await this.addTask(WorkerNames.GROUPER, {
+      projectId: event.projectId,
       catcherType: JavascriptWorker.type,
       payload
     });
-
-    JavascriptWorker.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
