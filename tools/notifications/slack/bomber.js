@@ -14,9 +14,11 @@ const connect = async () => {
   console.log('::connect');
   // Connect to RabbitMQ
   const conn = await amqp.connect(process.env.REGISTRY_URL);
+
   console.log('::connect conn');
   // Create channel
   const channel = await conn.createChannel();
+
   console.log('::connect channel');
 
   // Assert queue exists
@@ -33,6 +35,7 @@ const close = async (conn, channel) => {
 (async () => {
   console.log('::main');
   const { conn, channel } = await connect();
+
   console.log('::main connected');
   const msg = JSON.stringify({
     hook: process.env.SLACK_HOOK,

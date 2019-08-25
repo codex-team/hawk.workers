@@ -86,13 +86,13 @@ class PhpWorker extends Worker {
   static parseData(obj) {
     const payload = {};
 
-    payload.title = obj['error_description'] || '';
+    payload.title = obj.error_description || '';
 
     // @todo откуда это брать?
     payload.level = -1;
 
     try {
-      const timestamp = obj['http_params']['REQUEST_TIME'];
+      const timestamp = obj.http_params.REQUEST_TIME;
 
       payload.timestamp = new Date(timestamp);
     } catch (err) {
@@ -100,9 +100,9 @@ class PhpWorker extends Worker {
     }
 
     // Check optional field 'backtrace'
-    if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
+    if (obj.debug_backtrace && obj.debug_backtrace.length) {
       payload.backtrace = [];
-      obj['debug_backtrace'].forEach(item => {
+      obj.debug_backtrace.forEach(item => {
         if (item.file && item.line) {
           payload.backtrace.push({
             file: item.file,

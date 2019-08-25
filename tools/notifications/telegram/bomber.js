@@ -35,7 +35,7 @@ const close = async (conn, channel) => {
 (async () => {
   console.log('::main');
   const { conn, channel } = await connect();
-  
+
   console.log('::main connected');
   const msg = JSON.stringify({
     hook: process.env.TELEGRAM_BOT_HOOK,
