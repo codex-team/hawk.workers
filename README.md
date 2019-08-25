@@ -125,3 +125,25 @@ await db.saveEvent(event);
   }
 }
 ```
+
+## Migrations
+
+To create new migration use command
+
+```jsonc
+yarn migration create {migrationName} 
+```
+
+Each migration file contains two methods: up and down.
+ 
+`Up` method executes revision and increases database version.
+ 
+`Down` method rollbacks database changes
+
+To execute migration run
+
+```jsonc
+yarn migration up (or down)
+```
+
+[More details](https://www.npmjs.com/package/migrate-mongo)

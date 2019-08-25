@@ -26,6 +26,7 @@ const eventContent = {
 
 describe('JavascriptWorker', () => {
   const worker = new JavascriptWorker();
+
   test('should return right worker type', () => {
     expect(JavascriptWorker.type).toEqual('errors/javascript');
   });
