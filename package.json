@@ -13,7 +13,7 @@
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "worker:nodejs": "node workers/nodejs/runner.js",
-        "migrate": "./node_modules/migrate-mongo/bin/migrate-mongo.js"
+        "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
