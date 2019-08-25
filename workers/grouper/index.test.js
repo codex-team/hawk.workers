@@ -1,4 +1,6 @@
 const { GrouperWorker } = require('./index');
+const { ValidationError, DatabaseError } = require('../../lib/worker');
+const mongodb = require('mongodb');
 
 const eventContent = {
   // eslint-disable-next-line camelcase
@@ -25,6 +27,44 @@ describe('GrouperWorker', () => {
 
   test('should handle right messages', async () => {
     await worker.handle(eventContent);
+  });
+
+  test('show save event and return id', async () => {
+    const result = await worker.saveEvent('5d206f7f9aaf7c0071d64596', {
+      catcherType: 'grouper',
+      payload: {
+        title: 'testing',
+        timestamp: new Date()
+      }
+    });
+
+    const insertedId = mongodb.ObjectID.isValid(result);
+    expect(insertedId).toBe(true);
+  });
+
+  test('throw error if project id not mongodb id', async () => {
+    expect(
+      worker.saveEvent('10', {})
+    ).rejects.toThrowError();
+  });
+
+  test('throw error if event data not mongodb id', async () => {
+    expect(
+      worker.saveEvent('5d206f7f9aaf7c0071d64596', {})
+    ).rejects.toThrowError();
+  });
+
+  test('save repetition should return mongodb id', async () => {
+    const result = await worker.saveRepetition('5d206f7f9aaf7c0071d64596',{
+      catcherType: 'grouper',
+      payload: {
+        title: 'testing',
+        timestamp: new Date()
+      },
+    });
+
+    const insertedId = mongodb.ObjectID.isValid(result);
+    expect(insertedId).toBe(true);
   });
 
   test('should finish correctly', async () => {
