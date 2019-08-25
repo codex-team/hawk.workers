@@ -61,7 +61,7 @@ describe('GrouperWorker', () => {
       payload: {
         title: 'testing',
         timestamp: new Date()
-      },
+      }
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
