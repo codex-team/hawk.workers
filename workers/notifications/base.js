@@ -1,4 +1,5 @@
 const { Worker, CriticalError, NonCriticalError } = require('../../lib/worker');
+const { NOTIFY_EMAIL, NOTIFY_SLACK, NOTIFY_TELEGRAM } = require('../../lib/workerNames');
 
 /**
  * Notification worker base class
@@ -20,4 +21,10 @@ class ParamError extends NonCriticalError {
 
 }
 
-module.exports = { NotificationWorker, RequestFailedError, ParamError };
+const providerQueues = {
+  email: NOTIFY_EMAIL,
+  telegram: NOTIFY_TELEGRAM,
+  slack: NOTIFY_SLACK
+};
+
+module.exports = { NotificationWorker, RequestFailedError, ParamError, providerQueues };
