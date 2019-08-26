@@ -5,6 +5,7 @@ const mongodb = require('mongodb');
 const utils = require('../../lib/utils');
 const crypto = require('crypto');
 const { eventSchema } = require('../../lib/db/models/event');
+const { NOTIFY_CHECKER } = require('../../lib/workerNames');
 
 /**
  * Worker for handling Javascript events
@@ -58,6 +59,14 @@ class GrouperWorker extends Worker {
         catcherType: event.catcherType,
         payload: event.payload
       });
+
+      // Send notification about error
+      await this.addTask(NOTIFY_CHECKER, {
+        projectId: event.projectId,
+        new: true,
+        catcherType: event.catcherType,
+        payload: event.payload
+      });
     } else {
       // increment existed event's counter
       await this.incrementEventCounter(event.projectId, {
@@ -69,6 +78,12 @@ class GrouperWorker extends Worker {
 
       diff.groupHash = uniqueEventHash;
       await this.saveRepetition(event.projectId, diff);
+      await this.addTask(NOTIFY_CHECKER, {
+        projectId: event.projectId,
+        new: false,
+        catcherType: event.catcherType,
+        payload: event.payload
+      });
     }
 
     await this.saveDailyEvents(event.projectId, uniqueEventHash);
