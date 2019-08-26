@@ -207,7 +207,7 @@ class GrouperWorker extends Worker {
         .update(
           { groupHash: eventHash, date: currentDate },
           {
-            $set: { groupHash: eventHash, currentDate: currentDate },
+            $set: { groupHash: eventHash, date: currentDate },
             $inc: { count: 1 }
           },
           { upsert: true });
