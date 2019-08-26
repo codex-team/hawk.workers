@@ -1,6 +1,25 @@
 const { Worker, ParsingError } = require('../../lib/worker');
 const WorkerNames = require('../../lib/workerNames');
 const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
+const db = require('../../lib/db/controller');
+
+/**
+ * @typedef {object} JSEvent
+ * @property {StackFrame[]} stack
+ */
+
+/**
+ * @typedef {object} StackFrame
+ * @see https://github.com/stacktracejs/stackframe
+ * @property {string} functionName — 'funName',
+ * @property {string[]} args — ['args']
+ * @property {string} fileName — 'http://localhost:3000/file.js'
+ * @property {number} lineNumber — 1,
+ * @property {number} columnNumber — 3288,
+ * @property {boolean} isEval — true,
+ * @property {boolean} isNative — false,
+ * @property {string} source — 'funcName@http://localhost:3000/file.js:1:3288'
+ */
 
 /**
  * Worker for handling Javascript events
@@ -17,6 +36,7 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * Start consuming messages
    */
   async start() {
+    await db.connect();
     await super.start();
   }
 
@@ -25,49 +45,18 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
    */
   async finish() {
     await super.finish();
-  }
-
-  /**
-   * @typedef {Object} ParsedLine
-   * @property {string} [file] - Error file path
-   * @property {string} [func] - Error function
-   * @property {number} [line] - Error line number
-   * @property {number} [pos] - Error position on line
-   */
-
-  /**
-   * Parses error trace (not implemented yet)
-   *
-   * @param {string} trace - Javascript error trace
-   * @returns {[]} - Parsed trace
-   */
-  static parseTrace(trace) {
-    return [];
+    await db.close();
   }
 
   /**
    * Message handle function
    *
    * @override
-   * @param {Object} event - Message object from consume method
+   * @param {{token: string, payload: {location: {url, origin, host, port, path}, timestamp, userAgent: {name, frame:{}}, event: {colno}}}} event - Message object from consume method
    */
   async handle(event) {
+    console.log('event', event);
     await super.handle(event);
-
-    let backtrace;
-
-    try {
-      backtrace = await JavascriptWorker.parseTrace(event.stack);
-
-      backtrace = backtrace.map(el => {
-        return {
-          file: el.file,
-          line: isNaN(el.line) ? undefined : el.line
-        };
-      });
-    } catch (e) {
-      throw new ParsingError('Stack parsing error');
-    }
 
     let timestamp;
 
@@ -80,15 +69,26 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
     const payload = {
       title: event.payload.event.message,
       timestamp,
-      backtrace,
+      backtrace: event.stack,
       context: event.context
     };
+
+    /**
+     * @todo 1. Inspect 'event' object structure
+     * @todo 2. Get current error location
+     * @todo 3. Pass +-5 code lines from catcher
+     * @todo 4. Pass release identifier from catcher
+     * @todo 5. Check for release in 'releases-js' collection
+     * @todo 6. If release found, parse location, title and code by Source Maps or create a task for that.
+     */
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
       catcherType: JavascriptWorker.type,
       payload
     });
+
+
   }
 }
 
