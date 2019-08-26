@@ -205,9 +205,9 @@ class GrouperWorker extends Worker {
       await db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .update(
-          { groupHash: eventHash, currentDate: currentDate },
+          { groupHash: eventHash, date: currentDate },
           {
-            $set: { groupHash: eventHash, currentDate: currentDate },
+            $set: { groupHash: eventHash, date: currentDate },
             $inc: { count: 1 }
           },
           { upsert: true });
