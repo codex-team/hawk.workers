@@ -1,13 +1,5 @@
-const dotenv = require('dotenv');
-const path = require('path');
 const nodemailer = require('nodemailer');
 const { NotificationWorker, ParamError } = require('../base');
-
-// Local config
-dotenv.config({ path: path.resolve(__dirname, '/.env') });
-
-// Global config
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 /**
  * Slack worker event format

@@ -1,3 +1,12 @@
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Local config
+dotenv.config({ path: path.resolve(__dirname, './.env') });
+
+// Global config
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
 const { EmailNotificationWorker } = require('./index');
 
 const main = async () => {
