@@ -65,6 +65,7 @@ class EmailNotificationWorker extends NotificationWorker {
         text: event.text,
         html: event.html
       });
+
       console.log(info);
     } catch (err) {
       throw new ParamError(err);
