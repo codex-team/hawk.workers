@@ -23,6 +23,7 @@
         "jsonwebtoken": "^8.5.1",
         "migrate-mongo": "^6.0.1",
         "mongodb": "^3.3.0-beta2",
+        "nodemailer": "^6.3.0",
         "querystring": "^0.2.0",
         "winston": "^3.2.1",
         "yup": "^0.27.0"
@@ -34,6 +35,7 @@
         "jest": "^24.8.0",
         "nodemon": "^1.18.9",
         "random-words": "^1.1.0",
+        "smtp-server": "^3.5.0",
         "yargs": "^13.3.0"
     }
 }
