@@ -4,11 +4,11 @@ const randomWords = require('random-words');
 const dotenv = require('dotenv');
 const { SlackNotificationWorker } = require('../../../workers/notifications/slack');
 
-// Global config
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
-
 // Local config
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Global config
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const connect = async () => {
   console.log('::connect');

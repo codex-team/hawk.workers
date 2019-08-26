@@ -5,7 +5,7 @@ const { NotificationWorker, RequestFailedError, ParamError } = require('../base'
 /**
  * Slack worker event format
  * @typedef {object} SlackEvent
- * @property {string} hook - Telegram Codex bot hook URL
+ * @property {string} hook - Slack incoming webhook URL
  * @property {string} text - Text to send
  */
 
