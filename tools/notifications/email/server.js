@@ -18,7 +18,7 @@ const server = new SMTPServer({
   banner: 'Welcome to My Awesome SMTP Server',
 
   // disable STARTTLS to allow authentication in clear text mode
-  disabledCommands: ['STARTTLS'],
+  disabledCommands: [ 'STARTTLS' ],
 
   // Accept messages up to 10 MB. This is a soft limit
   size: 10 * 1024 * 1024,
