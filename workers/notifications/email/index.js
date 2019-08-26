@@ -48,7 +48,6 @@ class EmailNotificationWorker extends NotificationWorker {
    * @returns {Promise<void>}
    */
   async handle(event) {
-    console.log(event);
     try {
       const info = await this.transport.sendMail({
         ...this.senderOptions,
@@ -57,8 +56,7 @@ class EmailNotificationWorker extends NotificationWorker {
         text: event.text,
         html: event.html
       });
-
-      console.log(info);
+      this.logger.verbose(`sent email ${JSON.stringify(info)}`);
     } catch (err) {
       throw new ParamError(err);
     }
