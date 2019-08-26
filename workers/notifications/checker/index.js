@@ -1,14 +1,6 @@
-const dotenv = require('dotenv');
-const path = require('path');
 const { ObjectID } = require('mongodb');
 const db = require('../../../lib/db/controller');
-const { NotificationWorker, ParamError, providerQueues } = require('../base');
-
-// Local config
-dotenv.config({ path: path.resolve(__dirname, '/.env') });
-
-// Global config
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+const { NotificationWorker, providerQueues } = require('../base');
 
 /**
  *
@@ -89,12 +81,14 @@ class NotifyCheckerWorker extends NotificationWorker {
    */
   async handle(event) {
     const notifies = await this.getNotifiesByProjectId(event.projectId);
-    const project = await this.getProjectById(event.projectId);
+    // const project = await this.getProjectById(event.projectId);
 
     for (const notify of notifies) {
       switch (notify.actionType) {
-        case this.actions.ONLY_NEW:
+        case NotifyCheckerWorker.actions.ONLY_NEW:
           if (event.new) {
+            this.logger.verbose(`Trying to send notification for notify ${JSON.stringify(notify)}\nevent ${JSON.stringify(event)}`);
+
             if (notify.settings.email && notify.settings.email.enabled) {
               await this.addTask(providerQueues.email, {
                 to: notify.settings.email.value,
