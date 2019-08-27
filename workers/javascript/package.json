@@ -6,9 +6,6 @@
   "author": "CodeX",
   "license": "UNLICENSED",
   "private": true,
-  "scripts": {
-    "start": "ts-node src/index.ts"
-  },
   "devDependencies": {
     "@types/node": "^12.7.2",
     "ts-node": "^8.3.0",

@@ -1,6 +1,3 @@
-import { Worker } from './lib/worker';
-import {timingSafeEqual} from 'crypto';
-
 /**
  * Get worker name(s) from command line arguments
  *
@@ -20,15 +17,12 @@ class WorkerRunner {
   private workers: any[] = [];
 
   /**
-   * Nodejs current process id
-   */
-  private processId: number;
-
-  /**
    * Create runner instance
    * @param {string[]} workers - workers package names
    */
   constructor(workers: string[]){
+    
+    console.log('workers', workers);
     /**
      * 1. Load workers packages
      * 2. Create instances (start)
@@ -156,7 +150,7 @@ class WorkerRunner {
    * Stops all workers
    */
   private async finishAll(){
-    return Promise.all(this.workers.map(( async (worker)=> {
+    return Promise.all(this.workers.map(( async (worker) => {
       return await this.stopWorker(worker);
     })));
   }

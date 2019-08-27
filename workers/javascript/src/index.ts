@@ -55,7 +55,6 @@ export default class JavascriptWorker extends tokenVerifierMixin(Worker) {
    * @param {{token: string, payload: {location: {url, origin, host, port, path}, timestamp, userAgent: {name, frame:{}}, event: {colno}}}} event - Message object from consume method
    */
   async handle(event) {
-    console.log('event', event);
     await super.handle(event);
 
     let timestamp;
