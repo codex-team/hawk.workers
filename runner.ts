@@ -1,4 +1,5 @@
 import { Worker } from './lib/worker';
+import {timingSafeEqual} from 'crypto';
 
 /**
  * Get worker name(s) from command line arguments
@@ -19,6 +20,11 @@ class WorkerRunner {
   private workers: any[] = [];
 
   /**
+   * Nodejs current process id
+   */
+  private processId: number;
+
+  /**
    * Create runner instance
    * @param {string[]} workers - workers package names
    */
@@ -30,7 +36,6 @@ class WorkerRunner {
      */
     this.loadPackages()
       .then((workers) => {
-        console.log('✓ Workers loaded.');
         this.constructWorkers(workers);
       })
       .then(() => {
@@ -76,7 +81,7 @@ class WorkerRunner {
       try {
         await worker.start();
 
-        console.log(`Worker ${typeof worker} started PID: ${process.pid}`);
+        console.log('\x1b[32m%s\x1b[0m', `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`);
       } catch (startingError) {
         this.exceptionHandler(startingError);
 
@@ -93,9 +98,8 @@ class WorkerRunner {
    * - Unhandled Promise Rejection at Runner work
    */
   private exceptionHandler(error: Error){
-    console.log('\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error have been occurred');
-    console.log(error.name === 'MongoNetworkError' ? 'Mongo connection error:' : 'Uncaught exception:');
-    console.error(error);
+    console.log('\x1b[41m%s\x1b[0m', '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error have been occurred: \n');
+    console.log(error);
     console.log('\n\n');
   }
 
@@ -103,15 +107,23 @@ class WorkerRunner {
    * Finish workers when something happened with the process
    */
   private observeProcess(){
-    process.on('SIGINT', () => {
+    process.on('SIGINT', async () => {
       console.log('SIGINT');
 
-      this.finishAll();
+      await this.finishAll();
+
+      process.exit( 0 );
     });
-    process.on('SIGTERM', () => {
+    process.on('SIGTERM', async() => {
       console.log('SIGTERM');
 
-      this.finishAll();
+      await this.finishAll();
+
+      process.exit();
+    });
+    process.on('exit', () => {
+      console.log('exitting...');
+      process.kill( process.pid, 'SIGTERM' );
     });
     (process as NodeJS.EventEmitter).on('uncaughtException',async (event: {error}) => {
       this.exceptionHandler(event.error);
@@ -133,6 +145,8 @@ class WorkerRunner {
   private async stopWorker(worker){
     try {
       await worker.finish();
+
+      console.log('\x1b[33m%s\x1b[0m', `\n\n Worker ${worker.constructor.name} stopped \n`);
     } catch (finishingError) {
       console.error('Error while finishing Worker: ', finishingError);
     }
@@ -142,9 +156,9 @@ class WorkerRunner {
    * Stops all workers
    */
   private async finishAll(){
-    await this.workers.forEach(( async (worker)=> {
-      await this.stopWorker(worker);
-    }));
+    return Promise.all(this.workers.map(( async (worker)=> {
+      return await this.stopWorker(worker);
+    })));
   }
 }
 
