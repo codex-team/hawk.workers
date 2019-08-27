@@ -1,4 +1,4 @@
-const { JavascriptWorker } = require('./index');
+import JavascriptWorker from '../src';
 
 const eventContent = {
   token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI1ZDIyMTNmYTBmMjkwYzAxNDRhNjljNDYiLCJpYXQiOjE1NjQ2Nzg5MDN9.8GAVXDcXa8DRyW2oBXB9fcjT7Ed-bLg8u6WyDatfLvs',
@@ -30,10 +30,6 @@ describe('JavascriptWorker', () => {
 
   test('should return right worker type', () => {
     expect(JavascriptWorker.type).toEqual('errors/javascript');
-  });
-
-  test('should not parse backtrace (not implemented)', async () => {
-    expect(JavascriptWorker.parseTrace('TEST_MSG.stack')).toEqual([]);
   });
 
   test('should start correctly', async () => {

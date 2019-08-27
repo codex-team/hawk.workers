@@ -38,6 +38,7 @@ class GrouperWorker extends Worker {
    * Message handle function
    *
    * @override
+   * @todo describe event object structure in jsdoc
    * @param {Object} event - Message object from consume method
    */
   async handle(event) {

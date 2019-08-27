@@ -2,12 +2,12 @@ dist: trusty
 sudo: required
 language: node_js
 node_js:
-  - "11"
+  - "10"
 services:
   - mongodb
   - rabbitmq
 before_install:
-  - yarn add global jest codecov
+  - yarn add global jest codecov -W
 install:
   - yarn install
 before_script:
