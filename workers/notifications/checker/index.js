@@ -21,18 +21,31 @@ const { NotificationWorker, providerQueues } = require('../base');
 
 /**
  * @typedef {Object} NotifySchema
- * @property {ObjectID} _id - notify ID
- * @property {ObjectID} userId - user ID
  * @property {number} actionType - action type
+ * @property {string} words - words to filter when actionType is INCLUDING
  * @property {NotifySettings} settings - notify settings
  */
 
 /**
+ * Event came from grouper worker
+ * @typedef {Object} GrouperEvent
+ * @property {string} projectId - event's project ID
+ * @property {boolean} new - New error or repetition
+ * @property {string} catcherType - event type (js, golang, etc)
+ * @property {object} payload - event payload
+ */
+
+/**
+ * @typedef {Object} MerchantEvent
+ * @property {string} userId - payer ID
+ * @property {string} workspaceId - workspace ID
+ * @property {number} amount - deposit amount in kopecs
+ */
+
+/**
  * @typedef {Object} NotifyCheckerEvent
- * @param {string} projectId - event's project ID
- * @param {boolean} new - New error or repetition
- * @param {string} catcherType - event type (js, golang, etc)
- * @param {object} payload - event payload
+ * @property {string} type - Type of event or message to process. 'event' || 'merchant'
+ * @property {GrouperEvent} payload - event payload
  */
 
 /**
@@ -44,18 +57,6 @@ class NotifyCheckerWorker extends NotificationWorker {
    */
   static get type() {
     return 'notify/check';
-  }
-
-  /**
-   * Action types
-   * @returns {{ALL: number, ONLY_NEW: number, INCLUDING: number}}
-   */
-  static get actions() {
-    return {
-      ONLY_NEW: 1,
-      ALL: 2,
-      INCLUDING: 3
-    };
   }
 
   /**
@@ -75,24 +76,47 @@ class NotifyCheckerWorker extends NotificationWorker {
   }
 
   /**
-   * Handles event
-   * @param {NotifyCheckerEvent} event
+   * Action types
+   * @returns {{ALL: 2, ONLY_NEW: 1, INCLUDING: 3}}
+   */
+  static get eventActions() {
+    return {
+      ONLY_NEW: 1,
+      ALL: 2,
+      INCLUDING: 3
+    };
+  }
+
+  /**
+   * Notify event types
+   * @returns {{EVENT: string, MERCHANT: string}}
+   */
+  static get notifyTypes() {
+    return {
+      EVENT: 'event',
+      MERCHANT: 'merchant'
+    };
+  }
+
+  /**
+   * Check if need to send a notification about new error event and send it.
+   * @param {GrouperEvent} event
    * @returns {Promise<void>}
    */
-  async handle(event) {
+  async checkEvent(event) {
     const notifies = await this.getNotifiesByProjectId(event.projectId);
-    // const project = await this.getProjectById(event.projectId);
+    const project = await this.getProjectById(event.projectId);
 
     for (const notify of notifies) {
       switch (notify.actionType) {
-        case NotifyCheckerWorker.actions.ONLY_NEW:
+        case NotifyCheckerWorker.eventActions.ONLY_NEW:
           if (event.new) {
             this.logger.verbose(`Trying to send notification for notify ${JSON.stringify(notify)}\nevent ${JSON.stringify(event)}`);
 
             if (notify.settings.email && notify.settings.email.enabled) {
               await this.addTask(providerQueues.email, {
                 to: notify.settings.email.value,
-                subject: 'VAM OSHIBOCHKA',
+                subject: `VAM OSHIBOCHKA v ${project.name}`,
                 text: `Pohozhe u vas trouble :(\n${event.payload.title}`,
                 html: `<h1>Pohozhe u vas trouble :(</h1><br><code>${event.payload.title}</code>`
               });
@@ -101,7 +125,7 @@ class NotifyCheckerWorker extends NotificationWorker {
             if (notify.settings.tg && notify.settings.tg.enabled) {
               await this.addTask(providerQueues.telegram, {
                 hook: notify.settings.tg.value,
-                message: `<h1>Pohozhe u vas trouble :(</h1><br><code>${event.payload.title}</code>`,
+                message: `<h1>Pohozhe u vas trouble v ${project.name}:(</h1><br><code>${event.payload.title}</code>`,
                 parseMode: 'HTML'
               });
             }
@@ -109,12 +133,37 @@ class NotifyCheckerWorker extends NotificationWorker {
             if (notify.settings.slack && notify.settings.slack.enabled) {
               await this.addTask(providerQueues.slack, {
                 hook: notify.settings.tg.value,
-                text: `Pohozhe u vas trouble :(\n\`${event.payload.title}\``
+                text: `Pohozhe u vas trouble v ${project.name} :(\n\`${event.payload.title}\``
               });
             }
           }
           break;
       }
+    }
+  }
+
+  /**
+   * Check if need to send a notification about merchant event.
+   * @param event
+   * @returns {Promise<void>}
+   */
+  async checkMerchant(event) {
+
+  }
+
+  /**
+   * Handles event
+   * @param {NotifyCheckerEvent} event
+   * @returns {Promise<void>}
+   */
+  async handle(event) {
+    switch (event.type) {
+      case NotifyCheckerWorker.notifyTypes.EVENT:
+        await this.checkEvent(event.payload);
+        break;
+      case NotifyCheckerWorker.notifyTypes.MERCHANT:
+        await this.checkMerchant(event.payload);
+        break;
     }
   }
 
