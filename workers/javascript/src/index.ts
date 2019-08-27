@@ -1,7 +1,7 @@
-const { Worker, ParsingError } = require('../../lib/worker');
-const WorkerNames = require('../../lib/workerNames');
-const tokenVerifierMixin = require('../../lib/mixins/tokenVerifierMixin');
-const db = require('../../lib/db/controller');
+import { Worker, ParsingError } from '../../../lib/worker';
+import * as WorkerNames from '../../../lib/workerNames';
+const tokenVerifierMixin = require('../../../lib/mixins/tokenVerifierMixin');
+const db = require('../../../lib/db/controller');
 
 /**
  * @typedef {object} JSEvent
@@ -24,7 +24,7 @@ const db = require('../../lib/db/controller');
 /**
  * Worker for handling Javascript events
  */
-class JavascriptWorker extends tokenVerifierMixin(Worker) {
+export default class JavascriptWorker extends tokenVerifierMixin(Worker) {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -91,5 +91,3 @@ class JavascriptWorker extends tokenVerifierMixin(Worker) {
 
   }
 }
-
-module.exports = { JavascriptWorker };
