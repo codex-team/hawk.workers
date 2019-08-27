@@ -1,20 +1,22 @@
 [![Build Status](https://travis-ci.com/codex-team/hawk.workers.svg?branch=master)](https://travis-ci.com/codex-team/hawk.workers) [![Coverage Status](https://codecov.io/gh/codex-team/hawk.workers/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/codex-team/hawk.workers) [![Total alerts](https://img.shields.io/lgtm/alerts/g/codex-team/hawk.workers.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/codex-team/hawk.workers/alerts/) [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/codex-team/hawk.workers.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/codex-team/hawk.workers/context:javascript)
 
-# Hawk workers
+# Hawk Workers
 
-Workers for processing hawk's background tasks
+Workers are services for processing hawk's background tasks
 
-Registry - RabbitMQ
 
-> More info on setting up Registry [here](https://github.com/codex-team/hawk.registry)
 
 ## Requirements
 
 - [Registry](https://github.com/codex-team/hawk.registry)
 
-## Getting started
+Registry - RabbitMQ
 
-- Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/nodejs/index.js)
+> More info on setting up Registry [here](https://github.com/codex-team/hawk.registry)
+
+## How to write a Worker
+
+- Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/javascript/src/index.ts)
 
 - Define `type` - worker type (e.g `errors/nodejs`), which is also a Registry queue from where worker pulls tasks
 
@@ -25,6 +27,15 @@ Registry - RabbitMQ
 - Set `LOG_LEVEL` to `verbose` if you want message logs
 
   > Also you can use `worker.logger` which is [`winston.Logger`](https://github.com/winstonjs/winston) to log something
+                                                           >
+                                                           >
+## How to run workers
+
+1. Make sure you are in Workers root directory
+2. Add worker package as [Yarn Workspace](https://yarnpkg.com/lang/en/docs/workspaces/) — add worker's path to the root's package.json at "workspaces" section
+3. `yarn install`
+4. `yarn worker worker-package-name` (package name from worker's package.json). You can pass several workers separated by space.
+5. (Optionally) You can add own script to run specified worker, for example `"run-js": "ts-node ./runner.ts hawk-worker-javascript"`
 
 ## Running workers with PM2
 

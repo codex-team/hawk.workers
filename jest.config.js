@@ -7,5 +7,13 @@ module.exports = {
   /**
    * The test environment that will be used for testing
    */
-  testEnvironment: 'node'
+  testEnvironment: 'node',
+
+  /**
+   * TypeScript support
+   */
+
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest'
+  }
 };
