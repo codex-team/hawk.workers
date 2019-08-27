@@ -33,7 +33,7 @@ class TelegramCodexBotNotificationWorker extends NotificationWorker {
       await axios.post(event.hook, qs.stringify({
         message: event.message,
         // eslint-disable-next-line camelcase
-        parse_mode: event.parseMode
+        parse_mode: event.parseMode || 'Markdown'
       }), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
