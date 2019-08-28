@@ -5,8 +5,6 @@ const mongodb = require('mongodb');
 const utils = require('../../lib/utils');
 const crypto = require('crypto');
 
-const { eventSchema } = require('../../lib/db/models/event');
-
 /**
  * Worker for handling Javascript events
  */
@@ -105,26 +103,20 @@ class GrouperWorker extends Worker {
    * Save event to database
    *
    * @param {string|ObjectID} projectId - project id
-   * @param {EventSchema} eventData - event data
+   * @param {{groupHash: string, count: number, catcherType: string, payload: object}} groupedEventData - event data
    * @returns {Promise<mongodb.ObjectID>} saved event id
    * @throws {ValidationError} if `projectID` is not provided or invalid
    * @throws {ValidationError} if `eventData` is not a valid object
    */
-  async saveEvent(projectId, eventData) {
+  async saveEvent(projectId, groupedEventData) {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
     try {
-      await eventSchema.validate(eventData);
-    } catch (err) {
-      throw new ValidationError('Controller.saveEvent: ' + err);
-    }
-
-    try {
       const insertedEvent = await this.db.getConnection()
         .collection(`events:${projectId}`)
-        .insertOne(eventData);
+        .insertOne(groupedEventData);
 
       return insertedEvent.insertedId;
     } catch (err) {

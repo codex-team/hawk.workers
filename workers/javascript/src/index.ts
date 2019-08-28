@@ -1,12 +1,13 @@
-import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import { DatabaseController } from '../../../lib/db/controller';
 import { HawkEventJavascript } from '../types/hawk-event-javascript';
+import { EventWorker } from '../../../lib/event-worker';
 
 /**
  * Worker for handling Javascript events
+ * @extends Worker
  */
-export default class JavascriptWorker extends Worker {
+export default class JavascriptWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */

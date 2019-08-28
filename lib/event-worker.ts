@@ -1,5 +1,5 @@
 import Worker from './worker';
 
-export class EventWorker extends Worker {
-
+export abstract class EventWorker extends Worker {
 }
+
