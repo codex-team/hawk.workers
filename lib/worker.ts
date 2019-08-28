@@ -1,13 +1,14 @@
 import winston from 'winston';
 import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
 import {HawkEvent} from './types/hawk-event';
+import * as path from 'path';
+import * as amqp from 'amqplib';
+import { createLogger, format, transports } from 'winston';
+import * as dotenv from 'dotenv';
 
-const path = require('path');
-const amqp = require('amqplib');
-const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, colorize, simple, printf } = format;
 
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Base worker class for processing tasks
