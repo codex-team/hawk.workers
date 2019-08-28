@@ -1,5 +1,4 @@
 const { GrouperWorker } = require('./index');
-const { ValidationError, DatabaseError } = require('../../lib/worker');
 const mongodb = require('mongodb');
 
 const eventContent = {

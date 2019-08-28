@@ -16,8 +16,7 @@ class PhpWorker extends Worker {
   constructor() {
     super();
 
-    this.type = 'errors/php'
-
+    this.type = 'errors/php';
     this.db = new DatabaseController();
   }
 
