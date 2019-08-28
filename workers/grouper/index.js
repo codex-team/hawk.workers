@@ -116,7 +116,6 @@ class GrouperWorker extends Worker {
     }
 
     try {
-      eventData.payload.timestamp = new Date(eventData.payload.timestamp);
       await eventSchema.validate(eventData);
     } catch (err) {
       throw new ValidationError('Controller.saveEvent: ' + err);
