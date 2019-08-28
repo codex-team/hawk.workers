@@ -57,7 +57,7 @@ describe('PHP Worker parsing', () => {
     };
     const content = JSON.stringify(obj);
 
-    await expect(PhpWorker.handle(content)).resolves.not.toThrowError();
+    await expect(worker.handle(content)).resolves.not.toThrowError();
   });
 
   it('returns right fields in payload', () => {

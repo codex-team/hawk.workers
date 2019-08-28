@@ -1,5 +1,5 @@
 const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
-const db = require('../../lib/db/controller');
+const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
 const { decode } = require('jsonwebtoken');
 const { ValidationError } = require('yup');
@@ -10,6 +10,17 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
  * Worker for saving PHP errors from catcher
  */
 class PhpWorker extends Worker {
+  /**
+   * Create new instance
+   */
+  constructor() {
+    super();
+
+    this.type = 'errors/php'
+
+    this.db = new DatabaseController();
+  }
+
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -24,7 +35,7 @@ class PhpWorker extends Worker {
    * @param {Object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
    */
-  static async handle(msg) {
+  async handle(msg) {
     let phpError, payload;
 
     if (msg && msg.content) {
@@ -49,7 +60,7 @@ class PhpWorker extends Worker {
       }
 
       try {
-        await db.saveEvent(projectId, {
+        await this.db.saveEvent(projectId, {
           catcherType: PhpWorker.type, payload
         });
       } catch (err) {
@@ -65,7 +76,7 @@ class PhpWorker extends Worker {
    * Start consuming messages and connect to db
    */
   async start() {
-    await db.connect();
+    await this.db.connect();
     await super.start();
   }
 
@@ -73,7 +84,7 @@ class PhpWorker extends Worker {
    * Finish everything
    */
   async finish() {
-    await Promise.all([super.finish(), db.close()]);
+    await Promise.all([super.finish(), this.db.close()]);
   }
 
   /**

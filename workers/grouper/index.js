@@ -1,9 +1,10 @@
 const { Worker } = require('../../lib/worker');
 const { ValidationError, DatabaseError } = require('../../lib/worker');
-const db = require('../../lib/db/controller');
+const { DatabaseController } = require('../../lib/db/controller');
 const mongodb = require('mongodb');
 const utils = require('../../lib/utils');
 const crypto = require('crypto');
+
 const { eventSchema } = require('../../lib/db/models/event');
 
 /**
@@ -11,17 +12,21 @@ const { eventSchema } = require('../../lib/db/models/event');
  */
 class GrouperWorker extends Worker {
   /**
-   * Worker type (will pull tasks from Registry queue with the same name)
+   * Create new instance
    */
-  static get type() {
-    return 'grouper';
+  constructor() {
+    super();
+
+    this.type = 'grouper';
+
+    this.db = new DatabaseController();
   }
 
   /**
    * Start consuming messages
    */
   async start() {
-    await db.connect();
+    await this.db.connect();
     await super.start();
   }
 
@@ -30,7 +35,7 @@ class GrouperWorker extends Worker {
    */
   async finish() {
     await super.finish();
-    await db.close();
+    await this.db.close();
   }
 
   /**
@@ -41,8 +46,6 @@ class GrouperWorker extends Worker {
    * @param {Object} event - Message object from consume method
    */
   async handle(event) {
-    await super.handle(event);
-
     const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
       .update(event.catcherType + event.payload.title)
       .digest('hex');
@@ -88,7 +91,7 @@ class GrouperWorker extends Worker {
     }
 
     try {
-      const data = db.getConnection()
+      const data = this.db.getConnection()
         .collection(`events:${projectId}`)
         .findOne(query);
 
@@ -120,7 +123,7 @@ class GrouperWorker extends Worker {
     }
 
     try {
-      const insertedEvent = await db.getConnection()
+      const insertedEvent = await this.db.getConnection()
         .collection(`events:${projectId}`)
         .insertOne(eventData);
 
@@ -143,7 +146,7 @@ class GrouperWorker extends Worker {
     }
 
     try {
-      const insertedRepetition = await db.getConnection()
+      const insertedRepetition = await this.db.getConnection()
         .collection(`repetitions:${projectId}`)
         .insertOne(eventDiff);
 
@@ -166,7 +169,7 @@ class GrouperWorker extends Worker {
     }
 
     try {
-      const data = await db.getConnection()
+      const data = await this.db.getConnection()
         .collection(`events:${projectId}`)
         .updateOne(query, {
           $inc: {
@@ -203,7 +206,7 @@ class GrouperWorker extends Worker {
         now.getFullYear()
       ].join('-');
 
-      await db.getConnection()
+      await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .update(
           { groupHash: eventHash, date: currentDate },

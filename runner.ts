@@ -21,7 +21,7 @@ class WorkerRunner {
    * @param {string[]} workers - workers package names
    */
   constructor(workers: string[]){
-    
+
     console.log('workers', workers);
     /**
      * 1. Load workers packages

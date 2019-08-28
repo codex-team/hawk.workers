@@ -5,7 +5,7 @@ const mongodb = require('mongodb');
 const eventContent = {
   // eslint-disable-next-line camelcase
   projectId: '5d206f7f9aaf7c0071d64596',
-  catcherType: 'errors/javascript',
+  catcherType: 'grouper',
   payload: {
     title: 'Hawk client catcher test',
     timestamp: '2019-08-19T19:58:12.579Z',
@@ -14,14 +14,13 @@ const eventContent = {
 };
 
 describe('GrouperWorker', () => {
-  let worker;
+  const worker = new GrouperWorker();
 
-  test('should return right worker type', () => {
-    expect(GrouperWorker.type).toEqual('grouper');
+  test('should return correct worker type', () => {
+    expect(worker.type).toEqual('grouper');
   });
 
   test('should start correctly', async () => {
-    worker = new GrouperWorker();
     await worker.start();
   });
 
