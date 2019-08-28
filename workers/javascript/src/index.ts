@@ -45,11 +45,6 @@ export default class JavascriptWorker extends EventWorker {
     await super.handle(event);
 
     /**
-     * Convert JS timestamp to Unix timestamp
-     */
-    event.payload.timestamp = event.payload.timestamp / 1000;
-
-    /**
      * @todo 2. Get current error location
      * @todo 3. Pass +-5 code lines from catcher
      * @todo 4. Pass release identifier from catcher

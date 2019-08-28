@@ -32,6 +32,7 @@ export interface EventData {
 
   /**
    * Occurrence time
+   * [!] Must be a Unix timestamp in seconds (example: 1567009247.576)
    */
   timestamp: number;
 
