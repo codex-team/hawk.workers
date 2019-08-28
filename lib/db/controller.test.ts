@@ -1,8 +1,13 @@
+import { DatabaseController } from './controller';
+import * as mongodb from 'mongodb';
 require('../../env');
-const db = require('./controller');
-const mongodb = require('mongodb');
 
-describe('DB contoroller', () => {
+/**
+ * Test for the Database Controller module
+ */
+describe('Database Contoroller Test', () => {
+  const db = new DatabaseController();
+
   describe('event', () => {
     beforeAll(async () => {
       await db.connect();
