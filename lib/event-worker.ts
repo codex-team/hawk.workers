@@ -1,4 +1,4 @@
-import Worker from './worker';
+import { Worker } from './worker';
 
 export abstract class EventWorker extends Worker {
 }
