@@ -1,10 +1,10 @@
 import winston from 'winston';
 import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
-import {HawkEvent} from './types/hawk-event';
 import * as path from 'path';
 import * as amqp from 'amqplib';
 import { createLogger, format, transports } from 'winston';
 import * as dotenv from 'dotenv';
+import { WorkerTask } from './types/worker-task';
 
 const { combine, timestamp, colorize, simple, printf } = format;
 
@@ -154,9 +154,9 @@ export abstract class Worker {
   /**
    * Message handle function
    *
-   * @param {HawkEvent} event - Event object from consume method
+   * @param {WorkerTask} event - Event object from consume method
    */
-  protected abstract handle(event: HawkEvent): Promise<void>;
+  protected abstract handle(event: WorkerTask): Promise<void>;
 
   /**
    * Adds task to other worker
@@ -227,7 +227,7 @@ export abstract class Worker {
    * @param {Buffer} msg.content - Message content
    */
   private async processMessage(msg: ConsumeMessage): Promise<void> {
-    let event: HawkEvent;
+    let event: WorkerTask;
 
     try {
       const stringifiedEvent = msg.content.toString();
@@ -333,11 +333,6 @@ export class ParsingError extends NonCriticalError {}
  * Class for database errors in workers
  */
 export class DatabaseError extends CriticalError {}
-
-/**
- * Class for errors in data structure
- */
-export class DataStructError extends NonCriticalError {}
 
 /**
  * Class for validation errors

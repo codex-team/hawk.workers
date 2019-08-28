@@ -2,6 +2,7 @@ import * as WorkerNames from '../../../lib/workerNames';
 import { DatabaseController } from '../../../lib/db/controller';
 import { HawkEventJavascript } from '../types/hawk-event-javascript';
 import { EventWorker } from '../../../lib/event-worker';
+import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 
 /**
  * Worker for handling Javascript events
@@ -16,11 +17,10 @@ export default class JavascriptWorker extends EventWorker {
   /**
    * Database Controller
    */
-  private db: DatabaseController;
+  private db: DatabaseController = new DatabaseController();
 
   constructor(){
     super();
-    this.db = new DatabaseController();
   }
 
   /**
@@ -55,7 +55,7 @@ export default class JavascriptWorker extends EventWorker {
     await this.addTask(WorkerNames.GROUPER, {
       projectId: this.projectId,
       catcherType: this.type,
-      payload: event
-    });
+      event: event.payload
+    } as GroupWorkerTask);
   }
 }

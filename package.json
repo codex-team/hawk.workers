@@ -6,7 +6,8 @@
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "UNLICENSED",
     "workspaces": [
-        "workers/javascript"
+        "workers/javascript",
+        "workers/grouper"
     ],
     "scripts": {
         "test": "jest --coverage --silent",
@@ -17,7 +18,8 @@
         "lint:fix": "eslint . --fix",
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
-        "run-js": "ts-node ./runner.ts hawk-worker-javascript"
+        "run-js": "ts-node ./runner.ts hawk-worker-javascript",
+        "run-grouper": "ts-node ./runner.ts hawk-worker-grouper"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
