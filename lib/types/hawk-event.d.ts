@@ -130,5 +130,5 @@ export interface User {
   /**
    * User's public picture
    */
-  photo?: string;
+  image?: string;
 }
