@@ -3,7 +3,7 @@ import { Worker } from './worker';
 import { HawkEvent } from './types/hawk-event';
 
 /**
- * Defines a Worker that handles events from Cather.
+ * Defines a Worker that handles events from Catсher.
  * Used to extract Project Id from Integration Token and to provide some common methods.
  *
  * catherTypes -> 'error/*'
