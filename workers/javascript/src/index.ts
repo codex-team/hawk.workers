@@ -43,7 +43,8 @@ export default class JavascriptWorker extends EventWorker {
    * Message handle function
    */
   public async handle(event: HawkEventJavascript): Promise<void> {
-    console.log('Gaat', event);
+    await super.handle(event);
+
     /**
      * @todo 2. Get current error location
      * @todo 3. Pass +-5 code lines from catcher
@@ -51,10 +52,8 @@ export default class JavascriptWorker extends EventWorker {
      * @todo 5. Check for release in 'releases-js' collection
      * @todo 6. If release found, parse location, title and code by Source Maps or create a task for that.
      */
-    const projectId = 12345;
-
     await this.addTask(WorkerNames.GROUPER, {
-      projectId,
+      projectId: this.projectId,
       catcherType: this.type,
       payload: event
     });

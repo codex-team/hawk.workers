@@ -1,6 +1,11 @@
 const { GrouperWorker } = require('./index');
 const mongodb = require('mongodb');
 
+/**
+ * @todo rewrite for TS
+ * @todo specify type of 'handle' message object
+ * @type {{payload: {backtrace: [], title: string, timestamp: string}, catcherType: string, projectId: string}}
+ */
 const eventContent = {
   // eslint-disable-next-line camelcase
   projectId: '5d206f7f9aaf7c0071d64596',

@@ -1,4 +1,4 @@
-const { Worker } = require('../../lib/worker');
+const { EventWorker } = require('../../lib/event-worker');
 const { ValidationError, DatabaseError } = require('../../lib/worker');
 const { DatabaseController } = require('../../lib/db/controller');
 const mongodb = require('mongodb');
@@ -8,7 +8,7 @@ const crypto = require('crypto');
 /**
  * Worker for handling Javascript events
  */
-class GrouperWorker extends Worker {
+class GrouperWorker extends EventWorker {
   /**
    * Create new instance
    */
@@ -44,17 +44,20 @@ class GrouperWorker extends Worker {
    * @param {Object} event - Message object from consume method
    */
   async handle(event) {
+    await super.handle(event);
+
+    console.log('HANDL,', this.projectId);
     const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
       .update(event.catcherType + event.payload.title)
       .digest('hex');
 
-    const uniqueEvent = await this.getEvent(event.projectId, {
+    const uniqueEvent = await this.getEvent(this.projectId, {
       groupHash: uniqueEventHash
     });
 
     if (!uniqueEvent) {
       // insert new event
-      await this.saveEvent(event.projectId, {
+      await this.saveEvent(this.projectId, {
         groupHash: uniqueEventHash,
         count: 1,
         catcherType: event.catcherType,
@@ -62,7 +65,7 @@ class GrouperWorker extends Worker {
       });
     } else {
       // increment existed event's counter
-      await this.incrementEventCounter(event.projectId, {
+      await this.incrementEventCounter(this.projectId, {
         groupHash: uniqueEventHash
       });
 
@@ -70,10 +73,10 @@ class GrouperWorker extends Worker {
       const diff = utils.deepDiff(uniqueEvent.payload, event.payload);
 
       diff.groupHash = uniqueEventHash;
-      await this.saveRepetition(event.projectId, diff);
+      await this.saveRepetition(this.projectId, diff);
     }
 
-    await this.saveDailyEvents(event.projectId, uniqueEventHash);
+    await this.saveDailyEvents(this.projectId, uniqueEventHash);
   }
 
   /**

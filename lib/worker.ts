@@ -154,9 +154,9 @@ export abstract class Worker {
   /**
    * Message handle function
    *
-   * @param {HawkEvent} msg - Message object from consume method
+   * @param {HawkEvent} event - Event object from consume method
    */
-  public abstract handle(msg: HawkEvent): Promise<void>;
+  protected abstract handle(event: HawkEvent): Promise<void>;
 
   /**
    * Adds task to other worker
