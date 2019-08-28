@@ -6,7 +6,6 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 
 /**
  * Worker for handling Javascript events
- * @extends Worker
  */
 export default class JavascriptWorker extends EventWorker {
   /**
@@ -44,6 +43,11 @@ export default class JavascriptWorker extends EventWorker {
    */
   public async handle(event: HawkEventJavascript): Promise<void> {
     await super.handle(event);
+
+    /**
+     * Convert JS timestamp to Unix timestamp
+     */
+    event.payload.timestamp = event.payload.timestamp / 1000;
 
     /**
      * @todo 2. Get current error location

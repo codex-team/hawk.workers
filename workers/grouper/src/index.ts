@@ -53,7 +53,7 @@ export default class GrouperWorker extends Worker {
       .digest('hex');
 
     /**
-     * Find event with save group hash
+     * Find event by group hash
      */
     const existedEvent = await this.getEvent(task.projectId, {
       groupHash: uniqueEventHash

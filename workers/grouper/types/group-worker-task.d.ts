@@ -12,7 +12,7 @@ export interface GroupWorkerTask extends WorkerTask{
   projectId: string;
 
   /**
-   * What type of event we accept
+   * What type of event we've accept
    */
   catcherType: string,
 

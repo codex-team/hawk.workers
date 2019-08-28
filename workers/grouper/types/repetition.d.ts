@@ -1,6 +1,9 @@
 import { ObjectId } from 'bson';
 import {BacktraceFrame, User} from '../../../lib/types/hawk-event';
 
+/**
+ * Repetition is a document contained diff with original event
+ */
 export interface Repetition {
   /**
    * Internal mongo id

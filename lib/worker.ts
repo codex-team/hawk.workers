@@ -106,12 +106,6 @@ export abstract class Worker {
   });
 
   /**
-   * Creates an instance of Worker
-   */
-  constructor() {
-  }
-
-  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
