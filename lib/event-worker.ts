@@ -1,6 +1,5 @@
-import * as jwt from 'jsonwebtoken';
 import { Worker } from './worker';
-import { HawkEvent } from './types/hawk-event';
+import { EventWorkerTask } from './types/event-worker-task';
 
 /**
  * Defines a Worker that handles events from Catсher.
@@ -17,7 +16,7 @@ export abstract class EventWorker extends Worker {
   /**
    * Parse JWT from 'token', extract Project Id and store it.
    */
-  async handle(event: HawkEvent): Promise<void> {
+  async handle(event: EventWorkerTask): Promise<void> {
     this.projectId = event.projectId;
   }
 }

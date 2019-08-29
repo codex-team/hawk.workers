@@ -1,7 +1,7 @@
-const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
+const { EventWorker } = require('../../lib/event-worker');
+const { ParsingError, DatabaseError } = require('../../lib/worker');
 const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
-const { decode } = require('jsonwebtoken');
 const { ValidationError } = require('yup');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
@@ -9,7 +9,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 /**
  * Worker for saving PHP errors from catcher
  */
-class PhpWorker extends Worker {
+module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
   /**
    * Create new instance
    */
@@ -44,23 +44,17 @@ class PhpWorker extends Worker {
         throw new ParsingError('Message parsing error', err);
       }
 
-      let projectId;
+      const projectId = this.projectId;
 
       try {
-        projectId = decode(phpError.token).projectId;
-      } catch (err) {
-        throw new ParsingError("Can't decode token", err);
-      }
-
-      try {
-        payload = PhpWorker.parseData(phpError.payload);
+        payload = PhpEventWorker.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }
 
       try {
         await this.db.saveEvent(projectId, {
-          catcherType: PhpWorker.type, payload
+          catcherType: PhpEventWorker.type, payload
         });
       } catch (err) {
         if (err instanceof ValidationError) {
@@ -132,5 +126,3 @@ class PhpWorker extends Worker {
     return payload;
   }
 }
-
-module.exports = { PhpWorker };

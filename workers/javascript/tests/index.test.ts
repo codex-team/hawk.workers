@@ -1,11 +1,11 @@
-import JavascriptWorker from '../src';
-import { HawkEventJavascript } from '../types/hawk-event-javascript';
+import JavascriptEventWorker from '../src';
+import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 
 /**
  * Testing Event
  */
 const testEventData = {
-  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI1ZDIyMTNmYTBmMjkwYzAxNDRhNjljNDYiLCJpYXQiOjE1NjQ2Nzg5MDN9.8GAVXDcXa8DRyW2oBXB9fcjT7Ed-bLg8u6WyDatfLvs',
+  projectId: '5d2213fa0f290c0144a69c46',
   catcherType: 'errors/javascript',
   payload: {
     title: 'TestError: Everything is fine.',
@@ -16,10 +16,10 @@ const testEventData = {
     user: null,
     context: null
   }
-} as HawkEventJavascript;
+} as JavaScriptEventWorkerTask;
 
-describe('JavascriptWorker', () => {
-  const worker = new JavascriptWorker();
+describe('JavascriptEventWorker', () => {
+  const worker = new JavascriptEventWorker();
 
   test('should have correct catcher type', () => {
     expect(worker.type).toEqual('errors/javascript');
