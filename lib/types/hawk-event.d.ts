@@ -5,9 +5,9 @@
  */
 export interface HawkEvent {
   /**
-   * User project's Integration Token
+   * User project's id extracted from Integration Token
    */
-  token: string;
+  projectId: string;
 
   /**
    * Hawk Catcher name

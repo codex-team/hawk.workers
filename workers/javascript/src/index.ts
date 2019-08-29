@@ -44,6 +44,8 @@ export default class JavascriptWorker extends EventWorker {
   public async handle(event: HawkEventJavascript): Promise<void> {
     await super.handle(event);
 
+    console.log('js', event);
+
     /**
      * @todo 2. Get current error location
      * @todo 3. Pass +-5 code lines from catcher

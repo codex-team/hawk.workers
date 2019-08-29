@@ -213,7 +213,7 @@ export default class GrouperWorker extends Worker {
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
-        .update(
+        .updateOne(
           { groupHash: eventHash, date: currentDate },
           {
             $set: { groupHash: eventHash, date: currentDate },
