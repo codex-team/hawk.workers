@@ -53,7 +53,7 @@ export default class GrouperWorker extends Worker {
       .digest('hex');
 
     /**
-     * Find event by group hash
+     * Find event by group hash.
      */
     const existedEvent = await this.getEvent(task.projectId, {
       groupHash: uniqueEventHash
@@ -213,7 +213,7 @@ export default class GrouperWorker extends Worker {
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
-        .update(
+        .updateOne(
           { groupHash: eventHash, date: currentDate },
           {
             $set: { groupHash: eventHash, date: currentDate },

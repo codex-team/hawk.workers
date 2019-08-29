@@ -1,4 +1,4 @@
-const { NodeJSWorker } = require('./index');
+const { NodejsEventWorker } = require('./index');
 
 /**
  * Test message
@@ -78,9 +78,9 @@ const BACKTRACE_VALID = [
   }
 ];
 
-describe('NodeJSWorker', () => {
+describe('NodejsEventWorker', () => {
   test('should parse backtrace', async () => {
-    const parsed = await NodeJSWorker.parseTrace(TEST_MSG.stack);
+    const parsed = await NodejsEventWorker.parseTrace(TEST_MSG.stack);
 
     expect(parsed).toEqual(BACKTRACE_VALID);
   });

@@ -1,6 +1,9 @@
-import {EventData, HawkEvent} from '../../../lib/types/hawk-event';
+import {EventData, EventWorkerTask} from '../../../lib/types/event-worker-task';
 
-export interface HawkEventJavascript extends HawkEvent {
+/**
+ * Format of task for JavaScript Event Worker
+ */
+export interface JavaScriptEventWorkerTask extends EventWorkerTask {
   /**
    * Language-specific payload
    */

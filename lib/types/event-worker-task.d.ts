@@ -1,13 +1,16 @@
+import { WorkerTask } from './worker-task';
+
 /**
- * Hawk Event format
+ * Format of task that handled by Event Workers
  *
  * @copyright CodeX
  */
-export interface HawkEvent {
+
+export interface EventWorkerTask extends WorkerTask {
   /**
-   * User project's Integration Token
+   * User project's id extracted from Integration Token
    */
-  token: string;
+  projectId: string;
 
   /**
    * Hawk Catcher name
