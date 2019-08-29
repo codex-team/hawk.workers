@@ -6,6 +6,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import * as mongodb from 'mongodb';
 import * as utils from '../../../lib/utils';
 import * as crypto from 'crypto';
+import * as pkg from '../package.json';
 
 /**
  * Worker for handling Javascript events
@@ -14,7 +15,7 @@ export default class GrouperWorker extends Worker {
   /**
    * Worker type
    */
-  public readonly type: string = 'grouper';
+  public readonly type: string = pkg.workerType;
 
   /**
    * Database Controller

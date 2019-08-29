@@ -18,8 +18,8 @@
         "lint:fix": "eslint . --fix",
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
-        "run-js": "ts-node ./runner.ts hawk-worker-javascript",
-        "run-grouper": "ts-node ./runner.ts hawk-worker-grouper"
+        "run-js": "yarn worker hawk-worker-javascript",
+        "run-grouper": "yarn worker hawk-worker-grouper"
     },
     "dependencies": {
         "amqplib": "^0.5.5",

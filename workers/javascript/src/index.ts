@@ -3,6 +3,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import { EventWorker } from '../../../lib/event-worker';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
+import * as pkg from '../package.json'
 
 /**
  * Worker for handling Javascript events
@@ -11,7 +12,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: string = 'errors/javascript';
+  public readonly type: string = pkg.workerType;
 
   /**
    * Database Controller
