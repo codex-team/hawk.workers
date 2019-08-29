@@ -125,4 +125,4 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
 
     return payload;
   }
-}
+};
