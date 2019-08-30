@@ -4,8 +4,8 @@ import {Db, MongoClient} from "mongodb";
 /**
  * Database connection singleton
  *
- * @param {mongodb.MongoClient} connection - MongoDB connection
- * @param {mongodb.Db} db - MongoDB connection database instance
+ * @param {MongoClient} connection - MongoDB connection
+ * @param {Db} db - MongoDB connection database instance
  */
 export class DatabaseController {
   /**

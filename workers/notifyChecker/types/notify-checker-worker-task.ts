@@ -1,11 +1,11 @@
-import {GroupedEvent} from '../../grouper/types/grouped-event';
+import {GroupedEvent} from "../../grouper/types/grouped-event";
 
 export enum notifyTypes {
-  EVENT = 'event',
-  MERCHANT = 'merchant'
+  EVENT = "event",
+  MERCHANT = "merchant",
 }
 
-interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, 'catcherType' | 'payload'> {
+export interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, "catcherType" | "payload"> {
   /**
    * Event project ID
    */
@@ -17,7 +17,7 @@ interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, 'catc
   new: boolean;
 }
 
-interface NotifyCheckerWorkerTaskPayloadMerchant {
+export interface NotifyCheckerWorkerTaskPayloadMerchant {
   /**
    * Transaction amount in kopecs
    */
@@ -36,7 +36,7 @@ interface NotifyCheckerWorkerTaskPayloadMerchant {
   /**
    * Timestamp
    */
-  timestamp: number
+  timestamp: number;
 }
 
 export interface NotifyCheckerWorkerTask {
@@ -48,5 +48,5 @@ export interface NotifyCheckerWorkerTask {
   /**
    * Task payload. Type-specific
    */
-  payload: NotifyCheckerWorkerTaskPayloadGrouper | NotifyCheckerWorkerTaskPayloadMerchant
+  payload: NotifyCheckerWorkerTaskPayloadGrouper | NotifyCheckerWorkerTaskPayloadMerchant;
 }

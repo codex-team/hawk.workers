@@ -1,12 +1,17 @@
+// tslint-ignore ordered-imports
 import {config} from "dotenv";
-import {NotifyEmailWorkerTask} from "hawk-worker-notify-email/types/notify-email-worker-task";
-import {ObjectID} from "mongodb";
 import {resolve} from "path";
+
+// Load .env before other imports to set proper vars
+config({path: resolve(__dirname, "../.env")});
+
+import {ObjectID} from "mongodb";
 import {DatabaseController} from "../../../lib/db/controller";
 import {eventActions, Notify} from "../../../lib/db/models/notify";
 import {Project} from "../../../lib/db/models/project";
 import {Worker} from "../../../lib/worker";
 import * as WorkerNames from "../../../lib/workerNames";
+import {NotifyEmailWorkerTask} from "../../notifyEmail/types/notify-email-worker-task";
 import {NotifySlackWorkerTask} from "../../notifySlack/types/notify-slack-worker-task";
 import {NotifyTelegramWorkerTask} from "../../notifyTelegram/types/notify-telegram-worker-task";
 import * as pkg from "../package.json";
@@ -16,9 +21,6 @@ import {
   NotifyCheckerWorkerTaskPayloadMerchant,
   notifyTypes,
 } from "../types/notify-checker-worker-task";
-
-// Load .env before other imports to set proper vars
-config({path: resolve(__dirname, "../.env")});
 
 /**
  * Worker for handling notify check events

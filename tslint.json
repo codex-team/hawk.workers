@@ -4,7 +4,11 @@
         "tslint:recommended"
     ],
     "jsRules": {},
-    "rules": {},
+    "rules": {
+        "object-literal-sort-keys": false,
+        "interface-name": false,
+        "max-classes-per-file": false
+    },
     "rulesDirectory": [],
     "linterOptions": {
         "exclude": ["**/*.js"]

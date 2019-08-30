@@ -1,5 +1,5 @@
 import {config} from "dotenv";
-import nodemailer from "nodemailer";
+import * as nodemailer from "nodemailer";
 import {resolve} from "path";
 import {NonCriticalError, Worker} from "../../../lib/worker";
 import * as pkg from "../package.json";
@@ -32,7 +32,12 @@ export default class EmailNotificationWorker extends Worker {
   constructor() {
     super();
 
-    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.USERNAME || !process.env.SMTP_PASSWORD || !process.env.SMTP_SENDER_NAME || !process.env.SMTP_SENDER_ADDRESS) {
+    if (!process.env.SMTP_HOST
+      || !process.env.SMTP_PORT
+      || !process.env.USERNAME
+      || !process.env.SMTP_PASSWORD
+      || !process.env.SMTP_SENDER_NAME
+      || !process.env.SMTP_SENDER_ADDRESS) {
       throw new Error("Required parameters are not set, see .env.sample");
     }
 

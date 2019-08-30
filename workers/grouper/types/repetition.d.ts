@@ -1,5 +1,5 @@
-import {ObjectId} from 'bson';
-import {BacktraceFrame, User} from '../../../lib/types/event-worker-task';
+import {ObjectId} from "bson";
+import {BacktraceFrame, User} from "../../../lib/types/event-worker-task";
 
 /**
  * Repetition is a document contained diff with original event

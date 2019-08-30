@@ -2,7 +2,7 @@ import * as amqp from "amqplib";
 import {Channel, Connection, ConsumeMessage, Message} from "amqplib";
 import * as dotenv from "dotenv";
 import * as path from "path";
-import winston, {createLogger, format, transports} from "winston";
+import {createLogger, format, transports} from "winston";
 import {WorkerTask} from "./types/worker-task";
 
 const {combine, timestamp, colorize, simple, printf} = format;
@@ -53,7 +53,7 @@ export abstract class Worker {
    * Logger module
    * (default level='info')
    */
-  protected logger: winston.Logger = createLogger({
+  protected logger = createLogger({
     level: process.env.LOG_LEVEL || "info",
     transports: [
       new transports.Console({

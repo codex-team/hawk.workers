@@ -122,26 +122,6 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Returns finds event by query from project with passed ID
-   *
-   * @param {string} projectId - project's identifier
-   * @param {EventSchema} query - mongo query string
-   */
-  private async getEvent(projectId: string, query): Promise<GroupedEvent> {
-    if (!mongodb.ObjectID.isValid(projectId)) {
-      throw new ValidationError("Controller.saveEvent: Project ID is invalid or missed");
-    }
-
-    try {
-      return this.db.getConnection()
-        .collection(`events:${projectId}`)
-        .findOne(query);
-    } catch (err) {
-      throw new DatabaseError(err);
-    }
-  }
-
-  /**
    * Save event to database
    *
    * @param {string|ObjectID} projectId - project id
@@ -204,6 +184,26 @@ export default class GrouperWorker extends Worker {
             count: 1,
           },
         })).modifiedCount;
+    } catch (err) {
+      throw new DatabaseError(err);
+    }
+  }
+
+  /**
+   * Returns finds event by query from project with passed ID
+   *
+   * @param {string} projectId - project's identifier
+   * @param {EventSchema} query - mongo query string
+   */
+  private async getEvent(projectId: string, query): Promise<GroupedEvent> {
+    if (!mongodb.ObjectID.isValid(projectId)) {
+      throw new ValidationError("Controller.saveEvent: Project ID is invalid or missed");
+    }
+
+    try {
+      return this.db.getConnection()
+        .collection(`events:${projectId}`)
+        .findOne(query);
     } catch (err) {
       throw new DatabaseError(err);
     }

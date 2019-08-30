@@ -8,6 +8,7 @@
         "allowSyntheticDefaultImports": true,
         "allowJs": true,
         "module": "commonjs",
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "outDir": "./dist"
     }
 }
