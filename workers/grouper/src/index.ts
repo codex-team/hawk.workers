@@ -7,6 +7,8 @@ import * as mongodb from 'mongodb';
 import * as utils from '../../../lib/utils';
 import * as crypto from 'crypto';
 import * as pkg from '../package.json';
+import * as WorkerNames from '../../../lib/workerNames';
+import {NotifyCheckerWorkerTask} from "../../notifyChecker/types/notify-checker-worker-task";
 
 /**
  * Worker for handling Javascript events
@@ -56,14 +58,14 @@ export default class GrouperWorker extends Worker {
     /**
      * Find event by group hash.
      */
-    const existedEvent = await this.getEvent(task.projectId, {
+    const existingEvent = await this.getEvent(task.projectId, {
       groupHash: uniqueEventHash
     });
 
     /**
      * Event happened for the first time
      */
-    const isFirstOccurrence = existedEvent === null;
+    const isFirstOccurrence = existingEvent === null;
 
     if (isFirstOccurrence) {
       /**
@@ -75,10 +77,18 @@ export default class GrouperWorker extends Worker {
         catcherType: task.catcherType,
         payload: task.event
       } as GroupedEvent);
-      // @todo: Send to notify checker
+      await this.addTask(WorkerNames.NOTIFYCHECKER, {
+        type: 'event',
+        payload: {
+          projectId: task.projectId,
+          new: true,
+          catcherType: task.catcherType,
+          payload: task.event
+        }
+      } as NotifyCheckerWorkerTask)
     } else {
       /**
-       * Increment existed task's counter
+       * Increment existing task's counter
        */
       await this.incrementEventCounter(task.projectId, {
         groupHash: uniqueEventHash
@@ -88,13 +98,21 @@ export default class GrouperWorker extends Worker {
        * Save event's repetitions
        */
       const diff = Object.assign(
-        utils.deepDiff(existedEvent.payload, task.event),
+        utils.deepDiff(existingEvent.payload, task.event),
         {
           groupHash: uniqueEventHash
         }
       ) as Repetition;
       await this.saveRepetition(task.projectId, diff);
-      // @todo: Send to notify checker
+      await this.addTask(WorkerNames.NOTIFYCHECKER, {
+        type: 'event',
+        payload: {
+          projectId: task.projectId,
+          new: false,
+          catcherType: task.catcherType,
+          payload: task.event
+        }
+      } as NotifyCheckerWorkerTask)
     }
 
     /**
@@ -217,12 +235,12 @@ export default class GrouperWorker extends Worker {
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
-          { groupHash: eventHash, date: currentDate },
+          {groupHash: eventHash, date: currentDate},
           {
-            $set: { groupHash: eventHash, date: currentDate },
-            $inc: { count: 1 }
+            $set: {groupHash: eventHash, date: currentDate},
+            $inc: {count: 1}
           },
-          { upsert: true });
+          {upsert: true});
     } catch (err) {
       throw new DatabaseError(err);
     }

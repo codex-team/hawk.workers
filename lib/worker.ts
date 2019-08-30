@@ -90,7 +90,7 @@ export abstract class Worker {
    * Logger module
    * (default level='info')
    */
-  private logger: winston.Logger = createLogger({
+  protected logger: winston.Logger = createLogger({
     level: process.env.LOG_LEVEL || 'info',
     transports: [
       new transports.Console({
