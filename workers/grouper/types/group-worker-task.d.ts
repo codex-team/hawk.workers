@@ -1,4 +1,4 @@
-import { EventData } from '../../../lib/types/hawk-event';
+import { EventData } from '../../../lib/types/event-worker-task';
 import { WorkerTask } from '../../../lib/types/worker-task';
 
 /**
