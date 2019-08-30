@@ -1,6 +1,11 @@
+// tslint-ignore ordered-imports
 import {config} from "dotenv";
-import * as nodemailer from "nodemailer";
 import {resolve} from "path";
+
+// Load .env before other imports to set proper vars
+config({path: resolve(__dirname, "../.env")});
+
+import * as nodemailer from "nodemailer";
 import {NonCriticalError, Worker} from "../../../lib/worker";
 import * as pkg from "../package.json";
 import {NotifyEmailWorkerTask} from "../types/notify-email-worker-task";
@@ -38,6 +43,7 @@ export default class EmailNotificationWorker extends Worker {
       || !process.env.SMTP_PASSWORD
       || !process.env.SMTP_SENDER_NAME
       || !process.env.SMTP_SENDER_ADDRESS) {
+      console.log(process.env);
       throw new Error("Required parameters are not set, see .env.sample");
     }
 
