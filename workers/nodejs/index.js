@@ -2,14 +2,14 @@ const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-const { Worker, ParsingError } = require('../../lib/worker');
+const { EventWorker } = require('../../lib/event-worker');
+const { ParsingError } = require('../../lib/worker');
 const db = require('../../lib/db/controller');
-const { decode } = require('jsonwebtoken');
 
 /**
  * Worker for handling Node.js events
  */
-class NodeJSWorker extends Worker {
+class NodejsEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -78,7 +78,7 @@ class NodeJSWorker extends Worker {
    * @param {Object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
-  static async handle(msg) {
+  async handle(msg) {
     let eventRaw;
 
     try {
@@ -87,20 +87,14 @@ class NodeJSWorker extends Worker {
       throw new ParsingError('Message parsing error');
     }
 
-    let projectId;
-
-    try {
-      projectId = decode(eventRaw.token).projectId;
-    } catch (err) {
-      throw new ParsingError("Can't decode token", err);
-    }
+    const projectId = this.projectId;
 
     const event = eventRaw.payload;
 
     let backtrace;
 
     try {
-      backtrace = await NodeJSWorker.parseTrace(event.stack);
+      backtrace = await NodejsEventWorker.parseTrace(event.stack);
 
       backtrace = backtrace.map(el => {
         return {
@@ -133,12 +127,12 @@ class NodeJSWorker extends Worker {
     };
 
     const insertedId = await db.saveEvent(projectId, {
-      catcherType: NodeJSWorker.type,
+      catcherType: NodejsEventWorker.type,
       payload
     });
 
-    NodeJSWorker.logger.debug('Inserted event: ' + insertedId);
+    NodejsEventWorker.logger.debug('Inserted event: ' + insertedId);
   }
 }
 
-module.exports = { NodeJSWorker };
+module.exports = { NodejsEventWorker };

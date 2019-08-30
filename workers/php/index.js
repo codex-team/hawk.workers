@@ -1,7 +1,7 @@
-const { Worker, ParsingError, DatabaseError } = require('../../lib/worker');
-const db = require('../../lib/db/controller');
+const { EventWorker } = require('../../lib/event-worker');
+const { ParsingError, DatabaseError } = require('../../lib/worker');
+const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
-const { decode } = require('jsonwebtoken');
 const { ValidationError } = require('yup');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
@@ -9,7 +9,17 @@ require('dotenv').config({ path: path.resolve(__dirname, '.', '.env') });
 /**
  * Worker for saving PHP errors from catcher
  */
-class PhpWorker extends Worker {
+module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
+  /**
+   * Create new instance
+   */
+  constructor() {
+    super();
+
+    this.type = 'errors/php';
+    this.db = new DatabaseController();
+  }
+
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -24,7 +34,7 @@ class PhpWorker extends Worker {
    * @param {Object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
    */
-  static async handle(msg) {
+  async handle(msg) {
     let phpError, payload;
 
     if (msg && msg.content) {
@@ -34,23 +44,17 @@ class PhpWorker extends Worker {
         throw new ParsingError('Message parsing error', err);
       }
 
-      let projectId;
+      const projectId = this.projectId;
 
       try {
-        projectId = decode(phpError.token).projectId;
-      } catch (err) {
-        throw new ParsingError("Can't decode token", err);
-      }
-
-      try {
-        payload = PhpWorker.parseData(phpError.payload);
+        payload = PhpEventWorker.parseData(phpError.payload);
       } catch (err) {
         throw new ParsingError('Data parsing error', err);
       }
 
       try {
-        await db.saveEvent(projectId, {
-          catcherType: PhpWorker.type, payload
+        await this.db.saveEvent(projectId, {
+          catcherType: PhpEventWorker.type, payload
         });
       } catch (err) {
         if (err instanceof ValidationError) {
@@ -65,7 +69,7 @@ class PhpWorker extends Worker {
    * Start consuming messages and connect to db
    */
   async start() {
-    await db.connect();
+    await this.db.connect();
     await super.start();
   }
 
@@ -73,7 +77,7 @@ class PhpWorker extends Worker {
    * Finish everything
    */
   async finish() {
-    await Promise.all([super.finish(), db.close()]);
+    await Promise.all([super.finish(), this.db.close()]);
   }
 
   /**
@@ -121,6 +125,4 @@ class PhpWorker extends Worker {
 
     return payload;
   }
-}
-
-module.exports = { PhpWorker };
+};

@@ -41,8 +41,8 @@ module.exports.SourceMapsWorker = class SourceMapsWorker extends Worker {
    * Source maps will stored in this collection
    * One for all projects
    */
-  get collectionName(){
-    return `releases-js`;
+  get collectionName() {
+    return 'releases-js';
   }
 
   /**

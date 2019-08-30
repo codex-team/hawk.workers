@@ -1,4 +1,5 @@
-const mongodb = require('mongodb');
+import * as mongodb from 'mongodb';
+import {Db, MongoClient} from 'mongodb';
 
 /**
  * Database connection singleton
@@ -6,7 +7,17 @@ const mongodb = require('mongodb');
  * @param {mongodb.MongoClient} connection - MongoDB connection
  * @param {mongodb.Db} db - MongoDB connection database instance
  */
-class Controller {
+export class DatabaseController {
+  /**
+   * MongoDB client
+   */
+  private db: Db;
+
+  /**
+   * Mongo connection
+   */
+  private connection: MongoClient;
+
   /**
    * Connect to database
    * Requires `MONGO_DSN` environment variable to be set
@@ -50,5 +61,3 @@ class Controller {
     return this.db;
   }
 }
-
-module.exports = new Controller();
