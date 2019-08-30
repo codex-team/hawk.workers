@@ -39,11 +39,10 @@ export default class EmailNotificationWorker extends Worker {
 
     if (!process.env.SMTP_HOST
       || !process.env.SMTP_PORT
-      || !process.env.USERNAME
+      || !process.env.SMTP_USERNAME
       || !process.env.SMTP_PASSWORD
       || !process.env.SMTP_SENDER_NAME
       || !process.env.SMTP_SENDER_ADDRESS) {
-      console.log(process.env);
       throw new Error("Required parameters are not set, see .env.sample");
     }
 
