@@ -60,7 +60,6 @@ class TelegramCodexBotNotificationWorker extends NotificationWorker {
       }
     }
   }
-  ;
 }
 
 module.exports = { TelegramCodexBotNotificationWorker };

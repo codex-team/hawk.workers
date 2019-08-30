@@ -1,5 +1,5 @@
-import * as mongodb from 'mongodb';
-import {Db, MongoClient} from 'mongodb';
+import * as mongodb from "mongodb";
+import {Db, MongoClient} from "mongodb";
 
 /**
  * Database connection singleton
@@ -24,17 +24,17 @@ export class DatabaseController {
    * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  async connect() {
+  public async connect() {
     if (this.db) {
       return;
     }
 
     if (!process.env.MONGO_DSN) {
-      throw new Error('MONGO_DSN env variable is not set!');
+      throw new Error("MONGO_DSN env variable is not set!");
     }
 
-    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + process.env.MONGO_DBNAME, {
-      useNewUrlParser: true
+    this.connection = await mongodb.connect(process.env.MONGO_DSN + "/" + process.env.MONGO_DBNAME, {
+      useNewUrlParser: true,
     });
     this.db = await this.connection.db();
   }
@@ -44,7 +44,7 @@ export class DatabaseController {
    *
    * @returns {Promise<void>}
    */
-  async close() {
+  public async close() {
     this.db = null;
 
     if (!this.connection) {
@@ -57,7 +57,7 @@ export class DatabaseController {
   /**
    * @return {*|null}
    */
-  getConnection() {
+  public getConnection() {
     return this.db;
   }
 }

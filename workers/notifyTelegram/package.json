@@ -1,0 +1,19 @@
+{
+    "name": "hawk-worker-notify-telegram",
+    "version": "0.0.1",
+    "description": "Handles Telegram notifications tasks",
+    "main": "src/index.ts",
+    "author": "CodeX",
+    "license": "UNLICENSED",
+    "private": true,
+    "workerType": "notify/telegram",
+    "devDependencies": {
+        "@types/node": "^12.7.2",
+        "ts-node": "^8.3.0",
+        "typescript": "^3.5.3"
+    },
+    "dependencies": {
+        "axios": "^0.19.0",
+        "querystring": "^0.2.0"
+    }
+}

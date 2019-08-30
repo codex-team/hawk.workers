@@ -1,5 +1,5 @@
-import {Worker} from './worker';
-import {EventWorkerTask} from './types/event-worker-task';
+import {EventWorkerTask} from "./types/event-worker-task";
+import {Worker} from "./worker";
 
 /**
  * Defines a Worker that handles events from Catсher.
@@ -16,8 +16,7 @@ export abstract class EventWorker extends Worker {
   /**
    * Parse JWT from 'token', extract Project Id and store it.
    */
-  async handle(event: EventWorkerTask): Promise<void> {
+  public async handle(event: EventWorkerTask): Promise<void> {
     this.projectId = event.projectId;
   }
 }
-

@@ -52,7 +52,6 @@ class SlackNotificationWorker extends NotificationWorker {
       }
     }
   }
-  ;
 }
 
 module.exports = { SlackNotificationWorker };

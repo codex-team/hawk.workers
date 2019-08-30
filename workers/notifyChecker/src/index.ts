@@ -1,16 +1,24 @@
-import {ObjectID} from 'mongodb';
-import {DatabaseController} from '../../../lib/db/controller';
+import {config} from "dotenv";
+import {resolve} from "path";
+import {NotifyEmailWorkerTask} from "hawk-worker-notify-email/types/notify-email-worker-task";
+import {ObjectID} from "mongodb";
+import {DatabaseController} from "../../../lib/db/controller";
+import {eventActions, Notify} from "../../../lib/db/models/notify";
+import {Project} from "../../../lib/db/models/project";
 import {Worker} from "../../../lib/worker";
+import * as WorkerNames from "../../../lib/workerNames";
+import {NotifySlackWorkerTask} from "../../notifySlack/types/notify-slack-worker-task";
+import {NotifyTelegramWorkerTask} from "../../notifyTelegram/types/notify-telegram-worker-task";
+import * as pkg from "../package.json";
 import {
   NotifyCheckerWorkerTask,
   NotifyCheckerWorkerTaskPayloadGrouper,
   NotifyCheckerWorkerTaskPayloadMerchant,
-  notifyTypes
+  notifyTypes,
 } from "../types/notify-checker-worker-task";
-import {eventActions, Notify} from "../../../lib/db/models/notify";
-import {Project} from "../../../lib/db/models/project";
-import * as WorkerNames from '../../../lib/workerNames';
-import * as pkg from '../package.json';
+
+// Load .env before other imports to set proper vars
+config({path: resolve(__dirname, "../.env")});
 
 /**
  * Worker for handling notify check events
@@ -54,15 +62,15 @@ export default class NotifyCheckerWorker extends Worker {
   }
 
   /**
-   * Message handle function
+   * Task handling function
    */
-  public async handle(event: NotifyCheckerWorkerTask): Promise<void> {
-    switch (event.type) {
+  public async handle(task: NotifyCheckerWorkerTask): Promise<void> {
+    switch (task.type) {
       case notifyTypes.EVENT:
-        await this.checkEvent(event.payload as NotifyCheckerWorkerTaskPayloadGrouper);
+        await this.checkEvent(task.payload as NotifyCheckerWorkerTaskPayloadGrouper);
         break;
       case notifyTypes.MERCHANT:
-        await this.checkMerchant(event.payload as NotifyCheckerWorkerTaskPayloadMerchant);
+        await this.checkMerchant(task.payload as NotifyCheckerWorkerTaskPayloadMerchant);
         break;
     }
   }
@@ -85,23 +93,23 @@ export default class NotifyCheckerWorker extends Worker {
                 to: notify.settings.email.value,
                 subject: `VAM OSHIBOCHKA v ${project.name}`,
                 text: `Pohozhe u vas trouble :(\n${event.payload.title}`,
-                html: `<h1>Pohozhe u vas trouble :(</h1><br><code>${event.payload.title}</code>`
-              });
+                html: `<h1>Pohozhe u vas trouble :(</h1><br><code>${event.payload.title}</code>`,
+              } as NotifyEmailWorkerTask);
             }
 
             if (notify.settings.tg && notify.settings.tg.enabled) {
               await this.addTask(WorkerNames.NOTIFYTELEGRAM, {
                 hook: notify.settings.tg.value,
                 message: `<h1>Pohozhe u vas trouble v ${project.name}:(</h1><br><code>${event.payload.title}</code>`,
-                parseMode: 'HTML'
-              });
+                parseMode: "HTML",
+              } as NotifyTelegramWorkerTask);
             }
 
             if (notify.settings.slack && notify.settings.slack.enabled) {
               await this.addTask(WorkerNames.NOTIFYSLACK, {
                 hook: notify.settings.tg.value,
-                text: `Pohozhe u vas trouble v ${project.name} :(\n\`${event.payload.title}\``
-              });
+                text: `Pohozhe u vas trouble v ${project.name} :(\n\`${event.payload.title}\``,
+              } as NotifySlackWorkerTask);
             }
           }
           break;
@@ -122,6 +130,6 @@ export default class NotifyCheckerWorker extends Worker {
    * Get project by ID
    */
   private async getProjectById(projectId: string): Promise<Project> {
-    return this.db.getConnection().collection('projects').findOne({_id: new ObjectID(projectId)});
+    return this.db.getConnection().collection("projects").findOne({_id: new ObjectID(projectId)});
   }
 }

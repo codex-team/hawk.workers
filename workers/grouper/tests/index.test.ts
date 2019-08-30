@@ -1,42 +1,42 @@
-import GrouperWorker from '../src/index';
-import * as mongodb from 'mongodb';
-import {GroupWorkerTask} from '../types/group-worker-task';
+import * as mongodb from "mongodb";
+import GrouperWorker from "../src/index";
+import {GroupWorkerTask} from "../types/group-worker-task";
 
 /**
  * Test Grouping task
  */
 const testGroupingTask = {
-  projectId: '5d206f7f9aaf7c0071d64596',
-  catcherType: 'grouper',
+  projectId: "5d206f7f9aaf7c0071d64596",
+  catcherType: "grouper",
   event: {
-    title: 'Hawk client catcher test',
+    title: "Hawk client catcher test",
     timestamp: (new Date()).getTime(),
-    backtrace: []
-  }
+    backtrace: [],
+  },
 } as GroupWorkerTask;
 
-describe('GrouperWorker', () => {
+describe("GrouperWorker", () => {
   const worker = new GrouperWorker();
 
-  test('should return correct worker type', () => {
-    expect(worker.type).toEqual('grouper');
+  test("should return correct worker type", () => {
+    expect(worker.type).toEqual("grouper");
   });
 
-  test('should start correctly', async () => {
+  test("should start correctly", async () => {
     await worker.start();
   });
 
-  test('should correctly handle task', async () => {
+  test("should correctly handle task", async () => {
     await worker.handle(testGroupingTask);
   });
 
-  test('show save event and return id', async () => {
-    const result = await worker['saveEvent']('5d206f7f9aaf7c0071d64596', {
-      catcherType: 'grouper',
+  test("show save event and return id", async () => {
+    const result = await worker.saveEvent("5d206f7f9aaf7c0071d64596", {
+      catcherType: "grouper",
       payload: {
-        title: 'testing',
-        timestamp: (new Date()).getTime()
-      }
+        title: "testing",
+        timestamp: (new Date()).getTime(),
+      },
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -44,22 +44,22 @@ describe('GrouperWorker', () => {
     expect(insertedId).toBe(true);
   });
 
-  test('throw error on saveEvent if projectId is not a MongoId', async () => {
+  test("throw error on saveEvent if projectId is not a MongoId", async () => {
     await expect(
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['saveEvent']('10', {})
+      worker.saveEvent("10", {}),
     ).rejects.toThrowError();
   });
 
-  test('save repetition should return mongodb id', async () => {
+  test("save repetition should return mongodb id", async () => {
     /**
      * To test private method, we have to access it as dynamic prop.
      */
-    const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
-      groupHash: '1234567890',
-      timestamp: (new Date()).getTime()
+    const result = await worker.saveRepetition("5d206f7f9aaf7c0071d64596", {
+      groupHash: "1234567890",
+      timestamp: (new Date()).getTime(),
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -67,36 +67,36 @@ describe('GrouperWorker', () => {
     expect(insertedId).toBe(true);
   });
 
-  test('throw error on saveRepetition if project id is not mongodb id', async () => {
+  test("throw error on saveRepetition if project id is not mongodb id", async () => {
     await expect(
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['saveRepetition']('10', {
-        groupHash: '1234567890',
-      })
+      worker.saveRepetition("10", {
+        groupHash: "1234567890",
+      }),
     ).rejects.toThrowError();
   });
 
-  test('throw error on incrementEventCounter if project id not mongodb id', async () => {
+  test("throw error on incrementEventCounter if project id not mongodb id", async () => {
     await expect(
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['incrementEventCounter']('10', {})
+      worker.incrementEventCounter("10", {}),
     ).rejects.toThrowError();
   });
 
-  test('should increment event', async () => {
+  test("should increment event", async () => {
     /**
      * To test private method, we have to access it as dynamic prop.
      */
-    const result = await worker['incrementEventCounter']('5d206f7f9aaf7c0071d64596', {});
+    const result = await worker.incrementEventCounter("5d206f7f9aaf7c0071d64596", {});
 
     expect(result).not.toBe(null);
   });
 
-  test('should finish correctly', async () => {
+  test("should finish correctly", async () => {
     await worker.finish();
   });
 });

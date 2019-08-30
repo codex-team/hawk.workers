@@ -56,6 +56,7 @@ class EmailNotificationWorker extends NotificationWorker {
         text: event.text,
         html: event.html
       });
+
       this.logger.verbose(`sent email ${JSON.stringify(info)}`);
     } catch (err) {
       throw new ParamError(err);

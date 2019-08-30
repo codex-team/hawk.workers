@@ -4,7 +4,7 @@
 export enum eventActions {
   ONLY_NEW = 1,
   ALL = 2,
-  INCLUDING = 3
+  INCLUDING = 3,
 }
 
 /**
@@ -37,5 +37,5 @@ export interface Notify {
     email: ProviderSettings;
     tg: ProviderSettings;
     slack: ProviderSettings;
-  }
+  };
 }

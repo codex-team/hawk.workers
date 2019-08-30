@@ -1,9 +1,9 @@
-import * as WorkerNames from '../../../lib/workerNames';
-import {DatabaseController} from '../../../lib/db/controller';
-import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
-import {EventWorker} from '../../../lib/event-worker';
-import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
-import * as pkg from '../package.json'
+import {DatabaseController} from "../../../lib/db/controller";
+import {EventWorker} from "../../../lib/event-worker";
+import * as WorkerNames from "../../../lib/workerNames";
+import {GroupWorkerTask} from "../../grouper/types/group-worker-task";
+import * as pkg from "../package.json";
+import {JavaScriptEventWorkerTask} from "../types/javascript-event-worker-task";
 
 /**
  * Worker for handling Javascript events
@@ -55,7 +55,7 @@ export default class JavascriptEventWorker extends EventWorker {
     await this.addTask(WorkerNames.GROUPER, {
       projectId: this.projectId,
       catcherType: this.type,
-      event: event.payload
+      event: event.payload,
     } as GroupWorkerTask);
   }
 }

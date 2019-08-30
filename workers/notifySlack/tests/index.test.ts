@@ -1,10 +1,10 @@
-import NotifyCheckerWorker from "../src";
+import NotifySlackWorker from "../src";
 
-describe("NotifyCheckerWorker", () => {
-  const worker = new NotifyCheckerWorker();
+describe("NotifySlackWorker", () => {
+  const worker = new NotifySlackWorker();
 
   test("should have correct catcher type", () => {
-    expect(worker.type).toEqual("notify/check");
+    expect(worker.type).toEqual("notify/slack");
   });
 
   test("should start correctly", async () => {

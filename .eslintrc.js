@@ -4,5 +4,5 @@ module.exports = {
         "node": true,
         "jest": true
     },
-    "extends": ["codex"],
+    "extends": ["codex"]
 };

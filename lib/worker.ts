@@ -1,13 +1,13 @@
-import winston, {createLogger, format, transports} from 'winston';
-import * as amqp from 'amqplib';
-import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
-import * as path from 'path';
-import * as dotenv from 'dotenv';
-import {WorkerTask} from './types/worker-task';
+import * as amqp from "amqplib";
+import {Channel, Connection, ConsumeMessage, Message} from "amqplib";
+import * as dotenv from "dotenv";
+import * as path from "path";
+import winston, {createLogger, format, transports} from "winston";
+import {WorkerTask} from "./types/worker-task";
 
 const {combine, timestamp, colorize, simple, printf} = format;
 
-dotenv.config({path: path.resolve(__dirname, '../.env')});
+dotenv.config({path: path.resolve(__dirname, "../.env")});
 
 /**
  * Base worker class for processing tasks
@@ -50,9 +50,27 @@ export abstract class Worker {
   public abstract readonly type: string;
 
   /**
+   * Logger module
+   * (default level='info')
+   */
+  protected logger: winston.Logger = createLogger({
+    level: process.env.LOG_LEVEL || "info",
+    transports: [
+      new transports.Console({
+        format: combine(
+          timestamp(),
+          colorize(),
+          simple(),
+          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
+        ),
+      }),
+    ],
+  });
+
+  /**
    * Registry Endpoint
    */
-  private readonly registryUrl: string = process.env.REGISTRY_URL || 'amqp://localhost';
+  private readonly registryUrl: string = process.env.REGISTRY_URL || "amqp://localhost";
 
   /**
    * How many task Worker should do concurrently
@@ -68,7 +86,7 @@ export abstract class Worker {
    * Registry Consumer Tag (unique worker identifier, even for one-type workers).
    * Used to cancel subscription
    */
-  private registryConsumerTag: string = '';
+  private registryConsumerTag: string = "";
 
   /**
    * Connection to Registry
@@ -87,29 +105,11 @@ export abstract class Worker {
   private tasksMap: Map<object, Promise<void>> = new Map();
 
   /**
-   * Logger module
-   * (default level='info')
-   */
-  protected logger: winston.Logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: combine(
-          timestamp(),
-          colorize(),
-          simple(),
-          printf(msg => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
-        )
-      })
-    ]
-  });
-
-  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
     if (!this.type) {
-      throw new Error('Worker type is not defined');
+      throw new Error("Worker type is not defined");
     }
 
     if (!this.registryConnected) {
@@ -128,7 +128,6 @@ export abstract class Worker {
      */
     this.registryConsumerTag = consumerTag;
   }
-
 
   /**
    * Unsubscribe and disconnect
@@ -227,11 +226,11 @@ export abstract class Worker {
 
       event = JSON.parse(stringifiedEvent);
 
-      this.logger.verbose('Received event:\n', {
-        message: stringifiedEvent
+      this.logger.verbose("Received event:\n", {
+        message: stringifiedEvent,
       });
     } catch (error) {
-      throw new ParsingError('Worker::processMessage: Message parsing error' + error);
+      throw new ParsingError("Worker::processMessage: Message parsing error" + error);
     }
 
     try {
@@ -242,26 +241,26 @@ export abstract class Worker {
        */
       this.channelWithRegistry.ack(msg);
     } catch (e) {
-      this.logger.error('Worker::processMessage: An error occurred:\n', e);
+      this.logger.error("Worker::processMessage: An error occurred:\n", e);
 
       this.logger.debug(
-        'instanceof CriticalError? ' + (e instanceof CriticalError)
+        "instanceof CriticalError? " + (e instanceof CriticalError),
       );
       this.logger.debug(
-        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError)
+        "instanceof NonCriticalError? " + (e instanceof NonCriticalError),
       );
 
       /**
        * Send back message to registry since we failed to handle it
        */
       if (e instanceof CriticalError) {
-        this.logger.info('Requeueing msg');
+        this.logger.info("Requeueing msg");
         await this.requeue(msg);
       } else if (e instanceof NonCriticalError) {
-        this.logger.info('Sending msg to stash');
+        this.logger.info("Sending msg to stash");
         await this.sendToStash(msg);
       } else {
-        this.logger.error('Unknown error:\n', e);
+        this.logger.error("Unknown error:\n", e);
       }
     }
   }
