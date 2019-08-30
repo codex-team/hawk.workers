@@ -118,7 +118,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp);
   }
 
   /**
@@ -148,7 +148,7 @@ export default class GrouperWorker extends Worker {
    * @param {{groupHash: string, count: number, catcherType: string, payload: object}} groupedEventData - event data
    * @throws {ValidationError} if `projectID` is not provided or invalid
    * @throws {ValidationError} if `eventData` is not a valid object
-   * @returns {Promise<mongodb.ObjectID>} saved event id
+   * @returns {Promise<ObjectID>} saved event id
    */
   private async saveEvent(projectId, groupedEventData): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
@@ -158,7 +158,7 @@ export default class GrouperWorker extends Worker {
     try {
       return (await this.db.getConnection()
         .collection(`events:${projectId}`)
-        .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
+        .insertOne(groupedEventData)).insertedId  as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseError(err);
     }
@@ -214,9 +214,10 @@ export default class GrouperWorker extends Worker {
    *
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
+   * @param {string} eventTimestamp - timestamp of the last event
    * @return {Promise<void>}
    */
-  private async saveDailyEvents(projectId: string, eventHash: string): Promise<void> {
+  private async saveDailyEvents(projectId: string, eventHash: string, eventTimestamp: number): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError("Controller.saveEvent: Project ID is invalid or missed");
     }
@@ -224,7 +225,7 @@ export default class GrouperWorker extends Worker {
     try {
       const now = new Date();
       const day = now.getDate();
-      const month = now.getMonth();
+      const month = now.getMonth() + 1;
 
       const currentDate = [
         (day > 9 ? "" : "0") + day,
@@ -237,8 +238,8 @@ export default class GrouperWorker extends Worker {
         .updateOne(
           {groupHash: eventHash, date: currentDate},
           {
-            $set: {groupHash: eventHash, date: currentDate},
-            $inc: {count: 1},
+            $set: { groupHash: eventHash, date: currentDate, timestamp: eventTimestamp },
+            $inc: { count: 1 }
           },
           {upsert: true});
     } catch (err) {

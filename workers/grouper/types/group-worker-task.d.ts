@@ -1,5 +1,5 @@
-import {EventData} from '../../../lib/types/hawk-event';
-import {WorkerTask} from '../../../lib/types/worker-task';
+import { EventData } from '../../../lib/types/event-worker-task';
+import { WorkerTask } from '../../../lib/types/worker-task';
 
 /**
  * Language-workers adds tasks for Group Worker in this format.
