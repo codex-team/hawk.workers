@@ -34,10 +34,10 @@ export default class NotifySlackWorker extends Worker {
          *
          * Requeue message, try again.
          */
-        throw new CriticalError("Failed to submit message or 500 received", error);
+        throw new CriticalError(error);
       } else {
         // Something happened in setting up the request and triggered an Error
-        throw new NonCriticalError("Failed to set up request", error);
+        throw new NonCriticalError(error);
       }
     }
   }
