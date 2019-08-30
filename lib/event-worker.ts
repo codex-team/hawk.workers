@@ -2,7 +2,7 @@ import { Worker } from './worker';
 import { EventWorkerTask } from './types/event-worker-task';
 
 /**
- * Defines a Worker that handles events from Catсher.
+ * Defines a Worker that handles events from Catcher.
  * Used to extract Project Id from Integration Token and to provide some common methods.
  *
  * catherTypes -> 'error/*'
