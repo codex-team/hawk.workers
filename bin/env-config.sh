@@ -8,7 +8,12 @@ function pathedit {
   str=$0
   len=${#envfile}
   str=${str:0:((-$len))}
-  cp $0 "$str.env"
+  target="$str.env"
+
+  [ -f $target ] && echo "$target exist" && return
+
+  cp $0 $target
+  echo "$0 -> $target"
 }
 
 export -f pathedit
