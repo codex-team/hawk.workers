@@ -1,7 +1,7 @@
 import {config} from "dotenv";
-import {resolve} from "path";
 import {NotifyEmailWorkerTask} from "hawk-worker-notify-email/types/notify-email-worker-task";
 import {ObjectID} from "mongodb";
+import {resolve} from "path";
 import {DatabaseController} from "../../../lib/db/controller";
 import {eventActions, Notify} from "../../../lib/db/models/notify";
 import {Project} from "../../../lib/db/models/project";

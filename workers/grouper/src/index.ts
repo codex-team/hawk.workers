@@ -239,7 +239,7 @@ export default class GrouperWorker extends Worker {
           {groupHash: eventHash, date: currentDate},
           {
             $set: { groupHash: eventHash, date: currentDate, timestamp: eventTimestamp },
-            $inc: { count: 1 }
+            $inc: { count: 1 },
           },
           {upsert: true});
     } catch (err) {

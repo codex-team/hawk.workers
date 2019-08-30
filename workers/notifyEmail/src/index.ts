@@ -1,6 +1,6 @@
 import {config} from "dotenv";
-import {resolve} from "path";
 import nodemailer from "nodemailer";
+import {resolve} from "path";
 import {NonCriticalError, Worker} from "../../../lib/worker";
 import * as pkg from "../package.json";
 import {NotifyEmailWorkerTask} from "../types/notify-email-worker-task";
