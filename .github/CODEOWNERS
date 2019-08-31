@@ -1,8 +1,0 @@
-* @kabachook
-
-lib/* @kabachook
-
-db/* @dyadyaJora
-
-workers/php/* @dyadyaJora
-workers/nodejs/* @kabachook
