@@ -147,7 +147,7 @@ export default class GrouperWorker extends Worker {
    * Inserts unique event repetition to the database
    *
    * @param {string|ObjectID} projectId - project's identifier
-   * @param {object} repetition - object that contains only difference with first event
+   * @param {Repetition} repetition - object that contains only difference with first event
    */
   private async saveRepetition(projectId, repetition: Repetition): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
