@@ -7,7 +7,8 @@
     "license": "UNLICENSED",
     "workspaces": [
         "workers/javascript",
-        "workers/grouper"
+        "workers/grouper",
+        "workers/source-maps"
     ],
     "scripts": {
         "test": "jest --coverage --silent",
@@ -19,7 +20,8 @@
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
-        "run-grouper": "yarn worker hawk-worker-grouper"
+        "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-maps": "yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
