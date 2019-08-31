@@ -1,7 +1,7 @@
 /**
  * Grouped event format
  */
-import {EventData} from '../../../lib/types/hawk-event';
+import { EventData } from '../../../lib/types/event-worker-task';
 import { ObjectId } from 'mongodb';
 
 export interface GroupedEvent {
@@ -18,7 +18,7 @@ export interface GroupedEvent {
   /**
    * Number of events repetitions
    */
-  count: number;
+  totalCount: number;
 
   /**
    * Error language type

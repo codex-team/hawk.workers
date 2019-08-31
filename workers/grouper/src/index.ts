@@ -71,7 +71,7 @@ export default class GrouperWorker extends Worker {
        */
       await this.saveEvent(task.projectId, {
         groupHash: uniqueEventHash,
-        count: 1,
+        totalCount: 1,
         catcherType: task.catcherType,
         payload: task.event
       } as GroupedEvent);
@@ -86,19 +86,19 @@ export default class GrouperWorker extends Worker {
       /**
        * Save event's repetitions
        */
-      const diff = Object.assign(
-        utils.deepDiff(existedEvent.payload, task.event),
-        {
-          groupHash: uniqueEventHash
-        }
-      ) as Repetition;
-      await this.saveRepetition(task.projectId, diff);
+      const diff = utils.deepDiff(existedEvent.payload, task.event);
+      const repetition = {
+        groupHash: uniqueEventHash,
+        payload: diff
+      } as Repetition;
+
+      await this.saveRepetition(task.projectId, repetition);
     }
 
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp);
   }
 
   /**
@@ -128,7 +128,7 @@ export default class GrouperWorker extends Worker {
    * @param {{groupHash: string, count: number, catcherType: string, payload: object}} groupedEventData - event data
    * @throws {ValidationError} if `projectID` is not provided or invalid
    * @throws {ValidationError} if `eventData` is not a valid object
-   * @returns {Promise<mongodb.ObjectID>} saved event id
+   * @returns {Promise<ObjectID>} saved event id
    */
   private async saveEvent(projectId, groupedEventData): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
@@ -148,9 +148,9 @@ export default class GrouperWorker extends Worker {
    * Inserts unique event repetition to the database
    *
    * @param {string|ObjectID} projectId - project's identifier
-   * @param {object} eventDiff - object that contains only difference with first event
+   * @param {Repetition} repetition - object that contains only difference with first event
    */
-  private async saveRepetition(projectId, eventDiff: Repetition): Promise<mongodb.ObjectID> {
+  private async saveRepetition(projectId, repetition: Repetition): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missing');
     }
@@ -158,7 +158,7 @@ export default class GrouperWorker extends Worker {
     try {
       return (await this.db.getConnection()
         .collection(`repetitions:${projectId}`)
-        .insertOne(eventDiff)).insertedId as mongodb.ObjectID;
+        .insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseError(err);
     }
@@ -181,7 +181,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .updateOne(query, {
           $inc: {
-            count: 1
+            totalCount: 1
           }
         })).modifiedCount;
     } catch (err) {
@@ -194,17 +194,18 @@ export default class GrouperWorker extends Worker {
    *
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
+   * @param {string} eventTimestamp - timestamp of the last event
    * @return {Promise<void>}
    */
-  private async saveDailyEvents(projectId: string, eventHash: string): Promise<void> {
+  private async saveDailyEvents(projectId: string, eventHash: string, eventTimestamp: number): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
-      throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
+      throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
     }
 
     try {
       const now = new Date();
       const day = now.getDate();
-      const month = now.getMonth();
+      const month = now.getMonth() + 1;
 
       const currentDate = [
         (day > 9 ? '' : '0') + day,
@@ -217,7 +218,7 @@ export default class GrouperWorker extends Worker {
         .updateOne(
           { groupHash: eventHash, date: currentDate },
           {
-            $set: { groupHash: eventHash, date: currentDate },
+            $set: { groupHash: eventHash, date: currentDate, timestamp: eventTimestamp },
             $inc: { count: 1 }
           },
           { upsert: true });
