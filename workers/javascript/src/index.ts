@@ -77,7 +77,7 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     /**
-     * If we has a source map associated with passed release, override some values in backtrace with original line/file
+     * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame) => {
       return this.consumeBacktraceFrame(frame, releaseRecord);
