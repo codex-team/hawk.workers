@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-const { PhpWorker } = require('./index');
+const { PhpEventWorker } = require('./index');
 const { ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
 
@@ -38,7 +38,7 @@ const DEBUG_STACK_OBJ = {
 
 describe('PHP Worker parsing', () => {
   beforeAll(async () => {
-    worker = new PhpWorker();
+    worker = new PhpEventWorker();
     await worker.start();
   });
 
@@ -62,7 +62,7 @@ describe('PHP Worker parsing', () => {
 
   it('returns right fields in payload', () => {
     const obj = { ...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ };
-    const payload = PhpWorker.parseData(obj);
+    const payload = PhpEventWorker.parseData(obj);
 
     expect(payload).toHaveProperty('title');
     expect(payload).toHaveProperty('timestamp');
@@ -72,12 +72,12 @@ describe('PHP Worker parsing', () => {
 
   it('throwing parsing error with wrong params in message', () => {
     expect(() => {
-      PhpWorker.parseData({});
+      PhpEventWorker.parseData({});
     }).toThrow(ParsingError);
   });
 
   it('returns right backtrace when it is detected', () => {
-    const payload = PhpWorker.parseData({
+    const payload = PhpEventWorker.parseData({
       ...TITLE_OBJ,
       ...TIMESTAMP_OBJ,
       ...DEBUG_STACK_OBJ

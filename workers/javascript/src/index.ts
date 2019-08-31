@@ -1,17 +1,18 @@
 import * as WorkerNames from '../../../lib/workerNames';
 import { DatabaseController } from '../../../lib/db/controller';
-import { HawkEventJavascript } from '../types/hawk-event-javascript';
+import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import { EventWorker } from '../../../lib/event-worker';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
+import * as pkg from '../package.json'
 
 /**
  * Worker for handling Javascript events
  */
-export default class JavascriptWorker extends EventWorker {
+export default class JavascriptEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: string = 'errors/javascript';
+  public readonly type: string = pkg.workerType;
 
   /**
    * Database Controller
@@ -41,10 +42,8 @@ export default class JavascriptWorker extends EventWorker {
   /**
    * Message handle function
    */
-  public async handle(event: HawkEventJavascript): Promise<void> {
+  public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
     await super.handle(event);
-
-    console.log('js', event);
 
     /**
      * @todo 2. Get current error location
