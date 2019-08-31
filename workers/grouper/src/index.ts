@@ -85,15 +85,16 @@ export default class GrouperWorker extends Worker {
       /**
        * Save event's repetitions
        */
-      const diff = Object.assign(
-        utils.deepDiff(existedEvent.payload, task.event),
-        {
-          groupHash: uniqueEventHash
-        }
-      ) as Repetition;
-      await this.saveRepetition(task.projectId, diff);
+      const diff = utils.deepDiff(existedEvent.payload, task.event);
+      const repetition = {
+        groupHash: uniqueEventHash,
+        payload: diff
+      } as Repetition;
+
+      await this.saveRepetition(task.projectId, repetition);
     }
 
+    console.log('i think i saved', task.projectId);
     /**
      * Store events counter by days
      */
@@ -147,9 +148,9 @@ export default class GrouperWorker extends Worker {
    * Inserts unique event repetition to the database
    *
    * @param {string|ObjectID} projectId - project's identifier
-   * @param {object} eventDiff - object that contains only difference with first event
+   * @param {object} repetition - object that contains only difference with first event
    */
-  private async saveRepetition(projectId, eventDiff: Repetition): Promise<mongodb.ObjectID> {
+  private async saveRepetition(projectId, repetition: Repetition): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missing');
     }
@@ -157,7 +158,7 @@ export default class GrouperWorker extends Worker {
     try {
       return (await this.db.getConnection()
         .collection(`repetitions:${projectId}`)
-        .insertOne(eventDiff)).insertedId as mongodb.ObjectID;
+        .insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseError(err);
     }

@@ -1,7 +1,7 @@
 /**
  * Grouped event format
  */
-import {EventData} from '../../../lib/types/hawk-event';
+import { EventData } from '../../../lib/types/hawk-event';
 import { ObjectId } from 'mongodb';
 
 export interface GroupedEvent {
