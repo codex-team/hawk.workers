@@ -18,7 +18,7 @@ export interface GroupedEvent {
   /**
    * Number of events repetitions
    */
-  count: number;
+  totalCount: number;
 
   /**
    * Error language type

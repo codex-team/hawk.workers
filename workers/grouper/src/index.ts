@@ -70,7 +70,7 @@ export default class GrouperWorker extends Worker {
        */
       await this.saveEvent(task.projectId, {
         groupHash: uniqueEventHash,
-        count: 1,
+        totalCount: 1,
         catcherType: task.catcherType,
         payload: task.event
       } as GroupedEvent);
@@ -94,7 +94,6 @@ export default class GrouperWorker extends Worker {
       await this.saveRepetition(task.projectId, repetition);
     }
 
-    console.log('i think i saved', task.projectId);
     /**
      * Store events counter by days
      */
@@ -181,7 +180,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .updateOne(query, {
           $inc: {
-            count: 1
+            totalCount: 1
           }
         })).modifiedCount;
     } catch (err) {
