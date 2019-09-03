@@ -22,10 +22,13 @@ export class DatabaseController {
   /**
    * Connect to database
    * Requires `MONGO_DSN` environment variable to be set
+   *
+   * @param name — database name
+   *
    * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  async connect() {
+  async connect(name: string = process.env.MONGO_DBNAME) {
     if (this.db) {
       return;
     }
@@ -34,7 +37,7 @@ export class DatabaseController {
       throw new Error('MONGO_DSN env variable is not set!');
     }
 
-    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + process.env.MONGO_DBNAME, {
+    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + name, {
       useNewUrlParser: true
     });
     this.db = await this.connection.db();

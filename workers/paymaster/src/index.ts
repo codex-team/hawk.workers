@@ -1,13 +1,13 @@
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import {Collection, ObjectID} from 'mongodb';
-import {DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent} from "../types/event";
+import {DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent} from "../types/paymasterWorkerEvents";
 import * as workerNames from '../../../lib/workerNames';
 import {
   EventType as AccountantEventType,
   TransactionEvent,
   TransactionType
-} from "../../accountant/types/event";
+} from "hawk-worker-accountant/types/accountantWorkerEvents";
 import * as pkg from '../package.json';
 
 /**

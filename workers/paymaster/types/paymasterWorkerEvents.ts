@@ -1,3 +1,7 @@
+/**
+ * Types definitions for paymaster worker
+ */
+
 export enum EventType {
   DailyCheck = 'daily-check',
   PlanChanged = 'plan-changed'

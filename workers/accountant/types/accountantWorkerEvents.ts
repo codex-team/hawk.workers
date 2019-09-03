@@ -1,3 +1,7 @@
+/**
+ * Types definitions for accountant worker
+ */
+
 export enum TransactionType {
   Income = 'income',
   Charge = 'charge'

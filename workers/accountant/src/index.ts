@@ -1,7 +1,7 @@
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import {Collection, ObjectID, UpdateQuery} from 'mongodb';
-import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from "../types/event";
+import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from "../types/accountantWorkerEvents";
 import * as pkg from '../package.json';
 
 /**
@@ -76,6 +76,7 @@ export default class AccountantWorker extends Worker {
         /**
          * @todo Send notification to merchant worker to rebill
          * @todo Send notification to collector to block new events
+         * @todo Send notification to user via notify checker worker
          */
         console.warn('Not enough money on workspace balance');
         return;
