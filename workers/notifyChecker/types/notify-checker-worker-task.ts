@@ -1,11 +1,11 @@
-import {GroupedEvent} from "../../grouper/types/grouped-event";
+import {GroupedEvent} from '../../grouper/types/grouped-event';
 
 export enum notifyTypes {
-  EVENT = "event",
-  MERCHANT = "merchant",
+  EVENT = 'event',
+  MERCHANT = 'merchant',
 }
 
-export interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, "catcherType" | "payload"> {
+export interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, 'catcherType' | 'payload'> {
   /**
    * Event project ID
    */

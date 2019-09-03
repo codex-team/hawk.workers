@@ -1,9 +1,9 @@
-import {DatabaseController} from "../../../lib/db/controller";
-import {EventWorker} from "../../../lib/event-worker";
-import * as WorkerNames from "../../../lib/workerNames";
-import {GroupWorkerTask} from "../../grouper/types/group-worker-task";
-import * as pkg from "../package.json";
-import {JavaScriptEventWorkerTask} from "../types/javascript-event-worker-task";
+import {DatabaseController} from '../../../lib/db/controller';
+import {EventWorker} from '../../../lib/event-worker';
+import * as WorkerNames from '../../../lib/workerNames';
+import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
+import * as pkg from '../package.json';
+import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
 
 /**
  * Worker for handling Javascript events

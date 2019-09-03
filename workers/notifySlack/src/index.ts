@@ -1,7 +1,7 @@
-import axios from "axios";
-import {CriticalError, NonCriticalError, Worker} from "../../../lib/worker";
-import * as pkg from "../package.json";
-import {NotifySlackWorkerTask} from "../types/notify-slack-worker-task";
+import axios from 'axios';
+import {CriticalError, NonCriticalError, Worker} from '../../../lib/worker';
+import * as pkg from '../package.json';
+import {NotifySlackWorkerTask} from '../types/notify-slack-worker-task';
 
 /**
  * Worker for sending Slack notifications

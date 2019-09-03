@@ -1,5 +1,5 @@
-import {EventWorkerTask} from "./types/event-worker-task";
-import {Worker} from "./worker";
+import {EventWorkerTask} from './types/event-worker-task';
+import {Worker} from './worker';
 
 /**
  * Defines a Worker that handles events from Catcher.

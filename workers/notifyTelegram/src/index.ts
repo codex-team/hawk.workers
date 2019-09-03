@@ -1,8 +1,8 @@
-import axios from "axios";
-import qs from "querystring";
-import {CriticalError, NonCriticalError, Worker} from "../../../lib/worker";
-import * as pkg from "../package.json";
-import {NotifyTelegramWorkerTask} from "../types/notify-telegram-worker-task";
+import axios from 'axios';
+import qs from 'querystring';
+import {CriticalError, NonCriticalError, Worker} from '../../../lib/worker';
+import * as pkg from '../package.json';
+import {NotifyTelegramWorkerTask} from '../types/notify-telegram-worker-task';
 
 /**
  * Worker for sending Telegram notifications
@@ -21,10 +21,10 @@ export default class NotifyTelegramWorker extends Worker {
       await axios.post(event.hook, qs.stringify({
         message: event.message,
         // eslint-disable-next-line camelcase
-        parse_mode: event.parseMode || "Markdown",
+        parse_mode: event.parseMode || 'Markdown',
       }), {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
     } catch (error) {

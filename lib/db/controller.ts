@@ -1,5 +1,5 @@
-import * as mongodb from "mongodb";
-import {Db, MongoClient} from "mongodb";
+import * as mongodb from 'mongodb';
+import {Db, MongoClient} from 'mongodb';
 
 /**
  * Database connection singleton
@@ -30,10 +30,10 @@ export class DatabaseController {
     }
 
     if (!process.env.MONGO_DSN) {
-      throw new Error("MONGO_DSN env variable is not set!");
+      throw new Error('MONGO_DSN env variable is not set!');
     }
 
-    this.connection = await mongodb.connect(process.env.MONGO_DSN + "/" + process.env.MONGO_DBNAME, {
+    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + process.env.MONGO_DBNAME, {
       useNewUrlParser: true,
     });
     this.db = await this.connection.db();

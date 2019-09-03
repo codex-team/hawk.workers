@@ -1,17 +1,17 @@
-import NotifyCheckerWorker from "../src";
+import NotifyCheckerWorker from '../src';
 
-describe("NotifyCheckerWorker", () => {
+describe('NotifyCheckerWorker', () => {
   const worker = new NotifyCheckerWorker();
 
-  test("should have correct catcher type", () => {
-    expect(worker.type).toEqual("notify/check");
+  test('should have correct catcher type', () => {
+    expect(worker.type).toEqual('notify/check');
   });
 
-  test("should start correctly", async () => {
+  test('should start correctly', async () => {
     await worker.start();
   });
 
-  test("should finish correctly", async () => {
+  test('should finish correctly', async () => {
     await worker.finish();
   });
 });

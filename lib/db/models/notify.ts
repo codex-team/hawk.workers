@@ -1,3 +1,5 @@
+import {ObjectID} from 'mongodb';
+
 /**
  * Event action types
  */
@@ -23,6 +25,11 @@ export interface ProviderSettings {
 }
 
 export interface Notify {
+  /**
+   * User ID
+   */
+  userId?: ObjectID | string;
+
   actionType: eventActions;
 
   /**
@@ -39,3 +46,22 @@ export interface Notify {
     slack: ProviderSettings;
   };
 }
+
+export const defaultNotify: Notify = {
+  actionType: eventActions.ONLY_NEW,
+  words: '',
+  settings: {
+    email: {
+      enabled: false,
+      value: '',
+    },
+    tg: {
+      enabled: false,
+      value: '',
+    },
+    slack: {
+      enabled: false,
+      value: '',
+    },
+  },
+};
