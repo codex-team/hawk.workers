@@ -1,14 +1,14 @@
-import { Worker, ValidationError, DatabaseError } from '../../../lib/worker';
+import * as crypto from 'crypto';
+import * as mongodb from 'mongodb';
+import { DatabaseController } from '../../../lib/db/controller';
+import * as utils from '../../../lib/utils';
+import { DatabaseError, ValidationError, Worker } from '../../../lib/worker';
+import * as WorkerNames from '../../../lib/workerNames';
+import {NotifyCheckerWorkerTask} from '../../notifyChecker/types/notify-checker-worker-task';
+import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
-import {NotifyCheckerWorkerTask} from '../../notifyChecker/types/notify-checker-worker-task';
-import { DatabaseController } from '../../../lib/db/controller';
-import * as WorkerNames from '../../../lib/workerNames';
-import * as mongodb from 'mongodb';
-import * as utils from '../../../lib/utils';
-import * as crypto from 'crypto';
-import * as pkg from '../package.json';
 
 /**
  * Worker for handling Javascript events
@@ -97,10 +97,10 @@ export default class GrouperWorker extends Worker {
       /**
        * Save event's repetitions
        */
-      const diff = utils.deepDiff(existedEvent.payload, task.event);
+      const diff = utils.deepDiff(existingEvent.payload, task.event);
       const repetition = {
         groupHash: uniqueEventHash,
-        payload: diff
+        payload: diff,
       } as Repetition;
 
       await this.saveRepetition(task.projectId, repetition);
