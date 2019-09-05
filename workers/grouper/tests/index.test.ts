@@ -35,8 +35,10 @@ describe('GrouperWorker', () => {
       catcherType: 'grouper',
       payload: {
         title: 'testing',
-        timestamp: (new Date()).getTime()
-      }
+        timestamp: (new Date()).getTime(),
+      },
+      groupHash: '',
+      totalCount: 1,
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -49,7 +51,15 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['saveEvent']('10', {})
+      worker['saveEvent']('10', {
+        totalCount: 1,
+        groupHash: '',
+        catcherType: '',
+        payload: {
+          title: 'Test event',
+          timestamp: Date.now() / 1000
+        }
+      })
     ).rejects.toThrowError();
   });
 
@@ -59,7 +69,7 @@ describe('GrouperWorker', () => {
      */
     const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
       groupHash: '1234567890',
-      timestamp: (new Date()).getTime()
+      payload: {}
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -74,6 +84,7 @@ describe('GrouperWorker', () => {
        */
       worker['saveRepetition']('10', {
         groupHash: '1234567890',
+        payload: {}
       })
     ).rejects.toThrowError();
   });

@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as sourceMap from "source-map";
 import { DatabaseError } from '../../../lib/worker';
 import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
-import {SourcemapDataExtended, SourceMapsRecord} from 'hawk-worker-sourcemaps/types/source-maps-record';
+import {SourcemapDataExtended, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
 import {BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition} from 'source-map';
 
 /**
