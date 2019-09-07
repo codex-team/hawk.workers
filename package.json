@@ -11,7 +11,7 @@
         "workers/source-maps"
     ],
     "scripts": {
-        "test": "jest --coverage --silent",
+        "test": "jest --coverage",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
@@ -47,6 +47,7 @@
         "ts-jest": "^24.0.2",
         "ts-node": "^8.3.0",
         "typescript": "^3.5.3",
-        "yargs": "^13.3.0"
+        "yargs": "^13.3.0",
+        "webpack": "^4.39.3"
     }
 }
