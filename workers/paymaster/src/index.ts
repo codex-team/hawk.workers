@@ -147,7 +147,7 @@ export default class Paymaster extends Worker {
       type: AccountantEventType.Transaction,
       payload: {
         type,
-        date: Date.now() / 1000,
+        date: (new Date()).getTime(),
         workspaceId,
         amount
       }
@@ -172,7 +172,7 @@ export default class Paymaster extends Worker {
 
     expectedPayDay.setDate(date.getDate() + numberOfDays);
 
-    return this.isToday(+expectedPayDay);
+    return this.isToday(expectedPayDay.getTime());
   }
 
   /**
