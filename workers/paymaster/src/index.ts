@@ -1,13 +1,19 @@
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import {Collection, ObjectID} from 'mongodb';
-import {DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent} from "../types/paymasterWorkerEvents";
+import {
+  DailyCheckEvent,
+  EventType,
+  PaymasterEvent,
+  PlanChangedEvent,
+  TariffPlan, WorkspacePlan
+} from "../types/paymaster-worker-events";
 import * as workerNames from '../../../lib/workerNames';
 import {
   EventType as AccountantEventType,
   TransactionEvent,
   TransactionType
-} from "hawk-worker-accountant/types/accountantWorkerEvents";
+} from 'hawk-worker-accountant/types/accountant-worker-events';
 import * as pkg from '../package.json';
 
 /**
@@ -71,6 +77,8 @@ export default class Paymaster extends Worker {
   /**
    * DailyCheck event handler
    *
+   * Called every day, enumerate through workspaces and check if today is a payday for workspace plan
+   *
    * @param {DailyCheckEvent} event
    */
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
@@ -78,7 +86,7 @@ export default class Paymaster extends Worker {
     const plans = await this.plans.find({}).toArray();
 
     workspaces.forEach(({_id, plan}) => {
-      const currentPlan = plans.find(p => p.name === plan.name);
+      const currentPlan: TariffPlan = plans.find(p => p.name === plan.name);
 
       /**
        * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
@@ -93,17 +101,24 @@ export default class Paymaster extends Worker {
 
   /**
    * PlanChanged event handler
+   *
+   * Called when user changes tariff plan for workspace:
+   *
+   * If new plan charge is more than old one, withdraw the difference.
+   *
+   * If today is payday and payment has not been proceed or if new plan charge less then old one, do nothing
+   *
    * @param {PlanChangedEvent} event
    */
   private async handlePlanChangedEvent(event: PlanChangedEvent): Promise<void> {
     const { payload } = event;
 
-    const plans = await this.plans.find({}).toArray();
+    const plans: TariffPlan[] = await this.plans.find({}).toArray();
     const workspace = await this.workspaces.findOne({_id: new ObjectID(payload.workspaceId)});
-    const oldPlan = plans.find(p => p.name === payload.oldPlan);
-    const newPlan = plans.find(p => p.name === payload.newPlan);
+    const oldPlan: TariffPlan = plans.find(p => p.name === payload.oldPlan);
+    const newPlan: TariffPlan = plans.find(p => p.name === payload.newPlan);
 
-    const {lastChargeDate} = workspace.plan;
+    const {lastChargeDate} = workspace.plan as WorkspacePlan;
 
     /**
      * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
@@ -112,6 +127,9 @@ export default class Paymaster extends Worker {
       return;
     }
 
+    /**
+     * If new plan charge is more than old one, withdraw the difference.
+     */
     if (newPlan.monthlyCharge > oldPlan.monthlyCharge) {
       this.sendTransaction(TransactionType.Charge, workspace._id.toString(), newPlan.monthlyCharge - oldPlan.monthlyCharge);
     }

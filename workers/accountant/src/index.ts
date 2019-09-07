@@ -1,7 +1,7 @@
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import {Collection, ObjectID, UpdateQuery} from 'mongodb';
-import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from "../types/accountantWorkerEvents";
+import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from "../types/accountant-worker-events";
 import * as pkg from '../package.json';
 
 /**
@@ -18,13 +18,20 @@ export default class AccountantWorker extends Worker {
    */
   private db: DatabaseController = new DatabaseController();
 
+  /**
+   * Workspaces collection
+   */
   private workspaces: Collection;
-  private transactions: Collection;
-  private plans: Collection;
 
-  constructor(){
-    super();
-  }
+  /**
+   * Transactions collection
+   */
+  private transactions: Collection;
+
+  /**
+   * Tariff plans collection
+   */
+  private plans: Collection;
 
   /**
    * Start consuming messages
@@ -60,7 +67,9 @@ export default class AccountantWorker extends Worker {
   }
 
   /**
-   * Transaction event method
+   * Transaction event handler method
+   *
+   * Write transaction to the database and update workspace balance
    *
    * @param {TransactionEvent} event
    */
@@ -72,6 +81,12 @@ export default class AccountantWorker extends Worker {
     if (payload.type === TransactionType.Charge) {
       const workspace = await this.workspaces.findOne({ _id: new ObjectID(payload.workspaceId) });
 
+      /**
+       * If balance is too low for charge:
+       * 1. Try to rebill
+       * 2. Send notification to collector worker to block new events
+       * 3. Send notification to user
+       */
       if (workspace.balance < payload.amount) {
         /**
          * @todo Send notification to merchant worker to rebill
