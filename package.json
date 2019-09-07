@@ -9,7 +9,8 @@
         "workers/javascript",
         "workers/grouper",
         "workers/accountant",
-        "workers/paymaster"
+        "workers/paymaster",
+        "workers/python"
     ],
     "scripts": {
         "test": "jest --coverage --silent",
