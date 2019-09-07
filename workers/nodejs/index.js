@@ -21,7 +21,7 @@ class NodejsEventWorker extends EventWorker {
    * Start consuming messages
    */
   async start() {
-    await db.connect();
+    await db.connect(process.env.EVENTS_DB_NAME);
 
     await super.start();
   }

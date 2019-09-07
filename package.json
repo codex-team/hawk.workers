@@ -7,7 +7,9 @@
     "license": "UNLICENSED",
     "workspaces": [
         "workers/javascript",
-        "workers/grouper"
+        "workers/grouper",
+        "workers/accountant",
+        "workers/paymaster"
     ],
     "scripts": {
         "test": "jest --coverage --silent",
@@ -19,7 +21,9 @@
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
-        "run-grouper": "yarn worker hawk-worker-grouper"
+        "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-accountant": "yarn worker hawk-worker-accountant",
+        "run-paymaster": "yarn worker hawk-worker-paymaster"
     },
     "dependencies": {
         "amqplib": "^0.5.5",

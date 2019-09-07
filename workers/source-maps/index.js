@@ -25,7 +25,7 @@ module.exports.SourceMapsWorker = class SourceMapsWorker extends Worker {
    * Start consuming messages
    */
   async start() {
-    await db.connect();
+    await db.connect(process.env.EVENTS_DB_NAME);
     await super.start();
   }
 

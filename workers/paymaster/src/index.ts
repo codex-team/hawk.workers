@@ -41,7 +41,7 @@ export default class Paymaster extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect('hawk');
+    await this.db.connect(process.env.ACCOUNTS_DB_NAME);
 
     const connection = this.db.getConnection();
 
