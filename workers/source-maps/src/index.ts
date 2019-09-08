@@ -2,12 +2,12 @@
  * This worker gets source map from the Registry and puts it to Mongo
  * to provide access for it for JS Worker
  */
-import {DatabaseError, Worker} from '../../../lib/worker';
+import {RawSourceMap} from 'hawk-worker-javascript/node_modules/source-map';
 import {DatabaseController} from '../../../lib/db/controller';
+import {DatabaseError, Worker} from '../../../lib/worker';
+import * as pkg from '../package.json';
 import {SourcemapCollectedData, SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
-import * as pkg from '../package.json'
 import {SourcemapDataExtended, SourceMapsRecord} from '../types/source-maps-record';
-import {RawSourceMap} from "hawk-worker-javascript/node_modules/source-map";
 
 /**
  * Java Script source maps worker
@@ -32,7 +32,7 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Start consuming messages
    */
-  async start() {
+  public async start() {
     await this.db.connect();
     await super.start();
   }
@@ -40,7 +40,7 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Finish everything
    */
-  async finish() {
+  public async finish() {
     await super.finish();
     await this.db.close();
   }
@@ -63,7 +63,7 @@ export default class SourceMapsWorker extends Worker {
     this.save({
       projectId: task.projectId,
       release: task.release,
-      files: sourceMapsFilesExtended
+      files: sourceMapsFilesExtended,
     } as SourceMapsRecord);
   }
 
@@ -88,8 +88,8 @@ export default class SourceMapsWorker extends Worker {
       return {
         mapFileName: file.name,
         originFileName: mapContent.file,
-        content: mapBodyString
-      }
+        content: mapBodyString,
+      };
     });
   }
 
@@ -104,15 +104,15 @@ export default class SourceMapsWorker extends Worker {
         .collection(this.dbCollectionName)
         .replaceOne({
           projectId: releaseData.projectId,
-          release: releaseData.release
+          release: releaseData.release,
         }, releaseData, {
-          upsert: true
+          upsert: true,
         });
 
-      return upsertedRelease ? upsertedRelease.upsertedId: null;
+      return upsertedRelease ? upsertedRelease.upsertedId : null;
     } catch (err) {
       console.log('DatabaseError:', err);
       throw new DatabaseError(err);
     }
   }
-};
+}

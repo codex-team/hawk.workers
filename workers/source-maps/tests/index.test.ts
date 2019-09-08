@@ -1,16 +1,17 @@
+/* tslint:disable:no-string-literal */
 /**
  * Tests for Source Maps Worker
  */
-import {SourcemapCollectedData} from '../types/source-maps-event-worker-task';
-import MockBundle from './create-mock-bundle';
 import SourceMapsWorker from '../src/index';
+import {SourcemapCollectedData} from '../types/source-maps-event-worker-task';
 import {SourcemapDataExtended} from '../types/source-maps-record';
+import MockBundle from './create-mock-bundle';
 
 describe('SourceMaps Worker', () => {
   /**
    * Testing bundle of a mock application from './mock/src/'
    */
-  let mockBundle: MockBundle = new MockBundle();
+  const mockBundle: MockBundle = new MockBundle();
 
   /**
    * Create webpack bundle and source map for Mock App
@@ -35,7 +36,7 @@ describe('SourceMaps Worker', () => {
 
     const extendedInfo: SourcemapDataExtended[] = workerInstance['extendReleaseInfo']([{
       name: 'main.js.map',
-      payload: map
+      payload: map,
     }] as SourcemapCollectedData[]);
 
     /**

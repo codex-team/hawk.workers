@@ -1,3 +1,4 @@
+/* tslint:disable:no-shadowed-variable  */
 /**
  * Get worker name(s) from command line arguments
  *
