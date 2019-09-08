@@ -9,6 +9,7 @@
   "workerType": "errors/javascript",
   "devDependencies": {
     "@types/node": "^12.7.2",
+    "source-map": "^0.7.3",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.3"
   }

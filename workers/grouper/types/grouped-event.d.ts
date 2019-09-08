@@ -8,7 +8,7 @@ export interface GroupedEvent {
   /**
    * Internal mongo id
    */
-  _id: ObjectId;
+  _id?: ObjectId;
 
   /**
    * Hash for grouping similar events

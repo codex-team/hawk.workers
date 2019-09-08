@@ -61,6 +61,11 @@ export interface EventData {
   headers?: object;
 
   /**
+   * Catcher-specific information
+   */
+  addons?: object;
+
+  /**
    * Current release (aka version, revision) of an application
    */
   release?: string;
@@ -71,7 +76,7 @@ export interface EventData {
   user?: User;
 
   /**
-   * Any other information to send with event
+   * Any other information collected and passed by user
    */
   context?: object;
 }
@@ -91,9 +96,24 @@ export interface BacktraceFrame {
   line: number;
 
   /**
+   * Column number
+   */
+  column: number;
+
+  /**
    * Sibling source code lines: some above and some below
    */
   sourceCode?: SourceCodeLine[];
+
+  /**
+   * Function name extracted from current stack frame
+   */
+  function?: string;
+
+  /**
+   * Function arguments extracted from current stack frame
+   */
+  arguments?: string[];
 }
 
 /**
