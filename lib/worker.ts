@@ -1,14 +1,14 @@
-import { Channel, Connection, ConsumeMessage, Message } from 'amqplib';
+import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
 import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import winston from 'winston';
-import { createLogger, format, transports } from 'winston';
-import { WorkerTask } from './types/worker-task';
+import {createLogger, format, transports} from 'winston';
+import {WorkerTask} from './types/worker-task';
 
-const { combine, timestamp, colorize, simple, printf } = format;
+const {combine, timestamp, colorize, simple, printf} = format;
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({path: path.resolve(__dirname, '../.env')});
 
 /**
  * Base worker class for processing tasks
@@ -54,14 +54,12 @@ export abstract class Worker {
   /**
    * Registry Endpoint
    */
-  private readonly registryUrl: string =
-    process.env.REGISTRY_URL || 'amqp://localhost';
+  private readonly registryUrl: string = process.env.REGISTRY_URL || 'amqp://localhost';
 
   /**
    * How many task Worker should do concurrently
    */
-  private readonly simultaneousTasks: number =
-    +process.env.SIMULTANEOUS_TASKS || 1;
+  private readonly simultaneousTasks: number = +process.env.SIMULTANEOUS_TASKS || 1;
 
   /**
    * Registry connection status true/false
@@ -120,9 +118,7 @@ export abstract class Worker {
       await this.connect();
     }
 
-    const { consumerTag } = await this.channelWithRegistry.consume(
-      this.type,
-      (msg: ConsumeMessage) => {
+    const {consumerTag} = await this.channelWithRegistry.consume(this.type, (msg: ConsumeMessage) => {
         const promise = this.processMessage(msg) as Promise<void>;
 
         this.tasksMap.set(msg, promise);
@@ -255,12 +251,8 @@ export abstract class Worker {
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
-      this.logger.debug(
-        'instanceof CriticalError? ' + (e instanceof CriticalError),
-      );
-      this.logger.debug(
-        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError),
-      );
+      this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
+      this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
 
       /**
        * Send back message to registry since we failed to handle it
@@ -319,25 +311,30 @@ export abstract class Worker {
  * Class for critical errors
  * have to stop process
  */
-export class CriticalError extends Error {}
+export class CriticalError extends Error {
+}
 
 /**
  * Class for non-critical errors
  * have not to stop process
  */
-export class NonCriticalError extends Error {}
+export class NonCriticalError extends Error {
+}
 
 /**
  * Simple class for parsing errors
  */
-export class ParsingError extends NonCriticalError {}
+export class ParsingError extends NonCriticalError {
+}
 
 /**
  * Class for database errors in workers
  */
-export class DatabaseError extends CriticalError {}
+export class DatabaseError extends CriticalError {
+}
 
 /**
  * Class for validation errors
  */
-export class ValidationError extends NonCriticalError {}
+export class ValidationError extends NonCriticalError {
+}

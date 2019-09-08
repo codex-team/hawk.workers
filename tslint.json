@@ -9,7 +9,8 @@
         "quotemark": [true, "single"],
         "no-console": {
             "severity": "warn"
-        }
+        },
+        "member-ordering": [true, {"order": "fields-first"}]
     },
     "rulesDirectory": [],
     "linterOptions": {

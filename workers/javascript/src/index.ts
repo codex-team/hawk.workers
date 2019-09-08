@@ -17,6 +17,20 @@ import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
 export default class JavascriptEventWorker extends EventWorker {
 
   /**
+   * Worker type (will pull tasks from Registry queue with the same name)
+   */
+  public readonly type: string = pkg.workerType;
+
+  /**
+   * Database Controller
+   */
+  private db: DatabaseController = new DatabaseController();
+
+  constructor() {
+    super();
+  }
+
+  /**
    * Extract base filename from path
    * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
    */
@@ -32,20 +46,6 @@ export default class JavascriptEventWorker extends EventWorker {
     nameFromPath = nameFromPath.split('?').shift();
 
     return nameFromPath;
-  }
-
-  /**
-   * Worker type (will pull tasks from Registry queue with the same name)
-   */
-  public readonly type: string = pkg.workerType;
-
-  /**
-   * Database Controller
-   */
-  private db: DatabaseController = new DatabaseController();
-
-  constructor() {
-    super();
   }
 
   /**
