@@ -1,5 +1,5 @@
 import { ObjectId } from 'bson';
-import {EventData} from '../../../lib/types/hawk-event';
+import {EventData} from '../../../lib/types/event-worker-task';
 
 /**
  * Repetition is a document contained diff with original event
