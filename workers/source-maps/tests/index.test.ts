@@ -1,24 +1,10 @@
 /**
  * Tests for Source Maps Worker
  */
-import {SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
-
-import mockApp from './mock/src/index';
-import * as path from 'path';
-import * as fs from 'fs';
+import {SourcemapCollectedData} from '../types/source-maps-event-worker-task';
 import MockBundle from './create-mock-bundle';
-
-
-
-
-const workerTaskMock: SourceMapsEventWorkerTask = {
-  projectId: '5d206f7f9aaf7c0071d64596',
-  release: '12345',
-  files: [{
-    name: 'main.min.js',
-    payload: ''
-  }]
-};
+import SourceMapsWorker from '../src/index';
+import {SourcemapDataExtended} from '../types/source-maps-record';
 
 describe('SourceMaps Worker', () => {
   /**
@@ -27,7 +13,7 @@ describe('SourceMaps Worker', () => {
   let mockBundle: MockBundle = new MockBundle();
 
   /**
-   * Create webpack bundle
+   * Create webpack bundle and source map for Mock App
    */
   beforeAll(async () => {
     await mockBundle.build();
@@ -40,19 +26,34 @@ describe('SourceMaps Worker', () => {
     await mockBundle.clear();
   });
 
-  test('should return correct worker type', async () => {
+  test('should correctly extract original file name from source map', async () => {
     /**
-     * Create a minified version and source map from Mock App
+     * Get a bundle
      */
-    console.log('\n\n\nStart building Mock App');
+    const map = await mockBundle.getSourceMap();
+    const workerInstance = new SourceMapsWorker();
 
-    const bundle = await mockBundle.getBundle();
-    
-    console.log('bundle', bundle);
+    const extendedInfo: SourcemapDataExtended[] = workerInstance['extendReleaseInfo']([{
+      name: 'main.js.map',
+      payload: map
+    }] as SourcemapCollectedData[]);
 
+    /**
+     * Maps should be array
+     */
+    await expect(extendedInfo).toBeInstanceOf(Array);
 
+    const currentMapData = extendedInfo.pop();
 
-
-
+    /**
+     * Check for extended properties
+     */
+    await expect(currentMapData).toHaveProperty('mapFileName', 'main.js.map');
+    await expect(currentMapData).toHaveProperty('originFileName', 'main.js');
+    await expect(currentMapData).toHaveProperty('content');
   });
+
+  /**
+   * @todo add test for case with several source maps in a single release
+   */
 });

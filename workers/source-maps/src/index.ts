@@ -55,7 +55,26 @@ export default class SourceMapsWorker extends Worker {
      * Extract original file name from source-map's "file" property
      * and extend data-to-save with it
      */
-    const sourceMapsFilesExtended: SourcemapDataExtended[] = task.files.map((file: SourcemapCollectedData) => {
+    const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
+
+    /**
+     * Save source map
+     */
+    this.save({
+      projectId: task.projectId,
+      release: task.release,
+      files: sourceMapsFilesExtended
+    } as SourceMapsRecord);
+  }
+
+  /**
+   * Extract original file name from source-map's "file" property
+   * and extend data-to-save with it
+   *
+   * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
+   */
+  private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
+    return sourceMaps.map((file: SourcemapCollectedData) => {
       /**
        * Decode base64 source map content
        */
@@ -72,15 +91,6 @@ export default class SourceMapsWorker extends Worker {
         content: mapBodyString
       }
     });
-
-    /**
-     * Save source map
-     */
-    this.save({
-      projectId: task.projectId,
-      release: task.release,
-      files: sourceMapsFilesExtended
-    } as SourceMapsRecord);
   }
 
   /**
@@ -88,7 +98,7 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param {SourceMapsRecord} releaseData - info with source map
    */
-  async save(releaseData: SourceMapsRecord) {
+  private async save(releaseData: SourceMapsRecord) {
     try {
       const upsertedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)

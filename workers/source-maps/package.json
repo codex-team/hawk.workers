@@ -9,6 +9,7 @@
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
+    "rimraf": "^3.0.0",
     "webpack": "^4.39.3"
   }
 }
