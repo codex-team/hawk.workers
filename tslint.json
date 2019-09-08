@@ -1,0 +1,18 @@
+{
+    "defaultSeverity": "error",
+    "extends": ["tslint:recommended"],
+    "jsRules": {},
+    "rules": {
+        "object-literal-sort-keys": false,
+        "interface-name": false,
+        "max-classes-per-file": false,
+        "quotemark": [true, "single"],
+        "no-console": {
+            "severity": "warn"
+        }
+    },
+    "rulesDirectory": [],
+    "linterOptions": {
+        "exclude": ["**/*.js"]
+    }
+}

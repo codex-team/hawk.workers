@@ -1,9 +1,9 @@
-import winston from 'winston';
-import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
-import * as path from 'path';
+import { Channel, Connection, ConsumeMessage, Message } from 'amqplib';
 import * as amqp from 'amqplib';
-import { createLogger, format, transports } from 'winston';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import winston from 'winston';
+import { createLogger, format, transports } from 'winston';
 import { WorkerTask } from './types/worker-task';
 
 const { combine, timestamp, colorize, simple, printf } = format;
@@ -22,7 +22,8 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
  * Environment variables:
  *  - `REGISTRY_URL` Registry connection URL
  *  - `SIMULTANEOUS_TASKS` Number of tasks handling simultaneously
- *  - `LOG_LEVEL` Log level. Available: error,warn,info,versobe,debug,silly. See more https://github.com/winstonjs/winston#logging
+ *  - `LOG_LEVEL` Log level. Available: error,warn,info,verbose,debug,silly.
+ *    See more https://github.com/winstonjs/winston#logging
  *
  *  Other methods available (see code)
  *
@@ -53,12 +54,14 @@ export abstract class Worker {
   /**
    * Registry Endpoint
    */
-  private readonly registryUrl: string = process.env.REGISTRY_URL || 'amqp://localhost';
+  private readonly registryUrl: string =
+    process.env.REGISTRY_URL || 'amqp://localhost';
 
   /**
    * How many task Worker should do concurrently
    */
-  private readonly simultaneousTasks: number = +process.env.SIMULTANEOUS_TASKS || 1;
+  private readonly simultaneousTasks: number =
+    +process.env.SIMULTANEOUS_TASKS || 1;
 
   /**
    * Registry connection status true/false
@@ -99,10 +102,10 @@ export abstract class Worker {
           timestamp(),
           colorize(),
           simple(),
-          printf(msg => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
-        )
-      })
-    ]
+          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
+        ),
+      }),
+    ],
   });
 
   /**
@@ -117,19 +120,21 @@ export abstract class Worker {
       await this.connect();
     }
 
-    const { consumerTag } = await this.channelWithRegistry.consume(this.type, (msg: ConsumeMessage) => {
-      const promise = this.processMessage(msg) as Promise<void>;
+    const { consumerTag } = await this.channelWithRegistry.consume(
+      this.type,
+      (msg: ConsumeMessage) => {
+        const promise = this.processMessage(msg) as Promise<void>;
 
-      this.tasksMap.set(msg, promise);
-      promise.then(() => this.tasksMap.delete(msg));
-    });
+        this.tasksMap.set(msg, promise);
+        promise.then(() => this.tasksMap.delete(msg));
+      },
+    );
 
     /**
      * Remember consumer tag to cancel subscription in future
      */
     this.registryConsumerTag = consumerTag;
   }
-
 
   /**
    * Unsubscribe and disconnect
@@ -146,21 +151,24 @@ export abstract class Worker {
   }
 
   /**
-   * Message handle function
-   *
-   * @param {WorkerTask} event - Event object from consume method
-   */
-  protected abstract handle(event: WorkerTask): Promise<void>;
-
-  /**
    * Adds task to other worker
    *
    * @param {string} worker - worker's name
    * @param {object} payload - payload object
    */
   public async addTask(worker: string, payload: object): Promise<boolean> {
-    return this.channelWithRegistry.sendToQueue(worker, Buffer.from(JSON.stringify(payload)));
+    return this.channelWithRegistry.sendToQueue(
+      worker,
+      Buffer.from(JSON.stringify(payload)),
+    );
   }
+
+  /**
+   * Message handle function
+   *
+   * @param {WorkerTask} event - Event object from consume method
+   */
+  protected abstract handle(event: WorkerTask): Promise<void>;
 
   /**
    * Connect to RabbitMQ server
@@ -229,10 +237,12 @@ export abstract class Worker {
       event = JSON.parse(stringifiedEvent);
 
       this.logger.verbose('Received event:\n', {
-        message: stringifiedEvent
+        message: stringifiedEvent,
       });
     } catch (error) {
-      throw new ParsingError('Worker::processMessage: Message parsing error' + error);
+      throw new ParsingError(
+        'Worker::processMessage: Message parsing error' + error,
+      );
     }
 
     try {
@@ -246,10 +256,10 @@ export abstract class Worker {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
       this.logger.debug(
-        'instanceof CriticalError? ' + (e instanceof CriticalError)
+        'instanceof CriticalError? ' + (e instanceof CriticalError),
       );
       this.logger.debug(
-        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError)
+        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError),
       );
 
       /**
@@ -272,7 +282,6 @@ export abstract class Worker {
    */
   private async unsubscribe(): Promise<void> {
     if (this.registryConsumerTag) {
-
       /**
        * Cancel the consumer
        */

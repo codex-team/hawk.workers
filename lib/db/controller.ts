@@ -25,7 +25,7 @@ export class DatabaseController {
    * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  async connect() {
+  public async connect() {
     if (this.db) {
       return;
     }
@@ -35,7 +35,7 @@ export class DatabaseController {
     }
 
     this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + process.env.MONGO_DBNAME, {
-      useNewUrlParser: true
+      useNewUrlParser: true,
     });
     this.db = await this.connection.db();
   }
@@ -45,7 +45,7 @@ export class DatabaseController {
    *
    * @returns {Promise<void>}
    */
-  async close() {
+  public async close() {
     this.db = null;
 
     if (!this.connection) {
@@ -58,7 +58,7 @@ export class DatabaseController {
   /**
    * @return {*|null}
    */
-  getConnection() {
+  public getConnection() {
     return this.db;
   }
 }

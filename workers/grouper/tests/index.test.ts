@@ -1,5 +1,5 @@
-import GrouperWorker from '../src/index';
 import * as mongodb from 'mongodb';
+import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 
 /**
@@ -11,8 +11,8 @@ const testGroupingTask = {
   event: {
     title: 'Hawk client catcher test',
     timestamp: (new Date()).getTime(),
-    backtrace: []
-  }
+    backtrace: [],
+  },
 } as GroupWorkerTask;
 
 describe('GrouperWorker', () => {
@@ -31,12 +31,12 @@ describe('GrouperWorker', () => {
   });
 
   test('show save event and return id', async () => {
-    const result = await worker['saveEvent']('5d206f7f9aaf7c0071d64596', {
+    const result = await worker.saveEvent('5d206f7f9aaf7c0071d64596', {
       catcherType: 'grouper',
       payload: {
         title: 'testing',
-        timestamp: (new Date()).getTime()
-      }
+        timestamp: (new Date()).getTime(),
+      },
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -49,7 +49,7 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['saveEvent']('10', {})
+      worker.saveEvent('10', {}),
     ).rejects.toThrowError();
   });
 
@@ -57,9 +57,9 @@ describe('GrouperWorker', () => {
     /**
      * To test private method, we have to access it as dynamic prop.
      */
-    const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
+    const result = await worker.saveRepetition('5d206f7f9aaf7c0071d64596', {
       groupHash: '1234567890',
-      timestamp: (new Date()).getTime()
+      timestamp: (new Date()).getTime(),
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -72,9 +72,9 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['saveRepetition']('10', {
+      worker.saveRepetition('10', {
         groupHash: '1234567890',
-      })
+      }),
     ).rejects.toThrowError();
   });
 
@@ -83,7 +83,7 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['incrementEventCounter']('10', {})
+      worker.incrementEventCounter('10', {}),
     ).rejects.toThrowError();
   });
 
@@ -91,7 +91,7 @@ describe('GrouperWorker', () => {
     /**
      * To test private method, we have to access it as dynamic prop.
      */
-    const result = await worker['incrementEventCounter']('5d206f7f9aaf7c0071d64596', {});
+    const result = await worker.incrementEventCounter('5d206f7f9aaf7c0071d64596', {});
 
     expect(result).not.toBe(null);
   });

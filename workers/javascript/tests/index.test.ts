@@ -14,8 +14,8 @@ const testEventData = {
     backtrace: null,
     get: null,
     user: null,
-    context: null
-  }
+    context: null,
+  },
 } as JavaScriptEventWorkerTask;
 
 describe('JavascriptEventWorker', () => {

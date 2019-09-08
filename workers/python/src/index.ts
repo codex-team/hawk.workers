@@ -1,9 +1,9 @@
-import * as WorkerNames from '../../../lib/workerNames';
 import { DatabaseController } from '../../../lib/db/controller';
-import { PythonEventWorkerTask} from '../types/python-event-worker-task';
 import { EventWorker } from '../../../lib/event-worker';
+import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
-import * as pkg from '../package.json'
+import * as pkg from '../package.json';
+import { PythonEventWorkerTask} from '../types/python-event-worker-task';
 
 /**
  * Worker for handling Python events
@@ -19,7 +19,7 @@ export default class PythonEventWorker extends EventWorker {
    */
   private db: DatabaseController = new DatabaseController();
 
-  constructor(){
+  constructor() {
     super();
   }
 
@@ -48,7 +48,7 @@ export default class PythonEventWorker extends EventWorker {
     await this.addTask(WorkerNames.GROUPER, {
       projectId: this.projectId,
       catcherType: this.type,
-      event: event.payload
+      event: event.payload,
     } as GroupWorkerTask);
   }
 }

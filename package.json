@@ -5,18 +5,15 @@
     "description": "Hawk workers",
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "UNLICENSED",
-    "workspaces": [
-        "workers/javascript",
-        "workers/python",
-        "workers/grouper"
-    ],
+    "workspaces": ["workers/javascript", "workers/python", "workers/grouper"],
     "scripts": {
         "test": "jest --coverage --silent",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
+        "lint": "yarn lint:js; yarn lint:ts",
+        "lint:js": "eslint . --fix",
+        "lint:ts": "tslint --project . --fix",
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
@@ -45,6 +42,7 @@
         "random-words": "^1.1.0",
         "ts-jest": "^24.0.2",
         "ts-node": "^8.3.0",
+        "tslint": "^5.19.0",
         "typescript": "^3.5.3",
         "yargs": "^13.3.0"
     }
