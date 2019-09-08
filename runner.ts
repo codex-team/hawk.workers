@@ -98,7 +98,7 @@ class WorkerRunner {
   private exceptionHandler(error: Error) {
     console.log(
       '\x1b[41m%s\x1b[0m',
-      '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error have been occurred: \n',
+      '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n',
     );
     console.log(error);
     console.log('\n\n');
