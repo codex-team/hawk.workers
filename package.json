@@ -7,11 +7,12 @@
     "license": "UNLICENSED",
     "workspaces": [
         "workers/javascript",
-        "workers/python",
-        "workers/grouper"
+        "workers/grouper",
+        "workers/source-maps",
+        "workers/python"
     ],
     "scripts": {
-        "test": "jest --coverage --silent",
+        "test": "jest --coverage",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
@@ -20,7 +21,8 @@
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
-        "run-grouper": "yarn worker hawk-worker-grouper"
+        "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-maps": "yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
@@ -46,6 +48,7 @@
         "ts-jest": "^24.0.2",
         "ts-node": "^8.3.0",
         "typescript": "^3.5.3",
-        "yargs": "^13.3.0"
+        "yargs": "^13.3.0",
+        "webpack": "^4.39.3"
     }
 }

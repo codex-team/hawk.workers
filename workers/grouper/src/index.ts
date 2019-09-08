@@ -130,7 +130,7 @@ export default class GrouperWorker extends Worker {
    * @throws {ValidationError} if `eventData` is not a valid object
    * @returns {Promise<ObjectID>} saved event id
    */
-  private async saveEvent(projectId, groupedEventData): Promise<mongodb.ObjectID> {
+  private async saveEvent(projectId: string, groupedEventData: GroupedEvent): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
@@ -150,9 +150,9 @@ export default class GrouperWorker extends Worker {
    * @param {string|ObjectID} projectId - project's identifier
    * @param {Repetition} repetition - object that contains only difference with first event
    */
-  private async saveRepetition(projectId, repetition: Repetition): Promise<mongodb.ObjectID> {
+  private async saveRepetition(projectId: string, repetition: Repetition): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
-      throw new ValidationError('Controller.saveEvent: Project ID is invalid or missing');
+      throw new ValidationError('Controller.saveRepetition: Project ID is invalid or missing');
     }
 
     try {
