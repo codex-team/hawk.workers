@@ -43,10 +43,8 @@ export default class PythonEventWorker extends EventWorker {
    * Message handle function
    */
   public async handle(event: PythonEventWorkerTask): Promise<void> {
-    await super.handle(event);
-
     await this.addTask(WorkerNames.GROUPER, {
-      projectId: this.projectId,
+      projectId: event.projectId,
       catcherType: this.type,
       event: event.payload,
     } as GroupWorkerTask);

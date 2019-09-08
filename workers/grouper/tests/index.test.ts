@@ -1,7 +1,7 @@
 /* tslint:disable:no-string-literal */
 import * as mongodb from 'mongodb';
 import GrouperWorker from '../src/index';
-import { GroupWorkerTask } from '../types/group-worker-task';
+import {GroupWorkerTask} from '../types/group-worker-task';
 
 /**
  * Test Grouping task
@@ -70,7 +70,10 @@ describe('GrouperWorker', () => {
      */
     const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
       groupHash: '1234567890',
-      payload: {},
+      payload: {
+        title: 'Test event',
+        timestamp: Date.now() / 1000,
+      },
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -85,7 +88,10 @@ describe('GrouperWorker', () => {
        */
       worker['saveRepetition']('10', {
         groupHash: '1234567890',
-        payload: {},
+        payload: {
+          title: 'Test event',
+          timestamp: Date.now() / 1000,
+        },
       }),
     ).rejects.toThrowError();
   });

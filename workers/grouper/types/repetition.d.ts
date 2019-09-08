@@ -19,5 +19,5 @@ export interface Repetition {
    * And any of EventData field with diff
    * except fields that used in groupHash
    */
-  payload: EventData
+  payload: EventData;
 }
