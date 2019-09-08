@@ -8,7 +8,8 @@
     "workspaces": [
         "workers/javascript",
         "workers/grouper",
-        "workers/source-maps"
+        "workers/source-maps",
+        "workers/python"
     ],
     "scripts": {
         "test": "jest --coverage",
