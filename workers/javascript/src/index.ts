@@ -1,20 +1,21 @@
-import * as WorkerNames from '../../../lib/workerNames';
-import { DatabaseController } from '../../../lib/db/controller';
-import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import { EventWorker } from '../../../lib/event-worker';
-import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
-import * as pkg from '../package.json'
 import * as path from 'path';
-import * as sourceMap from "source-map";
-import { DatabaseError } from '../../../lib/worker';
-import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
-import {SourcemapDataExtended, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
+import * as sourceMap from 'source-map';
 import {BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition} from 'source-map';
+import {DatabaseController} from '../../../lib/db/controller';
+import {EventWorker} from '../../../lib/event-worker';
+import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
+import {DatabaseError} from '../../../lib/worker';
+import * as WorkerNames from '../../../lib/workerNames';
+import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
+import {SourcemapDataExtended, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
+import * as pkg from '../package.json';
+import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
 
 /**
  * Worker for handling Javascript events
  */
 export default class JavascriptEventWorker extends EventWorker {
+
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -25,8 +26,26 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private db: DatabaseController = new DatabaseController();
 
-  constructor(){
+  constructor() {
     super();
+  }
+
+  /**
+   * Extract base filename from path
+   * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
+   */
+  private static extractFileNameFromFullPath(filePath: string): string {
+    /**
+     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js?v=10"
+     */
+    let nameFromPath = path.basename(filePath);
+
+    /**
+     * "main.js?v=10" -> "main.js"
+     */
+    nameFromPath = nameFromPath.split('?').shift();
+
+    return nameFromPath;
   }
 
   /**
@@ -49,7 +68,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * Message handle function
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
-    if (event.payload.release && event.payload.backtrace){
+    if (event.payload.release && event.payload.backtrace) {
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
 
@@ -70,9 +89,11 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Find source map in Mongo
      */
-    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(event.projectId, event.payload.release.toString());
+    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
+      event.projectId,
+      event.payload.release.toString());
 
-    if (!releaseRecord){
+    if (!releaseRecord) {
       return event.payload.backtrace;
     }
 
@@ -89,22 +110,23 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {BacktraceFrame} stackFrame — one line of stack
    * @param {SourceMapsRecord} releaseRecord — what we store in DB (map file name, origin file name, maps files)
    */
-  private async consumeBacktraceFrame(stackFrame: BacktraceFrame, releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
+  private async consumeBacktraceFrame(stackFrame: BacktraceFrame,
+                                      releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
     /**
      * Extract base filename from path
      * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
      */
-    let nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
+    const nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
 
     /**
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
      */
-    const mapForFrame: SourcemapDataExtended = releaseRecord.files.find( (mapFileName: SourcemapDataExtended) => {
+    const mapForFrame: SourcemapDataExtended = releaseRecord.files.find((mapFileName: SourcemapDataExtended) => {
       return mapFileName.originFileName === nameFromPath;
     });
 
-    if (!mapForFrame){
+    if (!mapForFrame) {
       return stackFrame;
     }
 
@@ -116,16 +138,16 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Error's original position
      */
-    let originalLocation: NullableMappedPosition = consumer.originalPositionFor({
+    const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
-      column: stackFrame.column
+      column: stackFrame.column,
     });
 
     /**
      * Source code lines
      * 5 above and 5 below
      */
-    let lines = this.readSourceLines(consumer, originalLocation);
+    const lines = this.readSourceLines(consumer, originalLocation);
 
     consumer.destroy();
     consumer = null;
@@ -134,29 +156,9 @@ export default class JavascriptEventWorker extends EventWorker {
       line: originalLocation.line,
       column: originalLocation.column,
       file: originalLocation.source,
-      sourceCode: lines
+      sourceCode: lines,
     }) as BacktraceFrame;
   }
-
-
-  /**
-   * Extract base filename from path
-   * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
-   */
-  private static extractFileNameFromFullPath(filePath: string): string {
-    /**
-     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js?v=10"
-     */
-    let nameFromPath = path.basename(filePath);
-
-    /**
-     * "main.js?v=10" -> "main.js"
-     */
-    nameFromPath = nameFromPath.split('?').shift();
-
-    return nameFromPath;
-  }
-
 
   /**
    * Reads near-placed lines from the original source
@@ -166,12 +168,12 @@ export default class JavascriptEventWorker extends EventWorker {
    * @return {SourceCodeLine[]}
    */
   private readSourceLines(
-    consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer ,
-    original: NullableMappedPosition
+    consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer,
+    original: NullableMappedPosition,
   ): SourceCodeLine[] {
-    let sourceContent = consumer.sourceContentFor(original.source, true);
+    const sourceContent = consumer.sourceContentFor(original.source, true);
 
-    if (!sourceContent){
+    if (!sourceContent) {
       return null;
     }
 
@@ -187,7 +189,6 @@ export default class JavascriptEventWorker extends EventWorker {
     });
   }
 
-
   /**
    * Return source map for passed release from DB
    * Source Map are delivered at the building-time from client's server to the Source Maps Worker
@@ -202,12 +203,12 @@ export default class JavascriptEventWorker extends EventWorker {
       return await this.db.getConnection()
         .collection(releasesDbCollectionName)
         .findOne({
-          projectId: projectId,
-          release
+          projectId,
+          release,
         }, {
           sort: {
-            _id: -1
-          }
+            _id: -1,
+          },
         });
     } catch (err) {
       throw new DatabaseError(err);
@@ -222,9 +223,9 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private async consumeSourceMap(mapBody: string): Promise<BasicSourceMapConsumer | IndexedSourceMapConsumer> {
     return new Promise((resolve) => {
-      sourceMap.SourceMapConsumer.with(mapBody, null, consumer => {
+      sourceMap.SourceMapConsumer.with(mapBody, null, (consumer) => {
         resolve(consumer);
       });
-    })
+    });
   }
 }

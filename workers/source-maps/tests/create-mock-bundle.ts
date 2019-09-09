@@ -1,7 +1,7 @@
-import * as path from "path";
-import * as fs from "fs";
-import * as webpack from 'webpack';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as rimraf from 'rimraf';
+import * as webpack from 'webpack';
 
 /**
  * Create a webpack-bundle for mock app in ./mock/src/
@@ -17,13 +17,10 @@ export default class MockBundle {
    */
   private readonly outputDir: string = path.resolve(__dirname, 'mock', 'dist');
 
-  constructor() {
-  }
-
   /**
    * Create a bundle via Webpack
    */
-  build() {
+  public build() {
     return new Promise((resolve, reject) => {
       webpack({
         mode: 'production',
@@ -32,7 +29,7 @@ export default class MockBundle {
           path: this.outputDir,
           libraryExport: 'default',
         },
-        devtool: 'source-map'
+        devtool: 'source-map',
       }, (err, stats) => {
         if (err) {
           reject(err);
@@ -57,7 +54,7 @@ export default class MockBundle {
   /**
    * Load bundle file and return it's content
    */
-  getBundle(): Promise<string> {
+  public getBundle(): Promise<string> {
     return new Promise((resolve, reject) => {
       fs.readFile(path.resolve(this.outputDir, 'main.js'), (error, data) => {
         if (error) {
@@ -71,13 +68,13 @@ export default class MockBundle {
 
         resolve(dataStringified);
       });
-    })
+    });
   }
 
   /**
    * Load source map file and return it's content in base64
    */
-  getSourceMap(): Promise<string> {
+  public getSourceMap(): Promise<string> {
     return new Promise((resolve, reject) => {
       fs.readFile(path.resolve(this.outputDir, 'main.js.map'), (error, data) => {
         if (error) {
@@ -91,16 +88,15 @@ export default class MockBundle {
 
         resolve(dataStringified);
       });
-    })
+    });
   }
-
 
   /**
    * Clears created bundle
    */
-  clear() {
+  public clear() {
     return new Promise((resolve) => {
       rimraf(this.outputDir, resolve);
-    })
+    });
   }
 }

@@ -1,6 +1,7 @@
-import GrouperWorker from '../src/index';
+/* tslint:disable:no-string-literal */
 import * as mongodb from 'mongodb';
-import { GroupWorkerTask } from '../types/group-worker-task';
+import GrouperWorker from '../src/index';
+import {GroupWorkerTask} from '../types/group-worker-task';
 
 /**
  * Test Grouping task
@@ -11,8 +12,8 @@ const testGroupingTask = {
   event: {
     title: 'Hawk client catcher test',
     timestamp: (new Date()).getTime(),
-    backtrace: []
-  }
+    backtrace: [],
+  },
 } as GroupWorkerTask;
 
 describe('GrouperWorker', () => {
@@ -57,9 +58,9 @@ describe('GrouperWorker', () => {
         catcherType: '',
         payload: {
           title: 'Test event',
-          timestamp: Date.now() / 1000
-        }
-      })
+          timestamp: Date.now() / 1000,
+        },
+      }),
     ).rejects.toThrowError();
   });
 
@@ -69,7 +70,10 @@ describe('GrouperWorker', () => {
      */
     const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
       groupHash: '1234567890',
-      payload: {}
+      payload: {
+        title: 'Test event',
+        timestamp: Date.now() / 1000,
+      },
     });
 
     const insertedId = mongodb.ObjectID.isValid(result);
@@ -84,8 +88,11 @@ describe('GrouperWorker', () => {
        */
       worker['saveRepetition']('10', {
         groupHash: '1234567890',
-        payload: {}
-      })
+        payload: {
+          title: 'Test event',
+          timestamp: Date.now() / 1000,
+        },
+      }),
     ).rejects.toThrowError();
   });
 
@@ -94,7 +101,7 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['incrementEventCounter']('10', {})
+      worker['incrementEventCounter']('10', {}),
     ).rejects.toThrowError();
   });
 
