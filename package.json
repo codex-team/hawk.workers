@@ -11,7 +11,7 @@
         "workers/notifyChecker",
         "workers/notifyEmail",
         "workers/notifySlack",
-        "workers/notifyTelegram"
+        "workers/notifyTelegram",
         "workers/grouper",
         "workers/source-maps",
         "workers/python"
