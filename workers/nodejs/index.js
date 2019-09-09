@@ -87,7 +87,7 @@ class NodejsEventWorker extends EventWorker {
       throw new ParsingError('Message parsing error');
     }
 
-    const projectId = this.projectId;
+    const projectId = msg.projectId;
 
     const event = eventRaw.payload;
 

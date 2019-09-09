@@ -1,3 +1,4 @@
+/* tslint:disable:no-shadowed-variable  */
 /**
  * Get worker name(s) from command line arguments
  *
@@ -45,7 +46,7 @@ class WorkerRunner {
    * Dynamically loads workers through the yarn workspaces
    */
   private async loadPackages() {
-    return await workers.reduce((async (accumulator, packageName) => {
+    return await workers.reduce(async (accumulator, packageName) => {
       const workers = await accumulator;
 
       const workerClass = await import(`${packageName}`);
@@ -53,7 +54,7 @@ class WorkerRunner {
       workers.push(workerClass.default);
 
       return workers;
-    }), Promise.resolve([]));
+    }, Promise.resolve([]));
   }
 
   /**
@@ -69,19 +70,24 @@ class WorkerRunner {
    * Run workers
    */
   private async startWorkers() {
-    return Promise.all(this.workers.map((async (worker) => {
-      try {
-        await worker.start();
+    return Promise.all(
+      this.workers.map(async (worker) => {
+        try {
+          await worker.start();
 
-        console.log('\x1b[32m%s\x1b[0m', `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`);
-      } catch (startingError) {
-        this.exceptionHandler(startingError);
+          console.log(
+            '\x1b[32m%s\x1b[0m',
+            `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`,
+          );
+        } catch (startingError) {
+          this.exceptionHandler(startingError);
 
-        worker.logger.error(startingError);
+          worker.logger.error(startingError);
 
-        await this.stopWorker(worker);
-      }
-    })));
+          await this.stopWorker(worker);
+        }
+      }),
+    );
   }
 
   /**
@@ -90,7 +96,10 @@ class WorkerRunner {
    * - Unhandled Promise Rejection at Runner work
    */
   private exceptionHandler(error: Error) {
-    console.log('\x1b[41m%s\x1b[0m', '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error have been occurred: \n');
+    console.log(
+      '\x1b[41m%s\x1b[0m',
+      '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n',
+    );
     console.log(error);
     console.log('\n\n');
   }
@@ -104,7 +113,7 @@ class WorkerRunner {
 
       await this.finishAll();
 
-      process.exit( 0 );
+      process.exit(0);
     });
     process.on('SIGTERM', async () => {
       console.log('SIGTERM');
@@ -115,16 +124,19 @@ class WorkerRunner {
     });
     process.on('exit', () => {
       console.log('exitting...');
-      process.kill( process.pid, 'SIGTERM' );
+      process.kill(process.pid, 'SIGTERM');
     });
-    (process as NodeJS.EventEmitter).on('uncaughtException', async (event: {error}) => {
-      this.exceptionHandler(event.error);
+    (process as NodeJS.EventEmitter).on(
+      'uncaughtException',
+      async (event: { error }) => {
+        this.exceptionHandler(event.error);
 
-      await this.finishAll();
+        await this.finishAll();
 
-      process.exit();
-    });
-    process.on('unhandledRejection', async (event: {reason, promise}) => {
+        process.exit();
+      },
+    );
+    process.on('unhandledRejection', async (event: { reason; promise }) => {
       this.exceptionHandler(event.reason);
 
       await this.finishAll();
@@ -138,7 +150,10 @@ class WorkerRunner {
     try {
       await worker.finish();
 
-      console.log('\x1b[33m%s\x1b[0m', `\n\n Worker ${worker.constructor.name} stopped \n`);
+      console.log(
+        '\x1b[33m%s\x1b[0m',
+        `\n\n Worker ${worker.constructor.name} stopped \n`,
+      );
     } catch (finishingError) {
       console.error('Error while finishing Worker: ', finishingError);
     }
@@ -148,10 +163,13 @@ class WorkerRunner {
    * Stops all workers
    */
   private async finishAll() {
-    return Promise.all(this.workers.map(( async (worker) => {
-      return await this.stopWorker(worker);
-    })));
+    return Promise.all(
+      this.workers.map(async (worker) => {
+        return await this.stopWorker(worker);
+      }),
+    );
   }
 }
 
+// tslint:disable-next-line: no-unused-expression
 new WorkerRunner(workers);

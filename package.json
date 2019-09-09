@@ -12,19 +12,23 @@
         "workers/notifyEmail",
         "workers/notifySlack",
         "workers/notifyTelegram"
+        "workers/grouper",
+        "workers/source-maps",
+        "workers/python"
     ],
     "scripts": {
-        "test": "jest --coverage --silent",
+        "test": "jest --coverage",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
+        "lint": "yarn lint:js; yarn lint:ts",
+        "lint:js": "eslint . --fix",
         "lint:ts": "tslint --project . --fix",
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
-        "run-grouper": "yarn worker hawk-worker-grouper"
+        "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-maps": "yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
@@ -55,6 +59,7 @@
         "ts-node": "^8.3.0",
         "tslint": "^5.19.0",
         "typescript": "^3.5.3",
-        "yargs": "^13.3.0"
+        "yargs": "^13.3.0",
+        "webpack": "^4.39.3"
     }
 }

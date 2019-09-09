@@ -11,7 +11,7 @@ This worker is needed to save source-map uploaded from user to our DB.
 example request:
 
 ```bash
-curl -F secret=@"main.min.js.map" release=$RANDOM -H "Authentication: Bearer TOKEN" http://localhost:3000/sourcemap
+curl -F file=@"main.min.js.map" -F release=$RANDOM -H "Authorization: Bearer TOKEN" http://localhost:3000/sourcemap
 ```
 
 4. Collector accepts file and give a task for SourceMapsWorker for saving it to DB

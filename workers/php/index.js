@@ -44,7 +44,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
         throw new ParsingError('Message parsing error', err);
       }
 
-      const projectId = this.projectId;
+      const projectId = msg.projectId;
 
       try {
         payload = PhpEventWorker.parseData(phpError.payload);

@@ -1,7 +1,8 @@
-import * as amqp from 'amqplib';
 import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
+import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import winston from 'winston';
 import {createLogger, format, transports} from 'winston';
 import {WorkerTask} from './types/worker-task';
 
@@ -21,7 +22,8 @@ dotenv.config({path: path.resolve(__dirname, '../.env')});
  * Environment variables:
  *  - `REGISTRY_URL` Registry connection URL
  *  - `SIMULTANEOUS_TASKS` Number of tasks handling simultaneously
- *  - `LOG_LEVEL` Log level. Available: error,warn,info,versobe,debug,silly. See more https://github.com/winstonjs/winston#logging
+ *  - `LOG_LEVEL` Log level. Available: error,warn,info,verbose,debug,silly.
+ *    See more https://github.com/winstonjs/winston#logging
  *
  *  Other methods available (see code)
  *
@@ -48,24 +50,6 @@ export abstract class Worker {
    * (will pull tasks from Registry queue with the same name)
    */
   public abstract readonly type: string;
-
-  /**
-   * Logger module
-   * (default level='info')
-   */
-  protected logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: combine(
-          timestamp(),
-          colorize(),
-          simple(),
-          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
-        ),
-      }),
-    ],
-  });
 
   /**
    * Registry Endpoint
@@ -105,6 +89,24 @@ export abstract class Worker {
   private tasksMap: Map<object, Promise<void>> = new Map();
 
   /**
+   * Logger module
+   * (default level='info')
+   */
+  private logger: winston.Logger = createLogger({
+    level: process.env.LOG_LEVEL || 'info',
+    transports: [
+      new transports.Console({
+        format: combine(
+          timestamp(),
+          colorize(),
+          simple(),
+          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
+        ),
+      }),
+    ],
+  });
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -117,11 +119,12 @@ export abstract class Worker {
     }
 
     const {consumerTag} = await this.channelWithRegistry.consume(this.type, (msg: ConsumeMessage) => {
-      const promise = this.processMessage(msg) as Promise<void>;
+        const promise = this.processMessage(msg) as Promise<void>;
 
-      this.tasksMap.set(msg, promise);
-      promise.then(() => this.tasksMap.delete(msg));
-    });
+        this.tasksMap.set(msg, promise);
+        promise.then(() => this.tasksMap.delete(msg));
+      },
+    );
 
     /**
      * Remember consumer tag to cancel subscription in future
@@ -150,7 +153,10 @@ export abstract class Worker {
    * @param {object} payload - payload object
    */
   public async addTask(worker: string, payload: object): Promise<boolean> {
-    return this.channelWithRegistry.sendToQueue(worker, Buffer.from(JSON.stringify(payload)));
+    return this.channelWithRegistry.sendToQueue(
+      worker,
+      Buffer.from(JSON.stringify(payload)),
+    );
   }
 
   /**
@@ -230,7 +236,9 @@ export abstract class Worker {
         message: stringifiedEvent,
       });
     } catch (error) {
-      throw new ParsingError('Worker::processMessage: Message parsing error' + error);
+      throw new ParsingError(
+        'Worker::processMessage: Message parsing error' + error,
+      );
     }
 
     try {
@@ -243,12 +251,8 @@ export abstract class Worker {
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
-      this.logger.debug(
-        'instanceof CriticalError? ' + (e instanceof CriticalError),
-      );
-      this.logger.debug(
-        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError),
-      );
+      this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
+      this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
 
       /**
        * Send back message to registry since we failed to handle it
@@ -270,7 +274,6 @@ export abstract class Worker {
    */
   private async unsubscribe(): Promise<void> {
     if (this.registryConsumerTag) {
-
       /**
        * Cancel the consumer
        */

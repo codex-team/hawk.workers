@@ -1,14 +1,16 @@
 {
     "defaultSeverity": "error",
-    "extends": [
-        "tslint:recommended"
-    ],
+    "extends": ["tslint:recommended"],
     "jsRules": {},
     "rules": {
         "object-literal-sort-keys": false,
         "interface-name": false,
         "max-classes-per-file": false,
-        "quotemark": [true, "single"]
+        "quotemark": [true, "single"],
+        "no-console": {
+            "severity": "warn"
+        },
+        "member-ordering": [true, {"order": "fields-first"}]
     },
     "rulesDirectory": [],
     "linterOptions": {
