@@ -28,7 +28,7 @@ export class DatabaseController {
    * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  async connect(dbName: string) {
+  public async connect(dbName: string) {
     if (this.db) {
       return;
     }
@@ -48,7 +48,7 @@ export class DatabaseController {
    *
    * @returns {Promise<void>}
    */
-  async close() {
+  public async close() {
     this.db = null;
 
     if (!this.connection) {
@@ -61,7 +61,7 @@ export class DatabaseController {
   /**
    * @return {*|null}
    */
-  getConnection() {
+  public getConnection() {
     return this.db;
   }
 }

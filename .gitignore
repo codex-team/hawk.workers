@@ -3,3 +3,4 @@ coverage
 .vscode
 .env
 .idea
+.DS_Store

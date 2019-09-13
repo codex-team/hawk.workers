@@ -1,6 +1,6 @@
-import { DatabaseController } from './controller';
 import * as mongodb from 'mongodb';
-require('../../env');
+import '../../env';
+import { DatabaseController } from './controller';
 
 /**
  * Test for the Database Controller module

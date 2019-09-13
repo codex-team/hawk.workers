@@ -1,5 +1,5 @@
 import { ObjectId } from 'bson';
-import {EventData} from '../../../lib/types/hawk-event';
+import {EventData} from '../../../lib/types/event-worker-task';
 
 /**
  * Repetition is a document contained diff with original event
@@ -19,5 +19,5 @@ export interface Repetition {
    * And any of EventData field with diff
    * except fields that used in groupHash
    */
-  payload: EventData
+  payload: EventData;
 }
