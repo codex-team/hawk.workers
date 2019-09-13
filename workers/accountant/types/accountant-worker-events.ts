@@ -14,7 +14,7 @@ export enum TransactionType {
   /**
    * For expenses
    */
-  Charge = 'charge'
+  Charge = 'charge',
 }
 
 /**

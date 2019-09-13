@@ -1,8 +1,8 @@
+import {Collection, ObjectID, UpdateQuery} from 'mongodb';
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
-import {Collection, ObjectID, UpdateQuery} from 'mongodb';
-import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from "../types/accountant-worker-events";
 import * as pkg from '../package.json';
+import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from '../types/accountant-worker-events';
 
 /**
  * Worker for managing workspaces balance
@@ -102,7 +102,7 @@ export default class AccountantWorker extends Worker {
 
     const transaction: any = {
       ...payload,
-      workspaceId: new ObjectID(payload.workspaceId)
+      workspaceId: new ObjectID(payload.workspaceId),
     };
 
     if ((payload as IncomeTransactionPayload).userId) {
@@ -112,7 +112,7 @@ export default class AccountantWorker extends Worker {
     await this.transactions.insertOne(transaction);
 
     const updateData: UpdateQuery<any> = {
-      $inc: {balance: balanceDiff}
+      $inc: {balance: balanceDiff},
     };
 
     if (payload.type === TransactionType.Charge) {
@@ -121,7 +121,7 @@ export default class AccountantWorker extends Worker {
 
     await this.workspaces.updateOne(
       { _id: new ObjectID(payload.workspaceId) },
-      updateData
+      updateData,
     );
   }
 }

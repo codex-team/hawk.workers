@@ -38,7 +38,7 @@ export class DatabaseController {
     }
 
     this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + dbName, {
-      useNewUrlParser: true
+      useNewUrlParser: true,
     });
     this.db = await this.connection.db();
   }

@@ -33,7 +33,7 @@ export default class SourceMapsWorker extends Worker {
    * Start consuming messages
    */
   public async start() {
-    await this.db.connect();
+    await this.db.connect(process.env.EVENTS_DB_NAME);
     await super.start();
   }
 

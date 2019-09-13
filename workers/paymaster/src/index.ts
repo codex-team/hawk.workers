@@ -1,20 +1,20 @@
+import {
+  EventType as AccountantEventType,
+  TransactionEvent,
+  TransactionType,
+} from 'hawk-worker-accountant/types/accountant-worker-events';
+import {Collection, ObjectID} from 'mongodb';
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
-import {Collection, ObjectID} from 'mongodb';
+import * as workerNames from '../../../lib/workerNames';
+import * as pkg from '../package.json';
 import {
   DailyCheckEvent,
   EventType,
   PaymasterEvent,
   PlanChangedEvent,
-  TariffPlan, WorkspacePlan
-} from "../types/paymaster-worker-events";
-import * as workerNames from '../../../lib/workerNames';
-import {
-  EventType as AccountantEventType,
-  TransactionEvent,
-  TransactionType
-} from 'hawk-worker-accountant/types/accountant-worker-events';
-import * as pkg from '../package.json';
+  TariffPlan, WorkspacePlan,
+} from '../types/paymaster-worker-events';
 
 /**
  * Worker to check workspaces balance and handle tariff plan changes
@@ -33,7 +33,7 @@ export default class Paymaster extends Worker {
   private workspaces: Collection;
   private plans: Collection;
 
-  constructor(){
+  constructor() {
     super();
   }
 
@@ -86,7 +86,7 @@ export default class Paymaster extends Worker {
     const plans = await this.plans.find({}).toArray();
 
     workspaces.forEach(({_id, plan}) => {
-      const currentPlan: TariffPlan = plans.find(p => p.name === plan.name);
+      const currentPlan: TariffPlan = plans.find((p) => p.name === plan.name);
 
       /**
        * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
@@ -115,8 +115,8 @@ export default class Paymaster extends Worker {
 
     const plans: TariffPlan[] = await this.plans.find({}).toArray();
     const workspace = await this.workspaces.findOne({_id: new ObjectID(payload.workspaceId)});
-    const oldPlan: TariffPlan = plans.find(p => p.name === payload.oldPlan);
-    const newPlan: TariffPlan = plans.find(p => p.name === payload.newPlan);
+    const oldPlan: TariffPlan = plans.find((p) => p.name === payload.oldPlan);
+    const newPlan: TariffPlan = plans.find((p) => p.name === payload.newPlan);
 
     const {lastChargeDate} = workspace.plan as WorkspacePlan;
 
@@ -131,7 +131,11 @@ export default class Paymaster extends Worker {
      * If new plan charge is more than old one, withdraw the difference.
      */
     if (newPlan.monthlyCharge > oldPlan.monthlyCharge) {
-      this.sendTransaction(TransactionType.Charge, workspace._id.toString(), newPlan.monthlyCharge - oldPlan.monthlyCharge);
+      this.sendTransaction(
+        TransactionType.Charge,
+        workspace._id.toString(),
+        newPlan.monthlyCharge - oldPlan.monthlyCharge,
+        );
     }
   }
 
@@ -149,9 +153,9 @@ export default class Paymaster extends Worker {
         type,
         date: (new Date()).getTime(),
         workspaceId,
-        amount
-      }
-    } as TransactionEvent)
+        amount,
+      },
+    } as TransactionEvent);
   }
 
   /**
@@ -187,6 +191,10 @@ export default class Paymaster extends Worker {
     const now = new Date();
     const date = new Date(tmstp);
 
-    return now.getFullYear() === date.getFullYear() && now.getMonth() === date.getMonth() && now.getDate() === date.getDate();
+    return (
+      now.getFullYear() === date.getFullYear() &&
+      now.getMonth() === date.getMonth() &&
+      now.getDate() === date.getDate()
+    );
   }
 }

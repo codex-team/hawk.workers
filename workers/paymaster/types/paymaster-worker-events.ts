@@ -13,7 +13,7 @@ export enum EventType {
   /**
    * Plan changed event
    */
-  PlanChanged = 'plan-changed'
+  PlanChanged = 'plan-changed',
 }
 
 /**
