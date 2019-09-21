@@ -7,8 +7,8 @@ Receives transaction events and logs them to the database. Changes workspaces ba
 ## How to run
 
 1. Make sure you are in Workers root directory
-3. `yarn install`
-4. `yarn run-accountant`
+2. `yarn install`
+3. `yarn run-accountant`
 
 ## Event format
 

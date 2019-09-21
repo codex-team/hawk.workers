@@ -6,8 +6,8 @@ Also handles tariff plan changes
 ## How to run
 
 1. Make sure you are in Workers root directory
-3. `yarn install`
-4. `yarn run-paymaster`
+2. `yarn install`
+3. `yarn run-paymaster`
 
 ## Supported events
 
