@@ -76,7 +76,11 @@ export default class NotifyCheckerWorker extends Worker {
    */
   public async sendMerchantNotifications(
     event: NotifyCheckerWorkerTaskPayloadMerchant,
-  ) {}
+  ) {
+    /**
+     * @todo: send merchant notifications
+     */
+  }
 
   /**
    * Check if need to send a notification about new error event and send it.
