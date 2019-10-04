@@ -5,14 +5,14 @@ Sends notifications on various events
 Receives event from `grouper` and check if a notification should be sent to user
 
 ```
-+-------------------+                                              +--------------+ 
-|  Merchant worker  |                                        +---->| Email worker | 
-+-------------------+                                        |     +--------------+ 
-          |                                                  |                      
-          |                  +-------------------------+     |     +--------------+ 
-          +------------------>  Notify checker worker  |-----+---->| Slack worker | 
-          |                  +-------------------------+     |     +--------------+ 
-          |                                                  |                      
++-------------------+                                              +--------------+
+|  Merchant worker  |                                        +---->| Email worker |
++-------------------+                                        |     +--------------+
+          |                                                  |
+          |                  +-------------------------+     |     +--------------+
+          +------------------>  Notify checker worker  |-----+---->| Slack worker |
+          |                  +-------------------------+     |     +--------------+
+          |                                                  |
 +---------|--------+                                         |   +-----------------+
 |  Grouper worker  |                                         +-->| Telegram worker |
 +------------------+                                             +-----------------+
@@ -26,8 +26,8 @@ _From grouper_:
 {
 "type": "grouper",
 "payload": {
-  "projectId": event.projectId, // Event project ID 
-  "new": false, // New error?
+  "projectId": event.projectId, // Event project ID
+  "new": false, // is error new
   "catcherType": event.catcherType, // Cacther type (`errors/javascript`, etc)
   "payload": event.payload // Event payload
 }}

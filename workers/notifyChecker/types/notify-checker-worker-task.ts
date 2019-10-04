@@ -5,6 +5,9 @@ export enum notifyTypes {
   MERCHANT = 'merchant',
 }
 
+/**
+ * Event notify task payload
+ */
 export interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent, 'catcherType' | 'payload'> {
   /**
    * Event project ID
@@ -17,6 +20,9 @@ export interface NotifyCheckerWorkerTaskPayloadGrouper extends Pick<GroupedEvent
   new: boolean;
 }
 
+/**
+ * Merchant notify task payload
+ */
 export interface NotifyCheckerWorkerTaskPayloadMerchant {
   /**
    * Transaction amount in kopecs
@@ -39,6 +45,9 @@ export interface NotifyCheckerWorkerTaskPayloadMerchant {
   timestamp: number;
 }
 
+/**
+ * Notify checker worker task
+ */
 export interface NotifyCheckerWorkerTask {
   /**
    * Task type
