@@ -1,6 +1,9 @@
-import {ObjectID} from 'mongodb';
-import {Notify} from './notify';
+import { ObjectID } from 'mongodb';
+import { NotifySettings } from './notify';
 
+/**
+ * Project model representation
+ */
 export interface Project {
   /**
    * Project ID
@@ -25,5 +28,5 @@ export interface Project {
   /**
    * Project notify settings
    */
-  notify: Exclude<Notify, 'userId'>;
+  notify: Exclude<NotifySettings, 'userId'>;
 }

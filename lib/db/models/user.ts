@@ -1,5 +1,8 @@
-import {ObjectID} from 'mongodb';
+import { ObjectID } from 'mongodb';
 
+/**
+ * User model representation
+ */
 export interface User {
   /**
    * Project ID
