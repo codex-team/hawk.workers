@@ -11,10 +11,6 @@ import { notifyActions, NotifySettings } from '../../../lib/db/models/notify';
 import { Project } from '../../../lib/db/models/project';
 import { User } from '../../../lib/db/models/user';
 import { NonCriticalError, Worker } from '../../../lib/worker';
-import * as WorkerNames from '../../../lib/workerNames';
-import { NotifyEmailWorkerTask } from '../../notifyEmail/types/notify-email-worker-task';
-import { NotifySlackWorkerTask } from '../../notifySlack/types/notify-slack-worker-task';
-import { NotifyTelegramWorkerTask } from '../../notifyTelegram/types/notify-telegram-worker-task';
 import * as pkg from '../package.json';
 import {
   NotifyCheckerWorkerTask,
