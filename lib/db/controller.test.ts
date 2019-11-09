@@ -10,7 +10,7 @@ describe('Database Contoroller Test', () => {
 
   describe('event', () => {
     beforeAll(async () => {
-      await db.connect();
+      await db.connect(process.env.EVENTS_DB_NAME);
     });
 
     afterAll(async () => {

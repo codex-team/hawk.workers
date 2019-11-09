@@ -8,6 +8,8 @@
     "workspaces": [
         "workers/javascript",
         "workers/grouper",
+        "workers/accountant",
+        "workers/paymaster",
         "workers/source-maps",
         "workers/python"
     ],
@@ -23,6 +25,8 @@
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-accountant": "yarn worker hawk-worker-accountant",
+        "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-maps": "yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {

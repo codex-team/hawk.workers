@@ -69,7 +69,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Start consuming messages and connect to db
    */
   async start() {
-    await this.db.connect();
+    await this.db.connect(process.env.EVENTS_DB_NAME);
     await super.start();
   }
 

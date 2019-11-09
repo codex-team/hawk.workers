@@ -52,7 +52,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
+    await this.db.connect(process.env.EVENTS_DB_NAME);
     await super.start();
   }
 

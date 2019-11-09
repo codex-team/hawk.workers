@@ -1,0 +1,10 @@
+{
+  "name": "hawk-worker-paymaster",
+  "version": "0.0.1",
+  "description": "Manages charges for Hawk tariff plans",
+  "main": "src/index.ts",
+  "author": "CodeX",
+  "license": "UNLICENSED",
+  "private": true,
+  "workerType": "paymaster"
+}
