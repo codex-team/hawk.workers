@@ -65,6 +65,8 @@ export default class GrouperWorker extends Worker {
      */
     const isFirstOccurrence = existedEvent === null;
 
+    let repetitionId = null;
+
     if (isFirstOccurrence) {
       /**
        * Insert new event
@@ -92,13 +94,14 @@ export default class GrouperWorker extends Worker {
         payload: diff,
       } as Repetition;
 
-      await this.saveRepetition(task.projectId, repetition);
+      repetitionId = await this.saveRepetition(task.projectId, repetition);
     }
 
+    console.log('repetitionId', repetitionId);
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId);
   }
 
   /**
@@ -195,9 +198,15 @@ export default class GrouperWorker extends Worker {
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
+   * @param {string} repetitionId - event's last repetition id
    * @return {Promise<void>}
    */
-  private async saveDailyEvents(projectId: string, eventHash: string, eventTimestamp: number): Promise<void> {
+  private async saveDailyEvents(
+    projectId: string,
+    eventHash: string,
+    eventTimestamp: number,
+    repetitionId: string,
+  ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
     }
@@ -218,7 +227,12 @@ export default class GrouperWorker extends Worker {
         .updateOne(
           { groupHash: eventHash, date: currentDate },
           {
-            $set: { groupHash: eventHash, date: currentDate, timestamp: eventTimestamp },
+            $set: {
+              groupHash: eventHash,
+              date: currentDate,
+              timestamp: eventTimestamp,
+              lastRepetitionId: repetitionId
+            },
             $inc: { count: 1 },
           },
           { upsert: true });
