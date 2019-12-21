@@ -97,7 +97,6 @@ export default class GrouperWorker extends Worker {
       repetitionId = await this.saveRepetition(task.projectId, repetition);
     }
 
-    console.log('repetitionId', repetitionId);
     /**
      * Store events counter by days
      */
@@ -198,14 +197,14 @@ export default class GrouperWorker extends Worker {
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
-   * @param {string} repetitionId - event's last repetition id
+   * @param {string|null} repetitionId - event's last repetition id
    * @return {Promise<void>}
    */
   private async saveDailyEvents(
     projectId: string,
     eventHash: string,
     eventTimestamp: number,
-    repetitionId: string,
+    repetitionId: string | null,
   ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
