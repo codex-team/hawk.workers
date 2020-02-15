@@ -51,20 +51,27 @@ export default class SourceMapsWorker extends Worker {
    * @param {SourceMapsEventWorkerTask} task - Message object from consume method
    */
   public async handle(task: SourceMapsEventWorkerTask) {
+    console.log('task', task);
+    
     /**
      * Extract original file name from source-map's "file" property
      * and extend data-to-save with it
      */
-    const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
+    try {
+      const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
 
-    /**
-     * Save source map
-     */
-    this.save({
-      projectId: task.projectId,
-      release: task.release,
-      files: sourceMapsFilesExtended,
-    } as SourceMapsRecord);
+      /**
+       * Save source map
+       */
+      this.save({
+        projectId: task.projectId,
+        release: task.release,
+        files: sourceMapsFilesExtended,
+      } as SourceMapsRecord);
+
+    } catch (error) {
+      console.log('Can\'t extract release info:', error);
+    }
   }
 
   /**
@@ -108,6 +115,8 @@ export default class SourceMapsWorker extends Worker {
         }, releaseData, {
           upsert: true,
         });
+
+      console.log('upsertedRelease', upsertedRelease.result);
 
       return upsertedRelease ? upsertedRelease.upsertedId : null;
     } catch (err) {
