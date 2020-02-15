@@ -111,12 +111,24 @@ export default class SourceMapsWorker extends Worker {
     try {
       const upsertedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
-        .replaceOne({
+        .findOneAndUpdate({
           projectId: releaseData.projectId,
           release: releaseData.release,
-        }, releaseData, {
+        }, {
+          $set: {
+            projectId: releaseData.projectId,
+            release: releaseData.release,
+          },
+          $push: {
+            files: {
+              $each: releaseData.files,
+            },
+          },
+        }, {
           upsert: true,
         });
+
+      console.log('upsertedRelease', upsertedRelease);
 
       return upsertedRelease ? upsertedRelease.upsertedId : null;
 
