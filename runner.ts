@@ -1,4 +1,6 @@
 /* tslint:disable:no-shadowed-variable  */
+import * as utils from './lib/utils';
+
 /**
  * Get worker name(s) from command line arguments
  *
@@ -79,8 +81,12 @@ class WorkerRunner {
             '\x1b[32m%s\x1b[0m',
             `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`,
           );
+
+          utils.sendReport(worker.constructor.name + ' started');
         } catch (startingError) {
           this.exceptionHandler(startingError);
+
+          utils.sendReport(worker.constructor.name + ' failed to start');
 
           worker.logger.error(startingError);
 
@@ -102,6 +108,8 @@ class WorkerRunner {
     );
     console.log(error);
     console.log('\n\n');
+
+    utils.sendReport('Error has been occured: ' + error.message );
   }
 
   /**
@@ -124,6 +132,7 @@ class WorkerRunner {
     });
     process.on('exit', () => {
       console.log('exitting...');
+
       process.kill(process.pid, 'SIGTERM');
     });
     (process as NodeJS.EventEmitter).on(
