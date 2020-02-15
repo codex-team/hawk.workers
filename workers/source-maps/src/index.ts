@@ -55,16 +55,23 @@ export default class SourceMapsWorker extends Worker {
      * Extract original file name from source-map's "file" property
      * and extend data-to-save with it
      */
-    const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
+    try {
+      const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
 
-    /**
-     * Save source map
-     */
-    this.save({
-      projectId: task.projectId,
-      release: task.release,
-      files: sourceMapsFilesExtended,
-    } as SourceMapsRecord);
+      /**
+       * Save source map
+       */
+      this.save({
+        projectId: task.projectId,
+        release: task.release,
+        files: sourceMapsFilesExtended,
+      } as SourceMapsRecord);
+
+    } catch (error) {
+      this.logger.error('Can\'t extract release info:\n', {
+        error,
+      });
+    }
   }
 
   /**
