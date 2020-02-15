@@ -125,7 +125,7 @@ export default class SourceMapsWorker extends Worker {
           upsert: true,
         });
 
-      console.log('upsertedRelease', upsertedRelease.result);
+      console.log('upsertedRelease', upsertedRelease);
       console.log('upsertedId', upsertedRelease.upsertedId);
       return upsertedRelease ? upsertedRelease.upsertedId : null;
 
