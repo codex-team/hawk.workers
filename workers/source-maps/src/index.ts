@@ -68,7 +68,6 @@ export default class SourceMapsWorker extends Worker {
       } as SourceMapsRecord);
 
     } catch (error) {
-      console.log('err', error);
       this.logger.error('Can\'t extract release info:\n', {
         error,
       });
@@ -85,20 +84,15 @@ export default class SourceMapsWorker extends Worker {
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
     return sourceMaps.map((file: SourcemapCollectedData) => {
-      console.log('parsing', file.name);
       /**
        * Decode base64 source map content
        */
       const buffer = Buffer.from(file.payload, 'base64');
-
-      console.log('buffer', buffer.length);
       const mapBodyString = buffer.toString();
       /**
        * @todo use more efficient method to extract "file" from big JSON
        */
       const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
-
-      console.log('mapContent', mapContent.file);
 
       return {
         mapFileName: file.name,
@@ -115,7 +109,6 @@ export default class SourceMapsWorker extends Worker {
    */
   private async save(releaseData: SourceMapsRecord) {
     try {
-      console.log('now will save');
       const upsertedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
         .replaceOne({
@@ -125,8 +118,6 @@ export default class SourceMapsWorker extends Worker {
           upsert: true,
         });
 
-      console.log('upsertedRelease', upsertedRelease);
-      console.log('upsertedId', upsertedRelease.upsertedId);
       return upsertedRelease ? upsertedRelease.upsertedId : null;
 
 

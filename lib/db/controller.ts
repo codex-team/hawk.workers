@@ -37,6 +37,10 @@ export class DatabaseController {
       throw new Error('MONGO_DSN env variable is not set!');
     }
 
+    if (!dbName) {
+      throw new Error('Database name is not specified. Check .env');
+    }
+
     this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + dbName, {
       useNewUrlParser: true,
     });
