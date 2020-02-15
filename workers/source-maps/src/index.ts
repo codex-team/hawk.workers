@@ -68,6 +68,7 @@ export default class SourceMapsWorker extends Worker {
       } as SourceMapsRecord);
 
     } catch (error) {
+      console.log('err', error);
       this.logger.error('Can\'t extract release info:\n', {
         error,
       });
@@ -84,6 +85,7 @@ export default class SourceMapsWorker extends Worker {
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
     return sourceMaps.map((file: SourcemapCollectedData) => {
+      console.log('parsing', file.name);
       /**
        * Decode base64 source map content
        */
