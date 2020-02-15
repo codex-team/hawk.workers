@@ -103,7 +103,10 @@ export default class JavascriptEventWorker extends EventWorker {
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame) => {
-      return this.consumeBacktraceFrame(frame, releaseRecord);
+      return this.consumeBacktraceFrame(frame, releaseRecord)
+        .catch(error => {
+          console.log('Error while consuming')
+        });
     }));
   }
 
@@ -120,6 +123,8 @@ export default class JavascriptEventWorker extends EventWorker {
      */
     const nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
 
+    console.log('nameFromPath', stackFrame.file, nameFromPath);
+
     /**
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
@@ -127,6 +132,8 @@ export default class JavascriptEventWorker extends EventWorker {
     const mapForFrame: SourcemapDataExtended = releaseRecord.files.find((mapFileName: SourcemapDataExtended) => {
       return mapFileName.originFileName === nameFromPath;
     });
+
+    console.log('mapForFrame', mapForFrame ? ' yes': ' no');
 
     if (!mapForFrame) {
       return stackFrame;
@@ -144,6 +151,8 @@ export default class JavascriptEventWorker extends EventWorker {
       line: stackFrame.line,
       column: stackFrame.column,
     });
+    
+    console.log('originalLocation', originalLocation);
 
     /**
      * Source code lines
