@@ -4,7 +4,7 @@
  */
 import {RawSourceMap} from 'hawk-worker-javascript/node_modules/source-map';
 import {DatabaseController} from '../../../lib/db/controller';
-import {DatabaseError, Worker} from '../../../lib/worker';
+import {DatabaseError, NonCriticalError, Worker} from '../../../lib/worker';
 import * as pkg from '../package.json';
 import {SourcemapCollectedData, SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
 import {SourcemapDataExtended, SourceMapsRecord} from '../types/source-maps-record';
@@ -71,6 +71,8 @@ export default class SourceMapsWorker extends Worker {
       this.logger.error('Can\'t extract release info:\n', {
         error,
       });
+
+      throw new NonCriticalError('Can\'t parse source-map file');
     }
   }
 
@@ -117,6 +119,9 @@ export default class SourceMapsWorker extends Worker {
         });
 
       return upsertedRelease ? upsertedRelease.upsertedId : null;
+
+      console.log('upsertedRelease', upsertedRelease.result);
+
     } catch (err) {
       console.log('DatabaseError:', err);
       throw new DatabaseError(err);
