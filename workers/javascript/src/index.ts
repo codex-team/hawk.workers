@@ -102,10 +102,11 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
-    return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame) => {
+    return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index) => {
       return this.consumeBacktraceFrame(frame, releaseRecord)
-        .catch(error => {
-          console.log('Error while consuming')
+        .catch((error) => {
+          console.log('Error while consuming', error)
+          return event.payload.backtrace[index];
         });
     }));
   }
@@ -151,7 +152,7 @@ export default class JavascriptEventWorker extends EventWorker {
       line: stackFrame.line,
       column: stackFrame.column,
     });
-    
+
     console.log('originalLocation', originalLocation);
 
     /**
