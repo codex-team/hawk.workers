@@ -115,6 +115,7 @@ export default class SourceMapsWorker extends Worker {
    */
   private async save(releaseData: SourceMapsRecord) {
     try {
+      console.log('now will save');
       const upsertedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
         .replaceOne({
@@ -124,9 +125,9 @@ export default class SourceMapsWorker extends Worker {
           upsert: true,
         });
 
+      console.log('upsertedRelease', upsertedRelease.result);
       return upsertedRelease ? upsertedRelease.upsertedId : null;
 
-      console.log('upsertedRelease', upsertedRelease.result);
 
     } catch (err) {
       console.log('DatabaseError:', err);
