@@ -90,11 +90,15 @@ export default class SourceMapsWorker extends Worker {
        * Decode base64 source map content
        */
       const buffer = Buffer.from(file.payload, 'base64');
+
+      console.log('buffer', buffer.length);
       const mapBodyString = buffer.toString();
       /**
        * @todo use more efficient method to extract "file" from big JSON
        */
       const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
+
+      console.log('mapContent', mapContent.file);
 
       return {
         mapFileName: file.name,
