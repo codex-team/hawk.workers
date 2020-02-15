@@ -130,7 +130,7 @@ export default class SourceMapsWorker extends Worker {
 
       console.log('upsertedRelease', upsertedRelease);
 
-      return upsertedRelease ? upsertedRelease.upsertedId : null;
+      return upsertedRelease ? upsertedRelease : null;
 
 
     } catch (err) {
