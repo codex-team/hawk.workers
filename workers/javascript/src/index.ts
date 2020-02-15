@@ -93,6 +93,8 @@ export default class JavascriptEventWorker extends EventWorker {
       event.projectId,
       event.payload.release.toString());
 
+    console.log('releaseRecord ', releaseRecord ? 'found!' : 'not found');
+
     if (!releaseRecord) {
       return event.payload.backtrace;
     }
