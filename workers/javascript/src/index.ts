@@ -7,9 +7,10 @@ import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-ta
 import {DatabaseError} from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
-import {SourcemapDataExtended, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
+import {SourcemapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
+import {Readable, Writable} from "stream";
 
 /**
  * Worker for handling Javascript events
@@ -25,6 +26,11 @@ export default class JavascriptEventWorker extends EventWorker {
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController();
+
+  /**
+   * Collection where source maps stroed
+   */
+  private releasesDbCollectionName: string = 'releases-js';
 
   constructor() {
     super();
@@ -53,6 +59,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   public async start(): Promise<void> {
     await this.db.connect(process.env.EVENTS_DB_NAME);
+    this.db.createGridFsBucket(this.releasesDbCollectionName);
     await super.start();
   }
 
@@ -135,9 +142,18 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     /**
+     * Load source map content from Grid fs
+     */
+    const mapContent = await this.loadSourceMapFile(mapForFrame);
+
+    if (!mapContent) {
+      return stackFrame;
+    }
+
+    /**
      * @todo cache source map consumer for file-keys
      */
-    let consumer = await this.consumeSourceMap(mapForFrame.content);
+    let consumer = await this.consumeSourceMap(mapContent);
 
     /**
      * Error's original position
@@ -162,6 +178,34 @@ export default class JavascriptEventWorker extends EventWorker {
       file: originalLocation.source,
       sourceCode: lines,
     }) as BacktraceFrame;
+  }
+
+  /**
+   * Downloads source map file from Grid FS
+   * @param map - saved file info without content.
+   */
+  private loadSourceMapFile(map: SourcemapDataExtended): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let buf = Buffer.from('');
+
+      const readstream = this.db.getBucket().openDownloadStream(map._id)
+        .on('data', (chunk) => {
+          buf = Buffer.concat([buf, chunk]);
+        })
+        .on('error', (error) => {
+          reject(error);
+        })
+        .on('end', (info: SourceMapFileChunk) => {
+          const res = buf.toString();
+
+          /**
+           * Clean up memory
+           */
+          buf = null;
+          readstream.destroy();
+          resolve(res);
+        });
+    });
   }
 
   /**
@@ -201,11 +245,9 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {string} release - bundle version passed with source map and same release passed to the catcher's init
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
-    const releasesDbCollectionName = 'releases-js';
-
     try {
       return await this.db.getConnection()
-        .collection(releasesDbCollectionName)
+        .collection(this.releasesDbCollectionName)
         .findOne({
           projectId,
           release,

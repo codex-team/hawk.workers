@@ -1,4 +1,4 @@
-import { Timestamp } from 'mongodb';
+import { Timestamp, ObjectID } from 'mongodb';
 
 export interface SourceMapsRecord {
   /**
@@ -39,7 +39,7 @@ export interface SourcemapDataExtended {
   /**
    * When file will be saved to GridFS, there will be its td instead of 'content'
    */
-  _id?: string;
+  _id?: ObjectID;
 }
 
 /**
@@ -50,7 +50,7 @@ export interface SourceMapFileChunk {
   /**
    * Unique id of a file chunk
    */
-  _id: string;
+  _id: ObjectID;
 
   /**
    * Chunk size in bytes

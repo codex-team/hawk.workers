@@ -125,7 +125,9 @@ export default class SourceMapsWorker extends Worker {
         /**
          * Skip already saved maps
          */
-        const alreadySaved = existedRelease && existedRelease.files.find((savedFile) => savedFile.mapFileName === map.mapFileName);
+        const alreadySaved = existedRelease && existedRelease.files.find((savedFile) => {
+          return savedFile.mapFileName === map.mapFileName;
+        });
 
         if (alreadySaved) {
           return;
@@ -201,13 +203,16 @@ export default class SourceMapsWorker extends Worker {
   private saveFile(file: SourcemapDataExtended): Promise<SourceMapFileChunk> {
     return new Promise((resolve, reject) => {
       const readable = Readable.from([file.content]);
+      const writeStream = this.db.getBucket().openUploadStream(file.mapFileName);
 
       readable
-        .pipe(this.db.getBucket().openUploadStream(file.mapFileName))
+        .pipe(writeStream)
         .on('error', (error) => {
           reject(error);
         })
         .on('finish', (info: SourceMapFileChunk) => {
+          readable.destroy();
+          writeStream.destroy();
           resolve(info);
         });
     });
