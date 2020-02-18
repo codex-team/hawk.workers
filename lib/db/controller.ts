@@ -65,6 +65,8 @@ export class DatabaseController {
       return;
     }
 
+    this.gridFsBucket = null;
+
     return this.connection.close();
   }
 

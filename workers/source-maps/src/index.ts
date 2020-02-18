@@ -119,7 +119,7 @@ export default class SourceMapsWorker extends Worker {
         });
 
       /**
-       * Iterate all maps of the release
+       * Iterate all maps of the new release and save only new
        */
       let savedFiles = await Promise.all(releaseData.files.map(async (map: SourcemapDataExtended) => {
         /**
@@ -159,9 +159,9 @@ export default class SourceMapsWorker extends Worker {
       }
 
       /**
-       * - update previous record with adding new saved maps
-       * or
        * - insert new record with saved maps
+       * or
+       * - update previous record with adding new saved maps
        */
       if (!existedRelease) {
         const insertion = await this.db.getConnection()

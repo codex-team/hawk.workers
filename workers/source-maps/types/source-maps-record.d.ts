@@ -31,7 +31,8 @@ export interface SourcemapDataExtended {
   originFileName: string;
 
   /**
-   * Source map body
+   * Source map body in string.
+   * After saving to the db, this field will be replaced with _id of saved file
    */
   content?: string;
 

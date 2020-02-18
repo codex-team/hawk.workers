@@ -93,8 +93,6 @@ export default class JavascriptEventWorker extends EventWorker {
       event.projectId,
       event.payload.release.toString());
 
-    console.log('releaseRecord ', releaseRecord ? 'found!' : 'not found');
-
     if (!releaseRecord) {
       return event.payload.backtrace;
     }
@@ -105,7 +103,7 @@ export default class JavascriptEventWorker extends EventWorker {
     return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index) => {
       return this.consumeBacktraceFrame(frame, releaseRecord)
         .catch((error) => {
-          console.log('Error while consuming', error)
+          this.logger.error('Error while consuming ' + error);
           return event.payload.backtrace[index];
         });
     }));
@@ -124,8 +122,6 @@ export default class JavascriptEventWorker extends EventWorker {
      */
     const nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
 
-    console.log('nameFromPath', stackFrame.file, nameFromPath);
-
     /**
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
@@ -133,8 +129,6 @@ export default class JavascriptEventWorker extends EventWorker {
     const mapForFrame: SourcemapDataExtended = releaseRecord.files.find((mapFileName: SourcemapDataExtended) => {
       return mapFileName.originFileName === nameFromPath;
     });
-
-    console.log('mapForFrame', mapForFrame ? ' yes': ' no');
 
     if (!mapForFrame) {
       return stackFrame;
@@ -152,8 +146,6 @@ export default class JavascriptEventWorker extends EventWorker {
       line: stackFrame.line,
       column: stackFrame.column,
     });
-
-    console.log('originalLocation', originalLocation);
 
     /**
      * Source code lines
