@@ -1,3 +1,5 @@
+import { Timestamp } from 'mongodb';
+
 export interface SourceMapsRecord {
   /**
    * Project that sends the source map
@@ -12,7 +14,7 @@ export interface SourceMapsRecord {
   /**
    * List of source maps for all chunks
    */
-  files: SourcemapDataExtended[],
+  files: SourcemapDataExtended[];
 }
 
 export interface SourcemapDataExtended {
@@ -31,5 +33,47 @@ export interface SourcemapDataExtended {
   /**
    * Source map body
    */
-  content: string;
+  content?: string;
+
+  /**
+   * When file will be saved to GridFS, there will be its td instead of 'content'
+   */
+  _id?: string;
+}
+
+/**
+ * Object represents a file structure stored in Mongo GridFS
+ * @see https://github.com/mongodb/specifications/blob/master/source/gridfs/gridfs-spec.rst#definitions
+ */
+export interface SourceMapFileChunk {
+  /**
+   * Unique id of a file chunk
+   */
+  _id: string;
+
+  /**
+   * Chunk size in bytes
+   */
+  length: number;
+
+  /**
+   * Maximum chunk size in bytes. By default is 261120
+   */
+  chunkSize: number;
+
+  /**
+   * Uploading date  stored as a BSON datetime value 'Timestamp'.
+   * @example 2020-02-18T14:51:40.400Z
+   */
+  uploadDate: Timestamp;
+
+  /**
+   * Uploaded file name
+   */
+  filename: string;
+
+  /**
+   * Hash of the contents of the stored file
+   */
+  md5: string;
 }

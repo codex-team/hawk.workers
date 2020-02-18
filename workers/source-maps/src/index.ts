@@ -3,11 +3,12 @@
  * to provide access for it for JS Worker
  */
 import {RawSourceMap} from 'hawk-worker-javascript/node_modules/source-map';
+import { Readable } from 'stream';
 import {DatabaseController} from '../../../lib/db/controller';
 import {DatabaseError, NonCriticalError, Worker} from '../../../lib/worker';
 import * as pkg from '../package.json';
 import {SourcemapCollectedData, SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
-import {SourcemapDataExtended, SourceMapsRecord} from '../types/source-maps-record';
+import {SourcemapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../types/source-maps-record';
 
 /**
  * Java Script source maps worker
@@ -34,6 +35,7 @@ export default class SourceMapsWorker extends Worker {
    */
   public async start() {
     await this.db.connect(process.env.EVENTS_DB_NAME);
+    this.db.createGridFsBucket(this.dbCollectionName);
     await super.start();
   }
 
@@ -61,7 +63,7 @@ export default class SourceMapsWorker extends Worker {
       /**
        * Save source map
        */
-      this.save({
+      await this.save({
         projectId: task.projectId,
         release: task.release,
         files: sourceMapsFilesExtended,
@@ -109,33 +111,105 @@ export default class SourceMapsWorker extends Worker {
    */
   private async save(releaseData: SourceMapsRecord) {
     try {
-      const upsertedRelease = await this.db.getConnection()
+      const existedRelease = await this.db.getConnection()
+        .collection(this.dbCollectionName)
+        .findOne({
+          projectId: releaseData.projectId,
+          release: releaseData.release,
+        });
+
+      /**
+       * Iterate all maps of the release
+       */
+      let savedFiles = await Promise.all(releaseData.files.map(async (map: SourcemapDataExtended) => {
+        /**
+         * Skip already saved maps
+         */
+        const alreadySaved = existedRelease && existedRelease.files.find((savedFile) => savedFile.mapFileName === map.mapFileName);
+
+        if (alreadySaved) {
+          return;
+        }
+
+        try {
+          const fileInfo = await this.saveFile(map);
+
+          /**
+           * Replace 'content' with saved file id
+           */
+          map._id = fileInfo._id;
+          delete map.content;
+
+          return map;
+        } catch ( error ) {
+          console.log(`Map ${map.mapFileName} was not saved: `, error);
+        }
+      }));
+
+      /**
+       * Filter unsaved maps
+       */
+      savedFiles = savedFiles.filter( (file) => file !== undefined);
+
+      /**
+       * Nothing to save: maps was previously saved
+       */
+      if (!savedFiles) {
+        return;
+      }
+
+      /**
+       * - update previous record with adding new saved maps
+       * or
+       * - insert new record with saved maps
+       */
+      if (!existedRelease) {
+        const insertion = await this.db.getConnection()
+          .collection(this.dbCollectionName)
+          .insertOne({
+            projectId: releaseData.projectId,
+            release: releaseData.release,
+            files: savedFiles as SourcemapDataExtended[],
+          });
+
+        return insertion ? insertion.insertedId : null;
+      }
+
+      const updating = await this.db.getConnection()
         .collection(this.dbCollectionName)
         .findOneAndUpdate({
           projectId: releaseData.projectId,
           release: releaseData.release,
         }, {
-          $set: {
-            projectId: releaseData.projectId,
-            release: releaseData.release,
-          },
           $push: {
             files: {
-              $each: releaseData.files,
+              $each: savedFiles as SourcemapDataExtended[],
             },
           },
-        }, {
-          upsert: true,
         });
 
-      console.log('upsertedRelease', upsertedRelease);
-
-      return upsertedRelease ? upsertedRelease : null;
-
-
+      return updating ? updating.value._id : null;
     } catch (err) {
-      console.log('DatabaseError:', err);
-      throw new DatabaseError(err);
+      this.logger.error('DatabaseError:', err);
     }
+  }
+
+  /**
+   * Saves source map file to the GridFS
+   * @param file - source map file extended
+   */
+  private saveFile(file: SourcemapDataExtended): Promise<SourceMapFileChunk> {
+    return new Promise((resolve, reject) => {
+      const readable = Readable.from([file.content]);
+
+      readable
+        .pipe(this.db.getBucket().openUploadStream(file.mapFileName))
+        .on('error', (error) => {
+          reject(error);
+        })
+        .on('finish', (info: SourceMapFileChunk) => {
+          resolve(info);
+        });
+    });
   }
 }

@@ -1,5 +1,5 @@
 import * as mongodb from 'mongodb';
-import {MongoClient} from 'mongodb';
+import {GridFSBucket, MongoClient} from 'mongodb';
 import {Db} from 'mongodb';
 
 /**
@@ -18,6 +18,12 @@ export class DatabaseController {
    * Mongo connection
    */
   private connection: MongoClient;
+
+  /**
+   * GridFSBucket object
+   * Used to store files in GridFS
+   */
+  private gridFsBucket: GridFSBucket;
 
   /**
    * Connect to database
@@ -67,5 +73,23 @@ export class DatabaseController {
    */
   public getConnection() {
     return this.db;
+  }
+
+  /**
+   * Prepares GridFs bucket to store files
+   * @param {string} name - The bucket name. Defaults to 'fs'.
+   */
+  public createGridFsBucket(name = 'fs') {
+    this.gridFsBucket = new mongodb.GridFSBucket(this.db, {
+      bucketName: name,
+    });
+  }
+
+  /**
+   * Returns GridFs Bucket
+   * @return {GridFSBucket}
+   */
+  public getBucket() {
+    return this.gridFsBucket;
   }
 }
