@@ -10,7 +10,6 @@ import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
 import {SourcemapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
-import {Readable, Writable} from "stream";
 
 /**
  * Worker for handling Javascript events

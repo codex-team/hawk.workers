@@ -84,6 +84,7 @@ export class DatabaseController {
   public createGridFsBucket(name = 'fs') {
     this.gridFsBucket = new mongodb.GridFSBucket(this.db, {
       bucketName: name,
+
     });
   }
 
