@@ -148,11 +148,12 @@ class WorkerRunner {
         process.exit();
       },
     );
-    process.on('unhandledRejection', async (event: { reason; promise }) => {
-      console.log('unhandledRejection' , event);
-      this.exceptionHandler(event.reason);
+    process.on('unhandledRejection', async (event) => {
+      this.exceptionHandler(event as Error);
 
       await this.finishAll();
+
+      process.exit();
     });
   }
 
