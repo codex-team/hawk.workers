@@ -72,6 +72,7 @@ export default class SourceMapsWorker extends Worker {
       console.log('savingResult', savingResult);
 
     } catch (error) {
+      console.log('error', error);
       this.logger.error('Can\'t extract release info:\n', {
         error,
       });

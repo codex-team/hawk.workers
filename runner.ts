@@ -140,8 +140,8 @@ class WorkerRunner {
     });
     (process as NodeJS.EventEmitter).on(
       'uncaughtException',
-      async (event: { error }) => {
-        this.exceptionHandler(event.error);
+      async (event) => {
+        this.exceptionHandler(event as Error);
 
         await this.finishAll();
 
