@@ -112,7 +112,7 @@ class WorkerRunner {
     }
     console.log('\n\n');
 
-    utils.sendReport('Error has been occured: ' + error.message );
+    utils.sendReport('Error has been occurred: ' + (error ? error.message : 'unknown') );
   }
 
   /**
