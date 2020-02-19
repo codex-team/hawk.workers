@@ -4,7 +4,7 @@
  */
 import SourceMapsWorker from '../src/index';
 import {SourcemapCollectedData} from '../types/source-maps-event-worker-task';
-import {SourcemapDataExtended} from '../types/source-maps-record';
+import {SourceMapDataExtended} from '../types/source-maps-record';
 import MockBundle from './create-mock-bundle';
 
 describe('SourceMaps Worker', () => {
@@ -34,7 +34,7 @@ describe('SourceMaps Worker', () => {
     const map = await mockBundle.getSourceMap();
     const workerInstance = new SourceMapsWorker();
 
-    const extendedInfo: SourcemapDataExtended[] = workerInstance['extendReleaseInfo']([{
+    const extendedInfo: SourceMapDataExtended[] = workerInstance['extendReleaseInfo']([{
       name: 'main.js.map',
       payload: map,
     }] as SourcemapCollectedData[]);

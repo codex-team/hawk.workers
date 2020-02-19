@@ -107,9 +107,12 @@ class WorkerRunner {
       '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n',
     );
     console.log(error);
+    if (error === undefined) {
+      console.trace();
+    }
     console.log('\n\n');
 
-    utils.sendReport('Error has been occured: ' + error.message );
+    utils.sendReport('Error has been occurred: ' + (error ? error.message : 'unknown') );
   }
 
   /**
@@ -137,18 +140,20 @@ class WorkerRunner {
     });
     (process as NodeJS.EventEmitter).on(
       'uncaughtException',
-      async (event: { error }) => {
-        this.exceptionHandler(event.error);
+      async (event) => {
+        this.exceptionHandler(event as Error);
 
         await this.finishAll();
 
         process.exit();
       },
     );
-    process.on('unhandledRejection', async (event: { reason; promise }) => {
-      this.exceptionHandler(event.reason);
+    process.on('unhandledRejection', async (event) => {
+      this.exceptionHandler(event as Error);
 
       await this.finishAll();
+
+      process.exit();
     });
   }
 
