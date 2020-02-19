@@ -34,7 +34,7 @@ export class DatabaseController {
    * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  public async connect(dbName: string) {
+  public async connect(dbName: string): Promise<void> {
     if (this.db) {
       return;
     }
@@ -58,7 +58,7 @@ export class DatabaseController {
    *
    * @returns {Promise<void>}
    */
-  public async close() {
+  public async close(): Promise<void> {
     this.db = null;
 
     if (!this.connection) {
@@ -73,7 +73,7 @@ export class DatabaseController {
   /**
    * @return {*|null}
    */
-  public getConnection() {
+  public getConnection(): Db {
     return this.db;
   }
 
@@ -81,7 +81,7 @@ export class DatabaseController {
    * Prepares GridFs bucket to store files
    * @param {string} name - The bucket name. Defaults to 'fs'.
    */
-  public createGridFsBucket(name = 'fs') {
+  public createGridFsBucket(name: string = 'fs'): void {
     this.gridFsBucket = new mongodb.GridFSBucket(this.db, {
       bucketName: name,
     });
@@ -91,7 +91,7 @@ export class DatabaseController {
    * Returns GridFs Bucket
    * @return {GridFSBucket}
    */
-  public getBucket() {
+  public getBucket(): GridFSBucket {
     return this.gridFsBucket;
   }
 }

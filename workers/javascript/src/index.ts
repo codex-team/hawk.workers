@@ -7,7 +7,7 @@ import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-ta
 import {DatabaseError} from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
-import {SourcemapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
+import {SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
 
@@ -106,7 +106,7 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
-    return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index) => {
+    return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
       return this.consumeBacktraceFrame(frame, releaseRecord)
         .catch((error) => {
           this.logger.error('Error while consuming ' + error);
@@ -132,7 +132,7 @@ export default class JavascriptEventWorker extends EventWorker {
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
      */
-    const mapForFrame: SourcemapDataExtended = releaseRecord.files.find((mapFileName: SourcemapDataExtended) => {
+    const mapForFrame: SourceMapDataExtended = releaseRecord.files.find((mapFileName: SourceMapDataExtended) => {
       return mapFileName.originFileName === nameFromPath;
     });
 
@@ -183,7 +183,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * Downloads source map file from Grid FS
    * @param map - saved file info without content.
    */
-  private loadSourceMapFile(map: SourcemapDataExtended): Promise<string> {
+  private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
 

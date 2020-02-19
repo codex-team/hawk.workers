@@ -8,7 +8,7 @@ import {DatabaseController} from '../../../lib/db/controller';
 import {DatabaseError, NonCriticalError, Worker} from '../../../lib/worker';
 import * as pkg from '../package.json';
 import {SourcemapCollectedData, SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
-import {SourcemapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../types/source-maps-record';
+import {SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../types/source-maps-record';
 
 /**
  * Java Script source maps worker
@@ -58,7 +58,7 @@ export default class SourceMapsWorker extends Worker {
      * and extend data-to-save with it
      */
     try {
-      const sourceMapsFilesExtended: SourcemapDataExtended[] = this.extendReleaseInfo(task.files);
+      const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(task.files);
 
       /**
        * Save source map
@@ -84,7 +84,7 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
    */
-  private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
+  private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourceMapDataExtended[] {
     return sourceMaps.map((file: SourcemapCollectedData) => {
       /**
        * Decode base64 source map content
@@ -121,7 +121,7 @@ export default class SourceMapsWorker extends Worker {
       /**
        * Iterate all maps of the new release and save only new
        */
-      let savedFiles = await Promise.all(releaseData.files.map(async (map: SourcemapDataExtended) => {
+      let savedFiles = await Promise.all(releaseData.files.map(async (map: SourceMapDataExtended) => {
         /**
          * Skip already saved maps
          */
@@ -137,7 +137,7 @@ export default class SourceMapsWorker extends Worker {
           const fileInfo = await this.saveFile(map);
 
           /**
-           * Replace 'content' with saved file id
+           * Remove 'content' and save id of saved file instead
            */
           map._id = fileInfo._id;
           delete map.content;
@@ -171,7 +171,7 @@ export default class SourceMapsWorker extends Worker {
           .insertOne({
             projectId: releaseData.projectId,
             release: releaseData.release,
-            files: savedFiles as SourcemapDataExtended[],
+            files: savedFiles as SourceMapDataExtended[],
           });
 
         return insertion ? insertion.insertedId : null;
@@ -185,7 +185,7 @@ export default class SourceMapsWorker extends Worker {
         }, {
           $push: {
             files: {
-              $each: savedFiles as SourcemapDataExtended[],
+              $each: savedFiles as SourceMapDataExtended[],
             },
           },
         });
@@ -200,7 +200,7 @@ export default class SourceMapsWorker extends Worker {
    * Saves source map file to the GridFS
    * @param file - source map file extended
    */
-  private saveFile(file: SourcemapDataExtended): Promise<SourceMapFileChunk> {
+  private saveFile(file: SourceMapDataExtended): Promise<SourceMapFileChunk> {
     return new Promise((resolve, reject) => {
       const readable = Readable.from([file.content]);
       const writeStream = this.db.getBucket().openUploadStream(file.mapFileName);

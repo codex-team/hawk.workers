@@ -1,4 +1,4 @@
-import { Timestamp, ObjectID } from 'mongodb';
+import { ObjectID, Timestamp } from 'mongodb';
 
 export interface SourceMapsRecord {
   /**
@@ -14,10 +14,10 @@ export interface SourceMapsRecord {
   /**
    * List of source maps for all chunks
    */
-  files: SourcemapDataExtended[];
+  files: SourceMapDataExtended[];
 }
 
-export interface SourcemapDataExtended {
+export interface SourceMapDataExtended {
   /**
    * Name of source-map file
    * @example main.min.js.map
