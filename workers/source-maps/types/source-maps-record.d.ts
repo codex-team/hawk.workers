@@ -32,12 +32,12 @@ export interface SourceMapDataExtended {
 
   /**
    * Source map body in string.
-   * After saving to the db, this field will be replaced with _id of saved file
+   * After saving to the db, this field will be removed, and _id of saved file will be added instead
    */
   content?: string;
 
   /**
-   * When file will be saved to GridFS, there will be its td instead of 'content'
+   * When file will be saved to GridFS, there will be its id instead of 'content'
    */
   _id?: ObjectID;
 }
