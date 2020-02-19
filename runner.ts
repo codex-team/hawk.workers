@@ -107,6 +107,9 @@ class WorkerRunner {
       '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n',
     );
     console.log(error);
+    if (error === undefined) {
+      console.trace();
+    }
     console.log('\n\n');
 
     utils.sendReport('Error has been occured: ' + error.message );
