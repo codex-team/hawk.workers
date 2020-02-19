@@ -149,6 +149,7 @@ class WorkerRunner {
       },
     );
     process.on('unhandledRejection', async (event: { reason; promise }) => {
+      console.log('unhandledRejection' , event);
       this.exceptionHandler(event.reason);
 
       await this.finishAll();
