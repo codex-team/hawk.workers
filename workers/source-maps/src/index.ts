@@ -63,11 +63,13 @@ export default class SourceMapsWorker extends Worker {
       /**
        * Save source map
        */
-      await this.save({
+      const savingResult = await this.save({
         projectId: task.projectId,
         release: task.release,
         files: sourceMapsFilesExtended,
       } as SourceMapsRecord);
+      
+      console.log('savingResult', savingResult);
 
     } catch (error) {
       this.logger.error('Can\'t extract release info:\n', {
@@ -85,6 +87,7 @@ export default class SourceMapsWorker extends Worker {
    * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
+    console.log('extendReleaseInfo');
     return sourceMaps.map((file: SourcemapCollectedData) => {
       try {
         /**
@@ -115,6 +118,7 @@ export default class SourceMapsWorker extends Worker {
    * @param {SourceMapsRecord} releaseData - info with source map
    */
   private async save(releaseData: SourceMapsRecord) {
+    console.log('save');
     try {
       const existedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
@@ -152,6 +156,8 @@ export default class SourceMapsWorker extends Worker {
           console.log(`Map ${map.mapFileName} was not saved: `, error);
         }
       }));
+      
+      console.log('savedFiles', savedFiles);
 
       /**
        * Filter unsaved maps
