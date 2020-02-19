@@ -194,7 +194,7 @@ export default class JavascriptEventWorker extends EventWorker {
         .on('error', (error) => {
           reject(error);
         })
-        .on('end', (info: SourceMapFileChunk) => {
+        .on('end', () => {
           const res = buf.toString();
 
           /**

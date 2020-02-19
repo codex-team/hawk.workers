@@ -68,11 +68,10 @@ export default class SourceMapsWorker extends Worker {
         release: task.release,
         files: sourceMapsFilesExtended,
       } as SourceMapsRecord);
-      
+
       console.log('savingResult', savingResult);
 
     } catch (error) {
-      console.log('error', error);
       this.logger.error('Can\'t extract release info:\n', {
         error,
       });
@@ -88,7 +87,6 @@ export default class SourceMapsWorker extends Worker {
    * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
-    console.log('extendReleaseInfo');
     return sourceMaps.map((file: SourcemapCollectedData) => {
       try {
         /**
@@ -119,7 +117,6 @@ export default class SourceMapsWorker extends Worker {
    * @param {SourceMapsRecord} releaseData - info with source map
    */
   private async save(releaseData: SourceMapsRecord) {
-    console.log('save');
     try {
       const existedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
@@ -157,8 +154,6 @@ export default class SourceMapsWorker extends Worker {
           console.log(`Map ${map.mapFileName} was not saved: `, error);
         }
       }));
-      
-      console.log('savedFiles', savedFiles);
 
       /**
        * Filter unsaved maps
@@ -224,7 +219,6 @@ export default class SourceMapsWorker extends Worker {
         })
         .on('finish', (info: SourceMapFileChunk) => {
           readable.destroy();
-          writeStream.destroy();
           resolve(info);
         });
     });
