@@ -86,21 +86,26 @@ export default class SourceMapsWorker extends Worker {
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourcemapDataExtended[] {
     return sourceMaps.map((file: SourcemapCollectedData) => {
-      /**
-       * Decode base64 source map content
-       */
-      const buffer = Buffer.from(file.payload, 'base64');
-      const mapBodyString = buffer.toString();
-      /**
-       * @todo use more efficient method to extract "file" from big JSON
-       */
-      const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
+      try {
+        /**
+         * Decode base64 source map content
+         */
+        const buffer = Buffer.from(file.payload, 'base64');
+        const mapBodyString = buffer.toString();
+        /**
+         * @todo use more efficient method to extract "file" from big JSON
+         */
+        const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
 
-      return {
-        mapFileName: file.name,
-        originFileName: mapContent.file,
-        content: mapBodyString,
-      };
+        return {
+          mapFileName: file.name,
+          originFileName: mapContent.file,
+          content: mapBodyString,
+        };
+      } catch (error) {
+        console.error('Error while extending source map info', error);
+        return null;
+      }
     });
   }
 
