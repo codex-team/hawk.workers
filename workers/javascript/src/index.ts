@@ -123,6 +123,13 @@ export default class JavascriptEventWorker extends EventWorker {
   private async consumeBacktraceFrame(stackFrame: BacktraceFrame,
                                       releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
     /**
+     * Sometimes catcher can't extract file from the backtrace
+     */
+    if (!stackFrame.file) {
+      return stackFrame;
+    }
+
+    /**
      * Extract base filename from path
      * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
      */
