@@ -27,7 +27,7 @@
         "run-grouper": "yarn worker hawk-worker-grouper",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
-        "run-maps": "yarn worker hawk-worker-sourcemaps"
+        "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {
         "amqplib": "^0.5.5",

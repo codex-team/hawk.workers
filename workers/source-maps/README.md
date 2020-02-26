@@ -2,6 +2,10 @@
 
 This worker is needed to save source-map uploaded from user to our DB.
 
+## Important 
+
+**Current implementation supports only single Rabbit prefetch count (SIMULTANEOUS_TASKS=1)**
+
 ## Parsing scheme
 
 1. User wants to deploy project
