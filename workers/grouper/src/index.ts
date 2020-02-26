@@ -203,14 +203,20 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      const now = new Date();
-      const day = now.getDate();
-      const month = now.getMonth() + 1;
+      /**
+       * Get JavaScript date from event unixtime to convert daily aggregation collection format
+       *
+       * Problem was issued due to the numerous events that could be occurred in the past
+       * but the date always was current
+       */
+      const eventDate = new Date(eventTimestamp * 1000);
+      const eventDay = eventDate.getDate();
+      const eventMonth = eventDate.getMonth() + 1;
 
       const currentDate = [
-        (day > 9 ? '' : '0') + day,
-        (month > 9 ? '' : '0') + month,
-        now.getFullYear(),
+        (eventDay > 9 ? '' : '0') + eventDay,
+        (eventMonth > 9 ? '' : '0') + eventMonth,
+        eventDate.getFullYear(),
       ].join('-');
 
       await this.db.getConnection()
