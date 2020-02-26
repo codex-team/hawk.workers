@@ -37,6 +37,12 @@ Registry - RabbitMQ
 4. `yarn worker worker-package-name` (package name from worker's package.json). You can pass several workers separated by space.
 5. (Optionally) You can add own script to run specified worker, for example `"run-js": "ts-node ./runner.ts hawk-worker-javascript"`
 
+> Note. You can override some env variables on worker running:
+
+```
+SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps
+```
+
 ## Running workers with PM2
 
 - Install PM2
