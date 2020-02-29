@@ -97,8 +97,9 @@ export default class GrouperWorker extends Worker {
 
     /**
      * Store events counter by days
+     * @todo fix new Date()
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, new Date().getTime() / 1000);
   }
 
   /**
@@ -210,21 +211,15 @@ export default class GrouperWorker extends Worker {
        * but the date always was current
        */
       const eventDate = new Date(eventTimestamp * 1000);
-      const eventDay = eventDate.getDate();
-      const eventMonth = eventDate.getMonth() + 1;
-
-      const currentDate = [
-        (eventDay > 9 ? '' : '0') + eventDay,
-        (eventMonth > 9 ? '' : '0') + eventMonth,
-        eventDate.getFullYear(),
-      ].join('-');
+      eventDate.setHours(0, 0, 0, 0); // get midnight
+      const midnight = eventDate.getTime() / 1000;
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
-          { groupHash: eventHash, date: currentDate },
+          { groupHash: eventHash, date: midnight },
           {
-            $set: { groupHash: eventHash, date: currentDate, timestamp: eventTimestamp },
+            $set: { groupHash: eventHash, timestamp: eventTimestamp },
             $inc: { count: 1 },
           },
           { upsert: true });
