@@ -1,8 +1,8 @@
 /**
  * Grouped event format
  */
-import { EventData } from '../../../lib/types/event-worker-task';
 import { ObjectId } from 'mongodb';
+import { EventData } from '../../../lib/types/event-worker-task';
 
 export interface GroupedEvent {
   /**
