@@ -97,9 +97,8 @@ export default class GrouperWorker extends Worker {
 
     /**
      * Store events counter by days
-     * @todo fix new Date()
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, new Date().getTime() / 1000);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp);
   }
 
   /**
