@@ -228,6 +228,7 @@ export default class GrouperWorker extends Worker {
           {
             $set: {
               groupHash: eventHash,
+              date: midnight,
               timestamp: eventTimestamp,
               lastRepetitionId: repetitionId
             },
