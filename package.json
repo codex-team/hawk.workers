@@ -24,6 +24,7 @@
         "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
+        "run-python": "yarn worker hawk-worker-python",
         "run-grouper": "yarn worker hawk-worker-grouper",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
