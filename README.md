@@ -148,19 +148,23 @@ await db.saveEvent(event);
 To create new migration use command
 
 ```jsonc
-yarn migration create {migrationName} 
+yarn migration create {migrationName}
 ```
 
 Each migration file contains two methods: up and down.
- 
+
 `Up` method executes revision and increases database version.
- 
+
 `Down` method rollbacks database changes
 
 To execute migration run
 
 ```jsonc
-yarn migration up (or down)
+yarn migrate
 ```
+
+### Todo
+
+Refactor mongo-migrate commands to have an opportunity to create or rollback
 
 [More details](https://www.npmjs.com/package/migrate-mongo)

@@ -21,7 +21,7 @@
         "lint": "yarn lint:js; yarn lint:ts",
         "lint:js": "eslint . --fix",
         "lint:ts": "tslint --project . --fix",
-        "migration": "./node_modules/migrate-mongo/bin/migrate-mongo.js",
+        "migrate": "migrate-mongo up",
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-grouper": "yarn worker hawk-worker-grouper",

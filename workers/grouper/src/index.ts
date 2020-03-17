@@ -218,23 +218,17 @@ export default class GrouperWorker extends Worker {
        * but the date always was current
        */
       const eventDate = new Date(eventTimestamp * 1000);
-      const eventDay = eventDate.getDate();
-      const eventMonth = eventDate.getMonth() + 1;
-
-      const currentDate = [
-        (eventDay > 9 ? '' : '0') + eventDay,
-        (eventMonth > 9 ? '' : '0') + eventMonth,
-        eventDate.getFullYear(),
-      ].join('-');
+      eventDate.setHours(0, 0, 0, 0); // get midnight
+      const midnight = eventDate.getTime() / 1000;
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
-          { groupHash: eventHash, date: currentDate },
+          { groupHash: eventHash, date: midnight },
           {
             $set: {
               groupHash: eventHash,
-              date: currentDate,
+              date: midnight,
               timestamp: eventTimestamp,
               lastRepetitionId: repetitionId
             },
