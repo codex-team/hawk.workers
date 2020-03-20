@@ -22,7 +22,7 @@ module.exports = {
         {},
         {
           $rename: {
-            date: 'groupingTime',
+            date: 'groupingTimestamp',
             timestamp: 'lastRepetitionTime'
           }
         }
