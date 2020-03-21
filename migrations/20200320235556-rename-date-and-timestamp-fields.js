@@ -1,6 +1,5 @@
 /**
- * This migration updates date from format `dd-mm-YYYY` to midnight unixtime
- * so that each client with different timezone could convert it to local time
+ * This migration renames date and timestamp fields to groupingTimestamp and lastRepetitionTime
  */
 module.exports = {
   async up(db) {
