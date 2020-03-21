@@ -224,12 +224,12 @@ export default class GrouperWorker extends Worker {
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
-          { groupHash: eventHash, date: midnight },
+          { groupHash: eventHash, groupingTimestamp: midnight },
           {
             $set: {
               groupHash: eventHash,
-              date: midnight,
-              timestamp: eventTimestamp,
+              groupingTimestamp: midnight,
+              lastRepetitionTime: eventTimestamp,
               lastRepetitionId: repetitionId
             },
             $inc: { count: 1 },
