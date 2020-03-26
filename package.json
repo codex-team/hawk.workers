@@ -11,7 +11,8 @@
         "workers/accountant",
         "workers/paymaster",
         "workers/source-maps",
-        "workers/python"
+        "workers/python",
+        "workers/notifier"
     ],
     "scripts": {
         "test": "jest --coverage",
@@ -27,6 +28,7 @@
         "run-grouper": "yarn worker hawk-worker-grouper",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
+        "run-notifier": "yarn worker hawk-worker-notifier",
         "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps"
     },
     "dependencies": {
