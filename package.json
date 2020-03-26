@@ -36,6 +36,7 @@
         "lodash.mergewith": "^4.6.2",
         "migrate-mongo": "^6.0.1",
         "mongodb": "^3.3.0-beta2",
+        "prom-client": "^12.0.0",
         "winston": "^3.2.1",
         "yup": "^0.27.0"
     },

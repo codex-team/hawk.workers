@@ -5,6 +5,7 @@ import * as path from 'path';
 import winston from 'winston';
 import {createLogger, format, transports} from 'winston';
 import {WorkerTask} from './types/worker-task';
+const client = require('prom-client');
 
 const {combine, timestamp, colorize, simple, printf} = format;
 
@@ -50,6 +51,8 @@ export abstract class Worker {
    * (will pull tasks from Registry queue with the same name)
    */
   public abstract readonly type: string;
+
+  private metricProcessedMessages;
 
   /**
    * Registry Endpoint
@@ -130,6 +133,11 @@ export abstract class Worker {
      * Remember consumer tag to cancel subscription in future
      */
     this.registryConsumerTag = consumerTag;
+
+    this.metricProcessedMessages = new client.Counter({
+      name: 'successfully_processed_errors',
+      help: 'number of successfully processed errors',
+    });
   }
 
   /**
@@ -248,6 +256,11 @@ export abstract class Worker {
        * Let RabbitMQ know that we processed the message
        */
       this.channelWithRegistry.ack(msg);
+
+      /**
+       * Increment counter of successfully processed messages
+       */
+      this.metricProcessedMessages.inc();
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 

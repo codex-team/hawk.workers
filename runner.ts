@@ -1,5 +1,8 @@
 /* tslint:disable:no-shadowed-variable  */
 import * as utils from './lib/utils';
+import * as dotenv from 'dotenv';
+
+const client = require('prom-client');
 
 /**
  * Get worker name(s) from command line arguments
@@ -19,6 +22,8 @@ class WorkerRunner {
    */
   private workers: any[] = [];
 
+  private gateway: any;
+
   /**
    * Create runner instance
    * @param {string[]} workers - workers package names
@@ -34,6 +39,9 @@ class WorkerRunner {
         this.constructWorkers(workers);
       })
       .then(() => {
+        return this.startMetrics();
+      })
+      .then(() => {
         return this.startWorkers();
       })
       .then(() => {
@@ -42,6 +50,22 @@ class WorkerRunner {
       .catch((loadingError) => {
         console.error('Worker loading error: ', loadingError);
       });
+  }
+
+  /**
+   * Run metrics exporter
+   */
+  private async startMetrics() {
+    const collectDefaultMetrics = client.collectDefaultMetrics;
+    this.gateway = new client.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
+    // collectDefaultMetrics();
+
+    setInterval(() => {
+      this.workers.forEach((worker) => {
+        this.gateway.push({jobName: "worker", groupings: { type: worker.type.replace("/", "_") }}, (err, resp, body) => {});
+      });
+    }, 1000);
+    return Promise.resolve();
   }
 
   /**
@@ -83,6 +107,7 @@ class WorkerRunner {
           );
 
           utils.sendReport(worker.constructor.name + ' started');
+
         } catch (startingError) {
           this.exceptionHandler(startingError);
 
