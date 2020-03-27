@@ -3,7 +3,7 @@ import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import * as pkg from '../package.json';
 import {Channel} from '../types/channel';
-import {NotifierWorkerTask} from '../types/notifier-task';
+import {NotifierEvent, NotifierWorkerTask} from '../types/notifier-task';
 import {Rule} from '../types/rule';
 import Buffer, {BufferData, ChannelKey, EventKey} from './buffer';
 import RuleValidator from './validator';
@@ -34,8 +34,14 @@ export default class NotifierWorker extends Worker {
     });
   }
 
-  private async getFittedRules(projectId: string, event): Promise<Rule[]> {
-    const rules = await this.getProjectNotificationRules(projectId);
+  private async getFittedRules(projectId: string, event: NotifierEvent): Promise<Rule[]> {
+    let rules = [];
+
+    try {
+      rules = await this.getProjectNotificationRules(projectId);
+    } catch (e) {
+      console.warn(e);
+    }
 
     return rules
       .filter((rule: any) => {
@@ -50,7 +56,7 @@ export default class NotifierWorker extends Worker {
       });
   }
 
-  private addEventToChannels(projectId, rule, event) {
+  private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels);
 
     channels.forEach(([name, options]) => {
@@ -58,8 +64,8 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      const channelKey: ChannelKey = [projectId, rule.id, name];
-      const eventKey: EventKey = [projectId, rule.id, name, event.groupHash];
+      const channelKey: ChannelKey = [projectId, rule.id.toString(), name];
+      const eventKey: EventKey = [projectId, rule.id.toString(), name, event.groupHash];
 
       if (this.buffer.getTimer(channelKey)) {
         this.buffer.push(eventKey);
@@ -67,7 +73,7 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      this.sendToSenderWorker([projectId, rule.id, name], [{key: event.groupHash, count: 1}]);
+      this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
 
       const minPeriod = (options.minPeriod || 60) * 1000;
 
@@ -75,7 +81,7 @@ export default class NotifierWorker extends Worker {
     });
   }
 
-  private sendEvents = (channelKey) => {
+  private sendEvents = (channelKey: ChannelKey): void => {
     const events = this.buffer.flush(channelKey);
 
     if (!events.length) {
