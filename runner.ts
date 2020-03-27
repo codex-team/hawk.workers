@@ -1,8 +1,9 @@
 /* tslint:disable:no-shadowed-variable  */
 import * as utils from './lib/utils';
-import * as dotenv from 'dotenv';
 
-const client = require('prom-client');
+/* Prometheus client for pushing metrics to the pushgateway */
+const promClient = require('prom-client');
+const url = require('url');
 
 /**
  * Get worker name(s) from command line arguments
@@ -56,13 +57,38 @@ class WorkerRunner {
    * Run metrics exporter
    */
   private async startMetrics() {
-    const collectDefaultMetrics = client.collectDefaultMetrics;
-    this.gateway = new client.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
-    // collectDefaultMetrics();
+    if (!process.env.PROMETHEUS_PUSHGATEWAY) {
+      return Promise.resolve();
+    }
 
+    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
+    const collectDefaultMetrics = promClient.collectDefaultMetrics;
+    const Registry = promClient.Registry;
+    const register = new Registry();
+    const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY).host;
+
+    // Initialize metrics for workers
+    this.workers.forEach((worker) => {
+      worker.initMetrics();
+      worker.getMetrics().forEach((metric) => register.registerMetric(metric));
+    });
+
+    collectDefaultMetrics({ register });
+
+    console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY}`);
+
+    // Pushing metrics to the pushgateway every second
     setInterval(() => {
       this.workers.forEach((worker) => {
-        this.gateway.push({jobName: "worker", groupings: { type: worker.type.replace("/", "_") }}, (err, resp, body) => {});
+        this.gateway.push({
+          jobName: 'workers',
+          groupings: {
+            type: worker.type.replace("/", "_"),
+            instance: instance,
+          }
+        }, (err, resp, body) => {
+          if (err) { console.log(`Error of pushing metrics to gateway: ${err}`); }
+        });
       });
     }, 1000);
     return Promise.resolve();

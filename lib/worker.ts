@@ -52,7 +52,11 @@ export abstract class Worker {
    */
   public abstract readonly type: string;
 
-  private metricProcessedMessages;
+  /**
+   * Prometheus metrics
+   * – metricProcessedMessages – number of successfully processed messages
+   */
+  private metricSuccessfullyProcessedMessages;
 
   /**
    * Registry Endpoint
@@ -110,6 +114,23 @@ export abstract class Worker {
   });
 
   /**
+   * Initialize prometheus metrics
+   */
+  public initMetrics() {
+    this.metricSuccessfullyProcessedMessages = new client.Counter({
+      name: 'successfully_processed_messages',
+      help: 'number of successfully processed messages since last restart',
+    });
+  }
+
+  /**
+   * Get array of available prometheus metrics
+   */
+  public getMetrics() {
+    return [this.metricSuccessfullyProcessedMessages];
+  }
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -133,11 +154,6 @@ export abstract class Worker {
      * Remember consumer tag to cancel subscription in future
      */
     this.registryConsumerTag = consumerTag;
-
-    this.metricProcessedMessages = new client.Counter({
-      name: 'successfully_processed_errors',
-      help: 'number of successfully processed errors',
-    });
   }
 
   /**
@@ -260,7 +276,7 @@ export abstract class Worker {
       /**
        * Increment counter of successfully processed messages
        */
-      this.metricProcessedMessages.inc();
+      this.metricSuccessfullyProcessedMessages.inc();
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
