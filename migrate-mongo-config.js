@@ -1,8 +1,10 @@
+require('./env');
+
 // In this file you can configure migrate-mongo
 const config = {
   mongodb: {
-    url: process.env.MONGO_DNS,
-    databaseName: process.env.MONGO_DBNAME,
+    url: process.env.MONGO_DSN,
+    databaseName: process.env.EVENTS_DB_NAME,
 
     options: {
       useNewUrlParser: true // removes a deprecation warning when connecting
