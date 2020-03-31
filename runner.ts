@@ -67,6 +67,7 @@ class WorkerRunner {
     }
 
     this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
+    
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
     const Registry = promClient.Registry;
     const register = new Registry();
