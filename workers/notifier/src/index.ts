@@ -8,22 +8,64 @@ import {Rule} from '../types/rule';
 import Buffer, {BufferData, ChannelKey, EventKey} from './buffer';
 import RuleValidator from './validator';
 
+/**
+ * Worker to buffer events before sending notifications about them
+ */
 export default class NotifierWorker extends Worker {
+  /**
+   * Worker type
+   */
   public readonly type: string = pkg.workerType;
 
+  /**
+   * Database Controller
+   */
   private db: DatabaseController = new DatabaseController();
+
+  /**
+   * Received events buffer
+   */
   private buffer: Buffer = new Buffer();
 
+  /**
+   * Start consuming messages
+   */
   public async start(): Promise<void> {
     await this.db.connect(process.env.ACCOUNTS_DB_NAME);
     await super.start();
   }
 
+  /**
+   * Finish everything
+   */
   public async finish(): Promise<void> {
     await super.finish();
     await this.db.close();
   }
 
+  /**
+   * Task handling function
+   *
+   * Handling scheme:
+   *
+   * 1) On task received
+   *   -> receive task
+   *   -> get project notification rules
+   *   -> filter rules
+   *   -> check channel timer
+   *      a) if timer doesn't exist
+   *        -> send tasks to sender workers
+   *        -> set timeout for minPeriod
+   *      b) if timer exists
+   *        -> push event to channel's buffer
+   *
+   * 2) On timeout
+   *   -> get events from channel's buffer
+   *   -> flush channel's buffer
+   *   -> send tasks to sender workers
+   *
+   * @param {NotifierWorkerTask} task — task to handle
+   */
   public async handle(task: NotifierWorkerTask): Promise<void> {
     const {projectId, event} = task;
 
@@ -34,6 +76,13 @@ export default class NotifierWorker extends Worker {
     });
   }
 
+  /**
+   * Get project notifications rules that matches received event
+   *
+   * @param {string} projectId — project id event is related to
+   * @param {NotifierEvent} event — received event
+   * @return {Promise<Rule[]>}
+   */
   private async getFittedRules(projectId: string, event: NotifierEvent): Promise<Rule[]> {
     let rules = [];
 
@@ -56,6 +105,13 @@ export default class NotifierWorker extends Worker {
       });
   }
 
+  /**
+   * Add event to channel's buffer or set timer if it doesn't exist
+   *
+   * @param {string} projectId - project id event is related to
+   * @param {Rule} rule - notification rule
+   * @param {NotifierEvent} event - received event
+   */
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels);
 
@@ -81,6 +137,11 @@ export default class NotifierWorker extends Worker {
     });
   }
 
+  /**
+   * Get events from buffer, flush buffer and send event to sender workers
+   *
+   * @param {ChannelKey} channelKey — buffer key
+   */
   private sendEvents = (channelKey: ChannelKey): void => {
     const events = this.buffer.flush(channelKey);
 
@@ -91,10 +152,29 @@ export default class NotifierWorker extends Worker {
     this.sendToSenderWorker(channelKey, events);
   }
 
+  /**
+   * Send task to sender workers
+   *
+   * @param {ChannelKey} key — buffer key
+   * @param {BufferData[]} events - events to send
+   */
   private sendToSenderWorker(key: ChannelKey, events: BufferData[]): void {
-    console.log(key, events);
+    const [projectId, ruleId, channelName] = key;
+
+    this.addTask(`sender/${channelName}`, {
+      projectId,
+      ruleId,
+      events,
+    });
   }
 
+  /**
+   * Get project notification rules
+   *
+   * @param {string} projectId - project id event is related to
+   *
+   * @return {Promise<Rule[]>} - project notification rules
+   */
   private async getProjectNotificationRules(projectId: string): Promise<Rule[]> | never  {
     const connection = this.db.getConnection();
     const projects = connection.collection('projects');

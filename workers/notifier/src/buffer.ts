@@ -1,29 +1,86 @@
 import Timeout = NodeJS.Timeout;
 
+/**
+ * Index signature generic helper
+ */
 interface Index<T> {
   [key: string]: T;
 }
 
+/**
+ * Buffer channel object schema
+ */
 interface ChannelSchema {
+  /**
+   * Object which keys are events' group hash
+   * and values are number of events received for minPeroid
+   */
   payload: Index<number>;
+
+  /**
+   * Channel timer
+   */
   timer: Timeout;
 }
 
+/**
+ * Events data schema
+ */
 export interface BufferData {
+  /**
+   * Group hash
+   */
   key: string;
+
+  /**
+   * Number of events received for minPeriod
+   */
   count: number;
 }
 
+/**
+ * Schema for notification rule
+ */
 type RuleSchema = Index<ChannelSchema>;
+
+/**
+ * Schema for project
+ */
 type ProjectSchema = Index<RuleSchema>;
+
+/**
+ * Buffer schema
+ */
 type BufferSchema = Index<ProjectSchema>;
 
+/**
+ * Composed key to identify channel
+ *
+ * [projectId, ruleId, channelName]
+ */
 export type ChannelKey = [string, string, string];
+
+/**
+ * Composed key to identify event
+ *
+ * [projectId, ruleId, channelName, eventGroupHash]
+ */
 export type EventKey = [string, string, string, string];
 
+/**
+ * Channels' buffer to store number of received events
+ */
 export default class Buffer {
+  /**
+   * Store
+   */
   private projects: BufferSchema = {};
 
+  /**
+   * Add event to channel's buffer
+   *
+   * @param {EventKey} key
+   */
   public push(key: EventKey): void {
     const eventKey = key[3];
     const channel = this.getChannel(key.slice(0, -1) as ChannelKey);
@@ -33,9 +90,32 @@ export default class Buffer {
     channel.payload[eventKey]++;
   }
 
+  /**
+   * Get channel data
+   *
+   * @param {ChannelKey} key
+   *
+   * @return {BufferData[]}
+   */
   public get(key: ChannelKey): BufferData[];
+
+  /**
+   * Get event data
+   *
+   * @param {EventKey} key
+   *
+   * @return {number} - number of events received for minPeriod
+   */
   public get(key: EventKey): number;
-  public get(arg) {
+
+  /**
+   * Implementation of two methods above
+   *
+   * @param {ChannelKey|EventKey} arg - key
+   *
+   * @return {BufferData[]|number}
+   */
+  public get(arg: ChannelKey | EventKey): BufferData[] | number {
     const [projectId, ruleId, channelName, key] = arg;
 
     const channel = this.getChannel([projectId, ruleId, channelName]);
@@ -49,10 +129,24 @@ export default class Buffer {
       .map(([k, count]) => ({key: k, count}));
   }
 
+  /**
+   * Return size of channel's buffer
+   *
+   * @param {ChannelKey} key
+   *
+   * @return {number}
+   */
   public size(key: ChannelKey): number {
     return this.get(key).length;
   }
 
+  /**
+   * Set timer for channel
+   *
+   * @param {ChannelKey} key
+   * @param {number} timeout
+   * @param {function} callback
+   */
   public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void) {
     const channel = this.getChannel(key);
 
@@ -65,12 +159,24 @@ export default class Buffer {
     return channel.timer;
   }
 
+  /**
+   * Get channel timer
+   *
+   * @param {ChannelKey} key
+   *
+   * @return {Timeout}
+   */
   public getTimer(key: ChannelKey): Timeout {
     const channel = this.getChannel(key);
 
     return channel.timer;
   }
 
+  /**
+   * Clear channel timer
+   *
+   * @param {ChannelKey} key
+   */
   public clearTimer(key: ChannelKey): void {
     const channel = this.getChannel(key);
 
@@ -79,6 +185,13 @@ export default class Buffer {
     channel.timer = null;
   }
 
+  /**
+   * Flush channel buffer and return it's data
+   *
+   * @param {ChannelKey} key
+   *
+   * @return BufferData[]
+   */
   public flush(key: ChannelKey): BufferData[] {
     const channel = this.getChannel(key);
 
@@ -89,6 +202,11 @@ export default class Buffer {
     return data;
   }
 
+  /**
+   * Flush project buffer or whole buffer
+   *
+   * @param {string} [projectId] - project to flush, if not set whole buffer is flushed
+   */
   public flushAll(projectId?: string): void {
     if (projectId) {
       this.projects[projectId] = {};
@@ -98,6 +216,13 @@ export default class Buffer {
     this.projects = {};
   }
 
+  /**
+   * Get channel buffer
+   *
+   * @param {string} projectId
+   * @param {string} ruleId
+   * @param {string} channelName
+   */
   private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
     const project = this.getField<BufferSchema, ProjectSchema>(
       this.projects,
@@ -117,6 +242,15 @@ export default class Buffer {
     );
   }
 
+  /**
+   * Helper method to get object field and set default value if one doesn't exist
+   *
+   * @param {T = any} obj — any object
+   * @param {string} field — field to get
+   * @param {V = any} defaultValue - default value to set if field doesn't exist
+   *
+   * @return {V} — fields value
+   */
   private getField<T = any, V = any>(
     obj: T,
     field: string,
