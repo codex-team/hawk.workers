@@ -101,6 +101,20 @@ export default class GrouperWorker extends Worker {
      * Store events counter by days
      */
     await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId);
+
+    /**
+     * Add task for NotifierWorker
+     */
+    if (process.env.FEATURE_NOTIFIER_WORKER) {
+      this.addTask('notifier', {
+        projectId: task.projectId,
+        event: {
+          title: task.event.title,
+          groupHash: uniqueEventHash,
+          isNew: isFirstOccurrence,
+        },
+      });
+    }
   }
 
   /**
