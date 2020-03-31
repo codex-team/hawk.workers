@@ -40,7 +40,12 @@ class WorkerRunner {
         this.constructWorkers(workers);
       })
       .then(() => {
-        return this.startMetrics();
+        try {
+          this.startMetrics();
+        } catch (e) {
+          console.error(`Metrics not started: ${e}`);
+        }
+        return Promise.resolve();
       })
       .then(() => {
         return this.startWorkers();
@@ -56,9 +61,9 @@ class WorkerRunner {
   /**
    * Run metrics exporter
    */
-  private async startMetrics() {
+  private startMetrics() {
     if (!process.env.PROMETHEUS_PUSHGATEWAY) {
-      return Promise.resolve();
+      return;
     }
 
     this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
@@ -91,7 +96,6 @@ class WorkerRunner {
         });
       });
     }, 1000);
-    return Promise.resolve();
   }
 
   /**
