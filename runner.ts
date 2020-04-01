@@ -2,8 +2,8 @@
 import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
-import promClient from 'prom-client';
-import url from 'url';
+import * as promClient from 'prom-client';
+import * as url from 'url';
 
 /**
  * Get worker name(s) from command line arguments
