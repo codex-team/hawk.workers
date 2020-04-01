@@ -58,8 +58,19 @@ export default class GrouperWorker extends Worker {
      * Do not save event with unexpected structure caused due to js-vue integration
      * @todo remove after changing payload data format
      */
-    if (task.event.title === 'this.editor is undefined') {
-      (task.event.addons as {vue: {data, props, computed, lifecycle, component}}).vue.data = {};
+    if (task.event.title === 'this.editor is undefined' && task.event.addons) {
+      interface VueAddonsData {
+        lifecycle: string;
+        component: string;
+        data: object;
+        props: object;
+        computed: object;
+      }
+      const vueAddons = (task.event.addons as {vue: VueAddonsData}).vue;
+
+      if (vueAddons && vueAddons.data) {
+        (task.event.addons as {vue: VueAddonsData}).vue.data = {};
+      }
     }
 
     /**
