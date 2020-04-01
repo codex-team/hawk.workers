@@ -2,10 +2,10 @@ import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
 import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as client from 'prom-client';
 import winston from 'winston';
 import {createLogger, format, transports} from 'winston';
 import {WorkerTask} from './types/worker-task';
-const client = require('prom-client');
 
 const {combine, timestamp, colorize, simple, printf} = format;
 
@@ -54,7 +54,7 @@ export abstract class Worker {
 
   /**
    * Prometheus metrics
-   * – metricProcessedMessages – number of successfully processed messages
+   * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
   private metricSuccessfullyProcessedMessages;
 
