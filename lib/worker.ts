@@ -2,6 +2,7 @@ import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
 import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as client from 'prom-client';
 import winston from 'winston';
 import {createLogger, format, transports} from 'winston';
 import {WorkerTask} from './types/worker-task';
@@ -50,6 +51,12 @@ export abstract class Worker {
    * (will pull tasks from Registry queue with the same name)
    */
   public abstract readonly type: string;
+
+  /**
+   * Prometheus metrics
+   * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
+   */
+  private metricSuccessfullyProcessedMessages: client.Counter<string>;
 
   /**
    * Registry Endpoint
@@ -105,6 +112,23 @@ export abstract class Worker {
       }),
     ],
   });
+
+  /**
+   * Initialize prometheus metrics
+   */
+  public initMetrics() {
+    this.metricSuccessfullyProcessedMessages = new client.Counter({
+      name: 'successfully_processed_messages',
+      help: 'number of successfully processed messages since last restart',
+    });
+  }
+
+  /**
+   * Get array of available prometheus metrics
+   */
+  public getMetrics() {
+    return [this.metricSuccessfullyProcessedMessages];
+  }
 
   /**
    * Start consuming messages
@@ -248,6 +272,11 @@ export abstract class Worker {
        * Let RabbitMQ know that we processed the message
        */
       this.channelWithRegistry.ack(msg);
+
+      /**
+       * Increment counter of successfully processed messages
+       */
+      this.metricSuccessfullyProcessedMessages.inc();
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
