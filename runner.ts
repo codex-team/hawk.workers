@@ -3,7 +3,7 @@ import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
 import promClient from 'prom-client';
-import url = from 'url';
+import url from 'url';
 
 /**
  * Get worker name(s) from command line arguments
@@ -67,7 +67,7 @@ class WorkerRunner {
     }
 
     this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
-    
+
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
     const Registry = promClient.Registry;
     const register = new Registry();
