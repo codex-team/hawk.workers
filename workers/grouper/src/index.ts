@@ -54,6 +54,26 @@ export default class GrouperWorker extends Worker {
       .digest('hex');
 
     /**
+     * @since April 01, 2020
+     * Do not save event with unexpected structure caused due to js-vue integration
+     * @todo remove after changing payload data format
+     */
+    if (task.event.title === 'this.editor is undefined' && task.event.addons) {
+      interface VueAddonsData {
+        lifecycle: string;
+        component: string;
+        data: object;
+        props: object;
+        computed: object;
+      }
+      const vueAddons = (task.event.addons as {vue: VueAddonsData}).vue;
+
+      if (vueAddons && vueAddons.data) {
+        (task.event.addons as {vue: VueAddonsData}).vue.data = {};
+      }
+    }
+
+    /**
      * Find event by group hash.
      */
     const existedEvent = await this.getEvent(task.projectId, {

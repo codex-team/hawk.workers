@@ -1,14 +1,18 @@
-import { DatabaseController } from '../../../lib/db/controller';
-import { EventWorker } from '../../../lib/event-worker';
+import * as path from 'path';
+import {DatabaseController} from '../../../lib/db/controller';
+import {EventWorker} from '../../../lib/event-worker';
+import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
+import {DatabaseError} from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
-import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
+import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
 import * as pkg from '../package.json';
-import { PythonEventWorkerTask} from '../types/python-event-worker-task';
+import {PythonEventWorkerTask} from '../types/python-event-worker-task';
 
 /**
  * Worker for handling Python events
  */
 export default class PythonEventWorker extends EventWorker {
+
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -27,7 +31,7 @@ export default class PythonEventWorker extends EventWorker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
+    await this.db.connect(process.env.EVENTS_DB_NAME);
     await super.start();
   }
 
@@ -49,4 +53,5 @@ export default class PythonEventWorker extends EventWorker {
       event: event.payload,
     } as GroupWorkerTask);
   }
+
 }
