@@ -5,6 +5,7 @@ import * as pkg from '../package.json';
 import {Channel} from '../types/channel';
 import {NotifierEvent, NotifierWorkerTask} from '../types/notifier-task';
 import {Rule} from '../types/rule';
+import {SenderWorkerTask} from '../types/sender-task';
 import Buffer, {BufferData, ChannelKey, EventKey} from './buffer';
 import RuleValidator from './validator';
 
@@ -158,14 +159,19 @@ export default class NotifierWorker extends Worker {
    * @param {ChannelKey} key — buffer key
    * @param {BufferData[]} events - events to send
    */
-  private sendToSenderWorker(key: ChannelKey, events: BufferData[]): void {
+  private async sendToSenderWorker(key: ChannelKey, events: BufferData[]): Promise<void> {
     const [projectId, ruleId, channelName] = key;
+
+    const rules = await this.getProjectNotificationRules(projectId);
+    const rule = rules.find((r) => r.id.toString() === ruleId);
+
+    const endpoint = rule.channels[channelName].endpoint;
 
     this.addTask(`sender/${channelName}`, {
       projectId,
-      ruleId,
+      endpoint,
       events,
-    });
+    } as SenderWorkerTask);
   }
 
   /**

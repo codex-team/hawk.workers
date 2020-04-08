@@ -260,4 +260,29 @@ describe('NotifierWorker', () => {
       dbQueryMock = oldMock;
     });
   });
+
+  it('should send task to sender workers', async () => {
+    const worker = new NotifierWorker();
+
+    worker.addTask = jest.fn();
+
+    const message = {...messageMock};
+    const channels = ['telegram', 'slack'];
+
+    await worker.handle(message);
+
+    setTimeout(() => {
+      channels.forEach((channel, i) => {
+        expect(worker.addTask).toHaveBeenNthCalledWith(
+          i + 1,
+          `sender/${channel}`,
+          {
+            projectId: message.projectId,
+            endpoint: rule.channels[channel].endpoint,
+            events: [{key: message.event.groupHash, count: 1}],
+          },
+        );
+      });
+    }, 100);
+  });
 });

@@ -3,6 +3,6 @@ import {BufferData} from '../src/buffer';
 
 export interface SenderWorkerTask extends WorkerTask {
   projectId: string;
-  ruleId: string;
+  endpoint: string;
   events: BufferData[];
 }
