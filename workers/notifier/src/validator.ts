@@ -1,5 +1,5 @@
 import {NotifierEvent} from '../types/notifier-task';
-import {Rule} from '../types/rule';
+import {Rule, WhatToReceive} from '../types/rule';
 
 /**
  * Helper class to filter notification rules
@@ -34,7 +34,7 @@ export default class RuleValidator {
    * @return {RuleValidator}
    */
   public checkIfRuleIsOn(): RuleValidator {
-    const { rule } = this;
+    const {rule} = this;
 
     if (!rule.isEnabled) {
       throw Error('Rule is disabled');
@@ -52,7 +52,8 @@ export default class RuleValidator {
    */
   public checkWhatToReceive(): RuleValidator {
     const {rule, event} = this;
-    const result = rule.whatToReceive === 'all' || (event.isNew && rule.whatToReceive === 'new');
+    const result = rule.whatToReceive === WhatToReceive.All
+      || (event.isNew && rule.whatToReceive === WhatToReceive.New);
 
     if (!result) {
       throw Error('Event doesn\'t match `what to receive` filter');
@@ -70,7 +71,7 @@ export default class RuleValidator {
    */
   public checkIncludingWords(): RuleValidator {
     const {rule, event} = this;
-    const { including = [] } = rule;
+    const {including = []} = rule;
     let result;
 
     if (!including.length) {
@@ -95,7 +96,7 @@ export default class RuleValidator {
    */
   public checkExcludingWords(): RuleValidator {
     const {rule, event} = this;
-    const { excluding = [] } = rule;
+    const {excluding = []} = rule;
     let result;
 
     if (!excluding.length) {

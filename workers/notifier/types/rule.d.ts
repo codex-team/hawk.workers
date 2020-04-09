@@ -5,8 +5,8 @@ import {Channel, ChannelType} from './channel';
  * WhatToReceive property values
  */
 export enum WhatToReceive {
-  All = 'all',
-  New = 'new',
+  All = 'ALL',
+  New = 'ONLY_NEW',
 }
 
 /**
@@ -20,7 +20,7 @@ export interface Rule {
   /**
    * Rule identifier
    */
-  readonly id: ObjectID;
+  readonly _id: ObjectID;
 
   /**
    * Shows if Rule is enabled

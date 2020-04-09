@@ -121,8 +121,8 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      const channelKey: ChannelKey = [projectId, rule.id.toString(), name];
-      const eventKey: EventKey = [projectId, rule.id.toString(), name, event.groupHash];
+      const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
+      const eventKey: EventKey = [projectId, rule._id.toString(), name, event.groupHash];
 
       if (this.buffer.getTimer(channelKey)) {
         this.buffer.push(eventKey);
@@ -144,6 +144,8 @@ export default class NotifierWorker extends Worker {
    * @param {ChannelKey} channelKey — buffer key
    */
   private sendEvents = (channelKey: ChannelKey): void => {
+    this.buffer.clearTimer(channelKey);
+
     const events = this.buffer.flush(channelKey);
 
     if (!events.length) {
@@ -163,7 +165,7 @@ export default class NotifierWorker extends Worker {
     const [projectId, ruleId, channelName] = key;
 
     const rules = await this.getProjectNotificationRules(projectId);
-    const rule = rules.find((r) => r.id.toString() === ruleId);
+    const rule = rules.find((r) => r._id.toString() === ruleId);
 
     const endpoint = rule.channels[channelName].endpoint;
 
