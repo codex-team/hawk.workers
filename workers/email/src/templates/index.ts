@@ -1,4 +1,4 @@
-import fs from 'fs';
+import * as fs from 'fs';
 import './extensions';
 
 /**
@@ -25,7 +25,9 @@ export interface Template {
  * Collects template files
  */
 const templates: {[name: string]: Template} = fs.readdirSync(__dirname) // read templates directory
-  .filter((name) => !name.endsWith('.ts')) // leave only template folders
+  .filter((name) => {
+    return !name.endsWith('.ts') && name !== 'blocks';
+  }) // leave only template folders
   .reduce((accumulator, templateName) => {
     const templateDir = `${__dirname}/${templateName}/`;
     const templateContent = fs.readdirSync(templateDir);

@@ -6,11 +6,9 @@ Uncaught error
 
 In file: {{ event.payload.backtrace[0].file }} at line {{ event.payload.backtrace[0].line }}.
 
-{{ daysRepeated }} days repeating {{ event.totalCount }} times since {{ event.payload.timestamp | prettyDate }}.
+{{ newCount }} new | {{ event.totalCount }} total | {{ daysRepeated }} days repeating{{ usersAffected ? ' | #{userAffected}users affected' }}
 
-{{ usersAffected }} users affected.
-
-{{ host }}/event/{{ event._id }}
+View event: {{ host }}/event/{{ event._id }}
 
 To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
 

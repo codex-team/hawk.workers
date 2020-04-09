@@ -7,10 +7,14 @@ import {EmailSenderWorkerTask} from '../types/task';
 import EmailProvider from './provider';
 import Templates from './templates/names';
 
-import dotenv from 'dotenv';
-import path from 'path';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 import {Project} from '../types/project';
-import {NewEventTemplateVariables} from "../types/template-variables";
+import {
+  NewEventTemplateVariables,
+  SeveralEventsTemplateVariables,
+  TemplateEventData,
+} from '../types/template-variables';
 
 /**
  * Load local environment configuration
@@ -59,23 +63,55 @@ export default class EmailSenderWorker extends Worker {
    *
    * @param {EmailSenderWorkerTask} task - task to handle
    */
-  public async handle({projectId, endpoint, events}: EmailSenderWorkerTask): Promise<void> {
-    for (const {key: groupHash, count} of events) {
+  public async handle({projectId, ruleId, events}: EmailSenderWorkerTask): Promise<void> {
+    const project = await this.getProject(projectId);
+    const rule = project.notifications.find((r) => r._id.toString() === ruleId);
+
+    if (!project || !rule) {
+      return;
+    }
+
+    const channel = rule.channels.email;
+
+    if (events.length === 1) {
+      const {key: groupHash, count} = events[0];
       const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
-      const project = await this.getProject(projectId);
 
-      if (!event || !project) {
-        continue;
-      }
-
-      await this.emailProvider.send(endpoint, Templates.NewEvent, {
+      this.sendOneEvent(channel.endpoint, {
         host: process.env.GARAGE_URL,
         project,
         event,
         daysRepeated,
-        usersAffected: 10,
-      } as NewEventTemplateVariables);
+        newCount: count,
+      });
+
+      return;
     }
+
+    const eventsData = await Promise.all(events.map(async ({key: groupHash, count}): Promise<TemplateEventData> => {
+      const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
+
+      return {
+        event,
+        newCount: count,
+        daysRepeated,
+      };
+    }));
+
+    this.sendSeveralEvents(channel.endpoint, {
+      host: process.env.GARAGE_URL,
+      project,
+      events: eventsData,
+      period: channel.minPeriod,
+    });
+  }
+
+  private sendOneEvent(endpoint: string, variables: NewEventTemplateVariables) {
+    this.emailProvider.send(endpoint, Templates.NewEvent, variables);
+  }
+
+  private sendSeveralEvents(endpoint: string, variables: SeveralEventsTemplateVariables) {
+    this.emailProvider.send(endpoint, Templates.SeveralEvents, variables);
   }
 
   /**

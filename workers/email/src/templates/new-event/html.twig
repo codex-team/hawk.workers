@@ -1,208 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>
-        {{ project.name }}
-    </title>
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <meta name="language" content="en-us">
-    <meta http-equiv="Content-Type" content="text/html charset=UTF-8"/>
-    <meta charset="utf-8">
-    <style type="text/css">
-        html {
-            font-family: Roboto, system-ui, sans-serif;
-        }
+{% extends '../blocks/layout.twig' %}
 
-        td {
-            font-family: inherit;
-        }
-    </style>
-</head>
-<body style="background-color: #2f3341">
-<table cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#2f3341">
+{% block content %}
+
     <tr>
-        <td>
-            <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;">
-                <tr>
-                    <td style="background-color: #242732; border-radius: 10px">
-                        <a href="{{ host }}/project/{{ project._id }}" style="text-decoration: none;">
-                            <div style="padding: 12px 20px">
-                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                    <tr>
-                                        <td style="width: 36px;">
-                                            {% if not project.image %}
-                                                <div style="width: 26px; height: 26px; border-radius: 10px; vertical-align: middle; text-align: center; line-height: 26px; background-color: {{ project._id | colorById }};">
-                                                    <font color="#dbe6ff"
-                                                          style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                                        {{ project.name | capitalize | first }}
-                                                    </font>
-                                                </div>
-                                            {% else %}
-                                                    <img src="{{ project.image }}"
-                                                         alt="{{ project.name }}"
-                                                         style="width: 26px; height: 26px; border-radius: 10px; vertical-align: middle"
-                                                    />
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <font color="#dbe6ff"
-                                                  style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                                {{ project.name }}
-                                            </font>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </a>
-                    </td>
-                </tr>
-                <tr>
-                    <td align="center" style="padding: 30px 0">
-                        <font color="rgba(219, 230, 255, 0.6);"
-                              style="font-size: 14px; text-align: center; color: rgba(219, 230, 255, 0.6); letter-spacing: 0.2px;">
-                            Uncaught Error
-                        </font>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 20px;border-radius: 10px; border: solid 1px rgba(219, 230, 255, 0.16);">
-                        <font color="#dbe6ff"
-                              style="font-size: 15px; line-height: 1.47; letter-spacing: 0.4px; color: #dbe6ff">
-                            {{ event.payload.title }}
-                        </font>
-                    </td>
-                </tr>
-                {% set backtrace = findTrace(event.payload.backtrace) %}
-                <tr>
-                    <td style="padding: 30px 20px">
-                        <font color="#dbe6ff"
-                              style="opacity: 0.6; font-size: 11px; letter-spacing: 0.34px; color: #dbe6ff;">
-                            {{ backtrace.file | prettyPath }}
-                        </font>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <table cellpadding="0" cellspacing="0" border="0" width="100%"
-                               style="padding: 0 10px; font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;">
-                            {% for frame in backtrace.sourceCode %}
-                                <tr>
-                                    <td width="13">
-                                        <div style="padding-left: 10px; border-radius: 6px 0 0 6px; background-color: {{ frame.line == backtrace.line ? 'rgba(149, 61, 135, 0.3);' : 'unset' }}">
-                                            <font color="#dbe6ff"
-                                                  style="opacity: 0.4; font-size: 10px; line-height: 2.1; color: #dbe6ff;">
-                                                {{ frame.line }}
-                                            </font>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="padding: 0 10px 0 20px; border-radius: 0 6px 6px 0; background-color: {{ frame.line == backtrace.line ? 'rgba(149, 61, 135, 0.3);' : 'unset' }};">
-                                            <font color="rgba(219, 230, 255, 0.61)"
-                                                  style="font-size: 12px; line-height: 1.75; color: rgba(219, 230, 255, 0.61); white-space: pre; text-overflow: clip">{{ frame.content | escape }}</font>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 20px 20px 0;">
-                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                            <tr>
-                                <td style="padding-right: 10px">
-                                    <div style="padding: 0 7px; border-radius: 16px; background-color: #4979e4; text-align: center;">
-                                        <font color="#dbe6ff"
-                                              style="font-size: 12px; line-height: 20px; font-weight: 600; letter-spacing: -0.09px; color: #dbe6ff;">
-                                            {{ event.totalCount }}
-                                        </font>
-                                    </div>
-                                </td>
-                                <td>
-                                    <font color="rgba(219, 230, 255, 0.6)"
-                                          style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
-                                        Since {{ event.payload.timestamp | prettyDate }}
-                                    </font>
-                                </td>
-                                <td>
-                                    <font color="rgba(219, 230, 255, 0.6)"
-                                          style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
-                                        {{ daysRepeated }} days repeating
-                                    </font>
-                                </td>
-                                <td>
-                                    <font color="rgba(219, 230, 255, 0.6)"
-                                          style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
-                                        {{ usersAffected }} users affected
-                                    </font>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 30px 20px 40px">
-                        <a href="{{ host }}/event/{{ event._id }}" style="text-decoration: none">
-                            <div style="padding: 12px 0; background-color: #4979e4; border-radius: 4px; text-align: center">
-                                <font color="#dbe6ff"
-                                      style="font-size: 14.4px; font-weight: 500; color: #dbe6ff;">
-                                    View event
-                                </font>
-                            </div>
-                        </a>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center">
-                        <a href="{{ host }}/unsubscribe/{{ project._id }}"
-                           style="text-decoration: none; border-bottom: 1px solid rgba(219, 230, 255, 0.15);">
-                            <font color="rgba(219, 230, 255, 0.6)"
-                                  style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: rgba(219, 230, 255, 0.6);">
-                                Unsubscribe
-                            </font>
-                        </a>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 40px 20px 30px; text-align: center;">
-                        <font color="rgba(219, 230, 255, 0.6)"
-                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: rgba(219, 230, 255, 0.6);">
-                            You received this email because you are currently opted in to receive such alerts via your
-                            project’s notifications settings. You may adjust your preferences at any time by clicking the
-                            link above.
-                        </font>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        <a href="{{ host }}" style="text-decoration: none;">
-                            <font color="rgba(219, 230, 255, 0.6)"
-                                  style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: rgba(219, 230, 255, 0.6);">
-                                Hawk
-                            </font>
-                        </a>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center">
-                        <font color="rgba(219, 230, 255, 0.6)"
-                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: rgba(219, 230, 255, 0.6);">
-                            Errors tracking system
-                        </font>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding-top: 30px; text-align: center">
-                        <font color="rgba(219, 230, 255, 0.6)"
-                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: rgba(219, 230, 255, 0.6);">
-                            Made by <a href="https://codex.so"
-                                       style="color: inherit !important; text-decoration: none;">CodeX</a>
-                        </font>
-                    </td>
-                </tr>
-            </table>
+        <td align="center" style="padding: 30px 0">
+            <font color="rgba(219, 230, 255, 0.6);"
+                  style="font-size: 14px; text-align: center; color: rgba(219, 230, 255, 0.6); letter-spacing: 0.2px;">
+                Uncaught Error
+            </font>
         </td>
     </tr>
-</table>
-</body>
-</html>
+    <tr>
+        <td style="padding: 20px;border-radius: 10px; border: solid 1px rgba(219, 230, 255, 0.16);">
+            <font color="#dbe6ff"
+                  style="font-size: 15px; line-height: 1.47; letter-spacing: 0.4px; color: #dbe6ff">
+                {{ event.payload.title }}
+            </font>
+        </td>
+    </tr>
+    {% include '../blocks/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
+    {% include '../blocks/event-info.twig' with {event: {newCount: newCount, daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: usersAffected}} %}
+    {% include '../blocks/button.twig' with {href: host + '/event/' + event._id, label: 'View event'} %}
+
+{% endblock %}

@@ -8,13 +8,27 @@ export interface TemplateVariables {
   [key: string]: any;
 }
 
+export interface TemplateEventData {
+  event: GroupedEvent;
+  daysRepeated: number;
+  newCount: number;
+  usersAffected?: number;
+}
+
 /**
  * Variables for new-event template
  */
-export interface NewEventTemplateVariables extends  TemplateVariables {
-  event: GroupedEvent;
-  daysRepeated: number;
+export interface NewEventTemplateVariables extends TemplateEventData, TemplateVariables {
   host: string;
   project: Project;
-  usersAffected: number;
+}
+
+/**
+ * Variables for several-events template
+ */
+export interface SeveralEventsTemplateVariables extends TemplateVariables {
+  events: TemplateEventData[];
+  host: string;
+  project: Project;
+  period: number;
 }

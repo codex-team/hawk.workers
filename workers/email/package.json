@@ -10,6 +10,7 @@
   "dependencies": {
     "@types/twig": "^1.12.3",
     "nodemailer": "^6.4.6",
+    "short-number": "^1.0.7",
     "ts-node": "^8.8.2",
     "twig": "^1.15.0"
   },

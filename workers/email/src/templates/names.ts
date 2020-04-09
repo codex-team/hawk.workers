@@ -3,6 +3,7 @@
  */
 enum Templates {
   NewEvent = 'new-event',
+  SeveralEvents = 'several-events',
 }
 
 export default Templates;

@@ -1,0 +1,36 @@
+<tr>
+    <td style="padding: 10px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding-right: 10px">
+                    <div style="display: inline-block; padding: 0 7px; border-radius: 16px; background-color: #4979e4; text-align: center;">
+                        <font color="#dbe6ff"
+                              style="font-size: 12px; line-height: 20px; font-weight: 600; letter-spacing: -0.09px; color: #dbe6ff;">
+                            {{ event.newCount | abbrNumber }} new
+                        </font>
+                    </div>
+                </td>
+                <td style="padding-right: 10px">
+                    <font color="rgba(219, 230, 255, 0.6)"
+                          style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
+                        {{ event.event.totalCount | abbrNumber }} total
+                    </font>
+                </td>
+                <td style="padding-right: 10px">
+                    <font color="rgba(219, 230, 255, 0.6)"
+                          style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
+                        {{ event.daysRepeated }} days repeating
+                    </font>
+                </td>
+                {% if event.usersAffected %}
+                    <td>
+                        <font color="rgba(219, 230, 255, 0.6)"
+                              style="font-size: 12px;letter-spacing: 0.17px;text-align: center; color: rgba(219, 230, 255, 0.6);">
+                            {{ event.usersAffected }} users affected
+                        </font>
+                    </td>
+                {% endif %}
+            </tr>
+        </table>
+    </td>
+</tr>

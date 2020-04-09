@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import Twig from 'twig';
+import * as nodemailer from 'nodemailer';
+import * as Twig from 'twig';
 import {TemplateVariables} from '../types/template-variables';
 import templates, {Template} from './templates';
 
