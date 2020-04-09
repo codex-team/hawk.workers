@@ -1,5 +1,10 @@
 import {NotifierEvent} from '../types/notifier-task';
-import {Rule, WhatToReceive} from '../types/rule';
+import {Rule} from '../types/rule';
+
+enum WhatToReceive {
+  All = 'ALL',
+  New = 'ONLY_NEW',
+}
 
 /**
  * Helper class to filter notification rules

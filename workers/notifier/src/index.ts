@@ -90,7 +90,7 @@ export default class NotifierWorker extends Worker {
     try {
       rules = await this.getProjectNotificationRules(projectId);
     } catch (e) {
-      console.warn(e);
+      this.logger.warn(e);
     }
 
     return rules
@@ -98,7 +98,7 @@ export default class NotifierWorker extends Worker {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
-          console.error(e);
+          this.logger.error(e);
           return false;
         }
 
@@ -143,7 +143,7 @@ export default class NotifierWorker extends Worker {
    *
    * @param {ChannelKey} channelKey — buffer key
    */
-  private sendEvents = (channelKey: ChannelKey): void => {
+  private sendEvents = async (channelKey: ChannelKey): Promise<void> => {
     this.buffer.clearTimer(channelKey);
 
     const events = this.buffer.flush(channelKey);
@@ -152,7 +152,7 @@ export default class NotifierWorker extends Worker {
       return;
     }
 
-    this.sendToSenderWorker(channelKey, events);
+    await this.sendToSenderWorker(channelKey, events);
   }
 
   /**
@@ -164,14 +164,9 @@ export default class NotifierWorker extends Worker {
   private async sendToSenderWorker(key: ChannelKey, events: BufferData[]): Promise<void> {
     const [projectId, ruleId, channelName] = key;
 
-    const rules = await this.getProjectNotificationRules(projectId);
-    const rule = rules.find((r) => r._id.toString() === ruleId);
-
-    const endpoint = rule.channels[channelName].endpoint;
-
-    this.addTask(`sender/${channelName}`, {
+    await this.addTask(`sender/${channelName}`, {
       projectId,
-      endpoint,
+      ruleId,
       events,
     } as SenderWorkerTask);
   }

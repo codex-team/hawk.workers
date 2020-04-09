@@ -13,7 +13,7 @@ interface Index<T> {
 interface ChannelSchema {
   /**
    * Object which keys are events' group hash
-   * and values are number of events received for minPeroid
+   * and values are number of events received for minPeriod
    */
   payload: Index<number>;
 
