@@ -3,6 +3,7 @@ import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import * as utils from '../../../lib/utils';
 import { DatabaseError, ValidationError, Worker } from '../../../lib/worker';
+import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
@@ -125,8 +126,8 @@ export default class GrouperWorker extends Worker {
     /**
      * Add task for NotifierWorker
      */
-    if (process.env.FEATURE_NOTIFIER_WORKER) {
-      this.addTask('notifier', {
+    if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
+      await this.addTask(WorkerNames.NOTIFIER, {
         projectId: task.projectId,
         event: {
           title: task.event.title,
@@ -264,7 +265,7 @@ export default class GrouperWorker extends Worker {
               groupHash: eventHash,
               groupingTimestamp: midnight,
               lastRepetitionTime: eventTimestamp,
-              lastRepetitionId: repetitionId
+              lastRepetitionId: repetitionId,
             },
             $inc: { count: 1 },
           },
