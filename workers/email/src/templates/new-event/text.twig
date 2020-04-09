@@ -1,0 +1,27 @@
+{{ project.name }}
+
+Uncaught error
+
+{{ event.payload.title }}
+
+In file: {{ event.payload.backtrace[0].file }} at line {{ event.payload.backtrace[0].line }}.
+
+{{ daysRepeated }} days repeating {{ event.totalCount }} times since {{ event.payload.timestamp | prettyDate }}.
+
+{{ usersAffected }} users affected.
+
+{{ host }}/event/{{ event._id }}
+
+To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
+
+You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above.
+
+Hawk
+Errors tracking system
+
+Made by CodeX
+
+
+
+
+
