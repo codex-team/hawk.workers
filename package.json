@@ -11,7 +11,8 @@
         "workers/accountant",
         "workers/paymaster",
         "workers/source-maps",
-        "workers/python"
+        "workers/python",
+        "workers/slack"
     ],
     "scripts": {
         "test": "jest --coverage",
@@ -25,6 +26,7 @@
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-slack": "yarn worker hawk-worker-slack",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps"

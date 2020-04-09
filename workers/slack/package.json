@@ -1,13 +1,13 @@
 {
-  "name": "hawk-slacker-worker",
+  "name": "hawk-worker-slack",
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "license": "MIT",
+  "workerType": "sender/slack",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@slack/webhook": "^5.0.3"
   }
