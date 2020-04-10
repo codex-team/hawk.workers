@@ -178,9 +178,18 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      return (await this.db.getConnection()
-        .collection(`repetitions:${projectId}`)
-        .insertOne(repetition)).insertedId as mongodb.ObjectID;
+      const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
+      const result = (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
+
+      const hasIndex = await collection.indexExists("groupHash_hashed");
+      
+      if (!hasIndex) {
+        await collection.createIndex({
+          groupHash: "hashed"
+        })
+      }
+
+      return result;
     } catch (err) {
       throw new DatabaseError(err);
     }
