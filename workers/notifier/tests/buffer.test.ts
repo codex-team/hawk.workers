@@ -123,7 +123,7 @@ describe('Buffer', () => {
     it('should set timer', () => {
       const buffer = new Buffer();
 
-      buffer.setTimer([projectId, ruleId, channelName], 10, () => {});
+      buffer.setTimer([projectId, ruleId, channelName], 10, jest.fn());
 
       // @ts-ignore
       const timer = buffer.projects[projectId][ruleId][channelName].timer;
@@ -164,7 +164,7 @@ describe('Buffer', () => {
     it('should return timer', () => {
       const buffer = new Buffer();
 
-      buffer.setTimer([projectId, ruleId, channelName], 10, () => {});
+      buffer.setTimer([projectId, ruleId, channelName], 10, jest.fn());
 
       // @ts-ignore
       const timer = buffer.projects[projectId][ruleId][channelName].timer;
@@ -179,7 +179,7 @@ describe('Buffer', () => {
 
       jest.useFakeTimers();
 
-      buffer.setTimer([projectId, ruleId, channelName], 10000, () => {});
+      buffer.setTimer([projectId, ruleId, channelName], 10000, jest.fn());
 
       buffer.clearTimer([projectId, ruleId, channelName]);
 
