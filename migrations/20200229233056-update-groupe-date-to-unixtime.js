@@ -24,6 +24,10 @@ module.exports = {
         const id = row._id;
         const timestamp = row.timestamp;
 
+        if (!timestamp) {
+          continue;
+        }
+
         const date = new Date(timestamp * 1000);
 
         date.setHours(0, 0, 0, 0);
