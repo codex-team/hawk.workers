@@ -182,7 +182,7 @@ export default class GrouperWorker extends Worker {
       const result = (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
 
       const hasIndex = await collection.indexExists("groupHash_hashed");
-      
+
       if (!hasIndex) {
         await collection.createIndex({
           groupHash: "hashed"
