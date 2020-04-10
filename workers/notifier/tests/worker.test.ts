@@ -1,11 +1,12 @@
 import { ObjectID } from 'mongodb';
+import {WhatToReceive} from '../src/validator';
 import * as messageMock from './mock.json';
 
 const rule = {
   _id: 'ruleid',
   isEnabled: true,
   uidAdded: 'userid',
-  whatToReceive: 'ALL',
+  whatToReceive: WhatToReceive.All,
   including: [],
   excluding: [],
   channels: {
