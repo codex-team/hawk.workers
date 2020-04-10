@@ -2,10 +2,10 @@ import { ObjectID } from 'mongodb';
 import * as messageMock from './mock.json';
 
 const rule = {
-  id: 'ruleid',
+  _id: 'ruleid',
   isEnabled: true,
   uidAdded: 'userid',
-  whatToReceive: 'all',
+  whatToReceive: 'ALL',
   including: [],
   excluding: [],
   channels: {
@@ -145,7 +145,7 @@ describe('NotifierWorker', () => {
 
       const message = {...messageMock};
       const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule.id];
+      const channelKeyPart = [message.projectId, rule._id];
       const events = [{key: message.event.groupHash, count: 1}];
 
       await worker.handle(message);
@@ -184,7 +184,7 @@ describe('NotifierWorker', () => {
 
       const message = {...messageMock};
       const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule.id];
+      const channelKeyPart = [message.projectId, rule._id];
 
       await worker.handle(message);
       await worker.handle(message);
@@ -218,7 +218,7 @@ describe('NotifierWorker', () => {
 
       const message = {...messageMock};
       const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule.id];
+      const channelKeyPart = [message.projectId, rule._id];
 
       await worker.handle(message);
       await worker.handle(message);
@@ -278,7 +278,7 @@ describe('NotifierWorker', () => {
           `sender/${channel}`,
           {
             projectId: message.projectId,
-            endpoint: rule.channels[channel].endpoint,
+            ruleId: rule._id,
             events: [{key: message.event.groupHash, count: 1}],
           },
         );
