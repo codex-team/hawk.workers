@@ -75,10 +75,11 @@ describe('NotifierWorker', () => {
     expect(worker.type).toEqual('notifier');
   });
 
-  it('should start without errors', async () => {
+  it('should start and finish without errors', async () => {
     const worker = new NotifierWorker();
 
     await worker.start();
+    await worker.finish();
   });
 
   describe('db calls', () => {
@@ -88,6 +89,8 @@ describe('NotifierWorker', () => {
       await worker.start();
 
       expect(dbConnectMock).toBeCalledWith('hawk');
+
+      await worker.finish();
     });
 
     it('should get db connection on message handle', async () => {
