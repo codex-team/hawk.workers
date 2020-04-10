@@ -1,9 +1,9 @@
-import RuleValidator from '../src/validator';
+import RuleValidator, {WhatToReceive} from '../src/validator';
 
 describe('RuleValidator', () => {
   const ruleMock = {
     isEnabled: true,
-    whatToReceive: 'all',
+    whatToReceive: WhatToReceive.All,
     including: [],
     excluding: [],
   };
@@ -19,7 +19,7 @@ describe('RuleValidator', () => {
 
       rule.isEnabled = true;
 
-      const validator = new RuleValidator(rule, eventMock)
+      const validator = new RuleValidator(rule, eventMock);
 
       expect(() => validator.checkIfRuleIsOn()).not.toThrowError();
       expect(validator.checkIfRuleIsOn()).toBeInstanceOf(RuleValidator);
@@ -40,7 +40,7 @@ describe('RuleValidator', () => {
     it('should pass if what to receive is \'all\'', () => {
       const rule = {...ruleMock};
 
-      rule.whatToReceive = 'all';
+      rule.whatToReceive = WhatToReceive.All;
 
       const validator = new RuleValidator(rule, eventMock);
 
@@ -52,7 +52,7 @@ describe('RuleValidator', () => {
       const rule = {...ruleMock};
       const event = {...eventMock};
 
-      rule.whatToReceive = 'new';
+      rule.whatToReceive = WhatToReceive.New;
       event.isNew = true;
 
       const validator = new RuleValidator(rule, event);
@@ -65,7 +65,7 @@ describe('RuleValidator', () => {
       const rule = {...ruleMock};
       const event = {...eventMock};
 
-      rule.whatToReceive = 'new';
+      rule.whatToReceive = WhatToReceive.New;
       event.isNew = false;
 
       const validator = new RuleValidator(rule, event);
@@ -157,7 +157,7 @@ describe('RuleValidator', () => {
   describe('checkAll', () => {
     it('should return instance of RuleValidator', () => {
       const rule = {...ruleMock};
-      const event = {...eventMock}
+      const event = {...eventMock};
 
       const validator = new RuleValidator(rule, event);
 
@@ -166,7 +166,7 @@ describe('RuleValidator', () => {
 
     it ('should call all check methods', () => {
       const rule = {...ruleMock};
-      const event = {...eventMock}
+      const event = {...eventMock};
 
       const validator = new RuleValidator(rule, event);
 
