@@ -53,6 +53,24 @@ export abstract class Worker {
   public abstract readonly type: string;
 
   /**
+   * Logger module
+   * (default level='info')
+   */
+  protected logger: winston.Logger = createLogger({
+    level: process.env.LOG_LEVEL || 'info',
+    transports: [
+      new transports.Console({
+        format: combine(
+          timestamp(),
+          colorize(),
+          simple(),
+          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
+        ),
+      }),
+    ],
+  });
+
+  /**
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
@@ -94,24 +112,6 @@ export abstract class Worker {
    * {Map<Object, Promise>} tasksMap - current worker's tasks
    */
   private tasksMap: Map<object, Promise<void>> = new Map();
-
-  /**
-   * Logger module
-   * (default level='info')
-   */
-  protected logger: winston.Logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: combine(
-          timestamp(),
-          colorize(),
-          simple(),
-          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
-        ),
-      }),
-    ],
-  });
 
   /**
    * Initialize prometheus metrics

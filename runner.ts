@@ -89,9 +89,9 @@ class WorkerRunner {
         this.gateway.push({
           jobName: 'workers',
           groupings: {
-            type: worker.type.replace("/", "_"),
-            instance: instance,
-          }
+            type: worker.type.replace('/', '_'),
+            instance,
+          },
         }, (err, resp, body) => {
           if (err) { console.log(`Error of pushing metrics to gateway: ${err}`); }
         });
