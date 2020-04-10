@@ -1,7 +1,9 @@
 /**
  * Script to generate enum with template names
  */
+// tslint:disable-next-line:no-var-requires
 const path = require('path');
+// tslint:disable-next-line:no-var-requires
 const fs = require('fs');
 
 function formatName(name: string): string {

@@ -38,7 +38,7 @@ export default class EmailSenderWorker extends Worker {
   /**
    * Email provider
    */
-  private emailProvider = new EmailProvider();
+  private emailProvider = new EmailProvider(this.logger);
 
   /**
    * Start consuming messages

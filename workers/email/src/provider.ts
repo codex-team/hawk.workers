@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
+import {Logger} from 'winston';
 import {TemplateVariables} from '../types/template-variables';
 import templates, {Template} from './templates';
 
@@ -25,6 +26,18 @@ export default class EmailProvider {
   private transporter = nodemailer.createTransport(this.smtpConfig as any);
 
   /**
+   * Logger instance
+   */
+  private logger: Logger;
+
+  /**
+   * @constructor
+   */
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
+
+  /**
    * Send email to recipient
    *
    * @param {string} to - recipient email
@@ -45,13 +58,13 @@ export default class EmailProvider {
     };
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(content);
+      this.logger.info(content);
     }
 
     try {
       await this.transporter.sendMail(mailOptions);
     } catch (e) {
-      console.error(
+      this.logger.error(
         'Error sending letter. Try to check the environment settings (in .env file).',
       );
     }
