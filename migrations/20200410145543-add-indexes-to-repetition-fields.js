@@ -25,5 +25,25 @@ module.exports = {
         });
       }
     }
+  },
+  async down(db) {
+    const collections = await db.listCollections({}, {
+      authorizedCollections: true,
+      nameOnly: true
+    }).toArray();
+
+    const targetCollections = [];
+
+    collections.forEach((collection) => {
+      if (/repetitions/.test(collection.name)) {
+        targetCollections.push(collection.name);
+      }
+    });
+
+    for (const collectionName of targetCollections) {
+      await db.collection(collectionName).dropIndex({
+        groupHash: 'hashed'
+      });
+    }
   }
 };
