@@ -58,9 +58,11 @@ export default class SlackSender extends Worker {
     for (const {key: groupHash, count} of task.events) {
       const connection = this.eventsDb.getConnection();
       const event = await connection.collection(`events:${task.projectId}`).findOne({ groupHash });
+      const daysRepeated = await connection.collection(`dailyEvents:${task.projectId}`).countDocuments({
+        groupHash,
+      });
 
-      const message = this.renderer.render(event, EventTypes.NEW);
-
+      const message = this.renderer.render(event, daysRepeated,count, EventTypes.NEW);
       await this.sender.send(
         task.endpoint,
         message

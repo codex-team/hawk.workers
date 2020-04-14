@@ -1,5 +1,6 @@
 import {GroupedEvent} from "hawk-worker-grouper/types/grouped-event";
 import {IncomingWebhookSendArguments} from "@slack/webhook";
+const Templater = require('json-templater/object');
 
 /**
  * Event types
@@ -18,16 +19,23 @@ export class Renderer {
    * Returns JSON template
    *
    * @param {GroupedEvent} event
+   * @param {number} daysRepeating
+   * @param {number} newCount
    * @param {number} type - type of event to define template
    *
    * @return {IncomingWebhookSendArguments}
    */
-  public render(event: GroupedEvent, type: number): IncomingWebhookSendArguments {
+  public render(
+    event: GroupedEvent,
+    daysRepeating: number,
+    newCount: number,
+    type: number
+  ): IncomingWebhookSendArguments {
     let template = {};
 
     switch (type) {
       case EventTypes.NEW:
-        template = this.processNewEvent(event);
+        template = this.processNewEvent(event, daysRepeating, newCount);
         break;
     }
 
@@ -38,15 +46,40 @@ export class Renderer {
    * Gets template and replaces default value
    *
    * @param {GroupedEvent} event
+   * @param {number} daysRepeating
+   * @param {number} newCount
    *
    * @return {IncomingWebhookSendArguments}
    */
-  private processNewEvent(event: GroupedEvent): IncomingWebhookSendArguments {
+  private processNewEvent(
+    event: GroupedEvent,
+    daysRepeating: number,
+    newCount: number
+  ): IncomingWebhookSendArguments {
     const template = this.getTemplate('new-event');
+    const lastBacktrace = event.payload.backtrace.pop();
 
-    template.text = "New Error";
-    template.attachments[0].text = event.payload.title;
-    return template;
+    const sourceLineMessages = [];
+    for (const sourceCodeRow of lastBacktrace.sourceCode) {
+      if (sourceCodeRow.line === lastBacktrace.line) {
+        sourceLineMessages.push(sourceCodeRow.line + " -> " + sourceCodeRow.content);
+      } else {
+        sourceLineMessages.push(sourceCodeRow.line + ": " + sourceCodeRow.content);
+      }
+    }
+
+    return Templater(
+      template,
+      {
+        title: event.payload.title,
+        line: lastBacktrace.line,
+        file: lastBacktrace.file,
+        sourceMessage: sourceLineMessages.join("\n"),
+        totalCount: event.totalCount,
+        daysRepeating: daysRepeating,
+        newCount: newCount
+      }
+    );
   }
 
   /**
