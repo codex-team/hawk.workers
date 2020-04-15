@@ -7,21 +7,13 @@ import {EmailSenderWorkerTask} from '../types/task';
 import EmailProvider from './provider';
 import Templates from './templates/names';
 
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import {Project} from '../types/project';
 import {
   NewEventTemplateVariables,
   SeveralEventsTemplateVariables,
   TemplateEventData,
 } from '../types/template-variables';
-
-/**
- * Load local environment configuration
- */
-const localEnv = dotenv.config({path: path.resolve(__dirname, '../.env')}).parsed;
-
-Object.assign(process.env, localEnv);
+import './env';
 
 export default class EmailSenderWorker extends Worker {
   /**

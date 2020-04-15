@@ -49,7 +49,14 @@ export default class EmailProvider {
       throw new Error('Template name must be specified');
     }
 
-    const content = await this.render(templateName, variables);
+    let content: Template;
+
+    try {
+      content = await this.render(templateName, variables);
+    } catch (e) {
+      this.logger.error(`Failed to render ${templateName} template `, e);
+      return;
+    }
 
     const mailOptions = {
       from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
