@@ -1,4 +1,4 @@
-import { ObjectID } from 'mongodb';
+import {ObjectID} from 'mongodb';
 import {DatabaseController} from '../../../lib/db/controller';
 import {Worker} from '../../../lib/worker';
 import * as pkg from '../package.json';
@@ -68,13 +68,17 @@ export default class NotifierWorker extends Worker {
    * @param {NotifierWorkerTask} task — task to handle
    */
   public async handle(task: NotifierWorkerTask): Promise<void> {
-    const {projectId, event} = task;
+    try {
+      const {projectId, event} = task;
 
-    const rules = await this.getFittedRules(projectId, event);
+      const rules = await this.getFittedRules(projectId, event);
 
-    rules.forEach((rule) => {
-      this.addEventToChannels(projectId, rule, event);
-    });
+      rules.forEach((rule) => {
+        this.addEventToChannels(projectId, rule, event);
+      });
+    } catch (e) {
+      this.logger.error('Failed to handle message because of ', e);
+    }
   }
 
   /**
@@ -90,7 +94,7 @@ export default class NotifierWorker extends Worker {
     try {
       rules = await this.getProjectNotificationRules(projectId);
     } catch (e) {
-      this.logger.warn(e);
+      this.logger.warn('Failed to get project notification rules because ', e);
     }
 
     return rules
@@ -98,7 +102,7 @@ export default class NotifierWorker extends Worker {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
-          this.logger.error(e);
+          this.logger.warn('Rule validation error', e);
           return false;
         }
 
@@ -116,7 +120,7 @@ export default class NotifierWorker extends Worker {
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels);
 
-    channels.forEach(([name, options]) => {
+    channels.forEach(async ([name, options]) => {
       if (!options.isEnabled) {
         return;
       }
@@ -130,11 +134,11 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
-
       const minPeriod = (options.minPeriod || 60) * 1000;
 
       this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
+
+      await this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
     });
   }
 
@@ -178,14 +182,14 @@ export default class NotifierWorker extends Worker {
    *
    * @return {Promise<Rule[]>} - project notification rules
    */
-  private async getProjectNotificationRules(projectId: string): Promise<Rule[]> | never  {
+  private async getProjectNotificationRules(projectId: string): Promise<Rule[]> {
     const connection = this.db.getConnection();
     const projects = connection.collection('projects');
 
-    const project = await projects.findOne({_id : new ObjectID(projectId)});
+    const project = await projects.findOne({_id: new ObjectID(projectId)});
 
     if (!project) {
-      throw Error('There is no project with given id');
+      throw new Error('There is no project with given id');
     }
 
     return project.notifications || [];

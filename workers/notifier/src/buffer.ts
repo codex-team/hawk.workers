@@ -39,17 +39,17 @@ export interface BufferData {
 }
 
 /**
- * Schema for notification rule
+ * Schema for notification rule: Object<channelName, channelSchema>
  */
 type RuleSchema = Index<ChannelSchema>;
 
 /**
- * Schema for project
+ * Schema for project: Object<ruleId, ruleSchema>
  */
 type ProjectSchema = Index<RuleSchema>;
 
 /**
- * Buffer schema
+ * Buffer schema: Object<projectId, projectSchema>
  */
 type BufferSchema = Index<ProjectSchema>;
 
