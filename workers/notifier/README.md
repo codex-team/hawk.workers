@@ -28,3 +28,16 @@ Handles new events from Grouper Worker, holds it and sends to sender worlers
   -> flush channel's buffer
   -> send tasks to sender workers
 ```
+
+### Event example
+
+```json
+{
+  "projectId": "5e3eef0679fa3700a0198a49",
+  "event": {
+    "title": "New event",
+    "groupHash": "11da819a3d8c2024d16a55bc27f5ee6d8d572bb802c560495b5d546ad90b6fbb",
+    "isNew": true
+  }
+}
+```

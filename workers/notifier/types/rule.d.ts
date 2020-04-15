@@ -13,7 +13,7 @@ export enum WhatToReceive {
  * Rule channels object
  */
 export type RuleChannels = {
-  [T in ChannelType]: Channel;
+  [T in ChannelType]?: Channel;
 };
 
 export interface Rule {

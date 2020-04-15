@@ -19,10 +19,10 @@ export interface Channel {
   /**
    * Channel endpoint
    */
-  readonly endpoint?: string;
+  readonly endpoint: string;
 
   /**
    * Minimum period of time should pass between two messages
    */
-  readonly minPeriod?: number;
+  readonly minPeriod: number;
 }
