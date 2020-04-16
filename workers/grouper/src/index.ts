@@ -23,13 +23,6 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController();
 
   /**
-   * Create new instance
-   */
-  constructor() {
-    super();
-  }
-
-  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -47,6 +40,8 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Task handling function
+   *
+   * @param task - task for handling
    */
   public async handle(task: GroupWorkerTask): Promise<void> {
     const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
@@ -126,8 +121,8 @@ export default class GrouperWorker extends Worker {
   /**
    * Returns finds event by query from project with passed ID
    *
-   * @param {string} projectId - project's identifier
-   * @param {EventSchema} query - mongo query string
+   * @param projectId - project's identifier
+   * @param query - mongo query string
    */
   private async getEvent(projectId: string, query): Promise<GroupedEvent> {
     if (!mongodb.ObjectID.isValid(projectId)) {
@@ -146,11 +141,11 @@ export default class GrouperWorker extends Worker {
   /**
    * Save event to database
    *
-   * @param {string|ObjectID} projectId - project id
+   * @param projectId - project id
    * @param {{groupHash: string, count: number, catcherType: string, payload: object}} groupedEventData - event data
    * @throws {ValidationError} if `projectID` is not provided or invalid
    * @throws {ValidationError} if `eventData` is not a valid object
-   * @returns {Promise<ObjectID>} saved event id
+   * @returns {Promise<mongodb.ObjectId>} saved event id
    */
   private async saveEvent(projectId: string, groupedEventData: GroupedEvent): Promise<mongodb.ObjectID> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
@@ -160,7 +155,7 @@ export default class GrouperWorker extends Worker {
     try {
       return (await this.db.getConnection()
         .collection(`events:${projectId}`)
-        .insertOne(groupedEventData)).insertedId  as mongodb.ObjectID;
+        .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseError(err);
     }
@@ -169,7 +164,7 @@ export default class GrouperWorker extends Worker {
   /**
    * Inserts unique event repetition to the database
    *
-   * @param {string|ObjectID} projectId - project's identifier
+   * @param projectId - project's identifier
    * @param {Repetition} repetition - object that contains only difference with first event
    */
   private async saveRepetition(projectId: string, repetition: Repetition): Promise<mongodb.ObjectID> {
@@ -181,12 +176,12 @@ export default class GrouperWorker extends Worker {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
       const result = (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
 
-      const hasIndex = await collection.indexExists("groupHash_hashed");
+      const hasIndex = await collection.indexExists('groupHash_hashed');
 
       if (!hasIndex) {
         await collection.createIndex({
-          groupHash: "hashed"
-        })
+          groupHash: 'hashed',
+        });
       }
 
       return result;
@@ -198,11 +193,11 @@ export default class GrouperWorker extends Worker {
   /**
    * If event in project exists this method increments counter
    *
-   * @param {string|ObjectID} projectId
-   * @param {EventSchema} query
-   * @return {Promise<number>} — modified docs count
+   * @param projectId - project id to increment events count
+   * @param query - query to select project
+   * @returns {Promise<number>} — modified docs count
    */
-  private async incrementEventCounter(projectId, query): Promise<number> {
+  private async incrementEventCounter(projectId: string, query): Promise<number> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
@@ -227,13 +222,13 @@ export default class GrouperWorker extends Worker {
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
    * @param {string|null} repetitionId - event's last repetition id
-   * @return {Promise<void>}
+   * @returns {Promise<void>}
    */
   private async saveDailyEvents(
     projectId: string,
     eventHash: string,
     eventTimestamp: number,
-    repetitionId: string | null,
+    repetitionId: string | null
   ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
@@ -247,19 +242,23 @@ export default class GrouperWorker extends Worker {
        * but the date always was current
        */
       const eventDate = new Date(eventTimestamp * 1000);
+
       eventDate.setHours(0, 0, 0, 0); // get midnight
       const midnight = eventDate.getTime() / 1000;
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
-          { groupHash: eventHash, groupingTimestamp: midnight },
+          {
+            groupHash: eventHash,
+            groupingTimestamp: midnight,
+          },
           {
             $set: {
               groupHash: eventHash,
               groupingTimestamp: midnight,
               lastRepetitionTime: eventTimestamp,
-              lastRepetitionId: repetitionId
+              lastRepetitionId: repetitionId,
             },
             $inc: { count: 1 },
           },

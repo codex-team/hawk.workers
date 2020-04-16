@@ -1,4 +1,4 @@
-import {EventData, EventWorkerTask} from '../../../lib/types/event-worker-task';
+import { EventData, EventWorkerTask } from '../../../lib/types/event-worker-task';
 
 /**
  * Format of task for JavaScript Event Worker

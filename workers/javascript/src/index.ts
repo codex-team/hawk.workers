@@ -1,21 +1,22 @@
 import * as path from 'path';
+// eslint-disable-next-line import/no-duplicates
 import * as sourceMap from 'source-map';
-import {BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition} from 'source-map';
-import {DatabaseController} from '../../../lib/db/controller';
-import {EventWorker} from '../../../lib/event-worker';
-import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
-import {DatabaseError} from '../../../lib/worker';
+// eslint-disable-next-line import/no-duplicates
+import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition } from 'source-map';
+import { DatabaseController } from '../../../lib/db/controller';
+import { EventWorker } from '../../../lib/event-worker';
+import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
+import { DatabaseError } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
-import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
-import {SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../../source-maps/types/source-maps-record';
+import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
+import { SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
-import {JavaScriptEventWorkerTask} from '../types/javascript-event-worker-task';
+import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 
 /**
  * Worker for handling Javascript events
  */
 export default class JavascriptEventWorker extends EventWorker {
-
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -29,7 +30,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Collection where source maps stroed
    */
-  private releasesDbCollectionName: string = 'releases-js';
+  private releasesDbCollectionName = 'releases-js';
 
   constructor() {
     super();
@@ -72,6 +73,8 @@ export default class JavascriptEventWorker extends EventWorker {
 
   /**
    * Message handle function
+   *
+   * @param event
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
@@ -88,8 +91,9 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * This method tries to find a source map for passed release
    * and overrides a backtrace with parsed source-map
+   *
    * @param {JavaScriptEventWorkerTask} event — js error minified
-   * @return {BacktraceFrame[]} - parsed backtrace
+   * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
     /**
@@ -106,10 +110,11 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
-    return await Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
+    return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
       return this.consumeBacktraceFrame(frame, releaseRecord)
         .catch((error) => {
           this.logger.error('Error while consuming ' + error);
+
           return event.payload.backtrace[index];
         });
     }));
@@ -117,11 +122,12 @@ export default class JavascriptEventWorker extends EventWorker {
 
   /**
    * Try to parse backtrace item with source map
+   *
    * @param {BacktraceFrame} stackFrame — one line of stack
    * @param {SourceMapsRecord} releaseRecord — what we store in DB (map file name, origin file name, maps files)
    */
   private async consumeBacktraceFrame(stackFrame: BacktraceFrame,
-                                      releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
+    releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
     /**
      * Sometimes catcher can't extract file from the backtrace
      */
@@ -188,6 +194,7 @@ export default class JavascriptEventWorker extends EventWorker {
 
   /**
    * Downloads source map file from Grid FS
+   *
    * @param map - saved file info without content.
    */
   private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
@@ -219,11 +226,11 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {BasicSourceMapConsumer | IndexedSourceMapConsumer} consumer
    * @param {NullableMappedPosition} original - source file's line,column,source etc
-   * @return {SourceCodeLine[]}
+   * @returns {SourceCodeLine[]}
    */
   private readSourceLines(
     consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer,
-    original: NullableMappedPosition,
+    original: NullableMappedPosition
   ): SourceCodeLine[] {
     const sourceContent = consumer.sourceContentFor(original.source, true);
 

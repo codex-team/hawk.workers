@@ -31,7 +31,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Message handle function
    *
    * @override
-   * @param {Object} msg Message object from consume method
+   * @param {object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
    */
   async handle(msg) {
@@ -54,7 +54,8 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
 
       try {
         await this.db.saveEvent(projectId, {
-          catcherType: PhpEventWorker.type, payload
+          catcherType: PhpEventWorker.type,
+          payload,
         });
       } catch (err) {
         if (err instanceof ValidationError) {
@@ -84,8 +85,8 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Parse php error from hawk.catcher format
    * to new universal format
    *
-   * @param {Object} obj - Object to parse
-   * @returns {Object}
+   * @param {object} obj - Object to parse
+   * @returns {object}
    */
   static parseData(obj) {
     const payload = {};
@@ -111,7 +112,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
           payload.backtrace.push({
             file: item.file,
             line: item.line,
-            sourceCode: item.trace && item.trace.length ? item.trace : []
+            sourceCode: item.trace && item.trace.length ? item.trace : [],
           });
 
           if (!item.trace) {

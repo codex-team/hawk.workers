@@ -1,8 +1,8 @@
-import {Collection, ObjectID, UpdateQuery} from 'mongodb';
-import {DatabaseController} from '../../../lib/db/controller';
-import {Worker} from '../../../lib/worker';
+import { Collection, ObjectID, UpdateQuery } from 'mongodb';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import {AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType} from '../types/accountant-worker-events';
+import { AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType } from '../types/accountant-worker-events';
 
 /**
  * Worker for managing workspaces balance
@@ -58,6 +58,8 @@ export default class AccountantWorker extends Worker {
 
   /**
    * Message handle function
+   *
+   * @param event - events to handle
    */
   public async handle(event: AccountantEvent): Promise<void> {
     switch (event.type) {
@@ -71,7 +73,7 @@ export default class AccountantWorker extends Worker {
    *
    * Write transaction to the database and update workspace balance
    *
-   * @param {TransactionEvent} event
+   * @param {TransactionEvent} event - event to handle
    */
   public async handleTransactionEvent(event: TransactionEvent): Promise<void> {
     const { payload } = event;
@@ -94,12 +96,14 @@ export default class AccountantWorker extends Worker {
          * @todo Send notification to user via notify checker worker
          */
         console.warn('Not enough money on workspace balance');
+
         return;
       }
 
       balanceDiff *= -1;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const transaction: any = {
       ...payload,
       workspaceId: new ObjectID(payload.workspaceId),
@@ -111,8 +115,9 @@ export default class AccountantWorker extends Worker {
 
     await this.transactions.insertOne(transaction);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: UpdateQuery<any> = {
-      $inc: {balance: balanceDiff},
+      $inc: { balance: balanceDiff },
     };
 
     if (payload.type === TransactionType.Charge) {
@@ -121,7 +126,7 @@ export default class AccountantWorker extends Worker {
 
     await this.workspaces.updateOne(
       { _id: new ObjectID(payload.workspaceId) },
-      updateData,
+      updateData
     );
   }
 }

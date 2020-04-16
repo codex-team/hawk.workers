@@ -12,7 +12,7 @@ export interface SourceMapsEventWorkerTask {
   /**
    * List of source maps for all chunks
    */
-  files: SourcemapCollectedData[],
+  files: SourcemapCollectedData[];
 }
 
 export interface SourcemapCollectedData {
