@@ -1,12 +1,7 @@
-import * as mongodb from 'mongodb';
-import {GridFSBucket, MongoClient} from 'mongodb';
-import {Db} from 'mongodb';
+import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
 
 /**
  * Database connection singleton
- *
- * @param {mongodb.MongoClient} connection - MongoDB connection
- * @param {mongodb.Db} db - MongoDB connection database instance
  */
 export class DatabaseController {
   /**
@@ -47,7 +42,7 @@ export class DatabaseController {
       throw new Error('Database name is not specified. Check .env');
     }
 
-    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + dbName, {
+    this.connection = await connect(process.env.MONGO_DSN + '/' + dbName, {
       useNewUrlParser: true,
     });
     this.db = await this.connection.db();
@@ -71,7 +66,7 @@ export class DatabaseController {
   }
 
   /**
-   * @return {*|null}
+   * @returns {*|null}
    */
   public getConnection(): Db {
     return this.db;
@@ -79,17 +74,19 @@ export class DatabaseController {
 
   /**
    * Prepares GridFs bucket to store files
+   *
    * @param {string} name - The bucket name. Defaults to 'fs'.
    */
-  public createGridFsBucket(name: string = 'fs'): void {
-    this.gridFsBucket = new mongodb.GridFSBucket(this.db, {
+  public createGridFsBucket(name = 'fs'): void {
+    this.gridFsBucket = new GridFSBucket(this.db, {
       bucketName: name,
     });
   }
 
   /**
    * Returns GridFs Bucket
-   * @return {GridFSBucket}
+   *
+   * @returns {GridFSBucket}
    */
   public getBucket(): GridFSBucket {
     return this.gridFsBucket;
