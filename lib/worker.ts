@@ -274,9 +274,11 @@ export abstract class Worker {
       this.channelWithRegistry.ack(msg);
 
       /**
-       * Increment counter of successfully processed messages
+       * Increment counter of successfully processed messages if metrics are enabled
        */
-      this.metricSuccessfullyProcessedMessages.inc();
+      if (this.metricSuccessfullyProcessedMessages) {
+        this.metricSuccessfullyProcessedMessages.inc();
+      }
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
