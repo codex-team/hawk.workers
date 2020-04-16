@@ -6,6 +6,7 @@
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "UNLICENSED",
     "workspaces": [
+        "cron-manager",
         "workers/javascript",
         "workers/grouper",
         "workers/accountant",
@@ -28,7 +29,8 @@
         "run-grouper": "yarn worker hawk-worker-grouper",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
-        "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps"
+        "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps",
+        "run-cron-manager": "ts-node cron-manager/index.ts"
     },
     "dependencies": {
         "amqplib": "^0.5.5",
