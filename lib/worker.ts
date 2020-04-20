@@ -276,8 +276,7 @@ export abstract class Worker {
       /**
        * Increment counter of successfully processed messages if metrics are enabled
        */
-      if (this.metricSuccessfullyProcessedMessages) {
-        this.metricSuccessfullyProcessedMessages.inc();
+      this.metricSuccessfullyProcessedMessages?.inc();
       }
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
