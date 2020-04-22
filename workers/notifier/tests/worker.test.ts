@@ -1,5 +1,5 @@
 import { ObjectID } from 'mongodb';
-import {WhatToReceive} from '../src/validator';
+import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 
 const rule = {
@@ -29,7 +29,7 @@ const rule = {
 };
 
 let dbQueryMock = jest.fn(() => ({
-  notifications: [rule],
+  notifications: [ rule ],
 }));
 
 const dbCollectionMock = jest.fn(() => {
@@ -47,17 +47,31 @@ const dbConnectionMock = jest.fn(() => {
 const dbConnectMock = jest.fn();
 const dbCloseMock = jest.fn();
 
-// tslint:disable-next-line:class-name
+/**
+ * DBController mock
+ */
+// eslint-disable-next-line @typescript-eslint/class-name-casing
 class mockDBController {
-  public connect(...args) {
+  /**
+   * DBController.connect method mock
+   *
+   * @param args - connect arguments
+   */
+  public connect(...args): any {
     return dbConnectMock(...args);
   }
 
-  public getConnection() {
+  /**
+   * DBController.getConnection method mock
+   */
+  public getConnection(): any {
     return dbConnectionMock();
   }
 
-  public close() {
+  /**
+   * DBController.close method mock
+   */
+  public close(): void {
     dbCloseMock();
   }
 }
@@ -96,7 +110,8 @@ describe('NotifierWorker', () => {
     it('should get db connection on message handle', async () => {
       const worker = new NotifierWorker();
 
-      const message = {...messageMock};
+      const message = { ...messageMock };
+
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
@@ -106,7 +121,7 @@ describe('NotifierWorker', () => {
 
     it('should query correct collection on message handle', async () => {
       const worker = new NotifierWorker();
-      const message = {...messageMock};
+      const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -117,13 +132,13 @@ describe('NotifierWorker', () => {
 
     it('should query correct project on message handle', async () => {
       const worker = new NotifierWorker();
-      const message = {...messageMock};
+      const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
-      expect(dbQueryMock).toBeCalledWith({_id: new ObjectID(message.projectId)});
+      expect(dbQueryMock).toBeCalledWith({ _id: new ObjectID(message.projectId) });
     });
 
     it('should close db connection on finish', async () => {
@@ -138,7 +153,6 @@ describe('NotifierWorker', () => {
   });
 
   describe('handling', () => {
-
     it('should correctly handle first message', async () => {
       const worker = new NotifierWorker();
 
@@ -147,10 +161,13 @@ describe('NotifierWorker', () => {
       worker.buffer.push = jest.fn();
       worker.buffer.setTimer = jest.fn();
 
-      const message = {...messageMock};
+      const message = { ...messageMock };
       const channels = ['telegram', 'slack'];
       const channelKeyPart = [message.projectId, rule._id];
-      const events = [{key: message.event.groupHash, count: 1}];
+      const events = [ {
+        key: message.event.groupHash,
+        count: 1,
+      } ];
 
       await worker.handle(message);
 
@@ -162,12 +179,12 @@ describe('NotifierWorker', () => {
           i + 1,
           [...channelKeyPart, channel],
           rule.channels[channel].minPeriod * 1000,
-          worker.sendEvents,
+          worker.sendEvents
         );
         expect(worker.sendToSenderWorker).toHaveBeenNthCalledWith(
           i + 1,
           [...channelKeyPart, channels[i]],
-          events,
+          events
         );
       });
     });
@@ -186,7 +203,7 @@ describe('NotifierWorker', () => {
       worker.buffer.setTimer = jest.fn((...args) => realSetTimer.apply(worker.buffer, args));
       worker.buffer.push = jest.fn();
 
-      const message = {...messageMock};
+      const message = { ...messageMock };
       const channels = ['telegram', 'slack'];
       const channelKeyPart = [message.projectId, rule._id];
 
@@ -200,7 +217,7 @@ describe('NotifierWorker', () => {
       channels.forEach((channel, i) => {
         expect(worker.buffer.push).toHaveBeenNthCalledWith(
           i + 1,
-          [...channelKeyPart, channel, messageMock.event.groupHash],
+          [...channelKeyPart, channel, messageMock.event.groupHash]
         );
       });
 
@@ -220,7 +237,7 @@ describe('NotifierWorker', () => {
 
       worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
 
-      const message = {...messageMock};
+      const message = { ...messageMock };
       const channels = ['telegram', 'slack'];
       const channelKeyPart = [message.projectId, rule._id];
 
@@ -234,11 +251,11 @@ describe('NotifierWorker', () => {
         channels.forEach((channel, i) => {
           expect(worker.buffer.flush).toHaveBeenNthCalledWith(
             i + 1,
-            [...channelKeyPart, channel],
+            [...channelKeyPart, channel]
           );
           expect(worker.sendEvents).toHaveBeenNthCalledWith(
             i + 1,
-            [...channelKeyPart, channel],
+            [...channelKeyPart, channel]
           );
         });
 
@@ -251,7 +268,7 @@ describe('NotifierWorker', () => {
 
       worker.addEventsToChannels = jest.fn();
 
-      const message = {...messageMock};
+      const message = { ...messageMock };
 
       const oldMock = dbQueryMock;
 
@@ -270,7 +287,7 @@ describe('NotifierWorker', () => {
 
     worker.addTask = jest.fn();
 
-    const message = {...messageMock};
+    const message = { ...messageMock };
     const channels = ['telegram', 'slack'];
 
     await worker.handle(message);
@@ -283,8 +300,11 @@ describe('NotifierWorker', () => {
           {
             projectId: message.projectId,
             ruleId: rule._id,
-            events: [{key: message.event.groupHash, count: 1}],
-          },
+            events: [ {
+              key: message.event.groupHash,
+              count: 1,
+            } ],
+          }
         );
       });
     }, 100);

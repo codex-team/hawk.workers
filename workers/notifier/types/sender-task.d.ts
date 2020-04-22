@@ -1,5 +1,5 @@
-import {WorkerTask} from '../../../lib/types/worker-task';
-import {BufferData} from '../src/buffer';
+import { WorkerTask } from '../../../lib/types/worker-task';
+import { BufferData } from '../src/buffer';
 
 /**
  * Interface describes task for notifications` senders workers

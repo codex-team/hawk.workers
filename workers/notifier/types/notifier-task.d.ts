@@ -1,5 +1,5 @@
-import {EventData} from '../../../lib/types/event-worker-task';
-import {WorkerTask} from '../../../lib/types/worker-task';
+import { EventData } from '../../../lib/types/event-worker-task';
+import { WorkerTask } from '../../../lib/types/worker-task';
 
 /**
  * Data needed for NotificationWorker from GrouperWorker

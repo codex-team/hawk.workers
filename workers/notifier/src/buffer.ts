@@ -95,7 +95,7 @@ export default class Buffer {
    *
    * @param {ChannelKey} key - key of channel to retrieve
    *
-   * @return {BufferData[]}
+   * @returns {BufferData[]}
    */
   public get(key: ChannelKey): BufferData[];
 
@@ -104,8 +104,9 @@ export default class Buffer {
    *
    * @param {EventKey} key - key of event to get
    *
-   * @return {number} - number of events received for minPeriod
+   * @returns {number} - number of events received for minPeriod
    */
+  // eslint-disable-next-line no-dupe-class-members
   public get(key: EventKey): number;
 
   /**
@@ -113,8 +114,9 @@ export default class Buffer {
    *
    * @param {ChannelKey|EventKey} arg - Channel or Event key
    *
-   * @return {BufferData[]|number}
+   * @returns {BufferData[]|number}
    */
+  // eslint-disable-next-line no-dupe-class-members
   public get(arg: ChannelKey | EventKey): BufferData[] | number {
     const [projectId, ruleId, channelName, key] = arg;
 
@@ -126,7 +128,10 @@ export default class Buffer {
 
     return Object
       .entries(channel.payload)
-      .map(([k, count]) => ({key: k, count}));
+      .map(([k, count]) => ({
+        key: k,
+        count,
+      }));
   }
 
   /**
@@ -134,7 +139,7 @@ export default class Buffer {
    *
    * @param {ChannelKey} key - key of channel to get size of
    *
-   * @return {number}
+   * @returns {number}
    */
   public size(key: ChannelKey): number {
     return this.get(key).length;
@@ -145,15 +150,15 @@ export default class Buffer {
    *
    * @param {ChannelKey} key - key of channel to set timer to
    * @param {number} timeout - timer timeout time in ms
-   * @param {function} callback - callback to call on timeot
+   * @param {Function} callback - callback to call on timeot
    */
-  public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void) {
+  public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void): Timeout {
     const channel = this.getChannel(key);
 
     channel.timer = setTimeout(
       callback,
       timeout,
-      key,
+      key
     );
 
     return channel.timer;
@@ -164,7 +169,7 @@ export default class Buffer {
    *
    * @param {ChannelKey} key - key of channel to get timer
    *
-   * @return {Timeout}
+   * @returns {Timeout}
    */
   public getTimer(key: ChannelKey): Timeout {
     const channel = this.getChannel(key);
@@ -190,7 +195,7 @@ export default class Buffer {
    *
    * @param {ChannelKey} key - key of channel to flush
    *
-   * @return BufferData[]
+   * @returns BufferData[]
    */
   public flush(key: ChannelKey): BufferData[] {
     const channel = this.getChannel(key);
@@ -210,6 +215,7 @@ export default class Buffer {
   public flushAll(projectId?: string): void {
     if (projectId) {
       this.projects[projectId] = {};
+
       return;
     }
 
@@ -227,18 +233,21 @@ export default class Buffer {
     const project = this.getField<BufferSchema, ProjectSchema>(
       this.projects,
       projectId,
-      {},
+      {}
     );
     const rule = this.getField<ProjectSchema, RuleSchema>(
       project,
       ruleId,
-      {},
-      );
+      {}
+    );
 
     return this.getField<RuleSchema, ChannelSchema>(
       rule,
       channelName,
-      {payload: {}, timer: null},
+      {
+        payload: {},
+        timer: null,
+      }
     );
   }
 
@@ -249,12 +258,12 @@ export default class Buffer {
    * @param {string} field — field to get
    * @param {V = any} defaultValue - default value to set if field doesn't exist
    *
-   * @return {V} — fields value
+   * @returns {V} — fields value
    */
   private getField<T = any, V = any>(
     obj: T,
     field: string,
-    defaultValue: V,
+    defaultValue: V
   ): V {
     if (!(field in obj)) {
       obj[field] = defaultValue;

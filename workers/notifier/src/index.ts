@@ -1,12 +1,12 @@
-import {ObjectID} from 'mongodb';
-import {DatabaseController} from '../../../lib/db/controller';
-import {Worker} from '../../../lib/worker';
+import { ObjectID } from 'mongodb';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import {Channel} from '../types/channel';
-import {NotifierEvent, NotifierWorkerTask} from '../types/notifier-task';
-import {Rule} from '../types/rule';
-import {SenderWorkerTask} from '../types/sender-task';
-import Buffer, {BufferData, ChannelKey, EventKey} from './buffer';
+import { Channel } from '../types/channel';
+import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
+import { Rule } from '../types/rule';
+import { SenderWorkerTask } from '../types/sender-task';
+import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
 
 /**
@@ -74,7 +74,7 @@ export default class NotifierWorker extends Worker {
    */
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
-      const {projectId, event} = task;
+      const { projectId, event } = task;
 
       const rules = await this.getFittedRules(projectId, event);
 
@@ -91,7 +91,7 @@ export default class NotifierWorker extends Worker {
    *
    * @param {string} projectId — project id event is related to
    * @param {NotifierEvent} event — received event
-   * @return {Promise<Rule[]>}
+   * @returns {Promise<Rule[]>}
    */
   private async getFittedRules(projectId: string, event: NotifierEvent): Promise<Rule[]> {
     let rules = [];
@@ -148,7 +148,10 @@ export default class NotifierWorker extends Worker {
        */
       this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
 
-      await this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
+      await this.sendToSenderWorker(channelKey, [ {
+        key: event.groupHash,
+        count: 1,
+      } ]);
     });
   }
 
@@ -190,13 +193,13 @@ export default class NotifierWorker extends Worker {
    *
    * @param {string} projectId - project id event is related to
    *
-   * @return {Promise<Rule[]>} - project notification rules
+   * @returns {Promise<Rule[]>} - project notification rules
    */
   private async getProjectNotificationRules(projectId: string): Promise<Rule[]> {
     const connection = this.db.getConnection();
     const projects = connection.collection('projects');
 
-    const project = await projects.findOne({_id: new ObjectID(projectId)});
+    const project = await projects.findOne({ _id: new ObjectID(projectId) });
 
     if (!project) {
       throw new Error('There is no project with given id');

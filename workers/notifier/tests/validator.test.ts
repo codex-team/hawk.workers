@@ -1,4 +1,4 @@
-import RuleValidator, {WhatToReceive} from '../src/validator';
+import RuleValidator, { WhatToReceive } from '../src/validator';
 
 describe('RuleValidator', () => {
   const ruleMock = {
@@ -15,7 +15,7 @@ describe('RuleValidator', () => {
 
   describe('checkIfRuleIsOn', () => {
     it('should pass if rule is enabled', () => {
-      const rule = {...ruleMock};
+      const rule = { ...ruleMock };
 
       rule.isEnabled = true;
 
@@ -25,8 +25,8 @@ describe('RuleValidator', () => {
       expect(validator.checkIfRuleIsOn()).toBeInstanceOf(RuleValidator);
     });
 
-    it ('should fail if rule is disabled', () => {
-      const rule = {...ruleMock};
+    it('should fail if rule is disabled', () => {
+      const rule = { ...ruleMock };
 
       rule.isEnabled = false;
 
@@ -38,7 +38,7 @@ describe('RuleValidator', () => {
 
   describe('checkWhatToReceive', () => {
     it('should pass if what to receive is \'all\'', () => {
-      const rule = {...ruleMock};
+      const rule = { ...ruleMock };
 
       rule.whatToReceive = WhatToReceive.All;
 
@@ -49,8 +49,8 @@ describe('RuleValidator', () => {
     });
 
     it('should pass if what to receive is \'new\' and event is new', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.whatToReceive = WhatToReceive.New;
       event.isNew = true;
@@ -62,8 +62,8 @@ describe('RuleValidator', () => {
     });
 
     it('should fail if what to receive is \'new\' but event is not new', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.whatToReceive = WhatToReceive.New;
       event.isNew = false;
@@ -76,8 +76,8 @@ describe('RuleValidator', () => {
 
   describe('checkIncludingWords', () => {
     it('should pass if event title includes some of the words', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.including = ['included', 'excluded'];
       event.title = 'Included word is included';
@@ -89,8 +89,8 @@ describe('RuleValidator', () => {
     });
 
     it('should pass if words list is empty', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.including = [];
       event.title = 'Included word is included, and excluded is also included';
@@ -102,10 +102,10 @@ describe('RuleValidator', () => {
     });
 
     it('should fail if event title doesn\'t include any of the words', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
-      rule.including = ['exclude'];
+      rule.including = [ 'exclude' ];
       event.title = 'Title doesn\'t include any of the words';
 
       const validator = new RuleValidator(rule, event);
@@ -116,8 +116,8 @@ describe('RuleValidator', () => {
 
   describe('checkExcludingWords', () => {
     it('should pass if event title doesn\'t include any of the words', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.excluding = ['included', 'excluded'];
       event.title = 'This title doesn\'t have any of the words';
@@ -129,8 +129,8 @@ describe('RuleValidator', () => {
     });
 
     it('should fail if event title includes some of the words', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.excluding = ['included', 'excluded'];
       event.title = 'Included word is included';
@@ -141,8 +141,8 @@ describe('RuleValidator', () => {
     });
 
     it('should pass if words list is empty', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       rule.excluding = [];
       event.title = 'Included word is included, and excluded is also included';
@@ -156,17 +156,17 @@ describe('RuleValidator', () => {
 
   describe('checkAll', () => {
     it('should return instance of RuleValidator', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       const validator = new RuleValidator(rule, event);
 
       expect(validator.checkAll()).toBeInstanceOf(RuleValidator);
     });
 
-    it ('should call all check methods', () => {
-      const rule = {...ruleMock};
-      const event = {...eventMock};
+    it('should call all check methods', () => {
+      const rule = { ...ruleMock };
+      const event = { ...eventMock };
 
       const validator = new RuleValidator(rule, event);
 

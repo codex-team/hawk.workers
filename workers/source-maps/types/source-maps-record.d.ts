@@ -20,12 +20,14 @@ export interface SourceMapsRecord {
 export interface SourceMapDataExtended {
   /**
    * Name of source-map file
+   *
    * @example main.min.js.map
    */
   mapFileName: string;
 
   /**
    * Bundle or chunk name
+   *
    * @example main.min.js
    */
   originFileName: string;
@@ -44,6 +46,7 @@ export interface SourceMapDataExtended {
 
 /**
  * Object represents a file structure stored in Mongo GridFS
+ *
  * @see https://github.com/mongodb/specifications/blob/master/source/gridfs/gridfs-spec.rst#definitions
  */
 export interface SourceMapFileChunk {
@@ -64,6 +67,7 @@ export interface SourceMapFileChunk {
 
   /**
    * Uploading date  stored as a BSON datetime value 'Timestamp'.
+   *
    * @example 2020-02-18T14:51:40.400Z
    */
   uploadDate: Timestamp;

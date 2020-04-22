@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import Buffer from '../src/buffer';
 
 describe('Buffer', () => {
@@ -45,7 +46,6 @@ describe('Buffer', () => {
   const key = 'event';
 
   describe('push', () => {
-
     it('should add new event entity with 1 as default value', () => {
       const buffer = new Buffer();
 
@@ -87,7 +87,10 @@ describe('Buffer', () => {
 
       // @ts-ignore
       const tuples = Object.entries(buffer.projects[projectId][ruleId][channelName].payload)
-        .map(([k, count]) => ({key: k, count}));
+        .map(([k, count]) => ({
+          key: k,
+          count,
+        }));
 
       expect(buffer.get([projectId, ruleId, channelName])).toStrictEqual(tuples);
     });

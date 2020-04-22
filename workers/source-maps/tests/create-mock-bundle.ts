@@ -20,7 +20,7 @@ export default class MockBundle {
   /**
    * Create a bundle via Webpack
    */
-  public build() {
+  public build(): Promise<void> {
     return new Promise((resolve, reject) => {
       webpack({
         mode: 'production',
@@ -33,6 +33,7 @@ export default class MockBundle {
       }, (err, stats) => {
         if (err) {
           reject(err);
+
           return;
         }
 
@@ -94,7 +95,7 @@ export default class MockBundle {
   /**
    * Clears created bundle
    */
-  public clear() {
+  public clear(): Promise<void> {
     return new Promise((resolve) => {
       rimraf(this.outputDir, resolve);
     });

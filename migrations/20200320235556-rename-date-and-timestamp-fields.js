@@ -5,7 +5,7 @@ module.exports = {
   async up(db) {
     const collections = await db.listCollections({}, {
       authorizedCollections: true,
-      nameOnly: true
+      nameOnly: true,
     }).toArray();
 
     const targetCollections = [];
@@ -22,10 +22,10 @@ module.exports = {
         {
           $rename: {
             date: 'groupingTimestamp',
-            timestamp: 'lastRepetitionTime'
-          }
+            timestamp: 'lastRepetitionTime',
+          },
         }
       );
     }
-  }
+  },
 };
