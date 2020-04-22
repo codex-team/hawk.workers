@@ -11,7 +11,7 @@ jest.mock('amqplib');
 const testConfig: CronManagerConfig = {
   tasks: [
     {
-      workerName: 'testWorkerName',
+      workerType: 'testWorkerName',
       schedule: '* * * * * *',
     },
   ],
