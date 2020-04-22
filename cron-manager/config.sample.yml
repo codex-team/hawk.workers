@@ -1,0 +1,10 @@
+# List of tasks to manage
+tasks:
+    # Worker type to add tasks (equal to the Registry queue name)
+  - workerType: 'archiver'
+
+    # Cron-like schedule string
+    schedule: '* * * * * *'
+
+    # Any data to send with task
+    payload:
