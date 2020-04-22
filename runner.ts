@@ -255,4 +255,5 @@ class WorkerRunner {
   }
 }
 
-const runner = new WorkerRunner(workerNames);
+// eslint-disable-next-line no-new
+new WorkerRunner(workerNames);
