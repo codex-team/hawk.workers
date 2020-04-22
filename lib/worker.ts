@@ -143,8 +143,7 @@ export abstract class Worker {
 
       this.tasksMap.set(msg, promise);
       promise.then(() => this.tasksMap.delete(msg));
-    }
-    );
+    });
 
     /**
      * Remember consumer tag to cancel subscription in future
