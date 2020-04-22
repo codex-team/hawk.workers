@@ -1,22 +1,24 @@
 import fs from 'fs';
 import * as yaml from 'yaml';
 import path from 'path';
-import { CronJob } from 'cron';
 import { CronManagerConfig } from './types';
+import CronManager from './manager';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const configFile = fs.readFileSync(path.join(__dirname, './config.yml')).toString();
 
-const config = yaml.parse(configFile) as CronManagerConfig;
-const jobs: CronJob[] = [];
+const cronManagerConfig = yaml.parse(configFile) as CronManagerConfig;
 
-config.tasks.forEach(task => {
-  const job = new CronJob(task.schedule, () => {
-    console.log(task.workerName);
-  });
+if (!process.env.REGISTRY_URL) {
+  console.error('You must provide REGISTRY_URL via .env file to run CronManager');
+  process.exit();
+} else {
+  const manager = new CronManager(process.env.REGISTRY_URL, cronManagerConfig);
 
-  job.start();
-
-  jobs.push(job);
-});
-
-console.log(config);
+  manager
+    .start()
+    .then(() => console.log('Cron manager started successfully'))
+    .catch((e: Error) => console.error('Error while starting cron manager', e));
+}

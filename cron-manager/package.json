@@ -1,0 +1,19 @@
+{
+    "name": "hawk-cron-manager",
+    "version": "0.0.1",
+    "description": "Add new tasks for some workers to RabbitMQ due to schedule",
+    "main": "index.ts",
+    "repository": "https://github.com/codex-team/hawk.workers/tree/master/cron-manager",
+    "author": "CodeX <codex.so>",
+    "license": "UNLICENSED",
+    "private": true,
+    "scripts": {
+        "start": "ts-node index.ts"
+    },
+    "dependencies": {
+        "@types/cron": "^1.7.2",
+        "@types/yaml": "^1.2.0",
+        "cron": "^1.8.2",
+        "yaml": "^1.8.3"
+    }
+}
