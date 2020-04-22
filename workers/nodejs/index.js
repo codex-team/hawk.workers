@@ -12,6 +12,8 @@ const db = require('../../lib/db/controller');
 class NodejsEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
+   *
+   * @returns {string}
    */
   static get type() {
     return 'errors/nodejs';
@@ -35,7 +37,7 @@ class NodejsEventWorker extends EventWorker {
   }
 
   /**
-   * @typedef {Object} ParsedLine
+   * @typedef {object} ParsedLine
    * @property {string} [file] - Error file path
    * @property {string} [func] - Error function
    * @property {number} [line] - Error line number
@@ -64,7 +66,7 @@ class NodejsEventWorker extends EventWorker {
         func: match[1],
         file,
         line,
-        pos
+        pos,
       });
     }
 
@@ -75,7 +77,7 @@ class NodejsEventWorker extends EventWorker {
    * Message handle function
    *
    * @override
-   * @param {Object} msg - Message object from consume method
+   * @param {object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
   async handle(msg) {
@@ -99,12 +101,10 @@ class NodejsEventWorker extends EventWorker {
       backtrace = backtrace.map(el => {
         return {
           file: el.file,
-          line: isNaN(el.line) ? undefined : el.line
+          line: isNaN(el.line) ? undefined : el.line,
           /** @todo Add nodejs specific event fields to schema */
-          /*
-           * func: el.func,
-           * pos: el.pos
-           */
+          // func: el.func,
+          // pos: el.pos
         }; // Take only file and line field for schema
       });
     } catch (e) {
@@ -123,12 +123,12 @@ class NodejsEventWorker extends EventWorker {
       title: event.message,
       timestamp,
       backtrace,
-      context: event.context
+      context: event.context,
     };
 
     const insertedId = await db.saveEvent(projectId, {
       catcherType: NodejsEventWorker.type,
-      payload
+      payload,
     });
 
     NodejsEventWorker.logger.debug('Inserted event: ' + insertedId);

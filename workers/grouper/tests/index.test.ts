@@ -1,7 +1,7 @@
 /* tslint:disable:no-string-literal */
 import * as mongodb from 'mongodb';
 import GrouperWorker from '../src/index';
-import {GroupWorkerTask} from '../types/group-worker-task';
+import { GroupWorkerTask } from '../types/group-worker-task';
 
 /**
  * Test Grouping task
@@ -60,7 +60,7 @@ describe('GrouperWorker', () => {
           title: 'Test event',
           timestamp: Date.now() / 1000,
         },
-      }),
+      })
     ).rejects.toThrowError();
   });
 
@@ -92,7 +92,7 @@ describe('GrouperWorker', () => {
           title: 'Test event',
           timestamp: Date.now() / 1000,
         },
-      }),
+      })
     ).rejects.toThrowError();
   });
 
@@ -101,7 +101,7 @@ describe('GrouperWorker', () => {
       /**
        * To test private method, we have to access it as dynamic prop.
        */
-      worker['incrementEventCounter']('10', {}),
+      worker['incrementEventCounter']('10', {})
     ).rejects.toThrowError();
   });
 
