@@ -21,6 +21,8 @@ class NodejsEventWorker extends EventWorker {
 
   /**
    * Start consuming messages
+   *
+   * @returns {Promise<void>}
    */
   async start() {
     await db.connect(process.env.EVENTS_DB_NAME);
@@ -30,6 +32,8 @@ class NodejsEventWorker extends EventWorker {
 
   /**
    * Finish everything
+   *
+   * @returns {Promise<void>}
    */
   async finish() {
     await super.finish();
