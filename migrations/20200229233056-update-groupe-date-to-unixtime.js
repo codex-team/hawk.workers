@@ -6,7 +6,7 @@ module.exports = {
   async up(db) {
     const collections = await db.listCollections({}, {
       authorizedCollections: true,
-      nameOnly: true
+      nameOnly: true,
     }).toArray();
 
     const targetCollections = [];
@@ -18,7 +18,8 @@ module.exports = {
     });
 
     for (const collectionName of targetCollections) {
-      const rows = await db.collection(collectionName).find({}).toArray();
+      const rows = await db.collection(collectionName).find({})
+        .toArray();
 
       for (const row of rows) {
         const id = row._id;
@@ -34,11 +35,11 @@ module.exports = {
         const midnight = date.getTime() / 1000;
 
         await db.collection(collectionName).updateOne({
-          _id: id
+          _id: id,
         }, {
           $set: {
-            date: midnight
-          }
+            date: midnight,
+          },
         });
       }
     }

@@ -5,7 +5,7 @@ module.exports = {
   async up(db) {
     const collections = await db.listCollections({}, {
       authorizedCollections: true,
-      nameOnly: true
+      nameOnly: true,
     }).toArray();
 
     const targetCollections = [];
@@ -21,7 +21,7 @@ module.exports = {
 
       if (!hasIndexAlready) {
         await db.collection(collectionName).createIndex({
-          groupHash: 'hashed'
+          groupHash: 'hashed',
         });
       }
     }
@@ -29,7 +29,7 @@ module.exports = {
   async down(db) {
     const collections = await db.listCollections({}, {
       authorizedCollections: true,
-      nameOnly: true
+      nameOnly: true,
     }).toArray();
 
     const targetCollections = [];
@@ -42,8 +42,8 @@ module.exports = {
 
     for (const collectionName of targetCollections) {
       await db.collection(collectionName).dropIndex({
-        groupHash: 'hashed'
+        groupHash: 'hashed',
       });
     }
-  }
+  },
 };

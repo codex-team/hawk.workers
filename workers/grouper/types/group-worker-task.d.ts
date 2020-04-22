@@ -14,7 +14,7 @@ export interface GroupWorkerTask extends WorkerTask {
   /**
    * What type of event we've accept
    */
-  catcherType: string,
+  catcherType: string;
 
   /**
    * Event that should be grouped

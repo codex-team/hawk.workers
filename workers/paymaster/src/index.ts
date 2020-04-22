@@ -1,11 +1,11 @@
 import {
   EventType as AccountantEventType,
   TransactionEvent,
-  TransactionType,
+  TransactionType
 } from 'hawk-worker-accountant/types/accountant-worker-events';
-import {Collection, ObjectID} from 'mongodb';
-import {DatabaseController} from '../../../lib/db/controller';
-import {Worker} from '../../../lib/worker';
+import { Collection, ObjectID } from 'mongodb';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import {
@@ -13,7 +13,7 @@ import {
   EventType,
   PaymasterEvent,
   PlanChangedEvent,
-  TariffPlan, WorkspacePlan,
+  TariffPlan, WorkspacePlan
 } from '../types/paymaster-worker-events';
 
 /**
@@ -32,10 +32,6 @@ export default class Paymaster extends Worker {
 
   private workspaces: Collection;
   private plans: Collection;
-
-  constructor() {
-    super();
-  }
 
   /**
    * Start consuming messages
@@ -61,16 +57,18 @@ export default class Paymaster extends Worker {
 
   /**
    * Message handle function
+   *
+   * @param event - event to handle
    */
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
       case EventType.DailyCheck:
         await this.handleDailyCheckEvent(event as DailyCheckEvent);
+
         return;
 
       case EventType.PlanChanged:
         await this.handlePlanChangedEvent(event as PlanChangedEvent);
-        return;
     }
   }
 
@@ -79,13 +77,13 @@ export default class Paymaster extends Worker {
    *
    * Called every day, enumerate through workspaces and check if today is a payday for workspace plan
    *
-   * @param {DailyCheckEvent} event
+   * @param {DailyCheckEvent} event - event to handle
    */
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
     const plans = await this.plans.find({}).toArray();
 
-    workspaces.forEach(({_id, plan}) => {
+    workspaces.forEach(({ _id, plan }) => {
       const currentPlan: TariffPlan = plans.find((p) => p.name === plan.name);
 
       /**
@@ -108,17 +106,17 @@ export default class Paymaster extends Worker {
    *
    * If today is payday and payment has not been proceed or if new plan charge less then old one, do nothing
    *
-   * @param {PlanChangedEvent} event
+   * @param {PlanChangedEvent} event - event to handle
    */
   private async handlePlanChangedEvent(event: PlanChangedEvent): Promise<void> {
     const { payload } = event;
 
     const plans: TariffPlan[] = await this.plans.find({}).toArray();
-    const workspace = await this.workspaces.findOne({_id: new ObjectID(payload.workspaceId)});
+    const workspace = await this.workspaces.findOne({ _id: new ObjectID(payload.workspaceId) });
     const oldPlan: TariffPlan = plans.find((p) => p.name === payload.oldPlan);
     const newPlan: TariffPlan = plans.find((p) => p.name === payload.newPlan);
 
-    const {lastChargeDate} = workspace.plan as WorkspacePlan;
+    const { lastChargeDate } = workspace.plan as WorkspacePlan;
 
     /**
      * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
@@ -134,8 +132,8 @@ export default class Paymaster extends Worker {
       this.sendTransaction(
         TransactionType.Charge,
         workspace._id.toString(),
-        newPlan.monthlyCharge - oldPlan.monthlyCharge,
-        );
+        newPlan.monthlyCharge - oldPlan.monthlyCharge
+      );
     }
   }
 
@@ -164,12 +162,12 @@ export default class Paymaster extends Worker {
    * Pay day is calculated by formula: last charge date + number of days in last charged month
    *
    * @param {number} tmstp - last charge date timestamp
-   * @return {boolean}
+   * @returns {boolean}
    */
   private isTodayIsPayDay(tmstp: number): boolean {
     tmstp *= 1000;
 
-    const date = new Date(tmstp );
+    const date = new Date(tmstp);
 
     const numberOfDays = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
     const expectedPayDay = new Date(tmstp);
@@ -183,7 +181,7 @@ export default class Paymaster extends Worker {
    * Check if passed timestamp is today
    *
    * @param {number} tmstp - timestamp to check
-   * @return {boolean}
+   * @returns {boolean}
    */
   private isToday(tmstp: number): boolean {
     tmstp *= 1000;
