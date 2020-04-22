@@ -12,7 +12,6 @@ module.exports = {
   /**
    * TypeScript support
    */
-
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },

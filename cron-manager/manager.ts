@@ -1,5 +1,5 @@
 import { CronJob } from 'cron';
-import * as amqp from 'amqplib';
+import amqp from 'amqplib';
 import { CronManagerConfig } from './types';
 
 /**
@@ -64,11 +64,26 @@ export default class CronManager {
   }
 
   /**
-   * Starts all jobs
+   * Starts all jobs and setup registry connection
    */
   public async start(): Promise<void> {
     await this.connect();
     this.jobs.forEach(job => job.start());
+  }
+
+  /**
+   * Stop all jobs and close Registry connection
+   */
+  public async stop(): Promise<void> {
+    this.jobs.forEach(job => job.stop());
+
+    if (this.channelWithRegistry) {
+      await this.channelWithRegistry.close();
+    }
+
+    if (this.registryConnection) {
+      await this.registryConnection.close();
+    }
   }
 
   /**
