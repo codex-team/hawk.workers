@@ -2,10 +2,8 @@ import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as client from 'prom-client';
-import winston from 'winston';
+import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
-
-const { combine, timestamp, colorize, simple, printf } = winston.format;
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -48,15 +46,15 @@ export abstract class Worker {
    * Logger module
    * (default level='info')
    */
-  protected logger: winston.Logger = winston.createLogger({
+  protected logger: Logger = createLogger({
     level: process.env.LOG_LEVEL || 'info',
     transports: [
-      new winston.transports.Console({
-        format: combine(
-          timestamp(),
-          colorize(),
-          simple(),
-          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
+      new transports.Console({
+        format: format.combine(
+          format.timestamp(),
+          format.colorize(),
+          format.simple(),
+          format.printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
         ),
       }),
     ],
