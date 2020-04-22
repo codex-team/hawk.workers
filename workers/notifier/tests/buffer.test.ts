@@ -46,7 +46,7 @@ describe('Buffer', () => {
 
   describe('push', () => {
 
-    it('should add new key with 1 as default value', () => {
+    it('should add new event entity with 1 as default value', () => {
       const buffer = new Buffer();
 
       buffer.push([projectId, ruleId, channelName, key]);

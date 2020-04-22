@@ -1,6 +1,9 @@
 import {NotifierEvent} from '../types/notifier-task';
 import {Rule} from '../types/rule';
 
+/**
+ * WhatToReceive property values
+ */
 export enum WhatToReceive {
   All = 'ALL',
   New = 'ONLY_NEW',

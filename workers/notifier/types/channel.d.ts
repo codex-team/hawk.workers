@@ -22,7 +22,7 @@ export interface Channel {
   readonly endpoint: string;
 
   /**
-   * Minimum period of time should pass between two messages
+   * Minimum period of time should pass between two messages in seconds
    */
   readonly minPeriod: number;
 }

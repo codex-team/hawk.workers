@@ -79,7 +79,7 @@ export default class Buffer {
   /**
    * Add event to channel's buffer
    *
-   * @param {EventKey} key
+   * @param {EventKey} key - key of event to increment
    */
   public push(key: EventKey): void {
     const eventKey = key[3];
@@ -93,7 +93,7 @@ export default class Buffer {
   /**
    * Get channel data
    *
-   * @param {ChannelKey} key
+   * @param {ChannelKey} key - key of channel to retrieve
    *
    * @return {BufferData[]}
    */
@@ -102,7 +102,7 @@ export default class Buffer {
   /**
    * Get event data
    *
-   * @param {EventKey} key
+   * @param {EventKey} key - key of event to get
    *
    * @return {number} - number of events received for minPeriod
    */
@@ -111,7 +111,7 @@ export default class Buffer {
   /**
    * Implementation of two methods above
    *
-   * @param {ChannelKey|EventKey} arg - key
+   * @param {ChannelKey|EventKey} arg - Channel or Event key
    *
    * @return {BufferData[]|number}
    */
@@ -132,7 +132,7 @@ export default class Buffer {
   /**
    * Return size of channel's buffer
    *
-   * @param {ChannelKey} key
+   * @param {ChannelKey} key - key of channel to get size of
    *
    * @return {number}
    */
@@ -143,9 +143,9 @@ export default class Buffer {
   /**
    * Set timer for channel
    *
-   * @param {ChannelKey} key
-   * @param {number} timeout
-   * @param {function} callback
+   * @param {ChannelKey} key - key of channel to set timer to
+   * @param {number} timeout - timer timeout time in ms
+   * @param {function} callback - callback to call on timeot
    */
   public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void) {
     const channel = this.getChannel(key);
@@ -162,7 +162,7 @@ export default class Buffer {
   /**
    * Get channel timer
    *
-   * @param {ChannelKey} key
+   * @param {ChannelKey} key - key of channel to get timer
    *
    * @return {Timeout}
    */
@@ -175,7 +175,7 @@ export default class Buffer {
   /**
    * Clear channel timer
    *
-   * @param {ChannelKey} key
+   * @param {ChannelKey} key - key of channel to clear timer
    */
   public clearTimer(key: ChannelKey): void {
     const channel = this.getChannel(key);
@@ -188,7 +188,7 @@ export default class Buffer {
   /**
    * Flush channel buffer and return it's data
    *
-   * @param {ChannelKey} key
+   * @param {ChannelKey} key - key of channel to flush
    *
    * @return BufferData[]
    */
@@ -219,9 +219,9 @@ export default class Buffer {
   /**
    * Get channel buffer
    *
-   * @param {string} projectId
-   * @param {string} ruleId
-   * @param {string} channelName
+   * @param {string} projectId - id of project event is related to
+   * @param {string} ruleId - id of rule channel is related to
+   * @param {string} channelName - telegram, slack, or email
    */
   private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
     const project = this.getField<BufferSchema, ProjectSchema>(

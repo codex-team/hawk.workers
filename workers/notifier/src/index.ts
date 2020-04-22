@@ -29,6 +29,11 @@ export default class NotifierWorker extends Worker {
   private buffer: Buffer = new Buffer();
 
   /**
+   * Default period between messages in seconds
+   */
+  private DEFAULT_MIN_PERIOD = 60
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -102,7 +107,6 @@ export default class NotifierWorker extends Worker {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
-          this.logger.warn('Rule validation error', e);
           return false;
         }
 
@@ -121,6 +125,9 @@ export default class NotifierWorker extends Worker {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels);
 
     channels.forEach(async ([name, options]) => {
+      /**
+       * If channel is disabled by user, do not add event to it
+       */
       if (!options.isEnabled) {
         return;
       }
@@ -134,8 +141,11 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      const minPeriod = (options.minPeriod || 60) * 1000;
+      const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * 1000;
 
+      /**
+       * Set timer to send events after min period of time is passed
+       */
       this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
 
       await this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
