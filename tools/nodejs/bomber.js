@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Error bomber for nodejs hawk catcher
+ * @file Error bomber for nodejs hawk catcher
  */
 
 /* eslint-disable require-jsdoc*/
-var argv = require('yargs')
+const argv = require('yargs')
   .usage('Usage: $0 <command> [options]')
   .command('once', 'send error once')
   .example('$0 once', 'send error once and exit')
@@ -35,6 +35,7 @@ const CATCHER_TOKEN = process.env.CATCHER_TOKEN || 'randomtoken';
 
 /**
  * Errors type in randomize function
+ *
  * @type {number}
  */
 const ERRORS_TYPE_COUNT = 10;
@@ -43,12 +44,20 @@ const errorEmitter = new EventEmitter();
 
 const hawkCatcher = Hawk({
   url: CATCHER_URL,
-  accessToken: CATCHER_TOKEN
+  accessToken: CATCHER_TOKEN,
 });
 
+/**
+ * Custom error
+ */
 class MyError extends Error {}
 
 const main = async () => {
+  /**
+   * Function throws random error
+   *
+   * @returns {boolean}
+   */
   function namedFunc() {
     try {
       const ind = Math.floor(Math.random() * ERRORS_TYPE_COUNT);
@@ -102,6 +111,7 @@ const main = async () => {
           break;
         }
       }
+
       return true;
     } catch (e) {
       hawkCatcher.catchException(
@@ -133,8 +143,16 @@ const main = async () => {
   }
 };
 
+/**
+ * Returns random text
+ *
+ * @returns {string}
+ */
 function getRandomText() {
-  return randomWords({ min: 3, max: 10 }).join(' ');
+  return randomWords({
+    min: 3,
+    max: 10,
+  }).join(' ');
 }
 
 main();
