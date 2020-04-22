@@ -37,7 +37,7 @@ export default class CronManager {
     this.registryUrl = registryUrl;
     config.tasks.forEach(task => {
       const job = new CronJob(task.schedule, async () => {
-        await this.addTask(task.workerType, task.payload);
+        await this.addTask(task.workerType, task.payload || {});
       });
 
       this.jobs.push(job);
