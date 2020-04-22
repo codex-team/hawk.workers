@@ -64,7 +64,7 @@ export abstract class Worker {
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
-  private metricSuccessfullyProcessedMessages: client.Counter<string>;
+  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint
@@ -74,7 +74,7 @@ export abstract class Worker {
   /**
    * How many task Worker should do concurrently
    */
-  private readonly simultaneousTasks: number = +process.env.SIMULTANEOUS_TASKS || 1;
+  private readonly simultaneousTasks: number = +(process.env.SIMULTANEOUS_TASKS || 1);
 
   /**
    * Registry connection status true/false
@@ -90,13 +90,13 @@ export abstract class Worker {
   /**
    * Connection to Registry
    */
-  private registryConnection: amqp.Connection;
+  private registryConnection!: amqp.Connection;
 
   /**
    * Channel is a "transport-way" between Consumer and Registry inside the connection
    * One connection can has several channels.
    */
-  private channelWithRegistry: amqp.Channel;
+  private channelWithRegistry!: amqp.Channel;
 
   /**
    * {Map<Object, Promise>} tasksMap - current worker's tasks
@@ -138,7 +138,10 @@ export abstract class Worker {
       await this.connect();
     }
 
-    const { consumerTag } = await this.channelWithRegistry.consume(this.type, (msg: amqp.ConsumeMessage) => {
+    const { consumerTag } = await this.channelWithRegistry.consume(this.type, (msg: amqp.ConsumeMessage | null) => {
+      if (!msg) {
+        return;
+      }
       const promise = this.processMessage(msg) as Promise<void>;
 
       this.tasksMap.set(msg, promise);
