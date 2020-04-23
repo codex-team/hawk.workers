@@ -1,57 +1,7 @@
 {
     "blocks": [
         {
-            "type": "section",
-            "text": {
-                "type": "plain_text",
-                "emoji": true,
-                "text": "{{title}}"
-            }
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "*At {{line}} line*\n {{file}}"
-                }
-            ]
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "```{{sourceMessage}}```"
-                }
-            ]
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "`{{newCount}} new`    {{totalCount}} total     {{daysRepeating}} days repeating"
-                }
-            ]
-        },
-        {
-            "type": "divider"
-        },
-        {
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "style": "danger",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "View event"
-                    },
-                    "value": "click_me_123",
-                    "action_id": "button"
-                }
-            ]
+            "t": 1
         }
     ]
 }

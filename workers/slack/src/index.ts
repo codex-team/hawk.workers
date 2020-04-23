@@ -4,7 +4,10 @@ import * as pkg from '../package.json';
 import {DatabaseController} from "../../../lib/db/controller";
 import {Sender} from "./provider/sender";
 import WebhookSender from "./provider/webhook";
-import {Renderer, EventTypes} from "./renderer";
+import {Renderer} from "./renderer";
+import {TemplateEventData} from "../types/template-variables";
+import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
+
 
 /**
  * Slacker sender worker
@@ -54,19 +57,93 @@ export default class SlackSender extends Worker {
    *
    * @param {WorkerTask} task
    */
-  protected async handle(task): Promise<void> {
-    for (const {key: groupHash, count} of task.events) {
-      const connection = this.eventsDb.getConnection();
-      const event = await connection.collection(`events:${task.projectId}`).findOne({ groupHash });
-      const daysRepeated = await connection.collection(`dailyEvents:${task.projectId}`).countDocuments({
-        groupHash,
+  protected async handle({projectId, ruleId, events}): Promise<void> {
+    const project = await this.getProject(projectId);
+    const rule = project.notifications.find((r) => r._id.toString() === ruleId);
+
+    if (!project || !rule) {
+      return;
+    }
+
+    const endpoint = rule.channels.slack;
+
+    /**
+     * Send single Event
+     */
+    if (events.length === 1) {
+      const {
+        key: groupHash,
+        count
+      } = events[0];
+
+      const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
+
+      const message = this.renderer.renderNewEvent({
+        event,
+        daysRepeated,
+        count
       });
 
-      const message = this.renderer.render(event, daysRepeated,count, EventTypes.NEW);
       await this.sender.send(
-        task.endpoint,
+        endpoint,
+        message
+      );
+    }
+
+    /**
+     * Send Multiple Events
+     */
+    if (events.length > 1) {
+      const eventsData = await Promise.all(events.map(async ({key: groupHash, count}): Promise<TemplateEventData> => {
+        const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
+
+        return {
+          event,
+          daysRepeated,
+          count,
+        };
+      })) as TemplateEventData[];
+
+      const message = this.renderer.renderEvents(eventsData);
+      await this.sender.send(
+        endpoint,
         message
       );
     }
   }
+
+  /**
+   * Get project info
+   *
+   * @param {string} projectId - project id
+   * @return {Promise<Project>}
+   */
+  private async getProject(projectId: string): Promise<Project> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('projects').findOne({_id: new ObjectID(projectId)});
+  }
+
+  /**
+   * Get event and days repeating number by groupHash
+   *
+   * @param {string} projectId - project's identifier
+   * @param {string} groupHash - event's grouping hash
+   */
+  private async getEventDataByGroupHash(
+    projectId: string,
+    groupHash: string,
+  ): Promise<[GroupedEvent, number]> {
+    const connection = this.eventsDb.getConnection();
+    const event = await connection.collection(`events:${projectId}`).findOne({ groupHash });
+    const daysRepeated = await connection.collection(`dailyEvents:${projectId}`).countDocuments({
+      groupHash,
+    });
+
+    return [
+      event,
+      daysRepeated
+    ];
+  }
+
 }

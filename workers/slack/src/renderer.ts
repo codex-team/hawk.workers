@@ -1,14 +1,8 @@
-import {GroupedEvent} from "hawk-worker-grouper/types/grouped-event";
+import {TemplateEventData} from "../types/template-variables";
 import {IncomingWebhookSendArguments} from "@slack/webhook";
+import {Section} from "./renderer/section";
+import {Builder} from "./renderer/builder";
 const Templater = require('json-templater/object');
-
-/**
- * Event types
- * Renderer defines template according to this value
- */
-export enum EventTypes {
-  NEW,
-}
 
 /**
  * Renderer class
@@ -18,44 +12,11 @@ export class Renderer {
   /**
    * Returns JSON template
    *
-   * @param {GroupedEvent} event
-   * @param {number} daysRepeating
-   * @param {number} newCount
-   * @param {number} type - type of event to define template
+   * @param {TemplateEventData}
    *
    * @return {IncomingWebhookSendArguments}
    */
-  public render(
-    event: GroupedEvent,
-    daysRepeating: number,
-    newCount: number,
-    type: number
-  ): IncomingWebhookSendArguments {
-    let template = {};
-
-    switch (type) {
-      case EventTypes.NEW:
-        template = this.processNewEvent(event, daysRepeating, newCount);
-        break;
-    }
-
-    return template;
-  }
-
-  /**
-   * Gets template and replaces default value
-   *
-   * @param {GroupedEvent} event
-   * @param {number} daysRepeating
-   * @param {number} newCount
-   *
-   * @return {IncomingWebhookSendArguments}
-   */
-  private processNewEvent(
-    event: GroupedEvent,
-    daysRepeating: number,
-    newCount: number
-  ): IncomingWebhookSendArguments {
+  public renderNewEvent({ event, daysRepeated, count }: TemplateEventData): IncomingWebhookSendArguments {
     const template = this.getTemplate('new-event');
     const lastBacktrace = event.payload.backtrace.pop();
 
@@ -76,10 +37,22 @@ export class Renderer {
         file: lastBacktrace.file,
         sourceMessage: sourceLineMessages.join("\n"),
         totalCount: event.totalCount,
-        daysRepeating: daysRepeating,
-        newCount: newCount
+        daysRepeating: daysRepeated,
+        newCount: count
       }
     );
+  }
+
+  /**
+   * @param digestVariables
+   */
+  public renderDigest(digestVariables: TemplateEventData[])
+  {
+    const builder = new Builder();
+
+    const section = new Section();
+    builder.addBlock(section);
+    builder.buildMessage();
   }
 
   /**
