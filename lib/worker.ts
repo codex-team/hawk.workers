@@ -64,7 +64,7 @@ export abstract class Worker {
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
-  private metricSuccessfullyProcessedMessages: client.Counter<string>;
+  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint

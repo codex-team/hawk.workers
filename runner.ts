@@ -66,7 +66,7 @@ class WorkerRunner {
   /**
    * Run metrics exporter
    */
-  private startMetrics(): Promise<void> {
+  private startMetrics(): void {
     if (!process.env.PROMETHEUS_PUSHGATEWAY) {
       return;
     }
