@@ -64,7 +64,7 @@ export abstract class Worker {
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
-  private metricSuccessfullyProcessedMessages: client.Counter<string>;
+  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint
@@ -264,9 +264,9 @@ export abstract class Worker {
       this.channelWithRegistry.ack(msg);
 
       /**
-       * Increment counter of successfully processed messages
+       * Increment counter of successfully processed messages if metrics are enabled
        */
-      this.metricSuccessfullyProcessedMessages.inc();
+      this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
