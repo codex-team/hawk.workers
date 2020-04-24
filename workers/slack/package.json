@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@slack/webhook": "^5.0.3",
-    "json-templater": "^1.2.0"
+    "json-templater": "^1.2.0",
+    "slack-block-kit": "^0.9.9"
   }
 }

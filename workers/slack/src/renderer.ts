@@ -1,8 +1,10 @@
 import {TemplateEventData} from "../types/template-variables";
 import {IncomingWebhookSendArguments} from "@slack/webhook";
-import {Section} from "./renderer/section";
-import {Builder} from "./renderer/builder";
-const Templater = require('json-templater/object');
+import { block, element, object, TEXT_FORMAT_MRKDWN, TEXT_FORMAT_PLAIN } from 'slack-block-kit'
+
+const { text } = object;
+const { button } = element;
+const { section, actions, divider, context } = block;
 
 /**
  * Renderer class
@@ -17,7 +19,6 @@ export class Renderer {
    * @return {IncomingWebhookSendArguments}
    */
   public renderNewEvent({ event, daysRepeated, count }: TemplateEventData): IncomingWebhookSendArguments {
-    const template = this.getTemplate('new-event');
     const lastBacktrace = event.payload.backtrace.pop();
 
     const sourceLineMessages = [];
@@ -29,38 +30,85 @@ export class Renderer {
       }
     }
 
-    return Templater(
-      template,
-      {
-        title: event.payload.title,
-        line: lastBacktrace.line,
-        file: lastBacktrace.file,
-        sourceMessage: sourceLineMessages.join("\n"),
-        totalCount: event.totalCount,
-        daysRepeating: daysRepeated,
-        newCount: count
-      }
-    );
+    const blocks = [
+      section(
+        text(event.payload.title),
+        TEXT_FORMAT_PLAIN
+      ),
+      context([
+        text(`*At ${lastBacktrace.line} line*\n ${lastBacktrace.file}`, TEXT_FORMAT_MRKDWN)
+      ]),
+      context([
+        text(`\`\`\`${sourceLineMessages}\`\`\``, TEXT_FORMAT_MRKDWN)
+      ]),
+      context([
+        text(`\`${count} new \` ${event.totalCount} total ${daysRepeated} days repeating`, TEXT_FORMAT_MRKDWN)
+      ]),
+      divider(),
+      actions([
+        button('action', "Tete", {
+          style: 'danger'
+        })
+      ])
+    ];
+
+    return blocks as IncomingWebhookSendArguments;
   }
 
   /**
    * @param digestVariables
    */
-  public renderDigest(digestVariables: TemplateEventData[])
+  public renderDigest(digestVariables: TemplateEventData[]): IncomingWebhookSendArguments
   {
-    const builder = new Builder();
+    const blocks = [
+      // 1 event
+      context([
+        text("You have 46 new events for the last 1 hour", TEXT_FORMAT_MRKDWN)
+      ]),
+      divider(),
+      section(
+        text("he request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission."),
+        {
+          accessory: button('action', 'Details', {})
+        }
+      ),
 
-    const section = new Section();
-    builder.addBlock(section);
-    builder.buildMessage();
-  }
+      // 2 event
+      context([
+        text(">class.AndropovVideo.js   |   12 new   348 total", TEXT_FORMAT_MRKDWN)
+      ]),
+      divider(),
+      section(
+        text("The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission."),
+        {
+          accessory: button('action', 'Details', {})
+        }
+      ),
 
-  /**
-   * Returns JSON template of prepared message
-   * @param {string} name - template name
-   */
-  private getTemplate(name: string): IncomingWebhookSendArguments
-  {
-    return require(`./templates/${name}.json`);
+      // 3 event
+      context([
+        text(">class.AndropovVideo.js   |   12 new   348 total", TEXT_FORMAT_MRKDWN)
+      ]),
+      divider(),
+      section(
+        text("The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission."),
+        {
+          accessory: button('action', 'Details', {})
+        }
+      ),
+
+      // footer
+      context([
+        text(">class.AndropovVideo.js   |   12 new   348 total", TEXT_FORMAT_MRKDWN)
+      ]),
+      divider(),
+      actions([
+        button('action', 'and 41 more...', {
+          style: 'danger'
+        })
+      ])
+    ];
+
+    return block as IncomingWebhookSendArguments;
   }
 }
