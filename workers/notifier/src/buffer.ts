@@ -1,4 +1,4 @@
-'use string';
+'use strict';
 
 import Timeout = NodeJS.Timeout;
 

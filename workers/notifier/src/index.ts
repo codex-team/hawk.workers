@@ -1,4 +1,4 @@
-'use string';
+'use strict';
 
 import { ObjectID } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';

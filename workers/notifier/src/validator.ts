@@ -1,4 +1,4 @@
-'use string';
+'use strict';
 
 import { NotifierEvent } from '../types/notifier-task';
 import { Rule } from '../types/rule';
