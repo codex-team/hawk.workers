@@ -1,3 +1,5 @@
+'use string';
+
 import { ObjectID } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
@@ -37,7 +39,7 @@ export default class NotifierWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect(process.env.ACCOUNTS_DB_NAME);
+    await this.db.connect(process.env.ACCOUNTS_DB_NAME!);
     await super.start();
   }
 
@@ -94,7 +96,7 @@ export default class NotifierWorker extends Worker {
    * @returns {Promise<Rule[]>}
    */
   private async getFittedRules(projectId: string, event: NotifierEvent): Promise<Rule[]> {
-    let rules = [];
+    let rules: Rule[] = [];
 
     try {
       rules = await this.getProjectNotificationRules(projectId);
@@ -103,7 +105,7 @@ export default class NotifierWorker extends Worker {
     }
 
     return rules
-      .filter((rule: any) => {
+      .filter((rule) => {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
@@ -122,7 +124,7 @@ export default class NotifierWorker extends Worker {
    * @param {NotifierEvent} event - received event
    */
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
-    const channels: Array<[string, Channel]> = Object.entries(rule.channels);
+    const channels: Array<[string, Channel]> = Object.entries(rule.channels as {[name: string]: Channel});
 
     channels.forEach(async ([name, options]) => {
       /**

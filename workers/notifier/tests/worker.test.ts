@@ -26,11 +26,11 @@ const rule = {
       minPeriod: 0.5,
     },
   },
-};
+} as any;
 
 let dbQueryMock = jest.fn(() => ({
   notifications: [ rule ],
-}));
+})) as any;
 
 const dbCollectionMock = jest.fn(() => {
   return {
@@ -57,7 +57,7 @@ class mockDBController {
    *
    * @param args - connect arguments
    */
-  public connect(...args): any {
+  public connect(...args: any[]): any {
     return dbConnectMock(...args);
   }
 

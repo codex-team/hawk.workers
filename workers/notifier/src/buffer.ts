@@ -1,3 +1,5 @@
+'use string';
+
 import Timeout = NodeJS.Timeout;
 
 /**
@@ -20,7 +22,7 @@ interface ChannelSchema {
   /**
    * Channel timer
    */
-  timer: Timeout;
+  timer: Timeout | null;
 }
 
 /**
@@ -79,7 +81,7 @@ export default class Buffer {
   /**
    * Add event to channel's buffer
    *
-   * @param {EventKey} key - key of event to increment
+   * @param key - key of event to increment
    */
   public push(key: EventKey): void {
     const eventKey = key[3];
@@ -93,16 +95,14 @@ export default class Buffer {
   /**
    * Get channel data
    *
-   * @param {ChannelKey} key - key of channel to retrieve
-   *
-   * @returns {BufferData[]}
+   * @param key - key of channel to retrieve
    */
   public get(key: ChannelKey): BufferData[];
 
   /**
    * Get event data
    *
-   * @param {EventKey} key - key of event to get
+   * @param key - key of event to get
    *
    * @returns {number} - number of events received for minPeriod
    */
@@ -112,9 +112,7 @@ export default class Buffer {
   /**
    * Implementation of two methods above
    *
-   * @param {ChannelKey|EventKey} arg - Channel or Event key
-   *
-   * @returns {BufferData[]|number}
+   * @param arg - Channel or Event key
    */
   // eslint-disable-next-line no-dupe-class-members
   public get(arg: ChannelKey | EventKey): BufferData[] | number {
@@ -137,7 +135,7 @@ export default class Buffer {
   /**
    * Return size of channel's buffer
    *
-   * @param {ChannelKey} key - key of channel to get size of
+   * @param key - key of channel to get size of
    *
    * @returns {number}
    */
@@ -148,9 +146,9 @@ export default class Buffer {
   /**
    * Set timer for channel
    *
-   * @param {ChannelKey} key - key of channel to set timer to
-   * @param {number} timeout - timer timeout time in ms
-   * @param {Function} callback - callback to call on timeot
+   * @param key - key of channel to set timer to
+   * @param timeout - timer timeout time in ms
+   * @param callback - callback to call on timeot
    */
   public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void): Timeout {
     const channel = this.getChannel(key);
@@ -167,11 +165,11 @@ export default class Buffer {
   /**
    * Get channel timer
    *
-   * @param {ChannelKey} key - key of channel to get timer
+   * @param key - key of channel to get timer
    *
    * @returns {Timeout}
    */
-  public getTimer(key: ChannelKey): Timeout {
+  public getTimer(key: ChannelKey): Timeout | null {
     const channel = this.getChannel(key);
 
     return channel.timer;
@@ -180,12 +178,14 @@ export default class Buffer {
   /**
    * Clear channel timer
    *
-   * @param {ChannelKey} key - key of channel to clear timer
+   * @param key - key of channel to clear timer
    */
   public clearTimer(key: ChannelKey): void {
     const channel = this.getChannel(key);
 
-    clearTimeout(channel.timer);
+    if (channel.timer) {
+      clearTimeout(channel.timer);
+    }
 
     channel.timer = null;
   }
@@ -193,9 +193,7 @@ export default class Buffer {
   /**
    * Flush channel buffer and return it's data
    *
-   * @param {ChannelKey} key - key of channel to flush
-   *
-   * @returns BufferData[]
+   * @param key - key of channel to flush
    */
   public flush(key: ChannelKey): BufferData[] {
     const channel = this.getChannel(key);
@@ -230,18 +228,18 @@ export default class Buffer {
    * @param {string} channelName - telegram, slack, or email
    */
   private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
-    const project = this.getField<BufferSchema, ProjectSchema>(
+    const project = this.getField<ProjectSchema>(
       this.projects,
       projectId,
       {}
     );
-    const rule = this.getField<ProjectSchema, RuleSchema>(
+    const rule = this.getField<RuleSchema>(
       project,
       ruleId,
       {}
     );
 
-    return this.getField<RuleSchema, ChannelSchema>(
+    return this.getField<ChannelSchema>(
       rule,
       channelName,
       {
@@ -254,14 +252,12 @@ export default class Buffer {
   /**
    * Helper method to get object field and set default value if one doesn't exist
    *
-   * @param {T = any} obj — any object
-   * @param {string} field — field to get
-   * @param {V = any} defaultValue - default value to set if field doesn't exist
-   *
-   * @returns {V} — fields value
+   * @param obj — any object
+   * @param field — field to get
+   * @param defaultValue - default value to set if field doesn't exist
    */
-  private getField<T = any, V = any>(
-    obj: T,
+  private getField<V>(
+    obj: {[key: string]: V},
     field: string,
     defaultValue: V
   ): V {

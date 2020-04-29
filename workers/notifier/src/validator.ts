@@ -1,3 +1,5 @@
+'use string';
+
 import { NotifierEvent } from '../types/notifier-task';
 import { Rule } from '../types/rule';
 
@@ -29,7 +31,7 @@ export default class RuleValidator {
    * @param {Rule} rule - rule to validate
    * @param {NotifierEvent} event - received event
    */
-  constructor(rule, event) {
+  constructor(rule: Rule, event: NotifierEvent) {
     this.event = event;
     this.rule = rule;
   }

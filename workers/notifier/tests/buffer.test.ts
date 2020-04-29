@@ -17,7 +17,7 @@ describe('Buffer', () => {
     });
 
     it('should return default value if field doesn\'t exist', () => {
-      const obj = {};
+      const obj = {} as any;
       const buffer = new Buffer();
 
       // @ts-ignore
