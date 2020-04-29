@@ -1,3 +1,5 @@
+'use strict';
+
 import Timeout = NodeJS.Timeout;
 
 /**
@@ -20,7 +22,7 @@ interface ChannelSchema {
   /**
    * Channel timer
    */
-  timer: Timeout;
+  timer: Timeout | null;
 }
 
 /**
@@ -79,7 +81,7 @@ export default class Buffer {
   /**
    * Add event to channel's buffer
    *
-   * @param {EventKey} key
+   * @param key - key of event to increment
    */
   public push(key: EventKey): void {
     const eventKey = key[3];
@@ -93,28 +95,26 @@ export default class Buffer {
   /**
    * Get channel data
    *
-   * @param {ChannelKey} key
-   *
-   * @return {BufferData[]}
+   * @param key - key of channel to retrieve
    */
   public get(key: ChannelKey): BufferData[];
 
   /**
    * Get event data
    *
-   * @param {EventKey} key
+   * @param key - key of event to get
    *
-   * @return {number} - number of events received for minPeriod
+   * @returns {number} - number of events received for minPeriod
    */
+  // eslint-disable-next-line no-dupe-class-members
   public get(key: EventKey): number;
 
   /**
    * Implementation of two methods above
    *
-   * @param {ChannelKey|EventKey} arg - key
-   *
-   * @return {BufferData[]|number}
+   * @param arg - Channel or Event key
    */
+  // eslint-disable-next-line no-dupe-class-members
   public get(arg: ChannelKey | EventKey): BufferData[] | number {
     const [projectId, ruleId, channelName, key] = arg;
 
@@ -126,15 +126,18 @@ export default class Buffer {
 
     return Object
       .entries(channel.payload)
-      .map(([k, count]) => ({key: k, count}));
+      .map(([k, count]) => ({
+        key: k,
+        count,
+      }));
   }
 
   /**
    * Return size of channel's buffer
    *
-   * @param {ChannelKey} key
+   * @param key - key of channel to get size of
    *
-   * @return {number}
+   * @returns {number}
    */
   public size(key: ChannelKey): number {
     return this.get(key).length;
@@ -143,17 +146,17 @@ export default class Buffer {
   /**
    * Set timer for channel
    *
-   * @param {ChannelKey} key
-   * @param {number} timeout
-   * @param {function} callback
+   * @param key - key of channel to set timer to
+   * @param timeout - timer timeout time in ms
+   * @param callback - callback to call on timeot
    */
-  public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void) {
+  public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void): Timeout {
     const channel = this.getChannel(key);
 
     channel.timer = setTimeout(
       callback,
       timeout,
-      key,
+      key
     );
 
     return channel.timer;
@@ -162,11 +165,11 @@ export default class Buffer {
   /**
    * Get channel timer
    *
-   * @param {ChannelKey} key
+   * @param key - key of channel to get timer
    *
-   * @return {Timeout}
+   * @returns {Timeout}
    */
-  public getTimer(key: ChannelKey): Timeout {
+  public getTimer(key: ChannelKey): Timeout | null {
     const channel = this.getChannel(key);
 
     return channel.timer;
@@ -175,12 +178,14 @@ export default class Buffer {
   /**
    * Clear channel timer
    *
-   * @param {ChannelKey} key
+   * @param key - key of channel to clear timer
    */
   public clearTimer(key: ChannelKey): void {
     const channel = this.getChannel(key);
 
-    clearTimeout(channel.timer);
+    if (channel.timer) {
+      clearTimeout(channel.timer);
+    }
 
     channel.timer = null;
   }
@@ -188,9 +193,7 @@ export default class Buffer {
   /**
    * Flush channel buffer and return it's data
    *
-   * @param {ChannelKey} key
-   *
-   * @return BufferData[]
+   * @param key - key of channel to flush
    */
   public flush(key: ChannelKey): BufferData[] {
     const channel = this.getChannel(key);
@@ -210,6 +213,7 @@ export default class Buffer {
   public flushAll(projectId?: string): void {
     if (projectId) {
       this.projects[projectId] = {};
+
       return;
     }
 
@@ -219,42 +223,43 @@ export default class Buffer {
   /**
    * Get channel buffer
    *
-   * @param {string} projectId
-   * @param {string} ruleId
-   * @param {string} channelName
+   * @param {string} projectId - id of project event is related to
+   * @param {string} ruleId - id of rule channel is related to
+   * @param {string} channelName - telegram, slack, or email
    */
   private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
-    const project = this.getField<BufferSchema, ProjectSchema>(
+    const project = this.getField<ProjectSchema>(
       this.projects,
       projectId,
-      {},
+      {}
     );
-    const rule = this.getField<ProjectSchema, RuleSchema>(
+    const rule = this.getField<RuleSchema>(
       project,
       ruleId,
-      {},
-      );
+      {}
+    );
 
-    return this.getField<RuleSchema, ChannelSchema>(
+    return this.getField<ChannelSchema>(
       rule,
       channelName,
-      {payload: {}, timer: null},
+      {
+        payload: {},
+        timer: null,
+      }
     );
   }
 
   /**
    * Helper method to get object field and set default value if one doesn't exist
    *
-   * @param {T = any} obj — any object
-   * @param {string} field — field to get
-   * @param {V = any} defaultValue - default value to set if field doesn't exist
-   *
-   * @return {V} — fields value
+   * @param obj — any object
+   * @param field — field to get
+   * @param defaultValue - default value to set if field doesn't exist
    */
-  private getField<T = any, V = any>(
-    obj: T,
+  private getField<V>(
+    obj: {[key: string]: V},
     field: string,
-    defaultValue: V,
+    defaultValue: V
   ): V {
     if (!(field in obj)) {
       obj[field] = defaultValue;

@@ -1,18 +1,14 @@
-import * as path from 'path';
-import {DatabaseController} from '../../../lib/db/controller';
-import {EventWorker} from '../../../lib/event-worker';
-import {BacktraceFrame, SourceCodeLine} from '../../../lib/types/event-worker-task';
-import {DatabaseError} from '../../../lib/worker';
+import { DatabaseController } from '../../../lib/db/controller';
+import { EventWorker } from '../../../lib/event-worker';
 import * as WorkerNames from '../../../lib/workerNames';
-import {GroupWorkerTask} from '../../grouper/types/group-worker-task';
+import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import * as pkg from '../package.json';
-import {PythonEventWorkerTask} from '../types/python-event-worker-task';
+import { PythonEventWorkerTask } from '../types/python-event-worker-task';
 
 /**
  * Worker for handling Python events
  */
 export default class PythonEventWorker extends EventWorker {
-
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -22,10 +18,6 @@ export default class PythonEventWorker extends EventWorker {
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController();
-
-  constructor() {
-    super();
-  }
 
   /**
    * Start consuming messages
@@ -45,6 +37,8 @@ export default class PythonEventWorker extends EventWorker {
 
   /**
    * Message handle function
+   *
+   * @param event - event to handle
    */
   public async handle(event: PythonEventWorkerTask): Promise<void> {
     await this.addTask(WorkerNames.GROUPER, {
@@ -53,5 +47,4 @@ export default class PythonEventWorker extends EventWorker {
       event: event.payload,
     } as GroupWorkerTask);
   }
-
 }

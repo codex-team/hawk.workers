@@ -1,5 +1,5 @@
 import { ObjectID } from 'mongodb';
-import {Channel, ChannelType} from './channel';
+import { Channel, ChannelType } from './channel';
 
 /**
  * WhatToReceive property values

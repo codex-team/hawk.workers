@@ -1,6 +1,11 @@
-import {NotifierEvent} from '../types/notifier-task';
-import {Rule} from '../types/rule';
+'use strict';
 
+import { NotifierEvent } from '../types/notifier-task';
+import { Rule } from '../types/rule';
+
+/**
+ * WhatToReceive property values
+ */
 export enum WhatToReceive {
   All = 'ALL',
   New = 'ONLY_NEW',
@@ -26,7 +31,7 @@ export default class RuleValidator {
    * @param {Rule} rule - rule to validate
    * @param {NotifierEvent} event - received event
    */
-  constructor(rule, event) {
+  constructor(rule: Rule, event: NotifierEvent) {
     this.event = event;
     this.rule = rule;
   }
@@ -36,10 +41,10 @@ export default class RuleValidator {
    *
    * @throws {Error} if rule is disabled
    *
-   * @return {RuleValidator}
+   * @returns {RuleValidator}
    */
   public checkIfRuleIsOn(): RuleValidator {
-    const {rule} = this;
+    const { rule } = this;
 
     if (!rule.isEnabled) {
       throw Error('Rule is disabled');
@@ -53,12 +58,12 @@ export default class RuleValidator {
    *
    * @throws {Error} if event doesn't fit
    *
-   * @return {RuleValidator}
+   * @returns {RuleValidator}
    */
   public checkWhatToReceive(): RuleValidator {
-    const {rule, event} = this;
-    const result = rule.whatToReceive === WhatToReceive.All
-      || (event.isNew && rule.whatToReceive === WhatToReceive.New);
+    const { rule, event } = this;
+    const result = rule.whatToReceive === WhatToReceive.All ||
+      (event.isNew && rule.whatToReceive === WhatToReceive.New);
 
     if (!result) {
       throw Error('Event doesn\'t match `what to receive` filter');
@@ -72,11 +77,11 @@ export default class RuleValidator {
    *
    * @throws {Error} if event title doesn't include required words
    *
-   * @return {RuleValidator}
+   * @returns {RuleValidator}
    */
   public checkIncludingWords(): RuleValidator {
-    const {rule, event} = this;
-    const {including = []} = rule;
+    const { rule, event } = this;
+    const { including = [] } = rule;
     let result;
 
     if (!including.length) {
@@ -97,11 +102,11 @@ export default class RuleValidator {
    *
    * @throws {Error} if title contains excluding words
    *
-   * @return {RuleValidator}
+   * @returns {RuleValidator}
    */
   public checkExcludingWords(): RuleValidator {
-    const {rule, event} = this;
-    const {excluding = []} = rule;
+    const { rule, event } = this;
+    const { excluding = [] } = rule;
     let result;
 
     if (!excluding.length) {
@@ -122,7 +127,7 @@ export default class RuleValidator {
    *
    * @throws {Error} if some of checks doesn't fit
    *
-   * @return {RuleValidator}
+   * @returns {RuleValidator}
    */
   public checkAll(): RuleValidator {
     return this

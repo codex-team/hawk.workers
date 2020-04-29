@@ -15,6 +15,7 @@ const main = async () => {
 
   /**
    * Unhandled exception handler
+   *
    * @param {Error} err - Exception
    */
   const exceptionHandler = err => {

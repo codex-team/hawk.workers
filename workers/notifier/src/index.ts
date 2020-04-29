@@ -1,12 +1,14 @@
-import {ObjectID} from 'mongodb';
-import {DatabaseController} from '../../../lib/db/controller';
-import {Worker} from '../../../lib/worker';
+'use strict';
+
+import { ObjectID } from 'mongodb';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import {Channel} from '../types/channel';
-import {NotifierEvent, NotifierWorkerTask} from '../types/notifier-task';
-import {Rule} from '../types/rule';
-import {SenderWorkerTask} from '../types/sender-task';
-import Buffer, {BufferData, ChannelKey, EventKey} from './buffer';
+import { Channel } from '../types/channel';
+import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
+import { Rule } from '../types/rule';
+import { SenderWorkerTask } from '../types/sender-task';
+import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
 
 /**
@@ -29,10 +31,15 @@ export default class NotifierWorker extends Worker {
   private buffer: Buffer = new Buffer();
 
   /**
+   * Default period between messages in seconds
+   */
+  private DEFAULT_MIN_PERIOD = 60
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect(process.env.ACCOUNTS_DB_NAME);
+    await this.db.connect(process.env.ACCOUNTS_DB_NAME!);
     await super.start();
   }
 
@@ -69,7 +76,7 @@ export default class NotifierWorker extends Worker {
    */
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
-      const {projectId, event} = task;
+      const { projectId, event } = task;
 
       const rules = await this.getFittedRules(projectId, event);
 
@@ -86,10 +93,10 @@ export default class NotifierWorker extends Worker {
    *
    * @param {string} projectId — project id event is related to
    * @param {NotifierEvent} event — received event
-   * @return {Promise<Rule[]>}
+   * @returns {Promise<Rule[]>}
    */
   private async getFittedRules(projectId: string, event: NotifierEvent): Promise<Rule[]> {
-    let rules = [];
+    let rules: Rule[] = [];
 
     try {
       rules = await this.getProjectNotificationRules(projectId);
@@ -98,11 +105,10 @@ export default class NotifierWorker extends Worker {
     }
 
     return rules
-      .filter((rule: any) => {
+      .filter((rule) => {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
-          this.logger.warn('Rule validation error', e);
           return false;
         }
 
@@ -118,9 +124,12 @@ export default class NotifierWorker extends Worker {
    * @param {NotifierEvent} event - received event
    */
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
-    const channels: Array<[string, Channel]> = Object.entries(rule.channels);
+    const channels: Array<[string, Channel]> = Object.entries(rule.channels as {[name: string]: Channel});
 
     channels.forEach(async ([name, options]) => {
+      /**
+       * If channel is disabled by user, do not add event to it
+       */
       if (!options.isEnabled) {
         return;
       }
@@ -134,11 +143,17 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      const minPeriod = (options.minPeriod || 60) * 1000;
+      const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * 1000;
 
+      /**
+       * Set timer to send events after min period of time is passed
+       */
       this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
 
-      await this.sendToSenderWorker(channelKey, [{key: event.groupHash, count: 1}]);
+      await this.sendToSenderWorker(channelKey, [ {
+        key: event.groupHash,
+        count: 1,
+      } ]);
     });
   }
 
@@ -180,13 +195,13 @@ export default class NotifierWorker extends Worker {
    *
    * @param {string} projectId - project id event is related to
    *
-   * @return {Promise<Rule[]>} - project notification rules
+   * @returns {Promise<Rule[]>} - project notification rules
    */
   private async getProjectNotificationRules(projectId: string): Promise<Rule[]> {
     const connection = this.db.getConnection();
     const projects = connection.collection('projects');
 
-    const project = await projects.findOne({_id: new ObjectID(projectId)});
+    const project = await projects.findOne({ _id: new ObjectID(projectId) });
 
     if (!project) {
       throw new Error('There is no project with given id');

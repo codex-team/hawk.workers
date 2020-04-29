@@ -4,6 +4,9 @@ import * as utils from './lib/utils';
 /* Prometheus client for pushing metrics to the pushgateway */
 import * as promClient from 'prom-client';
 import * as url from 'url';
+import { Worker } from './lib/worker';
+
+type WorkerConstructor = new () => Worker;
 
 /**
  * Get worker name(s) from command line arguments
@@ -11,7 +14,7 @@ import * as url from 'url';
  * @example ts-node runner.ts hawk-worker-javascript
  * @example ts-node runner.ts hawk-worker-javascript hawk-worker-nodejs
  */
-const workers = process.argv.slice(2);
+const workerNames = process.argv.slice(2);
 
 /**
  * Workers dispatcher.
@@ -27,6 +30,7 @@ class WorkerRunner {
 
   /**
    * Create runner instance
+   *
    * @param {string[]} workers - workers package names
    */
   constructor(workers: string[]) {
@@ -36,8 +40,8 @@ class WorkerRunner {
      * 3. Observe process kill and errors to correctly finish workers
      */
     this.loadPackages()
-      .then((workers) => {
-        this.constructWorkers(workers);
+      .then((workerConstructors) => {
+        this.constructWorkers(workerConstructors);
       })
       .then(() => {
         try {
@@ -45,6 +49,7 @@ class WorkerRunner {
         } catch (e) {
           console.error(`Metrics not started: ${e}`);
         }
+
         return Promise.resolve();
       })
       .then(() => {
@@ -61,7 +66,7 @@ class WorkerRunner {
   /**
    * Run metrics exporter
    */
-  private startMetrics() {
+  private startMetrics(): void {
     if (!process.env.PROMETHEUS_PUSHGATEWAY) {
       return;
     }
@@ -71,12 +76,14 @@ class WorkerRunner {
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
     const Registry = promClient.Registry;
     const register = new Registry();
+
+    // eslint-disable-next-line node/no-deprecated-api
     const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY).host;
 
     // Initialize metrics for workers
     this.workers.forEach((worker) => {
       worker.initMetrics();
-      worker.getMetrics().forEach((metric) => register.registerMetric(metric));
+      worker.getMetrics().forEach((metric: promClient.Counter<string>) => register.registerMetric(metric));
     });
 
     collectDefaultMetrics({ register });
@@ -90,10 +97,12 @@ class WorkerRunner {
           jobName: 'workers',
           groupings: {
             type: worker.type.replace('/', '_'),
-            instance,
+            instance: instance,
           },
-        }, (err, resp, body) => {
-          if (err) { console.log(`Error of pushing metrics to gateway: ${err}`); }
+        }, (err: Error) => {
+          if (err) {
+            console.log(`Error of pushing metrics to gateway: ${err}`);
+          }
         });
       });
     }, 1000);
@@ -102,22 +111,24 @@ class WorkerRunner {
   /**
    * Dynamically loads workers through the yarn workspaces
    */
-  private async loadPackages() {
-    return await workers.reduce(async (accumulator, packageName) => {
+  private async loadPackages(): Promise<WorkerConstructor[]> {
+    return workerNames.reduce(async (accumulator, packageName) => {
       const workers = await accumulator;
 
-      const workerClass = await import(`${packageName}`);
+      const workerClass = (await import(`${packageName}`)) as {default: WorkerConstructor};
 
       workers.push(workerClass.default);
 
       return workers;
-    }, Promise.resolve([]));
+    }, Promise.resolve([] as WorkerConstructor[]));
   }
 
   /**
    * Starts worker classes
+   *
+   * @param workers
    */
-  private constructWorkers(workers) {
+  private constructWorkers(workers: WorkerConstructor[]): void {
     return workers.forEach((WorkerClass) => {
       this.workers.push(new WorkerClass());
     });
@@ -126,7 +137,7 @@ class WorkerRunner {
   /**
    * Run workers
    */
-  private async startWorkers() {
+  private async startWorkers(): Promise<void[]> {
     return Promise.all(
       this.workers.map(async (worker) => {
         try {
@@ -134,11 +145,10 @@ class WorkerRunner {
 
           console.log(
             '\x1b[32m%s\x1b[0m',
-            `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`,
+            `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`
           );
 
           utils.sendReport(worker.constructor.name + ' started');
-
         } catch (startingError) {
           this.exceptionHandler(startingError);
 
@@ -148,7 +158,7 @@ class WorkerRunner {
 
           await this.stopWorker(worker);
         }
-      }),
+      })
     );
   }
 
@@ -156,11 +166,13 @@ class WorkerRunner {
    * - Error on worker starting
    * - Uncaught Exception at Runner work
    * - Unhandled Promise Rejection at Runner work
+   *
+   * @param error - error to handle
    */
-  private exceptionHandler(error: Error) {
+  private exceptionHandler(error: Error): void {
     console.log(
       '\x1b[41m%s\x1b[0m',
-      '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n',
+      '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n'
     );
     console.log(error);
     if (error === undefined) {
@@ -168,13 +180,13 @@ class WorkerRunner {
     }
     console.log('\n\n');
 
-    utils.sendReport('Error has been occurred: ' + (error ? error.message : 'unknown') );
+    utils.sendReport('Error has been occurred: ' + (error ? error.message : 'unknown'));
   }
 
   /**
    * Finish workers when something happened with the process
    */
-  private observeProcess() {
+  private observeProcess(): void {
     process.on('SIGINT', async () => {
       console.log('SIGINT');
 
@@ -202,7 +214,7 @@ class WorkerRunner {
         await this.finishAll();
 
         process.exit();
-      },
+      }
     );
     process.on('unhandledRejection', async (event) => {
       this.exceptionHandler(event as Error);
@@ -215,14 +227,16 @@ class WorkerRunner {
 
   /**
    * Stops one worker
+   *
+   * @param worker - worker instance to stop
    */
-  private async stopWorker(worker) {
+  private async stopWorker(worker: Worker): Promise<void> {
     try {
       await worker.finish();
 
       console.log(
         '\x1b[33m%s\x1b[0m',
-        `\n\n Worker ${worker.constructor.name} stopped \n`,
+        `\n\n Worker ${worker.constructor.name} stopped \n`
       );
     } catch (finishingError) {
       console.error('Error while finishing Worker: ', finishingError);
@@ -232,14 +246,14 @@ class WorkerRunner {
   /**
    * Stops all workers
    */
-  private async finishAll() {
+  private async finishAll(): Promise<void[]> {
     return Promise.all(
       this.workers.map(async (worker) => {
-        return await this.stopWorker(worker);
-      }),
+        return this.stopWorker(worker);
+      })
     );
   }
 }
 
-// tslint:disable-next-line: no-unused-expression
-new WorkerRunner(workers);
+// eslint-disable-next-line no-new
+new WorkerRunner(workerNames);
