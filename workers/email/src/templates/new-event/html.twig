@@ -2,6 +2,11 @@
 
 {% block content %}
 
+    {% set event = events[0].event %}
+    {% set daysRepeated = events[0].daysRepeated %}
+    {% set newCount = events[0].newCount %}
+    {% set usersAffected = events[0].usersAffected %}
+
     <tr>
         <td align="center" style="padding: 30px 0">
             <font color="rgba(219, 230, 255, 0.6);"

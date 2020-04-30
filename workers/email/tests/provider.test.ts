@@ -1,4 +1,5 @@
-import {NewEventTemplateVariables, SeveralEventsTemplateVariables} from '../types/template-variables';
+/* eslint-disable */
+import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 
 const nodemailerMock = jest.genMockFromModule('nodemailer') as any;
 const sendMailMock = jest.fn();
@@ -9,14 +10,13 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
+import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';
-import { Project } from '../types/project';
+import { Project } from 'hawk-worker-sender/types/project';
 
 describe('EmailProvider', () => {
-
   describe('SMTP Transport', () => {
     it('should create nodemailer transporter with config on construct', () => {
       const provider = new EmailProvider(console as any);
@@ -36,7 +36,7 @@ describe('EmailProvider', () => {
         text: '',
       }));
 
-      await provider.send(to, Templates.NewEvent, {});
+      await provider.send(to, {events: [{event: {}}], project: {}} as any);
 
       const options = {
         from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
@@ -52,25 +52,28 @@ describe('EmailProvider', () => {
 
   describe('templates', () => {
     it('should render successfully render new-event template', async () => {
-      const vars: NewEventTemplateVariables = {
-        event: {
-          totalCount: 10,
-          payload: {
-            title: 'New event',
-            timestamp: Date.now(),
-            backtrace: [{
-              file: 'file',
-              line: 1,
-              sourceCode: [{
+      const vars: EventsTemplateVariables = {
+        events: [{
+          event: {
+            totalCount: 10,
+            payload: {
+              title: 'New event',
+              timestamp: Date.now(),
+              backtrace: [{
+                file: 'file',
                 line: 1,
-                content: 'code',
+                sourceCode: [{
+                  line: 1,
+                  content: 'code',
+                }],
               }],
-            }],
-          },
-        } as GroupedEvent,
-        daysRepeated: 1,
-        newCount: 1,
-        host: process.env.GARAGE_URL,
+            },
+          } as GroupedEvent,
+          daysRepeated: 1,
+          newCount: 1,
+        }],
+        period: 60,
+        host: process.env.GARAGE_URL!,
         project: {
           _id: 'projectId',
           name: 'Project',
@@ -96,27 +99,27 @@ describe('EmailProvider', () => {
     });
 
     it('should render successfully render new-event template', async () => {
-      const vars: SeveralEventsTemplateVariables = {
-        events: [{
+      const vars: EventsTemplateVariables = {
+        events: [ {
           event: {
             totalCount: 10,
             payload: {
               title: 'New event',
               timestamp: Date.now(),
-              backtrace: [{
+              backtrace: [ {
                 file: 'file',
                 line: 1,
-                sourceCode: [{
+                sourceCode: [ {
                   line: 1,
                   content: 'code',
-                }],
-              }],
+                } ],
+              } ],
             },
           } as GroupedEvent,
           daysRepeated: 1,
           newCount: 1,
-        }],
-        host: process.env.GARAGE_URL,
+        } ],
+        host: process.env.GARAGE_URL!,
         project: {
           _id: 'projectId',
           name: 'Project',

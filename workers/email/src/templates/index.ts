@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import './extensions';
+import Templates from './names';
 
 /**
  * Interface describes email template object
@@ -34,23 +35,23 @@ const templates: {[name: string]: Template} = fs.readdirSync(__dirname) // read 
 
     // go to each folder and find the template files
     const subjectFilename = templateContent.find((fileName) =>
-      fileName.startsWith('subject'),
+      fileName.startsWith('subject')
     );
     const htmlFilename = templateContent.find((fileName) =>
-      fileName.startsWith('html'),
+      fileName.startsWith('html')
     );
     const textFilename = templateContent.find((fileName) =>
-      fileName.startsWith('text'),
+      fileName.startsWith('text')
     );
 
     // write content of the template files to the object
-    accumulator[templateName] = {
+    accumulator[templateName as Templates] = {
       subject: templateDir + subjectFilename,
       html: templateDir + htmlFilename,
       text: templateDir + textFilename,
     };
 
     return accumulator;
-  }, {});
+  }, {} as {[K in Templates]: Template});
 
 export default templates;

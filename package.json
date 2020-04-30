@@ -13,7 +13,8 @@
         "workers/source-maps",
         "workers/python",
         "workers/notifier",
-        "workers/email"
+        "workers/email",
+        "workers/sender"
     ],
     "scripts": {
         "test": "jest --coverage",

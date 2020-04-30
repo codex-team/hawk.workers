@@ -1,5 +1,5 @@
 import { ObjectID } from 'mongodb';
-import { Rule } from '../../notifier/types/rule';
+import { Rule } from 'hawk-worker-notifier/types/rule';
 
 /**
  * Interface describes Hawk Project object

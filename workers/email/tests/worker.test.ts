@@ -2,7 +2,7 @@ import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
 import {WhatToReceive} from 'hawk-worker-notifier/src/validator';
 import {ObjectID} from 'mongodb';
 import '../src/env';
-import {Project} from '../types/project';
+import {Project} from '../../sender/types/project';
 
 const projectQueryMock = jest.fn(() => ({
   _id: new ObjectID('5e3eef0679fa3700a0198a49'),

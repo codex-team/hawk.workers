@@ -1,14 +1,15 @@
 import * as shortNumber from 'short-number';
 import * as Twig from 'twig';
-import {BacktraceFrame} from '../../../../lib/types/event-worker-task';
-import {TemplateEventData} from '../../types/template-variables';
+import { BacktraceFrame } from '../../../../lib/types/event-worker-task';
+import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 
 /**
  * Function to use in template to find backtrace frame with source code
  *
  * @param {BacktraceFrame[]} backrace - event backtrace
- * @return {BacktraceFrame}
+ * @returns {BacktraceFrame}
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame => {
   return backtrace.find((frame) => frame.sourceCode !== null);
@@ -18,7 +19,7 @@ Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame =
  * Prettify URLs
  *
  * @param {string} value - path to prettify
- * @return {string}
+ * @returns {string}
  */
 Twig.extendFilter('prettyPath', (value: string): string => {
   return value.split('/').join(' / ');
@@ -28,12 +29,12 @@ Twig.extendFilter('prettyPath', (value: string): string => {
  * Prettify time to show in 'DD days HH hours MM minutes"
  *
  * @param {number} seconds - time in seconds
- * @return {string}
+ * @returns {string}
  */
 Twig.extendFilter('prettyTime', (seconds: number): string => {
   const sec = seconds % 60;
   const minutes = Math.floor(seconds / 60) % 60;
-  const hours = Math.floor(seconds / 60 / 60 ) % 24;
+  const hours = Math.floor(seconds / 60 / 60) % 24;
   const days = Math.floor(seconds / 60 / 60 / 24);
 
   let result = '';
@@ -61,7 +62,7 @@ Twig.extendFilter('prettyTime', (seconds: number): string => {
  * Get color by unique id
  *
  * @param {string} id
- * @return {stirng}
+ * @returns {stirng}
  */
 Twig.extendFilter('colorById', (id: string): string => {
   const colors = [
@@ -89,7 +90,7 @@ Twig.extendFilter('colorById', (id: string): string => {
  *
  * @param {number} value - number to abbreviate
  *
- * @return {string}
+ * @returns {string}
  */
 Twig.extendFilter('abbrNumber', (value: number): string => {
   if (value < 1000) {
@@ -104,6 +105,7 @@ Twig.extendFilter('abbrNumber', (value: number): string => {
  *
  * @param {TemplateEventData[]} events - events to sort
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 Twig.extendFilter('sortEvents', (events: TemplateEventData[]): TemplateEventData[] => {
   return events.sort((a, b) => a.newCount - b.newCount);

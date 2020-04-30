@@ -8,6 +8,7 @@
     "generateTemplatesNames": "cd scripts && ts-node generateTemplatesNames"
   },
   "dependencies": {
+    "@types/dotenv": "^8.2.0",
     "@types/twig": "^1.12.3",
     "nodemailer": "^6.4.6",
     "short-number": "^1.0.7",

@@ -1,10 +1,15 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import {Logger} from 'winston';
-import {TemplateVariables} from '../types/template-variables';
-import templates, {Template} from './templates';
+import { TemplateVariables, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import templates, { Template } from './templates';
+import NotificationsProvider from 'hawk-worker-sender/src/provider';
 
-export default class EmailProvider {
+import Templates from './templates/names';
+
+/**
+ * Class to provide email notifications
+ */
+export default class EmailProvider extends NotificationsProvider {
   /**
    * NodeMailer SMTP config
    */
@@ -26,27 +31,18 @@ export default class EmailProvider {
   private transporter = nodemailer.createTransport(this.smtpConfig as any);
 
   /**
-   * Logger instance
-   */
-  private logger: Logger;
-
-  /**
-   * @constructor
-   */
-  constructor(logger: Logger) {
-    this.logger = logger;
-  }
-
-  /**
    * Send email to recipient
    *
    * @param {string} to - recipient email
-   * @param {string} templateName - template name
    * @param {TemplateVariables} variables - variables for template
    */
-  public async send(to: string, templateName: string, variables: TemplateVariables) {
-    if (!templateName) {
-      throw new Error('Template name must be specified');
+  public async send(to: string, variables: EventsTemplateVariables): Promise<void> {
+    let templateName: Templates;
+
+    if (variables.events.length === 1) {
+      templateName = Templates.NewEvent;
+    } else {
+      templateName = Templates.SeveralEvents;
     }
 
     let content: Template;
@@ -55,6 +51,7 @@ export default class EmailProvider {
       content = await this.render(templateName, variables);
     } catch (e) {
       this.logger.error(`Failed to render ${templateName} template `, e);
+
       return;
     }
 
@@ -72,7 +69,7 @@ export default class EmailProvider {
       await this.transporter.sendMail(mailOptions);
     } catch (e) {
       this.logger.error(
-        'Error sending letter. Try to check the environment settings (in .env file).',
+        'Error sending letter. Try to check the environment settings (in .env file).'
       );
     }
   }
@@ -83,7 +80,7 @@ export default class EmailProvider {
    * @param {string} templateName - template to render
    * @param {TemplateVariables} variables - variables for template
    *
-   * @return {Promise<Template>}
+   * @returns {Promise<Template>}
    */
   private async render(templateName: string, variables: TemplateVariables): Promise<Template> {
     const template: Template = templates[templateName];
@@ -95,15 +92,20 @@ export default class EmailProvider {
 
     await Promise.all(Object.keys(template).map((key) => {
       return new Promise(
-        (resolve) => Twig.renderFile(
-          template[key],
+        (resolve, reject) => Twig.renderFile(
+          template[key as keyof Template],
+          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
           // @ts-ignore because @types/twig doesn't match the docs
           variables,
-          (err, res) => {
-            renderedTemplate[key] = res;
+          (err: Error, res: string): void => {
+            if (err) {
+              reject(err);
+            }
+
+            renderedTemplate[key as keyof Template] = res;
 
             resolve();
-          }),
+          })
       );
     }));
 

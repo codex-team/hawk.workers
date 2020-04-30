@@ -8,10 +8,8 @@
         "allowSyntheticDefaultImports": true,
         "allowJs": true,
         "module": "commonjs",
-        "resolveJsonModule": true,
-        "strict": true
+        "resolveJsonModule": true
     },
-
     "include": [
         "workers/**/*.ts",
         "runner.ts"
