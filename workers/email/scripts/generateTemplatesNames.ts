@@ -24,6 +24,8 @@ const fs = require('fs');
 
 /**
  * Function format dir name in kebab-case to PascalCase for enum
+ *
+ * @param name
  */
 function formatName(name: string): string {
   return name

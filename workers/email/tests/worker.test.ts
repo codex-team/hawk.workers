@@ -1,8 +1,8 @@
-import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
-import {WhatToReceive} from 'hawk-worker-notifier/src/validator';
-import {ObjectID} from 'mongodb';
+import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
+import { ObjectID } from 'mongodb';
 import '../src/env';
-import {Project} from '../../sender/types/project';
+import { Project } from 'hawk-worker-sender/types/project';
 
 const projectQueryMock = jest.fn(() => ({
   _id: new ObjectID('5e3eef0679fa3700a0198a49'),
@@ -40,20 +40,19 @@ const eventsQueryMock = jest.fn(() => ({
   payload: {
     title: 'New event',
     timestamp: Date.now(),
-    backtrace: [{
+    backtrace: [ {
       file: 'file',
       line: 1,
-      sourceCode: [{
+      sourceCode: [ {
         line: 1,
         content: 'code',
-      }],
-    }],
+      } ],
+    } ],
   },
 } as GroupedEvent));
 const dailyEventsQueryMock = jest.fn(() => 1);
 
 const dbCollectionMock = jest.fn((collection: string) => {
-
   switch (true) {
     case collection === 'project':
       return {
@@ -86,17 +85,31 @@ const dbConnectionMock = jest.fn(() => {
 const dbConnectMock = jest.fn();
 const dbCloseMock = jest.fn();
 
-// tslint:disable-next-line:class-name
+/**
+ * Mock
+ */
+// eslint-disable-next-line @typescript-eslint/class-name-casing
 class mockDBController {
-  public connect(...args) {
+  /**
+   * Mock
+   *
+   * @param args - connection args
+   */
+  public connect(...args): any {
     return dbConnectMock(...args);
   }
 
-  public getConnection() {
+  /**
+   * Mock
+   */
+  public getConnection(): any {
     return dbConnectionMock();
   }
 
-  public close() {
+  /**
+   * Mock
+   */
+  public close(): any {
     dbCloseMock();
   }
 }
@@ -139,10 +152,13 @@ describe('Email Sender Worker', () => {
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
         ruleId: '5e3eef0679fa3700a0198a49',
-        events: [{key: 'groupHash', count: 1}],
+        events: [ {
+          key: 'groupHash',
+          count: 1,
+        } ],
       });
 
-      expect(projectQueryMock).toBeCalledWith({_id: new ObjectID('5e3eef0679fa3700a0198a49')});
+      expect(projectQueryMock).toBeCalledWith({ _id: new ObjectID('5e3eef0679fa3700a0198a49') });
     });
 
     it('should query events on handle', async () => {
@@ -151,10 +167,13 @@ describe('Email Sender Worker', () => {
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
         ruleId: '5e3eef0679fa3700a0198a49',
-        events: [{key: 'groupHash', count: 1}],
+        events: [ {
+          key: 'groupHash',
+          count: 1,
+        } ],
       });
 
-      expect(eventsQueryMock).toBeCalledWith({groupHash: 'groupHash'});
+      expect(eventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
     });
 
     it('should query daily events count on handle', async () => {
@@ -163,10 +182,13 @@ describe('Email Sender Worker', () => {
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
         ruleId: '5e3eef0679fa3700a0198a49',
-        events: [{key: 'groupHash', count: 1}],
+        events: [ {
+          key: 'groupHash',
+          count: 1,
+        } ],
       });
 
-      expect(dailyEventsQueryMock).toBeCalledWith({groupHash: 'groupHash'});
+      expect(dailyEventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
     });
   });
 
@@ -180,7 +202,10 @@ describe('Email Sender Worker', () => {
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
         ruleId: '5e3eef0679fa3700a0198a49',
-        events: [{key: 'groupHash', count: 1}],
+        events: [ {
+          key: 'groupHash',
+          count: 1,
+        } ],
       });
 
       expect(worker.sendOneEvent).toBeCalledTimes(1);
@@ -196,7 +221,13 @@ describe('Email Sender Worker', () => {
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
         ruleId: '5e3eef0679fa3700a0198a49',
-        events: [{key: 'groupHash', count: 1}, {key: 'anotherGroupHash', count: 1}],
+        events: [ {
+          key: 'groupHash',
+          count: 1,
+        }, {
+          key: 'anotherGroupHash',
+          count: 1,
+        } ],
       });
 
       expect(worker.sendSeveralEvents).toBeCalledTimes(1);
