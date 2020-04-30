@@ -11,7 +11,7 @@ import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
-Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame => {
+Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame | undefined => {
   return backtrace.find((frame) => frame.sourceCode !== null);
 });
 
@@ -22,7 +22,13 @@ Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame =
  * @returns {string}
  */
 Twig.extendFilter('prettyPath', (value: string): string => {
-  return value.split('/').join(' / ');
+  return value
+    // remove protocol
+    .replace(/^(.*?)\/{2,3}/, '')
+    // remove get params
+    .replace(/\?.*/, '')
+    // replace '/' with ' / '
+    .replace(/\//g, ' / ');
 });
 
 /**
