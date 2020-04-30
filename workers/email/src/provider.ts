@@ -62,7 +62,7 @@ export default class EmailProvider extends NotificationsProvider {
     };
 
     if (process.env.NODE_ENV === 'development') {
-      this.logger.info(content);
+      this.logger.info(`Mail sent to ${to}: \n\n + ${content}`);
     }
 
     try {

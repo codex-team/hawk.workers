@@ -1,7 +1,7 @@
 {
   "name": "hawk-worker-sender",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "workerType": "sender",
   "main": "src/index.ts",
-  "license": "MIT"
+  "license": "UNLICENSED"
 }
