@@ -7,7 +7,7 @@ import { Collection, Db, ObjectId } from 'mongodb';
 /**
  * Worker for handling Javascript events
  */
-export default class GrouperWorker extends Worker {
+export default class ArchiverWorker extends Worker {
   /**
    * Worker type
    */
@@ -44,11 +44,11 @@ export default class GrouperWorker extends Worker {
   public async start(): Promise<void> {
     await this.eventsDb.connect(process.env.EVENTS_DB_NAME);
     await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME);
-    await super.start();
 
     this.eventsDbConnection = this.eventsDb.getConnection();
     this.accountDbConnection = this.accountsDb.getConnection();
     this.projectCollection = this.accountDbConnection.collection<{ _id: ObjectId }>('projects');
+    await super.start();
   }
 
   /**
