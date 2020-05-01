@@ -1,0 +1,11 @@
+{
+    "name": "hawk-worker-archiver",
+    "version": "0.0.1",
+    "description": "Worker for archiving old events",
+    "main": "src/index.ts",
+    "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/archiver",
+    "author": "CodeX <codex.so>",
+    "license": "UNLICENSED",
+    "private": true,
+    "workerType": "cron-tasks/archiver"
+}
