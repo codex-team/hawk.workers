@@ -19,7 +19,13 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { Project } from 'hawk-worker-sender/types/project';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+/**
+ * Merge email worker .env and root workers .env
+ */
+const rootEnv = dotenv.config({ path: path.resolve(__dirname, '../../../.env') }).parsed;
+const localEnv = dotenv.config({ path: path.resolve(__dirname, '../.env') }).parsed;
+
+Object.assign(process.env, rootEnv, localEnv);
 
 /**
  * Server for rendering email templates
