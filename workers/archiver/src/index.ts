@@ -121,10 +121,20 @@ export default class GrouperWorker extends Worker {
    */
   private async removeOriginalEvents(project: { _id: ObjectId }): Promise<number> {
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
+
+    /**
+     * Search for all events and their daily events
+     */
     const result = await eventsCollection.aggregate([
+      /**
+       * Get only groupHash field from event
+       */
       {
         $project: { groupHash: 1 },
       },
+      /**
+       * Lookup for daily events with the same groupHashes
+       */
       {
         $lookup: {
           from: 'dailyEvents:' + project._id.toString(),
@@ -143,9 +153,10 @@ export default class GrouperWorker extends Worker {
       },
     ]).toArray();
 
+    const groupHashesToRemove = result.filter(res => !res.dailyEvent.length).map(res => res.groupHash);
     const deleteOriginalEventsResult = await eventsCollection.deleteMany({
       groupHash: {
-        $in: result.filter(res => !res.dailyEvent.length).map(res => res.groupHash),
+        $in: groupHashesToRemove,
       },
     });
 
