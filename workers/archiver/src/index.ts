@@ -70,65 +70,85 @@ export default class GrouperWorker extends Worker {
     const projects = await this.projectCollection.find({}).toArray();
 
     await asyncForEach(projects, async (project: { _id: ObjectId }) => {
-      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
-      const daysAgo = (new Date().getTime()) / 1000 - 30 * 24 * 60 * 60;
-
-      await dailyEventsCollection.deleteMany({
-        groupingTimestamp: {
-          $lt: daysAgo,
-        },
-      });
-
-      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
-
-      const deleteRepetitionsResult = await repetitionsCollection.deleteMany({
-        'payload.timestamp': {
-          $lt: daysAgo,
-        },
-      });
-
-      const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
-      const result = await eventsCollection.aggregate([
-        {
-          $project: { groupHash: 1 },
-        },
-        {
-          $lookup: {
-            from: 'dailyEvents:' + project._id.toString(),
-            let: { groupHash: '$groupHash' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $eq: ['$groupHash', '$$groupHash'] },
-                },
-              },
-              { $limit: 1 },
-              { $project: { groupHash: 1 } },
-            ],
-            as: 'dailyEvent',
-          },
-        },
-      ]).toArray();
-
-      const deleteOriginalEventsResult = await eventsCollection.deleteMany({
-        groupHash: {
-          $in: result.filter(res => !res.dailyEvent.length).map(res => res.groupHash),
-        },
-      });
-
-      const deletedCount = (deleteOriginalEventsResult.deletedCount || 0) + (deleteRepetitionsResult.deletedCount || 0);
-
-      await this.projectCollection.updateOne({
-        _id: project._id,
-      },
-      {
-        $inc: {
-          archivedEventsCount: deletedCount,
-        },
-      });
-
-      this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+      await this.archiveProjectEvents(project);
     });
     this.logger.info(`Finish archiving at ${new Date()}`);
+  }
+
+  /**
+   * Removes old events in project
+   *
+   * @param project - project data to remove events
+   */
+  private async archiveProjectEvents(project: { _id: ObjectId }): Promise<void> {
+    const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
+    const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
+    const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
+
+    await dailyEventsCollection.deleteMany({
+      groupingTimestamp: {
+        $lt: maxOldTimestamp,
+      },
+    });
+
+    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
+
+    const deleteRepetitionsResult = await repetitionsCollection.deleteMany({
+      'payload.timestamp': {
+        $lt: maxOldTimestamp,
+      },
+    });
+    const deleteOriginalEventsResult = await this.removeOriginalEvents(project);
+
+    const deletedCount = deleteOriginalEventsResult + (deleteRepetitionsResult.deletedCount || 0);
+
+    await this.projectCollection.updateOne({
+      _id: project._id,
+    },
+    {
+      $inc: {
+        archivedEventsCount: deletedCount,
+      },
+    });
+
+    this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+  }
+
+  /**
+   * Removes old original events for project
+   *
+   * @param project - project for handling
+   */
+  private async removeOriginalEvents(project: { _id: ObjectId }): Promise<number> {
+    const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
+    const result = await eventsCollection.aggregate([
+      {
+        $project: { groupHash: 1 },
+      },
+      {
+        $lookup: {
+          from: 'dailyEvents:' + project._id.toString(),
+          let: { groupHash: '$groupHash' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$groupHash', '$$groupHash'] },
+              },
+            },
+            { $limit: 1 },
+            { $project: { groupHash: 1 } },
+          ],
+          as: 'dailyEvent',
+        },
+      },
+    ]).toArray();
+
+    const deleteOriginalEventsResult = await eventsCollection.deleteMany({
+      groupHash: {
+        $in: result.filter(res => !res.dailyEvent.length).map(res => res.groupHash),
+      },
+    });
+
+    return deleteOriginalEventsResult.deletedCount || 0;
   }
 }

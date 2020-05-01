@@ -13,5 +13,10 @@ declare namespace NodeJS {
      * Database name with accounts
      */
     ACCOUNTS_DB_NAME: string;
+
+    /**
+     * How long to store events (in days)
+     */
+    MAX_DAYS_NUMBER: string;
   }
 }
