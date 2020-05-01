@@ -6,12 +6,16 @@ import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 /**
  * Function to use in template to find backtrace frame with source code
  *
- * @param {BacktraceFrame[]} backrace - event backtrace
+ * @param {BacktraceFrame[]} backtrace - event backtrace
  * @returns {BacktraceFrame}
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame | undefined => {
+  if (!backtrace || backtrace.length === 0){
+    return undefined;
+  }
+
   return backtrace.find((frame) => frame.sourceCode !== null);
 });
 
@@ -29,6 +33,22 @@ Twig.extendFilter('prettyPath', (value: string): string => {
     .replace(/\?.*/, '')
     // replace '/' with ' / '
     .replace(/\//g, ' / ');
+});
+
+
+/**
+ * Trim string to max chart from left and add '...'
+ *
+ * @param {string} value - path to prettify
+ * @param {number} maxLen - max length of string
+ * @returns {string}
+ */
+Twig.extendFilter('leftTrim', (value: string, maxLen: number): string => {
+  if (value.length > maxLen){
+    return '…' + value.slice(value.length - maxLen);
+  }
+
+  return value;
 });
 
 /**

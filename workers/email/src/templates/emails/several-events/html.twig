@@ -3,31 +3,49 @@
 {% block content %}
 
     <tr>
-        <td align="center" style="padding: 35px 0 10px">
+        <td style="padding-top: 35px;padding-right: 0;padding-left: 20px;padding-bottom: 10px;">
             <font color="#dbe6ff"
                   style="font-size: 15px; color: #dbe6ff; letter-spacing: 0.15px;">
-                You have {{ events.length }} new events for the last {{ period | prettyTime }}
+                You have {{ events.length }} new {{ events.length > 1 ? 'events' : 'event' }} for the last {{ period | prettyTime }}
             </font>
         </td>
     </tr>
+    <tr height="10">
+        <td></td>
+    </tr>
     {% set eventsToShow = 5 %}
     {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
+        <tr height="20">
+            <td></td>
+        </tr>
         <tr>
-            {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
-            <td style="padding: 0 20px;">
-                <font color="#dbe6ff"
-                      style="font-size: 13px; line-height: 1.54; letter-spacing: 0.35px; color: #dbe6ff">
-                    {{ eventData.event.payload.title }}
-                </font>
+            <td style="padding-top: 0;padding-right: 20px;padding-left: 20px;padding-bottom: 0;">
+                {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
+                <div style="padding-top: 10px;padding-right: 0;padding-left: 0;padding-bottom: 10px;">
+                    <font color="#dbe6ff"
+                          style="font-size: 13px; line-height: 1.54; letter-spacing: 0.35px; color: #dbe6ff">
+                        {{ eventData.event.payload.title }}
+                    </font>
+                </div>
+                {% include '../../components/event-info.twig' with { event: eventData } %}
             </td>
-            {% include '../../components/event-info.twig' with { event: eventData } %}
+        </tr>
+        <tr height="20">
+            <td></td>
         </tr>
     {% endfor %}
 
-    {% if events.length - eventsToShow > 0 %}
-        {% include '../../components/button.twig' with {href: '#{host}/project/#{project._id}', label: 'and #{events.length - eventsToShow} more'} %}
-    {% else %}
-        {% include '../../components/button.twig' with {href: '#{host}/project/#{project._id}', label: 'View events'} %}
-    {% endif %}
+    <tr>
+        <td style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+            {% set url = host ~ '/project/' ~ project._id %}
+            {% if events.length - eventsToShow > 0 %}
+                {% set hiddenEventsLen = events.length - eventsToShow %}
+                {% set hiddenEventsMessage = 'and ' ~ hiddenEventsLen ~ ' more…' %}
+                {% include '../../components/button.twig' with {href: url, label: hiddenEventsMessage} %}
+            {% else %}
+                {% include '../../components/button.twig' with {href: url, label: 'View events'} %}
+            {% endif %}
+        </td>
+    </tr>
 
 {% endblock %}

@@ -2,22 +2,32 @@
 {% set daysRepeated = events[0].daysRepeated %}
 {% set newCount = events[0].newCount %}
 {% set usersAffected = events[0].usersAffected %}
+{% set newLabel = 'a new event' %}
+{% if newCount > 1 %}
+    {% set newLabel = newCount ~ ' new events' %}
+{% endif %}
 
-{{ project.name }}
+You have {{ newLabel }} on «{{ project.name }}» project.
 
-{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}
+------------------------
+{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}: {{ event.payload.title }}
+------------------------
+{% if event.payload.backtrace is not empty %}
+    {% if event.payload.backtrace[0] is not empty %}
+        {% if event.payload.backtrace[0].file is not empty %}
 
-{{ event.payload.title }}
+            Located in {{ event.payload.backtrace[0].file }} at line {{ event.payload.backtrace[0].line }}.
+        {% endif %}
+    {% endif %}
+{% endif %}
 
-In file: {{ event.payload.backtrace[0].file }} at line {{ event.payload.backtrace[0].line }}.
+This event appears {{ event.totalCount }} total times, {{ daysRepeated }} days repeating.
 
-{{ newCount }} new | {{ event.totalCount }} total | {{ daysRepeated }} days repeating{{ usersAffected ? ' | #{userAffected}users affected' }}
+View event: {{ host }}/project/{{ project._id }}/event/{{ event._id }}
 
-View event: {{ host }}/event/{{ event._id }}
+***
 
-To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
-
-You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above.
+You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above. To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
 
 Hawk
 Errors tracking system
