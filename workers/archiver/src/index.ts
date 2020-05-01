@@ -2,6 +2,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
+import { ObjectId } from 'mongodb';
 
 /**
  * Worker for handling Javascript events
@@ -49,10 +50,10 @@ export default class GrouperWorker extends Worker {
 
     const eventsDbConnection = this.eventsDb.getConnection();
     const accountDbConnection = this.accountsDb.getConnection();
-    const projectCollection = accountDbConnection.collection('projects');
+    const projectCollection = accountDbConnection.collection<{ _id: ObjectId }>('projects');
     const projects = await projectCollection.find({}).toArray();
 
-    await asyncForEach(projects, async (project) => {
+    await asyncForEach(projects, async (project: { _id: ObjectId }) => {
       const dailyEventsCollection = eventsDbConnection.collection('dailyEvents:' + project._id.toString());
       const daysAgo = (new Date().getTime()) / 1000 - 30 * 24 * 60 * 60;
 
@@ -99,7 +100,18 @@ export default class GrouperWorker extends Worker {
         },
       });
 
-      this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deleteOriginalEventsResult.deletedCount + deleteRepetitionsResult.deletedCount}`);
+      const deletedCount = (deleteOriginalEventsResult.deletedCount || 0) + (deleteRepetitionsResult.deletedCount || 0);
+
+      await projectCollection.updateOne({
+        _id: project._id,
+      },
+      {
+        $inc: {
+          archivedEventsCount: deletedCount,
+        },
+      });
+
+      this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
     });
     this.logger.info(`Finish archiving at ${new Date()}`);
   }
