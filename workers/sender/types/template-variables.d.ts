@@ -5,6 +5,7 @@ import { Project } from './project';
  * Common interface for template variables
  */
 export interface TemplateVariables {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 

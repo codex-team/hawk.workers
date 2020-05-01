@@ -47,7 +47,7 @@ const emailTemplatesPath = path.resolve(__dirname, emailTemplatesDir);
  *   html: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/several-events/html.twig',
  *   text: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/several-events/text.twig'
  * }
-}
+ * }
  */
 const templates: {[name: string]: Template} = fs.readdirSync(emailTemplatesPath)
   .reduce((accumulator, templateName) => {

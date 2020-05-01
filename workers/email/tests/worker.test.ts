@@ -4,6 +4,8 @@ import { ObjectID } from 'mongodb';
 import '../src/env';
 import { Project } from 'hawk-worker-sender/types/project';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const projectQueryMock = jest.fn(() => ({
   _id: new ObjectID('5e3eef0679fa3700a0198a49'),
   name: 'Project',
@@ -34,7 +36,8 @@ const projectQueryMock = jest.fn(() => ({
       },
     },
   ],
-}));
+} as Project));
+
 const eventsQueryMock = jest.fn(() => ({
   totalCount: 10,
   payload: {

@@ -40,8 +40,8 @@ export default abstract class SenderWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.eventsDb.connect(process.env.EVENTS_DB_NAME!);
-    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME!);
+    await this.eventsDb.connect(process.env.EVENTS_DB_NAME);
+    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME);
     await super.start();
   }
 

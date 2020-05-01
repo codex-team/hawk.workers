@@ -74,6 +74,7 @@ describe('EmailProvider', () => {
         }],
         period: 60,
         host: process.env.GARAGE_URL!,
+        hostOfStatic: process.env.API_STATIC_URL!,
         project: {
           _id: 'projectId',
           name: 'Project',
@@ -120,6 +121,7 @@ describe('EmailProvider', () => {
           newCount: 1,
         } ],
         host: process.env.GARAGE_URL!,
+        hostOfStatic: process.env.API_STATIC_URL!,
         project: {
           _id: 'projectId',
           name: 'Project',

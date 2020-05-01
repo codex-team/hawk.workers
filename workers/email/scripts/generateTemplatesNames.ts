@@ -17,15 +17,13 @@
  *   SeveralEvents = 'several-events'
  * }
  */
-// tslint:disable-next-line:no-var-requires
-const path = require('path');
-// tslint:disable-next-line:no-var-requires
-const fs = require('fs');
+import * as path from 'path';
+import * as fs from 'fs';
 
 /**
  * Function format dir name in kebab-case to PascalCase for enum
  *
- * @param name
+ * @param name - file name to transform
  */
 function formatName(name: string): string {
   return name

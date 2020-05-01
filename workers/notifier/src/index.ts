@@ -39,7 +39,7 @@ export default class NotifierWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect(process.env.ACCOUNTS_DB_NAME!);
+    await this.db.connect(process.env.ACCOUNTS_DB_NAME);
     await super.start();
   }
 

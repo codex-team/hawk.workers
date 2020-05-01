@@ -1,7 +1,7 @@
 /**
- * Sample HTTP server for previewing of email template
+ * Sample HTTP server for previewing of email templates
  *
- * How to use [requires Node.js 10.0.0+ and npm install]:
+ * How to use:
  *
  * 1. yarn email-overview
  * 2. Open http://localhost:4444/
@@ -10,18 +10,21 @@
 import * as http from 'http';
 import * as url from 'url';
 import templates, { Template } from '../src/templates';
-import {EventsTemplateVariables, TemplateEventData} from 'hawk-worker-sender/types/template-variables';
+import { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
-import {DatabaseController} from '../../../lib/db/controller';
-import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
-import {ObjectID, ObjectId} from 'mongodb';
-import * as path from "path";
+import { DatabaseController } from '../../../lib/db/controller';
+import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { ObjectID, ObjectId } from 'mongodb';
+import * as path from 'path';
 import * as dotenv from 'dotenv';
-import {Project} from 'hawk-worker-sender/types/project';
+import { Project } from 'hawk-worker-sender/types/project';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-class ServerExample {
+/**
+ * Server for rendering email templates
+ */
+class EmailTestServer {
   /**
    * Node.js http server
    */
@@ -50,8 +53,8 @@ class ServerExample {
     this.port = port;
     this.server = http.createServer(async (req, res) => {
       try {
-        await this.onRequest(req, res)
-      } catch (error){
+        await this.onRequest(req, res);
+      } catch (error) {
         console.log('Error: ', error);
         this.sendHTML(error.message, res);
       }
@@ -62,8 +65,8 @@ class ServerExample {
    * Starts server
    */
   public async start(): Promise<void> {
-    await this.eventsDb.connect(process.env.EVENTS_DB_NAME!);
-    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME!);
+    await this.eventsDb.connect(process.env.EVENTS_DB_NAME);
+    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME);
 
     this.server.listen(this.port);
 
@@ -84,21 +87,24 @@ class ServerExample {
    * @param request - accepted request
    * @param response - response that will be sent
    */
-  async onRequest(request: http.IncomingMessage, response: http.ServerResponse) {
-    const queryObject = url.parse(request.url,true).query;
+  private async onRequest(request: http.IncomingMessage, response: http.ServerResponse): Promise<void> {
+    const queryParams = (new url.URL(request.url, `http://localhost:${this.port}`)).searchParams;
 
     console.log('Got request: ', request.url);
 
-    if (!queryObject){
+    if (!queryParams) {
       return;
     }
 
-    const { email, projectId, eventIds, type } = queryObject;
+    const email = queryParams.get('email');
+    const projectId = queryParams.get('projectId');
+    const eventIds = queryParams.get('eventIds');
+    const type = queryParams.get('type');
 
-    if (request.url.includes('fetchEvents')){
+    if (request.url.includes('fetchEvents')) {
       this.fetchEvents(projectId as string, response);
 
-      return
+      return;
     }
 
     if (!email) {
@@ -110,17 +116,15 @@ class ServerExample {
     const project = await this.getProject(projectId as string);
     const ids = typeof eventIds === 'string' ? [ eventIds ] : eventIds;
     const events = await Promise.all(ids.map(async (eventId: string) => {
-        const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
+      const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
 
-        return {
-          event,
-          daysRepeated,
-          newCount: 3,
-          usersAffected: 144,
-        }
+      return {
+        event,
+        daysRepeated,
+        newCount: 3,
+        usersAffected: 144,
+      };
     })) as TemplateEventData[];
-
-
 
     const templateData = {
       events,
@@ -128,7 +132,7 @@ class ServerExample {
       hostOfStatic: process.env.API_STATIC_URL,
       project,
       period: 10,
-    }
+    };
 
     try {
       const { subject, text, html } = await this.render(email as string, templateData);
@@ -145,7 +149,6 @@ class ServerExample {
           this.sendHTML(html, response);
           break;
       }
-
     } catch (e) {
       console.log('Rendering error', e);
     }
@@ -159,7 +162,7 @@ class ServerExample {
   private async showForm(response: http.ServerResponse): Promise<void> {
     const projects = await this.getAllProjects();
 
-    const renderForm = () => new Promise((resolve, reject) => {
+    const renderForm = (): Promise<string> => new Promise((resolve, reject): void => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
         {
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
@@ -167,13 +170,14 @@ class ServerExample {
           templates: Object.keys(templates),
           projects,
         },
-        (err: Error, result: any) => {
-        if (err) {
-          reject(err);
-        }
+        (err: Error, result: string) => {
+          if (err) {
+            reject(err);
+          }
 
-        resolve(result);
-      })});
+          resolve(result);
+        });
+    });
 
     const form = await renderForm();
 
@@ -249,15 +253,15 @@ class ServerExample {
 
   /**
    * Return events by project id
+   *
    * @param projectId - events owner
    * @param response - http response stream
    */
-  private async fetchEvents(projectId: string, response: http.ServerResponse){
+  private async fetchEvents(projectId: string, response: http.ServerResponse): Promise<void> {
     const events = await this.getEventsByProjectId(projectId);
 
     this.sendJSON(events, response);
   }
-
 
   /**
    * Get event data for email
@@ -274,10 +278,10 @@ class ServerExample {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({
-      '_id': new ObjectId(eventId)
+      _id: new ObjectId(eventId),
     });
     const daysRepeated = await connection.collection(`dailyEvents:${projectId}`).countDocuments({
-      groupHash: event.groupHash
+      groupHash: event.groupHash,
     });
 
     return [event, daysRepeated];
@@ -303,7 +307,8 @@ class ServerExample {
   private async getAllProjects(): Promise<Project[]> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('projects').find(null, { limit: 10}).toArray();
+    return connection.collection('projects').find(null, { limit: 10 })
+      .toArray();
   }
 
   /**
@@ -317,11 +322,11 @@ class ServerExample {
 
     return connection.collection(`events:${projectId}`).find(null, {
       limit: 30,
-    }).toArray();
+    })
+      .toArray();
   }
-
 }
 
-const server = new ServerExample(4444);
+const server = new EmailTestServer(4444);
 
 server.start();

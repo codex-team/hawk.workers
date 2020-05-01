@@ -28,7 +28,8 @@ export default class EmailProvider extends NotificationsProvider {
    *
    * 'as any' used because @types/nodemailer doesn't match the docs
    */
-  private transporter = nodemailer.createTransport(this.smtpConfig as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private transporter = nodemailer.createTransport(this.smtpConfig as {[key: string]: any});
 
   /**
    * Send email to recipient

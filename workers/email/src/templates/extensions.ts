@@ -12,7 +12,7 @@ import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame | undefined => {
-  if (!backtrace || backtrace.length === 0){
+  if (!backtrace || backtrace.length === 0) {
     return undefined;
   }
 
@@ -35,7 +35,6 @@ Twig.extendFilter('prettyPath', (value: string): string => {
     .replace(/\//g, ' / ');
 });
 
-
 /**
  * Trim string to max chart from left and add '...'
  *
@@ -44,7 +43,7 @@ Twig.extendFilter('prettyPath', (value: string): string => {
  * @returns {string}
  */
 Twig.extendFilter('leftTrim', (value: string, maxLen: number): string => {
-  if (value.length > maxLen){
+  if (value.length > maxLen) {
     return '…' + value.slice(value.length - maxLen);
   }
 
@@ -87,8 +86,8 @@ Twig.extendFilter('prettyTime', (seconds: number): string => {
 /**
  * Get color by unique id
  *
- * @param {string} id
- * @returns {stirng}
+ * @param {string} id - project/user/stc id to calcula  te color
+ * @returns {string}
  */
 Twig.extendFilter('colorById', (id: string): string => {
   const colors = [
