@@ -61,10 +61,8 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Task handling function
-   *
-   * @param task - event to handle
    */
-  public async handle(task: {}): Promise<void> {
+  public async handle(): Promise<void> {
     this.logger.info(`Start archiving at ${new Date()}`);
 
     const projects = await this.projectCollection.find({}).toArray();
@@ -81,27 +79,26 @@ export default class GrouperWorker extends Worker {
    * @param project - project data to remove events
    */
   private async archiveProjectEvents(project: { _id: ObjectId }): Promise<void> {
-    const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
     const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
 
-    await dailyEventsCollection.deleteMany({
-      groupingTimestamp: {
-        $lt: maxOldTimestamp,
-      },
-    });
-
-    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
-
-    const deleteRepetitionsResult = await repetitionsCollection.deleteMany({
-      'payload.timestamp': {
-        $lt: maxOldTimestamp,
-      },
-    });
+    await this.removeOldDailyEvents(project, maxOldTimestamp);
+    const deleteRepetitionsResult = await this.removeOldRepetitions(project, maxOldTimestamp);
     const deleteOriginalEventsResult = await this.removeOriginalEvents(project);
+    const deletedCount = deleteOriginalEventsResult + deleteRepetitionsResult;
 
-    const deletedCount = deleteOriginalEventsResult + (deleteRepetitionsResult.deletedCount || 0);
+    await this.updateArchivedEventsCounter(project, deletedCount);
 
+    this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+  }
+
+  /**
+   * Updates counter for archived events
+   *
+   * @param project - project to handle
+   * @param deletedCount - events deleted count for incrementation
+   */
+  private async updateArchivedEventsCounter(project: { _id: ObjectId }, deletedCount: number): Promise<void> {
     await this.projectCollection.updateOne({
       _id: project._id,
     },
@@ -110,8 +107,39 @@ export default class GrouperWorker extends Worker {
         archivedEventsCount: deletedCount,
       },
     });
+  }
 
-    this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+  /**
+   * Removes old repetitions
+   *
+   * @param project - project to handle
+   * @param maxOldTimestamp - max timestamp to do not delete events
+   */
+  private async removeOldRepetitions(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<number> {
+    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
+    const deleteRepetitionsResult = await repetitionsCollection.deleteMany({
+      'payload.timestamp': {
+        $lt: maxOldTimestamp,
+      },
+    });
+
+    return deleteRepetitionsResult.deletedCount || 0;
+  }
+
+  /**
+   * Removes old daily events
+   *
+   * @param project - project to handle
+   * @param maxOldTimestamp - max timestamp to do not delete events
+   */
+  private async removeOldDailyEvents(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<void> {
+    const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
+
+    await dailyEventsCollection.deleteMany({
+      groupingTimestamp: {
+        $lt: maxOldTimestamp,
+      },
+    });
   }
 
   /**
