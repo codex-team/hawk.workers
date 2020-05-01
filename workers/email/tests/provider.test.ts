@@ -19,14 +19,14 @@ import { Project } from 'hawk-worker-sender/types/project';
 describe('EmailProvider', () => {
   describe('SMTP Transport', () => {
     it('should create nodemailer transporter with config on construct', () => {
-      const provider = new EmailProvider(console as any);
+      const provider = new EmailProvider();
 
       // @ts-ignore
       expect(nodemailerMock.createTransport).toBeCalledWith(provider.smtpConfig);
     });
 
     it('should send email on send call', async () => {
-      const provider = new EmailProvider(console as any);
+      const provider = new EmailProvider();
       const to = 'test@test';
 
       // @ts-ignore
@@ -81,7 +81,7 @@ describe('EmailProvider', () => {
         } as Project,
       };
 
-      const provider = new EmailProvider(console as any);
+      const provider = new EmailProvider();
       let template;
 
       // @ts-ignore
@@ -128,7 +128,7 @@ describe('EmailProvider', () => {
         period: 60,
       };
 
-      const provider = new EmailProvider(console as any);
+      const provider = new EmailProvider();
       let template;
 
       // @ts-ignore
