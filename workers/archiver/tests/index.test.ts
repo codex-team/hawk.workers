@@ -40,12 +40,18 @@ describe('Archiver worker', () => {
   });
 
   test('Should correctly remove old events', async () => {
+    /**
+     * Worker initialization
+     */
     const worker = new ArchiverWorker();
 
     await worker.start();
     await worker.handle();
     await worker.finish();
 
+    /**
+     * Check that there is no old daily events in database
+     */
     const oldDailyEventsQueryResult = await dailyEventsCollection.find({
       groupHash: {
         $in: oldDailyEvents,
@@ -54,10 +60,16 @@ describe('Archiver worker', () => {
 
     expect(oldDailyEventsQueryResult.length).toBe(0);
 
+    /**
+     * Check that no extra events are deleted
+     */
     const dailyEventsQueryResult = await dailyEventsCollection.find({}).toArray();
 
-    expect(dailyEventsQueryResult.length).toBe(11);
+    expect(dailyEventsQueryResult.length).toBe(10);
 
+    /**
+     * Check that there is no old events in database
+     */
     const oldEventsQueryResult = await eventsCollection.find({
       groupHash: {
         $in: oldDailyEvents,
@@ -66,6 +78,9 @@ describe('Archiver worker', () => {
 
     expect(oldEventsQueryResult.length).toBe(0);
 
+    /**
+     * Check that archived events count is right
+     */
     const archiveEventsCount = oldDailyEvents.reduce((acc, current) => acc + current.count, 0);
 
     const changedProject = await projectCollection.findOne({ _id: mockedProject._id });
@@ -77,9 +92,12 @@ describe('Archiver worker', () => {
         originalEventsDeletedCount++;
       }
     });
+
+    expect(changedProject.archivedEventsCount).toBe(archiveEventsCount + originalEventsDeletedCount);
   });
 
   afterAll(async () => {
     await connection.close();
+    await db.close();
   });
 });

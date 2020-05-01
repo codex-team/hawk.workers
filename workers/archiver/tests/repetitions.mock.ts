@@ -121,18 +121,6 @@ export const mockedRepetitions = [
     },
   },
   {
-    groupHash: '83912413461b9a8d67b91b921a75668e02dd9c8e59045c0ac5b8882c43478f85',
-    payload: {
-      timestamp: 1584989420,
-    },
-  },
-  {
-    groupHash: 'c9fd526af8a0b3b977be1e96ec6f1020200dd8bdf7a77167d72cd8890332c7e7',
-    payload: {
-      timestamp: 1584989420,
-    },
-  },
-  {
     groupHash: '1143a799caa8f596740ed3741d280bbf6bac614797fc4e0e3cc628f218bab8ca',
     payload: {
       timestamp: 1584989420,

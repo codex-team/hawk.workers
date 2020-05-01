@@ -48,9 +48,6 @@ export const mockedEvents = [
     groupHash: '5f24dd5d6be4226e846383e015fd976affcee9f02eaa1d5cafc7d48710a9dfe7',
   },
   {
-    groupHash: '14b86d7afd3a4e8faba23faeed4b2587d1404528944616a2b8dee7d8a6bd6a38',
-  },
-  {
     groupHash: '5c9e6da01f91bb4b0a9d32acd862c23584a1ef037083d75f37a386a8a0275685',
   },
   {

@@ -45,12 +45,6 @@ export const mockedDailyEvents = [
     lastRepetitionTime: 1586792877,
   },
   {
-    groupHash: '0e69096ae18dffb3128ccebbee103ad78ef755160ba25ae4dcbf3d1285f30590',
-    groupingTimestamp: 1586725200,
-    count: 1,
-    lastRepetitionTime: 1586790826,
-  },
-  {
     groupHash: '881bd5ca1a517421a17620eec325ff33572d825620782862584d06b1b30a3e72',
     groupingTimestamp: 1586725200,
     count: 2,
@@ -96,18 +90,6 @@ export const mockedDailyEvents = [
     lastRepetitionTime: 1582998025.837,
   },
   {
-    groupHash: '83912413461b9a8d67b91b921a75668e02dd9c8e59045c0ac5b8882c43478f85',
-    groupingTimestamp: 1585602000,
-    count: 1,
-    lastRepetitionTime: 1585648729,
-  },
-  {
-    groupHash: 'c9fd526af8a0b3b977be1e96ec6f1020200dd8bdf7a77167d72cd8890332c7e7',
-    groupingTimestamp: 1585515600,
-    count: 1,
-    lastRepetitionTime: 1585592381,
-  },
-  {
     groupHash: '1143a799caa8f596740ed3741d280bbf6bac614797fc4e0e3cc628f218bab8ca',
     groupingTimestamp: 1585602000,
     count: 9,
@@ -133,5 +115,5 @@ export const mockedDailyEvents = [
   },
 ];
 
-export const newDailyEvents = mockedDailyEvents.slice(0, 11);
-export const oldDailyEvents = mockedDailyEvents.slice(11);
+export const newDailyEvents = mockedDailyEvents.slice(0, 10);
+export const oldDailyEvents = mockedDailyEvents.slice(10);
