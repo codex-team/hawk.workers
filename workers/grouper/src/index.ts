@@ -3,6 +3,7 @@ import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import * as utils from '../../../lib/utils';
 import { DatabaseError, ValidationError, Worker } from '../../../lib/worker';
+import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
@@ -117,6 +118,20 @@ export default class GrouperWorker extends Worker {
      * Store events counter by days
      */
     await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId);
+
+    /**
+     * Add task for NotifierWorker
+     */
+    if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
+      await this.addTask(WorkerNames.NOTIFIER, {
+        projectId: task.projectId,
+        event: {
+          title: task.event.title,
+          groupHash: uniqueEventHash,
+          isNew: isFirstOccurrence,
+        },
+      });
+    }
   }
 
   /**
