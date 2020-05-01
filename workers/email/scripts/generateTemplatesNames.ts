@@ -3,7 +3,7 @@
  *
  * To provide type-safe template names, this script reads template directories' names and generate TS enum
  *
- * Run `yarn generateTemplatesNames` any time you add new template
+ * Run `yarn generate-tpl-names` any time you add new template
  *
  * Example:
  *

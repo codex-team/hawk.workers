@@ -5,7 +5,8 @@
   "license": "UNLICENSED",
   "workerType": "sender/email",
   "scripts": {
-    "generateTemplatesNames": "cd scripts && ts-node generateTemplatesNames"
+    "generate-tpl-names": "cd scripts && ts-node generateTemplatesNames",
+    "email-overview": "cd scripts && ts-node emailOverview"
   },
   "dependencies": {
     "@types/dotenv": "^8.2.0",

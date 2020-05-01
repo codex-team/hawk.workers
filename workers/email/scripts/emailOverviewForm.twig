@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="language" content="en-us">
+        <meta http-equiv="Content-Type" content="text/html charset=UTF-8"/>
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+        <meta charset="utf-8">
+        <title>
+            Hawk Mailer: email overview
+        </title>
+        <style>
+            body {
+                font-family: Roboto, system-ui, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #2F3341;
+                color: #DBE6FF;
+                font-size: 13px;
+                letter-spacing: 0.01em;
+            }
+
+            header {
+                padding: 30px;
+                background: #242732;
+            }
+
+            .center {
+                max-width: 500px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                font-weight: bold;
+                font-size: 20px;
+                margin: 0 0 15px;
+            }
+
+            a {
+                color: inherit;
+            }
+
+            section {
+                padding: 15px;
+                border: 1px solid rgba(219,230,255,0.10);
+                border-radius: 4px;
+                margin: 15px 0;
+                line-height: 1.55em;
+            }
+
+            h2 {
+                font-weight: 500;
+                margin: 0 0 10px;
+                font-size: 17px;
+                color: rgba(219,230,255,0.60);
+                letter-spacing: 0.2px;
+                text-align: left;
+                font-variant: all-petite-caps;
+            }
+
+            button {
+                display: inline-block;
+                padding: 8px 20px;
+                border: 0;
+                border-radius: 5px;
+                background: #4979E4;
+                color: #DBE6FF;
+                font-weight: 500;
+                font-size: 14px;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background: #4869d2;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 15px;
+            }
+
+            input, select , textarea {
+                background: rgba(36,39,50,0.68);
+                border: 1px solid rgba(0,0,0,0.18);
+                border-radius: 3px;
+                padding: 10px 15px;
+                font-size: 15px;
+                color:inherit;
+                width: 300px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="center">
+                <h1>
+                    💌 Hawk Mailer
+                </h1>
+                <a href="https://github.com/codex-team/hawk.workers/tree/master/workers/email">
+                    https://github.com/codex-team/hawk.workers/tree/master/workers/email
+                </a>
+            </div>
+        </header>
+        <div class="center">
+            <section>
+                <span style="float: right; font-size: 42px; margin: 10px 0 0 20px">🤹‍♂  </span>
+                ️On this page you can test email templates. You will need an access to the local Events and Accounts Database.
+            </section>
+            <section>
+                <h2>
+                    Select email type and properties
+                </h2>
+                <form>
+                    <label>
+                        Email type
+                    </label>
+                    <select name="email">
+                        {% for name in templates %}
+                            <option value="{{ name }}"> {{ name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <br><br>
+
+                    <label>
+                        Project id
+                    </label>
+                    <input name="projectId" type="text" required>
+
+                    <br><br>
+
+                    <label>
+                        Event ids
+                    </label>
+                    <textarea name="eventIds" required rows="5"></textarea>
+
+                    <br><br>
+
+                    <label>
+                        What to overview
+                    </label>
+                    <select name="type">
+                        <option value="html">Reach HTML Email</option>
+                        <option value="text">Plain-text message</option>
+                        <option value="subject">Subject</option>
+                    </select>
+
+                    <br><br>
+
+                    <button>View email</button>
+                </form>
+            </section>
+        </div>
+    </body>
+</html>
