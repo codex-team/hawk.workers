@@ -1,4 +1,4 @@
-{% extends '../blocks/layout.twig' %}
+{% extends '../../components/layout.twig' %}
 
 {% block content %}
 
@@ -23,8 +23,8 @@
             </font>
         </td>
     </tr>
-    {% include '../blocks/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
-    {% include '../blocks/event-info.twig' with {event: {newCount: newCount, daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: usersAffected}} %}
-    {% include '../blocks/button.twig' with {href: host + '/event/' + event._id, label: 'View event'} %}
+    {% include '../../components/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
+    {% include '../../components/event-info.twig' with {event: {newCount: newCount, daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: usersAffected}} %}
+    {% include '../../components/button.twig' with {href: host + '/event/' + event._id, label: 'View event'} %}
 
 {% endblock %}

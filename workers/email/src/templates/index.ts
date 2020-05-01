@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import './extensions';
 import Templates from './names';
 
@@ -23,14 +24,34 @@ export interface Template {
 }
 
 /**
- * Collects template files
+ * This folder contains available emails templates
  */
-const templates: {[name: string]: Template} = fs.readdirSync(__dirname) // read templates directory
-  .filter((name) => {
-    return !name.endsWith('.ts') && name !== 'blocks';
-  }) // leave only template folders
+const emailTemplatesDir = 'emails';
+
+/**
+ * Path to email templates folder
+ */
+const emailTemplatesPath = path.resolve(__dirname, emailTemplatesDir);
+
+/**
+ * Collects template files
+ * Return object like
+ * {
+ * 'new-event': {
+ *   subject: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/new-event/subject.twig',
+ *   html: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/new-event/html.twig',
+ *   text: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/new-event/text.twig'
+ * },
+ * 'several-events': {
+ *   subject: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/several-events/subject.twig',
+ *   html: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/several-events/html.twig',
+ *   text: '/Users/.../hawk.mono/workers/workers/email/src/templates/emails/several-events/text.twig'
+ * }
+}
+ */
+const templates: {[name: string]: Template} = fs.readdirSync(emailTemplatesPath)
   .reduce((accumulator, templateName) => {
-    const templateDir = `${__dirname}/${templateName}/`;
+    const templateDir = `${emailTemplatesPath}/${templateName}/`;
     const templateContent = fs.readdirSync(templateDir);
 
     // go to each folder and find the template files

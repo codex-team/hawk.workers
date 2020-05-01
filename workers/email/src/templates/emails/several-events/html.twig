@@ -1,4 +1,4 @@
-{% extends '../blocks/layout.twig' %}
+{% extends '../../components/layout.twig' %}
 
 {% block content %}
 
@@ -13,21 +13,21 @@
     {% set eventsToShow = 5 %}
     {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
         <tr>
-            {% include '../blocks/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
+            {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
             <td style="padding: 0 20px;">
                 <font color="#dbe6ff"
                       style="font-size: 13px; line-height: 1.54; letter-spacing: 0.35px; color: #dbe6ff">
                     {{ eventData.event.payload.title }}
                 </font>
             </td>
-            {% include '../blocks/event-info.twig' with { event: eventData } %}
+            {% include '../../components/event-info.twig' with { event: eventData } %}
         </tr>
     {% endfor %}
 
     {% if events.length - eventsToShow > 0 %}
-        {% include '../blocks/button.twig' with {href: '#{host}/project/#{project._id}', label: 'and #{events.length - eventsToShow} more'} %}
+        {% include '../../components/button.twig' with {href: '#{host}/project/#{project._id}', label: 'and #{events.length - eventsToShow} more'} %}
     {% else %}
-        {% include '../blocks/button.twig' with {href: '#{host}/project/#{project._id}', label: 'View events'} %}
+        {% include '../../components/button.twig' with {href: '#{host}/project/#{project._id}', label: 'View events'} %}
     {% endif %}
 
 {% endblock %}
