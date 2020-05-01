@@ -5,7 +5,7 @@
 
 {{ project.name }}
 
-{{ event.payload.type || 'Uncaught Error' }}
+{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}
 
 {{ event.payload.title }}
 

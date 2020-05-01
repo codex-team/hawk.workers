@@ -191,47 +191,4 @@ describe('Email Sender Worker', () => {
       expect(dailyEventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
     });
   });
-
-  describe('messages handling', () => {
-    it('should send new-event template if there is only one event', async () => {
-      const worker = new EmailWorker();
-
-      worker.sendOneEvent = jest.fn();
-      worker.sendSeveralEvents = jest.fn();
-
-      await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
-      });
-
-      expect(worker.sendOneEvent).toBeCalledTimes(1);
-      expect(worker.sendSeveralEvents).not.toBeCalled();
-    });
-
-    it('should send several-events template if there are several events', async () => {
-      const worker = new EmailWorker();
-
-      worker.sendOneEvent = jest.fn();
-      worker.sendSeveralEvents = jest.fn();
-
-      await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        }, {
-          key: 'anotherGroupHash',
-          count: 1,
-        } ],
-      });
-
-      expect(worker.sendSeveralEvents).toBeCalledTimes(1);
-      expect(worker.sendOneEvent).not.toBeCalled();
-    });
-  });
 });

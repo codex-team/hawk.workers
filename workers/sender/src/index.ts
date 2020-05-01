@@ -6,7 +6,6 @@ import * as pkg from '../package.json';
 
 import { Project } from '../types/project';
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
-import './env';
 import { Rule } from 'hawk-worker-notifier/types/rule';
 import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
@@ -22,20 +21,20 @@ export default abstract class SenderWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Notifications provider
-   */
-  protected provider: NotificationsProvider | null = null;
-
-  /**
    * Database Controllers
    */
   private eventsDb: DatabaseController = new DatabaseController();
   private accountsDb: DatabaseController = new DatabaseController();
 
   /**
+   * Notifications provider
+   */
+  protected abstract provider: NotificationsProvider;
+
+  /**
    * Sender type. Used to get correct notifications endpoint from DB
    */
-  protected abstract channelType: ChannelType | undefined = undefined;
+  protected abstract channelType: ChannelType;
 
   /**
    * Start consuming messages
@@ -67,6 +66,10 @@ export default abstract class SenderWorker extends Worker {
 
     if (!this.provider || typeof this.provider.send !== 'function') {
       throw new Error('Notification Provider is not set or doesn\'t have `send` method');
+    }
+
+    if (!this.provider.logger) {
+      this.provider.setLogger(this.logger);
     }
 
     const project = await this.getProject(projectId);

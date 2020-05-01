@@ -8,15 +8,14 @@ export default abstract class NotificationsProvider {
   /**
    * Winston logger instance
    */
-  protected logger: Logger;
+  public logger: Logger;
 
   /**
-   * Provider constructor
+   * Set logger instance
    *
-   * @class
    * @param logger - winston logger
    */
-  constructor(logger: Logger) {
+  public setLogger(logger: Logger): void {
     this.logger = logger;
   }
 

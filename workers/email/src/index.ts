@@ -1,7 +1,7 @@
 import * as pkg from '../package.json';
-import EmailProvider from './provider';
 import './env';
-import SenderWorker from '../../sender/src';
+import EmailProvider from './provider';
+import SenderWorker from 'hawk-worker-sender/src';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 
 /**
@@ -21,5 +21,5 @@ export default class EmailSenderWorker extends SenderWorker {
   /**
    * Email provider
    */
-  protected provider = new EmailProvider(this.logger);
+  protected provider = new EmailProvider();
 }
