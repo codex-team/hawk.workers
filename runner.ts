@@ -83,7 +83,7 @@ class WorkerRunner {
     // Initialize metrics for workers
     this.workers.forEach((worker) => {
       worker.initMetrics();
-      worker.getMetrics().forEach((metric) => register.registerMetric(metric));
+      worker.getMetrics().forEach((metric: promClient.Counter<string>) => register.registerMetric(metric));
     });
 
     collectDefaultMetrics({ register });
@@ -99,7 +99,7 @@ class WorkerRunner {
             type: worker.type.replace('/', '_'),
             instance: instance,
           },
-        }, (err, resp, body) => {
+        }, (err: Error) => {
           if (err) {
             console.log(`Error of pushing metrics to gateway: ${err}`);
           }
@@ -115,12 +115,12 @@ class WorkerRunner {
     return workerNames.reduce(async (accumulator, packageName) => {
       const workers = await accumulator;
 
-      const workerClass = await import(`${packageName}`);
+      const workerClass = (await import(`${packageName}`)) as {default: WorkerConstructor};
 
       workers.push(workerClass.default);
 
       return workers;
-    }, Promise.resolve([]));
+    }, Promise.resolve([] as WorkerConstructor[]));
   }
 
   /**
