@@ -39,6 +39,7 @@ class EmailTestServer {
    * Accounts DB
    */
   private accountsDb: DatabaseController = new DatabaseController();
+
   /**
    * Server port
    */
