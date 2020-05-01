@@ -142,7 +142,7 @@ describe('Buffer', () => {
         done();
       });
 
-      buffer.setTimer([projectId, ruleId, channelName], 1000, callback);
+      buffer.setTimer([projectId, ruleId, channelName], 500, callback);
     });
 
     it('should call callback with arguments', (done) => {
