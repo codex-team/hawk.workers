@@ -106,6 +106,7 @@ export default abstract class SenderWorker extends Worker {
 
     this.provider.send(channel.endpoint, {
       host: process.env.GARAGE_URL,
+      hostOfStatic: process.env.API_STATIC_URL,
       project,
       events: eventsData,
       period: channel.minPeriod,

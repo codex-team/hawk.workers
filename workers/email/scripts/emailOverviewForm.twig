@@ -40,9 +40,9 @@
             }
 
             section {
-                padding: 15px;
+                padding: 20px;
                 border: 1px solid rgba(219,230,255,0.10);
-                border-radius: 4px;
+                border-radius: 10px;
                 margin: 15px 0;
                 line-height: 1.55em;
             }
@@ -58,8 +58,10 @@
             }
 
             button {
-                display: inline-block;
-                padding: 8px 20px;
+                display: block;
+                width: 100%;
+                text-align: center;
+                padding: 12px 20px;
                 border: 0;
                 border-radius: 5px;
                 background: #4979E4;
@@ -79,6 +81,15 @@
                 font-size: 15px;
             }
 
+            select.loading {
+                background: linear-gradient(to right, #242732 8%, #2F3341 18%, #242732 33%);
+                animation-duration: 3s;
+                animation-fill-mode: forwards;
+                animation-iteration-count: infinite;
+                animation-name: placeHolderShimmer;
+                animation-timing-function: linear;
+            }
+
             input, select , textarea {
                 background: rgba(36,39,50,0.68);
                 border: 1px solid rgba(0,0,0,0.18);
@@ -86,8 +97,18 @@
                 padding: 10px 15px;
                 font-size: 15px;
                 color:inherit;
-                width: 300px;
+                width: 360px;
             }
+
+            @keyframes placeHolderShimmer {
+                0% {
+                    background-position: 0px 0;
+                }
+                100% {
+                    background-position: 100em 0;
+                }
+            }
+
         </style>
     </head>
     <body>
@@ -123,16 +144,20 @@
                     <br><br>
 
                     <label>
-                        Project id
+                        Project
                     </label>
-                    <input name="projectId" type="text" required>
+                    <select name="projectId" id="project">
+                        {% for project in projects %}
+                            <option value="{{ project._id }}"> {{ project.name }}</option>
+                        {% endfor %}
+                    </select>
 
                     <br><br>
 
                     <label>
                         Event ids
                     </label>
-                    <textarea name="eventIds" required rows="5"></textarea>
+                    <select name="eventIds" required id="events" multiple style="height: 200px"></select>
 
                     <br><br>
 
@@ -151,5 +176,46 @@
                 </form>
             </section>
         </div>
+
+        <script>
+          const eventsSelect = document.getElementById('events');
+          const projectSelect = document.getElementById('project');
+          const loaderClass = 'loading';
+
+          projectSelect.addEventListener('change', (event) => {
+            const projectId = event.target.value;
+
+            eventsSelect.classList.add(loaderClass);
+
+            fetch('/fetchEvents?projectId=' + projectId)
+              .then((response) => response.json())
+              .then((response) => {
+                eventsSelect.classList.remove(loaderClass);
+                eventsSelect.innerHTML = '';
+
+                const events = response;
+
+                if (!events || events.length === 0){
+                  return;
+                }
+
+                events.forEach(event => {
+                  const option = document.createElement('option')
+
+                  option.textContent = `(${event.totalCount}) ${event.payload.title}`;
+                  option.value = event._id
+
+                  eventsSelect.appendChild(option);
+                })
+
+                console.log('response', response);
+              })
+          })
+
+          /**
+           * Force filling on page load
+           */
+          projectSelect.dispatchEvent(new CustomEvent('change'));
+        </script>
     </body>
 </html>

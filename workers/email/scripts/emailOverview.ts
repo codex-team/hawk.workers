@@ -95,6 +95,12 @@ class ServerExample {
 
     const { email, projectId, eventIds, type } = queryObject;
 
+    if (request.url.includes('fetchEvents')){
+      this.fetchEvents(projectId as string, response);
+
+      return
+    }
+
     if (!email) {
       this.showForm(response);
 
@@ -102,7 +108,8 @@ class ServerExample {
     }
 
     const project = await this.getProject(projectId as string);
-    const events = await Promise.all((eventIds as string).split('\n').map(async (eventId: string) => {
+    const ids = typeof eventIds === 'string' ? [ eventIds ] : eventIds;
+    const events = await Promise.all(ids.map(async (eventId: string) => {
         const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
 
         return {
@@ -118,6 +125,7 @@ class ServerExample {
     const templateData = {
       events,
       host: process.env.GARAGE_URL,
+      hostOfStatic: process.env.API_STATIC_URL,
       project,
       period: 10,
     }
@@ -149,12 +157,15 @@ class ServerExample {
    * @param response - node http response stream
    */
   private async showForm(response: http.ServerResponse): Promise<void> {
+    const projects = await this.getAllProjects();
+
     const renderForm = () => new Promise((resolve, reject) => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
         {
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
         // @ts-ignore because @types/twig doesn't match the docs
-          templates: Object.keys(templates)
+          templates: Object.keys(templates),
+          projects,
         },
         (err: Error, result: any) => {
         if (err) {
@@ -180,6 +191,20 @@ class ServerExample {
       'Content-Type': 'text/html',
     });
     response.write(html);
+    response.end();
+  }
+
+  /**
+   * Sends JSON to browser
+   *
+   * @param json - what to send
+   * @param response - node http response stream
+   */
+  private sendJSON(json: object, response: http.ServerResponse): void {
+    response.writeHead(200, {
+      'Content-Type': 'application/json',
+    });
+    response.write(JSON.stringify(json));
     response.end();
   }
 
@@ -222,6 +247,17 @@ class ServerExample {
     return renderedTemplate;
   }
 
+  /**
+   * Return events by project id
+   * @param projectId - events owner
+   * @param response - http response stream
+   */
+  private async fetchEvents(projectId: string, response: http.ServerResponse){
+    const events = await this.getEventsByProjectId(projectId);
+
+    this.sendJSON(events, response);
+  }
+
 
   /**
    * Get event data for email
@@ -258,6 +294,32 @@ class ServerExample {
 
     return connection.collection('projects').findOne({ _id: new ObjectID(projectId) });
   }
+
+  /**
+   * Get all projects
+   *
+   * @returns {Promise<Project>}
+   */
+  private async getAllProjects(): Promise<Project[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('projects').find(null, { limit: 10}).toArray();
+  }
+
+  /**
+   * Get all projects
+   *
+   * @param {string} projectId - project id
+   * @returns {Promise<GroupedEvent[]>}
+   */
+  private async getEventsByProjectId(projectId: string): Promise<GroupedEvent[]> {
+    const connection = await this.eventsDb.getConnection();
+
+    return connection.collection(`events:${projectId}`).find(null, {
+      limit: 30,
+    }).toArray();
+  }
+
 }
 
 const server = new ServerExample(4444);

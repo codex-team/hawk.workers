@@ -11,7 +11,10 @@
         <td align="center" style="padding: 30px 0">
             <font color="rgba(219, 230, 255, 0.6);"
                   style="font-size: 14px; text-align: center; color: rgba(219, 230, 255, 0.6); letter-spacing: 0.2px;">
-                {{ event.payload.type ? event.payload.type : 'Uncaught Error' }}
+                <img src="{{ hostOfStatic }}/email/event-badge-icon.png" width="8" height="14" hspace="3" style="vertical-align: middle">
+                <span style="vertical-align: middle; display: inline-block;">
+                    {{ event.payload.type ? event.payload.type : 'Uncaught Error' }}
+                </span>
             </font>
         </td>
     </tr>
@@ -25,6 +28,6 @@
     </tr>
     {% include '../../components/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
     {% include '../../components/event-info.twig' with {event: {newCount: newCount, daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: usersAffected}} %}
-    {% include '../../components/button.twig' with {href: host + '/event/' + event._id, label: 'View event'} %}
+    {% include '../../components/button.twig' with {href: host ~ '/event/' ~ event._id, label: 'View event'} %}
 
 {% endblock %}
