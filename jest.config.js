@@ -9,10 +9,11 @@ module.exports = {
    */
   testEnvironment: 'node',
 
+  preset: '@shelf/jest-mongodb',
+
   /**
    * TypeScript support
    */
-
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },

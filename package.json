@@ -46,6 +46,7 @@
     },
     "devDependencies": {
         "@codexteam/hawk.nodejs": "github:codex-team/hawk.nodejs#hawk2.0",
+        "@shelf/jest-mongodb": "^1.1.5",
         "@types/amqplib": "^0.5.13",
         "@types/jest": "^24.0.18",
         "@types/mongodb": "^3.3.1",
