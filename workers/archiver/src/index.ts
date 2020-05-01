@@ -151,9 +151,17 @@ export default class GrouperWorker extends Worker {
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
 
     /**
+     * Result of the aggregation below
+     */
+    type AggregationResult = {
+      groupHash: string;
+      dailyEvent: { groupHash: string }[];
+    }
+
+    /**
      * Search for all events and their daily events
      */
-    const result = await eventsCollection.aggregate([
+    const result = await eventsCollection.aggregate<AggregationResult>([
       /**
        * Get only groupHash field from event
        */
@@ -165,15 +173,38 @@ export default class GrouperWorker extends Worker {
        */
       {
         $lookup: {
+          /**
+           * Collection to join
+           */
           from: 'dailyEvents:' + project._id.toString(),
+
+          /**
+           * Specifies variables to use in the pipeline field stages
+           * Specify groupHash variable
+           */
           let: { groupHash: '$groupHash' },
+
+          /**
+           * Specifies how to process daily events
+           */
           pipeline: [
+            /**
+             * Get daily events with the same group hash
+             */
             {
               $match: {
                 $expr: { $eq: ['$groupHash', '$$groupHash'] },
               },
             },
+
+            /**
+             * Get only one record
+             */
             { $limit: 1 },
+
+            /**
+             * Get only groupHash field
+             */
             { $project: { groupHash: 1 } },
           ],
           as: 'dailyEvent',
@@ -181,7 +212,14 @@ export default class GrouperWorker extends Worker {
       },
     ]).toArray();
 
-    const groupHashesToRemove = result.filter(res => !res.dailyEvent.length).map(res => res.groupHash);
+    /**
+     * Has events any daily records
+     *
+     * @param events - event to handle
+     */
+    const noDailyRecords = (events: AggregationResult): boolean => events.dailyEvent.length === 0;
+
+    const groupHashesToRemove = result.filter(noDailyRecords).map(res => res.groupHash);
     const deleteOriginalEventsResult = await eventsCollection.deleteMany({
       groupHash: {
         $in: groupHashesToRemove,
