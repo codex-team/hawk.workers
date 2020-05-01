@@ -7,7 +7,7 @@ services:
   - mongodb
   - rabbitmq
 before_install:
-  - yarn add global jest codecov -W
+  - yarn add global jest@24.9.0 codecov -W
 install:
   - yarn install
 before_script:
