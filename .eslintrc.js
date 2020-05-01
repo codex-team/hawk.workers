@@ -4,5 +4,9 @@ module.exports = {
         node: true,
         jest: true
     },
-    extends: ['codex']
+    extends: ['codex'],
+    rules: {
+        "@typescript-eslint/no-unused-expressions": "error",
+        "no-unused-expressions": "off"
+    }
 };
