@@ -3,5 +3,5 @@ import SeveralEventsTpl from './several-events';
 
 export default {
   NewEventTpl,
-  SeveralEventsTpl
-}
+  SeveralEventsTpl,
+};
