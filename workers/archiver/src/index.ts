@@ -3,6 +3,8 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, ObjectId } from 'mongodb';
+import axios from 'axios';
+import { Project, ReportDataByProject, ReportData } from './types';
 
 /**
  * Worker for handling Javascript events
@@ -36,7 +38,7 @@ export default class ArchiverWorker extends Worker {
   /**
    * Collection with projects
    */
-  private projectCollection!: Collection;
+  private projectCollection!: Collection<Project>;
 
   /**
    * Start consuming messages
@@ -47,7 +49,7 @@ export default class ArchiverWorker extends Worker {
 
     this.eventsDbConnection = this.eventsDb.getConnection();
     this.accountDbConnection = this.accountsDb.getConnection();
-    this.projectCollection = this.accountDbConnection.collection<{ _id: ObjectId }>('projects');
+    this.projectCollection = this.accountDbConnection.collection<Project>('projects');
     await super.start();
   }
 
@@ -63,22 +65,39 @@ export default class ArchiverWorker extends Worker {
    * Task handling function
    */
   public async handle(): Promise<void> {
-    this.logger.info(`Start archiving at ${new Date()}`);
+    const startDate = new Date();
+
+    this.logger.info(`Start archiving at ${startDate}`);
 
     const projects = await this.projectCollection.find({}).toArray();
+    const projectsData: ReportDataByProject[] = [];
 
-    await asyncForEach(projects, async (project: { _id: ObjectId }) => {
-      await this.archiveProjectEvents(project);
+    await asyncForEach(projects, async (project) => {
+      const archivedEventsCount = await this.archiveProjectEvents(project);
+
+      projectsData.push({
+        project,
+        archivedEventsCount,
+      });
     });
-    this.logger.info(`Finish archiving at ${new Date()}`);
+
+    const finishDate = new Date();
+
+    await this.sendReport({
+      startDate,
+      projectsData,
+      finishDate,
+    });
+    this.logger.info(`Finish archiving at ${finishDate}`);
   }
 
   /**
    * Removes old events in project
+   * Returns archived events count
    *
    * @param project - project data to remove events
    */
-  private async archiveProjectEvents(project: { _id: ObjectId }): Promise<void> {
+  private async archiveProjectEvents(project: { _id: ObjectId }): Promise<number> {
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
     const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
 
@@ -90,6 +109,8 @@ export default class ArchiverWorker extends Worker {
     await this.updateArchivedEventsCounter(project, deletedCount);
 
     this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+
+    return deletedCount;
   }
 
   /**
@@ -227,5 +248,34 @@ export default class ArchiverWorker extends Worker {
     });
 
     return deleteOriginalEventsResult.deletedCount || 0;
+  }
+
+  /**
+   * Send report with archived events count to Telegram
+   *
+   * @param reportData - data for sending report
+   */
+  private async sendReport(reportData: ReportData): Promise<void> {
+    if (!process.env.NOTIFY_URL) {
+      this.logger.error('Can\'t send report because NOTIFY_URL not provided');
+    }
+
+    let report = 'Hawk Archiver 👾 \n';
+    let totalArchivedEventsCount = 0;
+
+    reportData.projectsData.forEach(dataByProject => {
+      if (dataByProject.archivedEventsCount > 0) {
+        report += `\n${dataByProject.archivedEventsCount} events | <b>${dataByProject.project.name}</b> | <code>${dataByProject.project._id}</code>`;
+        totalArchivedEventsCount += dataByProject.archivedEventsCount;
+      }
+    });
+
+    report += `\n\n${totalArchivedEventsCount} total events archived`;
+
+    await axios({
+      method: 'post',
+      url: process.env.NOTIFY_URL,
+      data: 'message=' + report + '&parse_mode=HTML',
+    });
   }
 }
