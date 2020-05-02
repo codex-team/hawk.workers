@@ -256,8 +256,10 @@ export default class ArchiverWorker extends Worker {
    * @param reportData - data for sending report
    */
   private async sendReport(reportData: ReportData): Promise<void> {
-    if (!process.env.NOTIFY_URL) {
+    if (!process.env.CODEX_BOT_WEBHOOK) {
       this.logger.error('Can\'t send report because NOTIFY_URL not provided');
+
+      return;
     }
 
     let report = 'Hawk Archiver ☣️ \n';
@@ -276,7 +278,7 @@ export default class ArchiverWorker extends Worker {
 
     await axios({
       method: 'post',
-      url: process.env.NOTIFY_URL,
+      url: process.env.CODEX_BOT_WEBHOOK,
       data: 'message=' + report + '&parse_mode=HTML',
     });
   }
