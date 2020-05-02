@@ -262,6 +262,8 @@ export default class ArchiverWorker extends Worker {
       return;
     }
 
+    reportData.projectsData.sort((a, b) => b.archivedEventsCount - a.archivedEventsCount);
+
     let report = 'Hawk Archiver ☣️ \n';
     let totalArchivedEventsCount = 0;
 
