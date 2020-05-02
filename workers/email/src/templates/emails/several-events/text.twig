@@ -1,0 +1,35 @@
+You have {{ events.length }} new events on «{{ project.name }}» project for the last {{ period | prettyTime }}
+
+{% set eventsToShow = 5 %}
+
+{% for eventData in events | sortEvents | slice(0, eventsToShow) %}
+
+{{ eventData.event.payload.type ?: 'Uncaught Error' }}: {{ eventData.event.payload.title }}
+
+In file: {{ eventData.event.payload.backtrace[0].file }} at line {{ eventData.event.payload.backtrace[0].line }}.
+
+{{ eventData.newCount }} new and {{ eventData.event.totalCount }} total{{ event.daysRepeated ? ', ' ~ event.daysRepeated ~ 'days repeating' : ''  }} {{ event.usersAffected ? ', ' ~ event.userAffected ~ ' users affected' : '' }}
+
+
+{% endfor %}
+
+{% if events.length - eventsToShow > 0 %}
+View other {{ events.length - eventsToShow }} events: {{ host }}/project/{{ project._id }}
+{% else %}
+View events: {{ host }}/project/{{ project._id }}
+{% endif %}
+
+
+***
+
+You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above. To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
+
+Hawk
+Errors tracking system
+
+Made by CodeX
+
+
+
+
+

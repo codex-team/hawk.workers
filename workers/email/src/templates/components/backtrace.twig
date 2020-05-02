@@ -1,0 +1,30 @@
+<div style="padding-left: 10px;" >
+    {% include './filename.twig' with {file: backtrace.file} %}
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace; table-layout: fixed; overflow: hidden">
+    <tr height="10">
+        <td width="13"></td>
+        <td></td>
+    </tr>
+    {% for frame in backtrace.sourceCode %}
+        <tr>
+            <td width="13">
+                <div style="padding-left: 10px; border-top-right-radius: 0;border-top-left-radius: 6px;border-bottom-right-radius: 0;border-bottom-left-radius: 6px;background-color: {{ frame.line == backtrace.line ? 'rgba(149, 61, 135, 0.3);' : 'unset' }}">
+                    <font color="#dbe6ff"
+                          style="opacity: 0.4; font-size: 10px; line-height: 2.1; color: #dbe6ff;">
+                        {{ frame.line }}
+                    </font>
+                </div>
+            </td>
+            <td>
+                <div style="padding-top: 0;padding-right: 10px;padding-left: 20px;padding-bottom: 0;border-top-right-radius: 6px;border-top-left-radius: 0;border-bottom-right-radius: 6px;border-bottom-left-radius: 0;background-color: {{ frame.line == backtrace.line ? 'rgba(149, 61, 135, 0.3);' : 'unset' }}; overflow: auto">
+                    <font color="#969FB3"
+                          style="font-size: 12px; line-height: 1.75; color: #969FB3; white-space: pre; text-overflow: clip">{{ frame.content | escape }}</font>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+

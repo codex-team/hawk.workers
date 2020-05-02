@@ -10,7 +10,6 @@
         "module": "commonjs",
         "resolveJsonModule": true
     },
-
     "include": [
         "workers/**/*.ts",
         "runner.ts"

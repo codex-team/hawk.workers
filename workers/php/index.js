@@ -1,5 +1,5 @@
 const { EventWorker } = require('../../lib/event-worker');
-const { ParsingError, DatabaseError } = require('../../lib/worker');
+const { ParsingError, DatabaseError } = require('../../lib/workerErrors');
 const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
 const { ValidationError } = require('yup');

@@ -8,5 +8,8 @@ module.exports = {
     rules: {
         "@typescript-eslint/no-unused-expressions": "error",
         "no-unused-expressions": "off"
-    }
+    },
+  globals: {
+    NodeJS: true
+  }
 };

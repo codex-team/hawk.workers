@@ -148,8 +148,9 @@ export default class Buffer {
    *
    * @param key - key of channel to set timer to
    * @param timeout - timer timeout time in ms
-   * @param callback - callback to call on timeot
+   * @param callback - callback to call on timeout
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public setTimer(key: ChannelKey, timeout: number, callback: (...args: any[]) => void): Timeout {
     const channel = this.getChannel(key);
 
@@ -223,9 +224,10 @@ export default class Buffer {
   /**
    * Get channel buffer
    *
-   * @param {string} projectId - id of project event is related to
-   * @param {string} ruleId - id of rule channel is related to
-   * @param {string} channelName - telegram, slack, or email
+   * @param {object} params - method rest params
+   * @param {string} params.projectId - id of project event is related to
+   * @param {string} params.ruleId - id of rule channel is related to
+   * @param {string} params.channelName - telegram, slack, or email
    */
   private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
     const project = this.getField<ProjectSchema>(

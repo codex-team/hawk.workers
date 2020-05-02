@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const { EventWorker } = require('../../lib/event-worker');
-const { ParsingError } = require('../../lib/worker');
+const { ParsingError } = require('../../lib/workerErrors');
 const db = require('../../lib/db/controller');
 
 /**

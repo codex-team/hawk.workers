@@ -1,0 +1,59 @@
+{% extends '../../components/layout.twig' %}
+
+{% block content %}
+
+    {% set event = events[0].event %}
+    {% set daysRepeated = events[0].daysRepeated %}
+    {% set newCount = events[0].newCount %}
+    {% set usersAffected = events[0].usersAffected %}
+
+    <tr>
+        <td align="center" style="padding-top: 30px;padding-right: 0;padding-left: 0;padding-bottom: 30px;">
+            <font color="#969FB3"
+                  style="font-size: 14px; text-align: center; color: #969FB3; letter-spacing: 0.2px;">
+                <img src="{{ hostOfStatic }}/email/event-badge-icon.png" width="8" height="14" hspace="3" style="vertical-align: middle">
+                <span style="vertical-align: middle; display: inline-block;">
+                    {{ event.payload.type ? event.payload.type : 'Uncaught Error' }}
+                </span>
+            </font>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <div class="event-title-block" style="padding: 20px; border-width: 1px; border-style: solid; border-color: #494F5E; border-radius: 10px;">
+                <font class="event-title-block__font" color="#dbe6ff" style="font-size: 15px; line-height: 1.47; letter-spacing: 0.4px; color: #dbe6ff">
+                    {{ event.payload.title }}
+                </font>
+            </div>
+        </td>
+    </tr>
+
+    <tr height="10">
+        <td></td>
+    </tr>
+
+    {% if event.payload.backtrace is not empty %}
+        <tr>
+            <td class="backtrace-wrap" style="padding-top: 10px;padding-right: 10px;padding-left: 10px;padding-bottom: 10px;">
+                {% include '../../components/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
+            </td>
+        </tr>
+    {% endif %}
+
+    <tr>
+        <td style="padding-top: 10px;padding-right: 20px;padding-left: 20px;padding-bottom: 5px;">
+            {% include '../../components/event-info.twig' with {event: {newCount: newCount, daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: usersAffected}} %}
+        </td>
+    </tr>
+
+    <tr>
+        <td style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+            {% set eventURL = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id %}
+            {% include '../../components/button.twig' with {href: eventURL, label: 'View event'} %}
+        </td>
+    </tr>
+
+
+
+
+{% endblock %}

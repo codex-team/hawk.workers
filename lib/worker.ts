@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as client from 'prom-client';
 import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
+import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -331,36 +332,4 @@ export abstract class Worker {
    * @param {WorkerTask} event - Event object from consume method
    */
   protected abstract handle(event: WorkerTask): Promise<void>;
-}
-
-/**
- * Class for critical errors
- * have to stop process
- */
-export class CriticalError extends Error {
-}
-
-/**
- * Class for non-critical errors
- * have not to stop process
- */
-export class NonCriticalError extends Error {
-}
-
-/**
- * Simple class for parsing errors
- */
-export class ParsingError extends NonCriticalError {
-}
-
-/**
- * Class for database errors in workers
- */
-export class DatabaseError extends CriticalError {
-}
-
-/**
- * Class for validation errors
- */
-export class ValidationError extends NonCriticalError {
 }
