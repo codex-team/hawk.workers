@@ -2,7 +2,7 @@ import { TemplateVariables, EventsTemplateVariables } from 'hawk-worker-sender/t
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import templates from './templates';
 import { TelegramTemplate } from '../types/template';
-import * as utils from '../../../lib/utils';
+import axios from 'axios';
 
 /**
  * Class to provide telegram notifications
@@ -25,7 +25,7 @@ export default class TelegramProvider extends NotificationsProvider {
 
     const message = await this.render(template, variables);
 
-    await utils.sendReport(message);
+    await this.deliver(to, message);
   }
 
   /**
@@ -36,5 +36,18 @@ export default class TelegramProvider extends NotificationsProvider {
    */
   private async render(template: TelegramTemplate, variables: EventsTemplateVariables): Promise<string> {
     return template(variables);
+  }
+
+  /**
+   * Sends message to the telegram through the @codex_bot
+   * @param endpoint - where to send
+   * @param message - what to send
+   */
+  private async deliver(endpoint: string, message: string): Promise<void> {
+    await axios({
+      method: 'post',
+      url: endpoint,
+      data: `parse_mode=Markdown&message=` + encodeURIComponent(message)
+    })
   }
 }
