@@ -273,7 +273,7 @@ export default class ArchiverWorker extends Worker {
 
     reportData.projectsData.forEach(dataByProject => {
       if (dataByProject.archivedEventsCount > 0) {
-        report += `\n${dataByProject.archivedEventsCount} events | <b>${dataByProject.project.name}</b> | <code>${dataByProject.project._id}</code>`;
+        report += `\n${dataByProject.archivedEventsCount} events | <b>${encodeURIComponent(dataByProject.project.name)}</b> | <code>${dataByProject.project._id}</code>`;
         totalArchivedEventsCount += dataByProject.archivedEventsCount;
       }
     });
