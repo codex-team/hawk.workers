@@ -2,6 +2,8 @@ import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const rule = {
   _id: 'ruleid',
   isEnabled: true,

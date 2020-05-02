@@ -2,12 +2,13 @@ import * as crypto from 'crypto';
 import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import * as utils from '../../../lib/utils';
-import { DatabaseError, ValidationError, Worker } from '../../../lib/worker';
+import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
+import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
 
 /**
  * Worker for handling Javascript events

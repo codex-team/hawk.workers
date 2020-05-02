@@ -17,6 +17,7 @@ describe('Buffer', () => {
     });
 
     it('should return default value if field doesn\'t exist', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const obj = {} as any;
       const buffer = new Buffer();
 

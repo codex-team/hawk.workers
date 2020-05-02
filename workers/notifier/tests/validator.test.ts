@@ -1,5 +1,7 @@
 import RuleValidator, { WhatToReceive } from '../src/validator';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 describe('RuleValidator', () => {
   const ruleMock = {
     isEnabled: true,
