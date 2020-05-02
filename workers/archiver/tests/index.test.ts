@@ -4,6 +4,13 @@ import { mockedRepetitions } from './repetitions.mock';
 import ArchiverWorker from '../src';
 import { mockedEvents } from './events.mock';
 
+jest.mock('axios');
+
+/**
+ * Set test date at 01.05.2020 12:00 so that tests pass always at the same time
+ */
+// eslint-disable-next-line no-extend-native
+Date.prototype.getTime = (): number => 1588334400 * 1000;
 const MONGO_DSN = 'mongodb://127.0.0.1:27019';
 
 process.env.MONGO_DSN = MONGO_DSN;
