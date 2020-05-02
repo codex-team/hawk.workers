@@ -1,6 +1,6 @@
-import {EventsTemplateVariables} from 'hawk-worker-sender/types/template-variables';
-import {GroupedEvent} from 'hawk-worker-grouper/types/grouped-event';
-import {Project} from 'hawk-worker-sender/types/project';
+import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { Project } from 'hawk-worker-sender/types/project';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
 
@@ -9,34 +9,33 @@ describe('TelegramProvider', () => {
    * Check templates rendering
    */
   describe('templates', () => {
-
     /**
      * Check that rendering of a single event message works without errors
      */
     it('should successfully render a new-event template', async () => {
       const vars: EventsTemplateVariables = {
-        events: [{
+        events: [ {
           event: {
             totalCount: 10,
             payload: {
               title: 'New event',
               timestamp: Date.now(),
-              backtrace: [{
+              backtrace: [ {
                 file: 'file',
                 line: 1,
-                sourceCode: [{
+                sourceCode: [ {
                   line: 1,
                   content: 'code',
-                }],
-              }],
+                } ],
+              } ],
             },
           } as GroupedEvent,
           daysRepeated: 1,
           newCount: 1,
-        }],
+        } ],
         period: 60,
-        host: process.env.GARAGE_URL!,
-        hostOfStatic: process.env.API_STATIC_URL!,
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
         project: {
           _id: 'projectId',
           name: 'Project',
@@ -46,12 +45,13 @@ describe('TelegramProvider', () => {
 
       const provider = new TelegramProvider();
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
-      const render = () => provider.render(templates.NewEventTpl, vars);
+      const render = (): string => provider.render(templates.NewEventTpl, vars);
 
       expect(render).not.toThrowError();
 
-      let message = await render();
+      const message = await render();
 
       expect(message).toBeDefined();
     });
@@ -79,8 +79,8 @@ describe('TelegramProvider', () => {
           daysRepeated: 1,
           newCount: 1,
         } ],
-        host: process.env.GARAGE_URL!,
-        hostOfStatic: process.env.API_STATIC_URL!,
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
         project: {
           _id: 'projectId',
           name: 'Project',
@@ -91,8 +91,9 @@ describe('TelegramProvider', () => {
 
       const provider = new TelegramProvider();
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
-      const render = () => provider.render(templates.SeveralEventsTpl, vars);
+      const render = (): string => provider.render(templates.SeveralEventsTpl, vars);
 
       expect(render).not.toThrowError();
 
@@ -101,4 +102,4 @@ describe('TelegramProvider', () => {
       expect(message).toBeDefined();
     });
   });
-})
+});

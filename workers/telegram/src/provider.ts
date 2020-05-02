@@ -40,6 +40,7 @@ export default class TelegramProvider extends NotificationsProvider {
 
   /**
    * Sends message to the telegram through the @codex_bot
+   *
    * @param endpoint - where to send
    * @param message - what to send
    */
@@ -47,7 +48,7 @@ export default class TelegramProvider extends NotificationsProvider {
     await axios({
       method: 'post',
       url: endpoint,
-      data: `parse_mode=Markdown&message=` + encodeURIComponent(message)
-    })
+      data: `parse_mode=Markdown&message=` + encodeURIComponent(message),
+    });
   }
 }
