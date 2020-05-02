@@ -1,8 +1,6 @@
 import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
 import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
 import { ObjectID } from 'mongodb';
-import '../src/env';
-import { Project } from 'hawk-worker-sender/types/project';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -18,6 +16,18 @@ const projectQueryMock = jest.fn(() => ({
       including: [],
       excluding: [],
       channels: {
+        /**
+         * Channel of test sender
+         */
+        console: {
+          isEnabled: true,
+          endpoint: 'current-terminal-window',
+          minPeriod: 0.5,
+        },
+
+        /**
+         * Used in app channels
+         */
         telegram: {
           isEnabled: true,
           endpoint: 'tgEndpoint',
@@ -36,7 +46,7 @@ const projectQueryMock = jest.fn(() => ({
       },
     },
   ],
-} as Project));
+}));
 
 const eventsQueryMock = jest.fn(() => ({
   totalCount: 10,
@@ -117,29 +127,44 @@ class mockDBController {
   }
 }
 
-describe('Email Sender Worker', () => {
+describe('Sender Worker', () => {
+  /**
+   * Mock db controller
+   */
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: mockDBController,
   }));
 
-  const EmailWorker = require('../src').default;
+  const ExampleSenderWorker = require('./sender-example').default;
 
+  /**
+   * Check worker type
+   */
   it('should have correct worker type', () => {
-    const worker = new EmailWorker();
+    const worker = new ExampleSenderWorker();
 
-    expect(worker.type).toEqual('sender/email');
+    expect(worker.type).toMatch(/^sender\/[-a-z]+$/);
   });
 
+  /**
+   * Check start and finish
+   */
   it('should start and finish without errors', async () => {
-    const worker = new EmailWorker();
+    const worker = new ExampleSenderWorker();
 
     await worker.start();
     await worker.finish();
   });
 
+  /**
+   * Check DB connect
+   */
   describe('db calls', () => {
+    /**
+     * Call connect to 2 DBs per single time
+     */
     it('should connect to db on start', async () => {
-      const worker = new EmailWorker();
+      const worker = new ExampleSenderWorker();
 
       await worker.start();
 
@@ -149,8 +174,11 @@ describe('Email Sender Worker', () => {
       await worker.finish();
     });
 
+    /**
+     * On 'handle' it should get Project from DB
+     */
     it('should query project on handle', async () => {
-      const worker = new EmailWorker();
+      const worker = new ExampleSenderWorker();
 
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
@@ -164,8 +192,11 @@ describe('Email Sender Worker', () => {
       expect(projectQueryMock).toBeCalledWith({ _id: new ObjectID('5e3eef0679fa3700a0198a49') });
     });
 
+    /**
+     * Then, it should get events
+     */
     it('should query events on handle', async () => {
-      const worker = new EmailWorker();
+      const worker = new ExampleSenderWorker();
 
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',
@@ -179,8 +210,11 @@ describe('Email Sender Worker', () => {
       expect(eventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
     });
 
+    /**
+     * Then, compute events count
+     */
     it('should query daily events count on handle', async () => {
-      const worker = new EmailWorker();
+      const worker = new ExampleSenderWorker();
 
       await worker.handle({
         projectId: '5e3eef0679fa3700a0198a49',

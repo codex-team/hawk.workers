@@ -51,7 +51,7 @@ describe('EmailProvider', () => {
   });
 
   describe('templates', () => {
-    it('should render successfully render new-event template', async () => {
+    it('should successfully render a new-event template', async () => {
       const vars: EventsTemplateVariables = {
         events: [{
           event: {
@@ -99,7 +99,7 @@ describe('EmailProvider', () => {
       });
     });
 
-    it('should render successfully render new-event template', async () => {
+    it('should successfully render a several-events template', async () => {
       const vars: EventsTemplateVariables = {
         events: [ {
           event: {
