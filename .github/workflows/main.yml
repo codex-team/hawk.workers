@@ -1,0 +1,143 @@
+name: Build and deploy
+
+on: [push]
+
+env:
+  DOCKER_IMAGE_NAME: hawk-workers
+  DOCKERHUB_USER: codexteamuser
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get branch name
+        uses: nelonoel/branch-name@v1
+
+      - name: Build email
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-email"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-email .
+
+      - name: Build grouper
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-grouper"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-grouper .
+
+      - name: Build js
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-js"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-js .
+
+      - name: Build nodejs
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-nodejs"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-nodejs .
+
+      - name: Build notifier
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-notifier"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-notifier .
+
+      - name: Build php
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-php"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-php .
+
+      - name: Build python
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-python"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-python .
+
+      - name: Build sender
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-sender"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-sender .
+
+      - name: Build source-maps
+        if: endsWith(github.ref, '/stage')
+        run: |
+          sed 's/run-.\+/run-maps"]/' Dockerfile
+          docker build -t ${DOCKER_IMAGE_NAME}-source-maps .
+
+      - name: Push email
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-email $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-email:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-email:$BRANCH_NAME
+          docker logout
+
+      - name: Push grouper
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-grouper $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-grouper:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-grouper:$BRANCH_NAME
+          docker logout
+
+      - name: Push js
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-js $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-js:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-js:$BRANCH_NAME
+          docker logout
+
+      - name: Push nodejs
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-nodejs $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-nodejs:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-nodejs:$BRANCH_NAME
+          docker logout
+
+      - name: Push notifier
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-notifier $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-notifier:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-notifier:$BRANCH_NAME
+          docker logout
+
+      - name: Push php
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-php $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-php:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-php:$BRANCH_NAME
+          docker logout
+
+      - name: Push python
+        if: endsWith(github.ref, '/stage')
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-python $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-python:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-python:$BRANCH_NAME
+          docker logout
+
+      - name: Push sender
+        if: endsWith(github.ref, '/stage')                
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-sender $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-sender:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-sender:$BRANCH_NAME
+          docker logout
+
+      - name: Push source-maps
+        if: endsWith(github.ref, '/stage')        
+        run: |
+          docker tag ${DOCKER_IMAGE_NAME}-source-maps $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-source-maps:$BRANCH_NAME
+          docker login -u $DOCKERHUB_USER -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $DOCKERHUB_USER/${DOCKER_IMAGE_NAME}-source-maps:$BRANCH_NAME
+          docker logout
