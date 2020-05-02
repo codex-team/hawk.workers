@@ -257,7 +257,7 @@ export default class ArchiverWorker extends Worker {
    */
   private async sendReport(reportData: ReportData): Promise<void> {
     if (!process.env.CODEX_BOT_WEBHOOK) {
-      this.logger.error('Can\'t send report because NOTIFY_URL not provided');
+      this.logger.error('Can\'t send report because CODEX_BOT_WEBHOOK not provided');
 
       return;
     }
