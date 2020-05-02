@@ -5,6 +5,10 @@ import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, ObjectId } from 'mongodb';
 import axios from 'axios';
 import { Project, ReportDataByProject, ReportData } from './types';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Worker for handling Javascript events
@@ -256,8 +260,8 @@ export default class ArchiverWorker extends Worker {
    * @param reportData - data for sending report
    */
   private async sendReport(reportData: ReportData): Promise<void> {
-    if (!process.env.CODEX_BOT_WEBHOOK) {
-      this.logger.error('Can\'t send report because CODEX_BOT_WEBHOOK not provided');
+    if (!process.env.REPORT_NOTIFY_URL) {
+      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
 
       return;
     }
@@ -280,7 +284,7 @@ export default class ArchiverWorker extends Worker {
 
     await axios({
       method: 'post',
-      url: process.env.CODEX_BOT_WEBHOOK,
+      url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + report + '&parse_mode=HTML',
     });
   }
