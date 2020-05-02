@@ -260,7 +260,7 @@ export default class ArchiverWorker extends Worker {
       this.logger.error('Can\'t send report because NOTIFY_URL not provided');
     }
 
-    let report = 'Hawk Archiver 👾 \n';
+    let report = 'Hawk Archiver ☣️ \n';
     let totalArchivedEventsCount = 0;
 
     reportData.projectsData.forEach(dataByProject => {
@@ -270,7 +270,9 @@ export default class ArchiverWorker extends Worker {
       }
     });
 
-    report += `\n\n${totalArchivedEventsCount} total events archived`;
+    const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
+
+    report += `\n\n${totalArchivedEventsCount} total events archived in ${archivingTimeInMinutes.toFixed(3)} min`;
 
     await axios({
       method: 'post',
