@@ -1,32 +1,33 @@
-<table cellpadding="0" cellspacing="0" border="0">
-    <tr>
-        <td style="padding-right: 10px" valign="middle">
-            <div style="display: inline-block; padding: 0 9px; border-radius: 16px; background-color: #4979e4; text-align: center; vertical-align: middle">
-                <font color="#dbe6ff"
-                      style="font-size: 12px; line-height: 20px; font-weight: 500; letter-spacing: -0.09px; color: #dbe6ff;">
-                    {{ event.newCount | abbrNumber }} new
-                </font>
-            </div>
-        </td>
-        <td style="padding-right: 10px" valign="middle">
-            <font color="#969FB3"
-                  style="font-size: 12px; line-height: 20px;letter-spacing: 0.17px;text-align: center; color: #969FB3;">
-                {{ event.event.totalCount | abbrNumber }} total
-            </font>
-        </td>
-        <td style="padding-right: 10px" valign="middle">
+<div>
+    <div style="display: inline-block; padding: 0 9px; border-radius: 16px; background-color: #4979e4; text-align: center; margin-bottom: 5px">
+        <font color="#dbe6ff"
+              style="font-size: 12px; line-height: 20px; font-weight: 500; letter-spacing: -0.09px; color: #dbe6ff;">
+            <nobr>
+                {{ event.newCount | abbrNumber }}&nbsp;new
+            </nobr>
+        </font>
+    </div>
+    &nbsp;&nbsp;
+    <font color="#969FB3"
+          style="font-size: 12px; line-height: 20px;letter-spacing: 0.17px;text-align: center; color: #969FB3;">
+        <nobr>
+            {{ event.event.totalCount | abbrNumber }}&nbsp;total
+        </nobr>
+    </font>
+    &nbsp;&nbsp;
+    <font color="#969FB3"
+          style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
+        <nobr>
+            {{ event.daysRepeated }}&nbsp;days&nbsp;repeating
+        </nobr>
+    </font>
+    &nbsp;&nbsp;
+    {% if event.usersAffected %}
             <font color="#969FB3"
                   style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
-                {{ event.daysRepeated }} days repeating
+                <nobr>
+                    {{ event.usersAffected }}&nbsp;users&nbsp;affected
+                </nobr>
             </font>
-        </td>
-        {% if event.usersAffected %}
-            <td valign="middle">
-                <font color="#969FB3"
-                      style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
-                    {{ event.usersAffected }} users affected
-                </font>
-            </td>
-        {% endif %}
-    </tr>
-</table>
+    {% endif %}
+</div>

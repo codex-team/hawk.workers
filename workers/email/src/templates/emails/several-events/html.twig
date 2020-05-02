@@ -3,23 +3,23 @@
 {% block content %}
 
     <tr>
-        <td style="padding-top: 35px;padding-right: 0;padding-left: 20px;padding-bottom: 10px;">
-            <font color="#dbe6ff"
+        <td class="several-items-heading" style="padding-top: 35px;padding-right: 0;padding-left: 20px;padding-bottom: 10px;">
+            <font class="several-items-heading__font"  color="#dbe6ff"
                   style="font-size: 15px; color: #dbe6ff; letter-spacing: 0.15px;">
                 You have {{ events.length }} new {{ events.length > 1 ? 'events' : 'event' }} for the last {{ period | prettyTime }}
             </font>
         </td>
     </tr>
-    <tr height="10">
+    <tr height="10" class="several-items-head-space">
         <td></td>
     </tr>
     {% set eventsToShow = 5 %}
     {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
-        <tr height="20">
+        <tr height="20" class="several-items-listspace">
             <td></td>
         </tr>
         <tr>
-            <td style="padding-top: 0;padding-right: 20px;padding-left: 20px;padding-bottom: 0;">
+            <td class="several-items-event" style="padding-top: 0;padding-right: 20px;padding-left: 20px;padding-bottom: 0;">
                 {% if eventData.event.payload.backtrace is not empty %}
                     {% if eventData.event.payload.backtrace[0].file is not empty %}
                         {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
@@ -36,13 +36,13 @@
                 {% include '../../components/event-info.twig' with { event: eventData } %}
             </td>
         </tr>
-        <tr height="20">
+        <tr height="20" class="several-items-listspace">
             <td></td>
         </tr>
     {% endfor %}
 
     <tr>
-        <td style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+        <td class="several-items-button-wrap" style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
             {% set url = host ~ '/project/' ~ project._id %}
             {% if events.length - eventsToShow > 0 %}
                 {% set hiddenEventsLen = events.length - eventsToShow %}

@@ -3,6 +3,7 @@ import * as Twig from 'twig';
 import { TemplateVariables, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
+import * as utils from '../../../lib/utils';
 
 import Templates from './templates/names';
 
@@ -70,8 +71,10 @@ export default class EmailProvider extends NotificationsProvider {
       await this.transporter.sendMail(mailOptions);
     } catch (e) {
       this.logger.error(
-        'Error sending letter. Try to check the environment settings (in .env file).'
+        'Error sending letter. Try to check the environment settings (in .env file).', e.message
       );
+
+      utils.sendReport('📮 Email worker\n\n' + (e.message || e.toString()));
     }
   }
 

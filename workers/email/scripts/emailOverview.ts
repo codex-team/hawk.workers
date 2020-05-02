@@ -105,7 +105,7 @@ class EmailTestServer {
 
     const email = queryParams.get('email');
     const projectId = queryParams.get('projectId');
-    const eventIds = queryParams.get('eventIds');
+    const eventIds = queryParams.getAll('eventIds');
     const type = queryParams.get('type');
 
     if (request.url.includes('fetchEvents')) {
