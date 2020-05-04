@@ -7,7 +7,7 @@ services:
   - mongodb
   - rabbitmq
 before_install:
-  - yarn add global codecov
+  - yarn add global codecov -W
 install:
   - yarn install
 before_script:
