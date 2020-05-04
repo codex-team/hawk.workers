@@ -15,7 +15,8 @@
         "workers/notifier",
         "workers/email",
         "workers/telegram",
-        "workers/sender"
+        "workers/sender",
+        "workers/archiver"
     ],
     "scripts": {
         "test": "jest --coverage",
@@ -29,6 +30,7 @@
         "run-js": "yarn worker hawk-worker-javascript",
         "run-python": "yarn worker hawk-worker-python",
         "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-archiver": "yarn worker hawk-worker-archiver",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-notifier": "yarn worker hawk-worker-notifier",
@@ -62,6 +64,7 @@
         "ts-jest": "25.4.0",
         "ts-node": "^8.10.1",
         "typescript": "^3.8.3",
+        "wait-for-expect": "^3.0.2",
         "webpack": "^4.43.0",
         "yargs": "^15.3.1"
     }
