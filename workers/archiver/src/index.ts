@@ -22,22 +22,17 @@ export default class ArchiverWorker extends Worker {
   /**
    * Database Controller for events database
    */
-  private eventsDb: DatabaseController = new DatabaseController();
+  private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Database Controller for accounts database
    */
-  private accountsDb: DatabaseController = new DatabaseController();
+  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
   /**
    * Connection to events DB
    */
   private eventsDbConnection!: Db;
-
-  /**
-   * Connection to accounts DB
-   */
-  private accountDbConnection!: Db;
 
   /**
    * Collection with projects
@@ -48,12 +43,10 @@ export default class ArchiverWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.eventsDb.connect(process.env.EVENTS_DB_NAME);
-    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME);
+    this.eventsDbConnection = await this.eventsDb.connect();
+    const accountDbConnection = await this.accountsDb.connect();
 
-    this.eventsDbConnection = this.eventsDb.getConnection();
-    this.accountDbConnection = this.accountsDb.getConnection();
-    this.projectCollection = this.accountDbConnection.collection<Project>('projects');
+    this.projectCollection = accountDbConnection.collection<Project>('projects');
     await super.start();
   }
 
@@ -268,7 +261,7 @@ export default class ArchiverWorker extends Worker {
 
     reportData.projectsData.sort((a, b) => b.archivedEventsCount - a.archivedEventsCount);
 
-    let report = 'Hawk Archiver ☣️ \n';
+    let report = 'Hawk Archiver 📦️ \n';
     let totalArchivedEventsCount = 0;
 
     reportData.projectsData.forEach(dataByProject => {

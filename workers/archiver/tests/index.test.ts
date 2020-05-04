@@ -3,7 +3,7 @@ import { mockedDailyEvents, oldDailyEvents } from './dailyEvents.mock';
 import { mockedRepetitions } from './repetitions.mock';
 import ArchiverWorker from '../src';
 import { mockedEvents } from './events.mock';
-
+import '../../../env-test';
 jest.mock('axios');
 
 /**
@@ -11,11 +11,6 @@ jest.mock('axios');
  */
 // eslint-disable-next-line no-extend-native
 Date.prototype.getTime = (): number => 1588334400 * 1000;
-const MONGO_DSN = 'mongodb://127.0.0.1:27019';
-
-process.env.MONGO_DSN = MONGO_DSN;
-process.env.MAX_DAYS_NUMBER = '30';
-process.env.ACCOUNTS_DB_NAME = process.env.EVENTS_DB_NAME = 'hawk';
 
 const mockedProject = {
   _id: new ObjectId('5e4ff518628a6c714515f4da'),
@@ -30,7 +25,9 @@ describe('Archiver worker', () => {
   let projectCollection;
 
   beforeAll(async () => {
-    connection = await MongoClient.connect(MONGO_DSN, {
+    console.log(process.env.MONGO_ACCOUNTS_DATABASE_URI);
+
+    connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
