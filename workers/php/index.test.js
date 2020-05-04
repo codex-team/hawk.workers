@@ -2,8 +2,8 @@
 const { PhpEventWorker } = require('./index');
 const { ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
-
 require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
+require('dotenv').config({ path: resolve(__dirname, '../../.env.test') });
 
 let worker;
 

@@ -1,4 +1,5 @@
 import RuleValidator, { WhatToReceive } from '../src/validator';
+import '../../../env-test';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

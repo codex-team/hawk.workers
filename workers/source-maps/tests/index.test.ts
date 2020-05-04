@@ -6,6 +6,7 @@ import SourceMapsWorker from '../src/index';
 import { SourcemapCollectedData } from '../types/source-maps-event-worker-task';
 import { SourceMapDataExtended } from '../types/source-maps-record';
 import MockBundle from './create-mock-bundle';
+import '../../../env-test';
 
 describe('SourceMaps Worker', () => {
   /**

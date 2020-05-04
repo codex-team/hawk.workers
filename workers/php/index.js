@@ -17,7 +17,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
     super();
 
     this.type = 'errors/php';
-    this.db = new DatabaseController();
+    this.db = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
   }
 
   /**
@@ -72,7 +72,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Start consuming messages and connect to db
    */
   async start() {
-    await this.db.connect(process.env.EVENTS_DB_NAME);
+    await this.db.connect();
     await super.start();
   }
 

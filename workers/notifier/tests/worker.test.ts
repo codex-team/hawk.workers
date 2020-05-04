@@ -1,6 +1,7 @@
 import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
+import '../../../env-test';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -104,7 +105,7 @@ describe('NotifierWorker', () => {
 
       await worker.start();
 
-      expect(dbConnectMock).toBeCalledWith('hawk');
+      expect(dbConnectMock).toBeCalled();
 
       await worker.finish();
     });

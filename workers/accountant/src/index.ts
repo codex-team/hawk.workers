@@ -16,7 +16,7 @@ export default class AccountantWorker extends Worker {
   /**
    * Database Controller
    */
-  private db: DatabaseController = new DatabaseController();
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
   /**
    * Workspaces collection
@@ -37,7 +37,7 @@ export default class AccountantWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect(process.env.ACCOUNTS_DB_NAME);
+    await this.db.connect();
 
     const connection = this.db.getConnection();
 

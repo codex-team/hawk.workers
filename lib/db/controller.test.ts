@@ -1,16 +1,16 @@
 import * as mongodb from 'mongodb';
-import '../../env';
 import { DatabaseController } from './controller';
+import '../../env-test';
 
 /**
  * Test for the Database Controller module
  */
-describe('Database Contoroller Test', () => {
-  const db = new DatabaseController();
+describe('Database Controller Test', () => {
+  const db = new DatabaseController(process.env.MONGO_URL);
 
   describe('event', () => {
     beforeAll(async () => {
-      await db.connect(process.env.EVENTS_DB_NAME);
+      await db.connect();
     });
 
     afterAll(async () => {

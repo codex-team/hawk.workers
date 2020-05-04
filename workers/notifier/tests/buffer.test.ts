@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-ignore */
 import Buffer from '../src/buffer';
+import '../../../env-test';
 
 describe('Buffer', () => {
   describe('getField', () => {

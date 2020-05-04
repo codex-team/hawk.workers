@@ -23,8 +23,8 @@ export default abstract class SenderWorker extends Worker {
   /**
    * Database Controllers
    */
-  private eventsDb: DatabaseController = new DatabaseController();
-  private accountsDb: DatabaseController = new DatabaseController();
+  private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
   /**
    * Notifications provider
@@ -40,8 +40,8 @@ export default abstract class SenderWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.eventsDb.connect(process.env.EVENTS_DB_NAME);
-    await this.accountsDb.connect(process.env.ACCOUNTS_DB_NAME);
+    await this.eventsDb.connect();
+    await this.accountsDb.connect();
     await super.start();
   }
 
