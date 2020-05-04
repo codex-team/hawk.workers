@@ -50,6 +50,7 @@ export class DatabaseController {
 
     this.connection = await connect(this.connectionUri, {
       useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
     this.db = await this.connection.db();
 
