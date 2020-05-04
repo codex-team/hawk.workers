@@ -2,6 +2,7 @@
 import * as mongodb from 'mongodb';
 import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
+import '../../../env-test';
 
 /**
  * Test Grouping task

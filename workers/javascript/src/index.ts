@@ -22,7 +22,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Database Controller
    */
-  private db: DatabaseController = new DatabaseController();
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Collection where source maps stroed
@@ -53,7 +53,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect(process.env.EVENTS_DB_NAME);
+    await this.db.connect();
     this.db.createGridFsBucket(this.releasesDbCollectionName);
     await super.start();
   }

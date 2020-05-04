@@ -1,6 +1,7 @@
 import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
 import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
 import { ObjectID } from 'mongodb';
+import '../../../env-test';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -164,12 +165,12 @@ describe('Sender Worker', () => {
      * Call connect to 2 DBs per single time
      */
     it('should connect to db on start', async () => {
+      dbConnectMock.mockClear();
       const worker = new ExampleSenderWorker();
 
       await worker.start();
 
-      expect(dbConnectMock).toHaveBeenNthCalledWith(1, 'hawk_events');
-      expect(dbConnectMock).toHaveBeenNthCalledWith(2, 'hawk');
+      expect(dbConnectMock).toHaveBeenCalledTimes(2);
 
       await worker.finish();
     });

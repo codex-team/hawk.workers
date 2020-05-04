@@ -70,7 +70,7 @@ export abstract class Worker {
   /**
    * Registry Endpoint
    */
-  private readonly registryUrl: string = process.env.REGISTRY_URL || 'amqp://localhost';
+  private readonly registryUrl: string = process.env.REGISTRY_URL;
 
   /**
    * How many task Worker should do concurrently
