@@ -1,5 +1,6 @@
 import JavascriptEventWorker from '../src';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import '../../../env-test';
 
 /**
  * Testing Event
