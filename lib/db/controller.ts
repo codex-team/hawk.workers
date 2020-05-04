@@ -14,6 +14,9 @@ export class DatabaseController {
    */
   private connection: MongoClient;
 
+  /**
+   * MongoDB connection URI
+   */
   private readonly connectionUri: string;
 
   /**
