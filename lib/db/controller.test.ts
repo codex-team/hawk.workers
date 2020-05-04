@@ -6,7 +6,7 @@ import '../../env-test';
  * Test for the Database Controller module
  */
 describe('Database Controller Test', () => {
-  const db = new DatabaseController(process.env.MONGO_URL);
+  const db = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   describe('event', () => {
     beforeAll(async () => {
