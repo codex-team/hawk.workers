@@ -2,6 +2,7 @@ import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 import '../../../env-test';
+import waitForExpect from 'wait-for-expect';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -291,25 +292,37 @@ describe('NotifierWorker', () => {
     worker.addTask = jest.fn();
 
     const message = { ...messageMock };
-    const channels = ['telegram', 'slack'];
 
     await worker.handle(message);
 
-    setTimeout(() => {
-      channels.forEach((channel, i) => {
-        expect(worker.addTask).toHaveBeenNthCalledWith(
-          i + 1,
-          `sender/${channel}`,
-          {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          }
-        );
-      });
-    }, 600);
+    await waitForExpect(() => {
+      expect(worker.addTask).toHaveBeenNthCalledWith(
+        1,
+        `sender/telegram`,
+        {
+          projectId: message.projectId,
+          ruleId: rule._id,
+          events: [ {
+            key: message.event.groupHash,
+            count: 1,
+          } ],
+        }
+      );
+    }, 2000);
+
+    await waitForExpect(() => {
+      expect(worker.addTask).toHaveBeenNthCalledWith(
+        2,
+        `sender/slack`,
+        {
+          projectId: message.projectId,
+          ruleId: rule._id,
+          events: [ {
+            key: message.event.groupHash,
+            count: 1,
+          } ],
+        }
+      );
+    }, 2000);
   });
 });
