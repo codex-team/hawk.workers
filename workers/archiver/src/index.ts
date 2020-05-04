@@ -56,6 +56,7 @@ export default class ArchiverWorker extends Worker {
   public async finish(): Promise<void> {
     await super.finish();
     await this.eventsDb.close();
+    await this.accountsDb.close();
   }
 
   /**
