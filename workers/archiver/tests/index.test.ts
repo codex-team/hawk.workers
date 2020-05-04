@@ -11,6 +11,7 @@ jest.mock('axios');
  */
 // eslint-disable-next-line no-extend-native
 Date.prototype.getTime = (): number => 1588334400 * 1000;
+process.env.MAX_DAYS_NUMBER = '30';
 
 const mockedProject = {
   _id: new ObjectId('5e4ff518628a6c714515f4da'),
@@ -25,8 +26,6 @@ describe('Archiver worker', () => {
   let projectCollection;
 
   beforeAll(async () => {
-    console.log(process.env.MONGO_ACCOUNTS_DATABASE_URI);
-
     connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
