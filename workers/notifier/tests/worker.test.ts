@@ -228,44 +228,44 @@ describe('NotifierWorker', () => {
       jest.useRealTimers();
     });
 
-    it('should send events after timeout', async () => {
-      const worker = new NotifierWorker();
-
-      worker.sendToSenderWorker = jest.fn();
-
-      const realSendEvents = worker.sendEvents;
-
-      worker.sendEvents = jest.fn((...args) => realSendEvents.apply(worker, args));
-
-      const realFlush = worker.buffer.flush;
-
-      worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-
-      await worker.handle(message);
-      await worker.handle(message);
-
-      await new Promise((resolve) => setTimeout(() => {
-        expect(worker.sendEvents).toBeCalledTimes(2);
-        expect(worker.buffer.flush).toBeCalledTimes(2);
-
-        channels.forEach((channel, i) => {
-          expect(worker.buffer.flush).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-          expect(worker.sendEvents).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-        });
-
-        resolve();
-      }, 1000));
-    });
+    // it('should send events after timeout', async () => {
+    //   const worker = new NotifierWorker();
+    //
+    //   worker.sendToSenderWorker = jest.fn();
+    //
+    //   const realSendEvents = worker.sendEvents;
+    //
+    //   worker.sendEvents = jest.fn((...args) => realSendEvents.apply(worker, args));
+    //
+    //   const realFlush = worker.buffer.flush;
+    //
+    //   worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
+    //
+    //   const message = { ...messageMock };
+    //   const channels = ['telegram', 'slack'];
+    //   const channelKeyPart = [message.projectId, rule._id];
+    //
+    //   await worker.handle(message);
+    //   await worker.handle(message);
+    //
+    //   await new Promise((resolve) => setTimeout(() => {
+    //     expect(worker.sendEvents).toBeCalledTimes(2);
+    //     expect(worker.buffer.flush).toBeCalledTimes(2);
+    //
+    //     channels.forEach((channel, i) => {
+    //       expect(worker.buffer.flush).toHaveBeenNthCalledWith(
+    //         i + 1,
+    //         [...channelKeyPart, channel]
+    //       );
+    //       expect(worker.sendEvents).toHaveBeenNthCalledWith(
+    //         i + 1,
+    //         [...channelKeyPart, channel]
+    //       );
+    //     });
+    //
+    //     resolve();
+    //   }, 1000));
+    // });
 
     it('should do nothing if project doesn\'t exist', async () => {
       const worker = new NotifierWorker();
