@@ -86,9 +86,12 @@ export default class ArchiverWorker extends Worker {
     await asyncForEach(projects, async (project) => {
       const archivedEventsCount = await this.archiveProjectEvents(project);
 
+      const removedReleasesCount = await this.removeOldReleases(project);
+
       projectsData.push({
         project,
         archivedEventsCount,
+        removedReleasesCount,
       });
     });
 
@@ -119,9 +122,7 @@ export default class ArchiverWorker extends Worker {
 
     await this.updateArchivedEventsCounter(project, deletedCount);
 
-    await this.removeOldReleases(project);
-
-    this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+    this.logger.info(`Summary deleted events for project ${project._id.toString()}: ${deletedCount}`);
 
     return deletedCount;
   }
@@ -287,9 +288,20 @@ export default class ArchiverWorker extends Worker {
       }
     });
 
+    report += '\n\n<b>==== Releases ====</b>';
+
     const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
 
-    report += `\n\n${totalArchivedEventsCount} total events archived in ${archivingTimeInMinutes.toFixed(3)} min`;
+    let totalRemovedReleasesCount = 0;
+
+    reportData.projectsData.forEach(dataByProject => {
+      if (dataByProject.removedReleasesCount > 0) {
+        report += `\n${dataByProject.removedReleasesCount} releases | <b>${encodeURIComponent(dataByProject.project.name)}</b> | <code>${dataByProject.project._id}</code>`;
+        totalRemovedReleasesCount += dataByProject.removedReleasesCount;
+      }
+    });
+
+    report += `\n\n${totalArchivedEventsCount} total events archived and ${totalRemovedReleasesCount} total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
 
     await axios({
       method: 'post',
@@ -303,7 +315,7 @@ export default class ArchiverWorker extends Worker {
    *
    * @param project - project to handle
    */
-  private async removeOldReleases(project: Project): Promise<void> {
+  private async removeOldReleases(project: Project): Promise<number> {
     const releasesToRemove = await this.releasesCollection
       .find({
         projectId: project._id.toString(),
@@ -339,10 +351,14 @@ export default class ArchiverWorker extends Worker {
       return acc;
     }, []);
 
-    await this.releasesCollection.deleteMany({
+    const result = await this.releasesCollection.deleteMany({
       _id: {
         $in: releasesIdsToDelete,
       },
     });
+
+    this.logger.info(`Summary deleted releases for project ${project._id.toString()}: ${result.deletedCount}`);
+
+    return result.deletedCount;
   }
 }

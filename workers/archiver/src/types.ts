@@ -28,6 +28,11 @@ export interface ReportDataByProject {
    * Number of archived events
    */
   archivedEventsCount: number;
+
+  /**
+   * Number of the removed releases
+   */
+  removedReleasesCount: number;
 }
 
 export interface ReportData {
@@ -47,6 +52,9 @@ export interface ReportData {
   projectsData: ReportDataByProject[];
 }
 
+/**
+ * Release record in database
+ */
 export interface ReleaseRecord {
   /**
    * Record id
@@ -69,6 +77,9 @@ export interface ReleaseRecord {
   files: ReleaseFileData[];
 }
 
+/**
+ * Release file in database
+ */
 export interface ReleaseFileData {
   /**
    * Name of source-map file
