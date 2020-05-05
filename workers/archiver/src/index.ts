@@ -288,7 +288,7 @@ export default class ArchiverWorker extends Worker {
       }
     });
 
-    report += '\n\n<b>==== Releases ====</b>';
+    report += '\n\n<b>Releases</b>';
 
     const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
 
