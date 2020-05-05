@@ -2,7 +2,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import { Collection, Db, ObjectId } from 'mongodb';
+import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
 import axios from 'axios';
 import { Project, ReportDataByProject, ReportData } from './types';
 import * as path from 'path';
@@ -40,6 +40,16 @@ export default class ArchiverWorker extends Worker {
   private projectCollection!: Collection<Project>;
 
   /**
+   * Collection with Javascript releases
+   */
+  private releasesCollection: Collection;
+
+  /**
+   * Bucket with js-releases files
+   */
+  private gridFsBucket: GridFSBucket;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -47,6 +57,9 @@ export default class ArchiverWorker extends Worker {
     const accountDbConnection = await this.accountsDb.connect();
 
     this.projectCollection = accountDbConnection.collection<Project>('projects');
+    this.releasesCollection = this.eventsDbConnection.collection('releases-js');
+
+    this.gridFsBucket = this.eventsDb.createGridFsBucket('releases-js');
     await super.start();
   }
 
@@ -95,7 +108,7 @@ export default class ArchiverWorker extends Worker {
    *
    * @param project - project data to remove events
    */
-  private async archiveProjectEvents(project: { _id: ObjectId }): Promise<number> {
+  private async archiveProjectEvents(project: Project): Promise<number> {
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
     const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
 
@@ -105,6 +118,8 @@ export default class ArchiverWorker extends Worker {
     const deletedCount = deleteOriginalEventsResult + deleteRepetitionsResult;
 
     await this.updateArchivedEventsCounter(project, deletedCount);
+
+    await this.removeOldReleases(project);
 
     this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
 
@@ -280,6 +295,52 @@ export default class ArchiverWorker extends Worker {
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + report + '&parse_mode=HTML',
+    });
+  }
+
+  /**
+   * Removes old project releases
+   *
+   * @param project - project to handle
+   */
+  private async removeOldReleases(project: Project): Promise<void> {
+    const releasesToRemove = await this.releasesCollection
+      .find({
+        projectId: project._id.toString(),
+      })
+      .sort({ _id: -1 })
+      .skip(3)
+      .toArray();
+
+    const filesToDelete = releasesToRemove.reduce((acc, curr) => acc.concat(curr.files), []);
+
+    await Promise.all(filesToDelete.map(file => {
+      return new Promise((resolve, reject) => {
+        this.gridFsBucket.delete(file._id, (err) => {
+          if (err) {
+            if (err.message.startsWith('FileNotFound')) {
+              resolve();
+
+              return;
+            }
+            reject(err);
+          }
+
+          resolve();
+        });
+      });
+    }));
+
+    const releasesIdsToDelete = releasesToRemove.reduce((acc, curr) => {
+      acc.push(curr._id);
+
+      return acc;
+    }, []);
+
+    await this.releasesCollection.deleteMany({
+      _id: {
+        $in: releasesIdsToDelete,
+      },
     });
   }
 }
