@@ -4,7 +4,7 @@ import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
 import axios from 'axios';
-import { Project, ReportDataByProject, ReportData } from './types';
+import { Project, ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
@@ -42,7 +42,7 @@ export default class ArchiverWorker extends Worker {
   /**
    * Collection with Javascript releases
    */
-  private releasesCollection: Collection;
+  private releasesCollection: Collection<ReleaseRecord>;
 
   /**
    * Bucket with js-releases files
@@ -312,7 +312,9 @@ export default class ArchiverWorker extends Worker {
       .skip(3)
       .toArray();
 
-    const filesToDelete = releasesToRemove.reduce((acc, curr) => acc.concat(curr.files), []);
+    const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(
+      (acc, curr) => acc.concat(curr.files), []
+    );
 
     await Promise.all(filesToDelete.map(file => {
       return new Promise((resolve, reject) => {
@@ -331,7 +333,7 @@ export default class ArchiverWorker extends Worker {
       });
     }));
 
-    const releasesIdsToDelete = releasesToRemove.reduce((acc, curr) => {
+    const releasesIdsToDelete = releasesToRemove.reduce<ObjectId[]>((acc, curr) => {
       acc.push(curr._id);
 
       return acc;
