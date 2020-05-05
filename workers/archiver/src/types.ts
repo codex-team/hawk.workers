@@ -50,6 +50,16 @@ export interface ReportData {
    * Data about projects and archived events count
    */
   projectsData: ReportDataByProject[];
+
+  /**
+   * Database size when worker start archiving
+   */
+  dbSizeOnStart: number;
+
+  /**
+   * Database size when worker stop archiving
+   */
+  dbSizeOnFinish: number;
 }
 
 /**

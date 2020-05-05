@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Project, ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import prettysize from 'prettysize';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -76,6 +77,8 @@ export default class ArchiverWorker extends Worker {
    * Task handling function
    */
   public async handle(): Promise<void> {
+    const dbSizeOnStart = (await this.eventsDbConnection.stats()).dataSize;
+
     const startDate = new Date();
 
     this.logger.info(`Start archiving at ${startDate}`);
@@ -96,13 +99,17 @@ export default class ArchiverWorker extends Worker {
     });
 
     const finishDate = new Date();
+    const dbSizeOnFinish = (await this.eventsDbConnection.stats()).dataSize;
 
     await this.sendReport({
+      dbSizeOnFinish,
+      dbSizeOnStart,
       startDate,
       projectsData,
       finishDate,
     });
-    this.logger.info(`Finish archiving at ${finishDate}`);
+    this.logger.info(`Finish archiving at ${finishDate}.`);
+    this.logger.info(`Database size on start: ${prettysize(dbSizeOnStart)}, on finish: ${prettysize(dbSizeOnFinish)}, delta: ${prettysize(dbSizeOnStart - dbSizeOnFinish)}`);
   }
 
   /**
@@ -302,6 +309,7 @@ export default class ArchiverWorker extends Worker {
     });
 
     report += `\n\n${totalArchivedEventsCount} total events archived and ${totalRemovedReleasesCount} total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
+    report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
     await axios({
       method: 'post',
