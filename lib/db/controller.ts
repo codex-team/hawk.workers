@@ -86,10 +86,12 @@ export class DatabaseController {
    *
    * @param {string} name - The bucket name. Defaults to 'fs'.
    */
-  public createGridFsBucket(name = 'fs'): void {
+  public createGridFsBucket(name): GridFSBucket {
     this.gridFsBucket = new GridFSBucket(this.db, {
       bucketName: name,
     });
+
+    return this.gridFsBucket;
   }
 
   /**

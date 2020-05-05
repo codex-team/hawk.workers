@@ -2,11 +2,12 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import { Collection, Db, ObjectId } from 'mongodb';
+import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
 import axios from 'axios';
-import { Project, ReportDataByProject, ReportData } from './types';
+import { Project, ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import prettysize from 'prettysize';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -40,6 +41,16 @@ export default class ArchiverWorker extends Worker {
   private projectCollection!: Collection<Project>;
 
   /**
+   * Collection with Javascript releases
+   */
+  private releasesCollection: Collection<ReleaseRecord>;
+
+  /**
+   * Bucket with js-releases files
+   */
+  private gridFsBucket: GridFSBucket;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -47,6 +58,9 @@ export default class ArchiverWorker extends Worker {
     const accountDbConnection = await this.accountsDb.connect();
 
     this.projectCollection = accountDbConnection.collection<Project>('projects');
+    this.releasesCollection = this.eventsDbConnection.collection('releases-js');
+
+    this.gridFsBucket = this.eventsDb.createGridFsBucket('releases-js');
     await super.start();
   }
 
@@ -63,6 +77,8 @@ export default class ArchiverWorker extends Worker {
    * Task handling function
    */
   public async handle(): Promise<void> {
+    const dbSizeOnStart = (await this.eventsDbConnection.stats()).dataSize;
+
     const startDate = new Date();
 
     this.logger.info(`Start archiving at ${startDate}`);
@@ -73,20 +89,27 @@ export default class ArchiverWorker extends Worker {
     await asyncForEach(projects, async (project) => {
       const archivedEventsCount = await this.archiveProjectEvents(project);
 
+      const removedReleasesCount = await this.removeOldReleases(project);
+
       projectsData.push({
         project,
         archivedEventsCount,
+        removedReleasesCount,
       });
     });
 
     const finishDate = new Date();
+    const dbSizeOnFinish = (await this.eventsDbConnection.stats()).dataSize;
 
     await this.sendReport({
+      dbSizeOnFinish,
+      dbSizeOnStart,
       startDate,
       projectsData,
       finishDate,
     });
-    this.logger.info(`Finish archiving at ${finishDate}`);
+    this.logger.info(`Finish archiving at ${finishDate}.`);
+    this.logger.info(`Database size on start: ${prettysize(dbSizeOnStart)}, on finish: ${prettysize(dbSizeOnFinish)}, delta: ${prettysize(dbSizeOnStart - dbSizeOnFinish)}`);
   }
 
   /**
@@ -95,7 +118,7 @@ export default class ArchiverWorker extends Worker {
    *
    * @param project - project data to remove events
    */
-  private async archiveProjectEvents(project: { _id: ObjectId }): Promise<number> {
+  private async archiveProjectEvents(project: Project): Promise<number> {
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
     const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
 
@@ -106,7 +129,7 @@ export default class ArchiverWorker extends Worker {
 
     await this.updateArchivedEventsCounter(project, deletedCount);
 
-    this.logger.info(`Summary deleted for project ${project._id.toString()}: ${deletedCount}`);
+    this.logger.info(`Summary deleted events for project ${project._id.toString()}: ${deletedCount}`);
 
     return deletedCount;
   }
@@ -272,14 +295,78 @@ export default class ArchiverWorker extends Worker {
       }
     });
 
+    report += '\n\n<b>Releases</b>';
+
     const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
 
-    report += `\n\n${totalArchivedEventsCount} total events archived in ${archivingTimeInMinutes.toFixed(3)} min`;
+    let totalRemovedReleasesCount = 0;
+
+    reportData.projectsData.forEach(dataByProject => {
+      if (dataByProject.removedReleasesCount > 0) {
+        report += `\n${dataByProject.removedReleasesCount} releases | <b>${encodeURIComponent(dataByProject.project.name)}</b> | <code>${dataByProject.project._id}</code>`;
+        totalRemovedReleasesCount += dataByProject.removedReleasesCount;
+      }
+    });
+
+    report += `\n\n${totalArchivedEventsCount} total events archived and ${totalRemovedReleasesCount} total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
+    report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
     await axios({
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + report + '&parse_mode=HTML',
     });
+  }
+
+  /**
+   * Removes old project releases
+   *
+   * @param project - project to handle
+   */
+  private async removeOldReleases(project: Project): Promise<number> {
+    const releasesToRemove = await this.releasesCollection
+      .find({
+        projectId: project._id.toString(),
+      })
+      .sort({ _id: -1 })
+      .skip(3)
+      .toArray();
+
+    const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(
+      (acc, curr) => acc.concat(curr.files), []
+    );
+
+    await Promise.all(filesToDelete.map(file => {
+      return new Promise((resolve, reject) => {
+        this.gridFsBucket.delete(file._id, (err) => {
+          if (err) {
+            if (err.message.startsWith('FileNotFound')) {
+              resolve();
+
+              return;
+            }
+            reject(err);
+          }
+
+          resolve();
+        });
+      });
+    }));
+
+    const releasesIdsToDelete = releasesToRemove.reduce<ObjectId[]>((acc, curr) => {
+      acc.push(curr._id);
+
+      return acc;
+    }, []);
+
+    const result = await this.releasesCollection.deleteMany({
+      _id: {
+        $in: releasesIdsToDelete,
+      },
+    });
+
+    this.logger.info(`Summary deleted releases for project ${project._id.toString()}: ${result.deletedCount}`);
+
+    return result.deletedCount;
   }
 }

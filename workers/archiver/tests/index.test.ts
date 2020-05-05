@@ -4,7 +4,10 @@ import { mockedRepetitions } from './repetitions.mock';
 import ArchiverWorker from '../src';
 import { mockedEvents } from './events.mock';
 import '../../../env-test';
+import { mockedReleases } from './releases.mock';
+import './rabbit.mock';
 jest.mock('axios');
+jest.mock('amqplib');
 
 /**
  * Set test date at 01.05.2020 12:00 so that tests pass always at the same time
@@ -15,6 +18,7 @@ process.env.MAX_DAYS_NUMBER = '30';
 
 const mockedProject = {
   _id: new ObjectId('5e4ff518628a6c714515f4da'),
+  name: 'Test project',
 };
 
 describe('Archiver worker', () => {
@@ -97,6 +101,25 @@ describe('Archiver worker', () => {
     });
 
     expect(changedProject.archivedEventsCount).toBe(archiveEventsCount + originalEventsDeletedCount);
+  });
+
+  test('Should remove old releases', async () => {
+    await db.collection('releases-js').insertMany(mockedReleases);
+
+    const worker = new ArchiverWorker();
+
+    await worker.start();
+    const gridFsDeleteMock = jest.spyOn(worker['gridFsBucket'], 'delete');
+
+    await worker['removeOldReleases'](mockedProject);
+
+    const newReleasesCollection = await db.collection('releases-js')
+      .find({})
+      .toArray();
+
+    expect(newReleasesCollection).toEqual(mockedReleases.slice(mockedReleases.length - 3));
+    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length - 3);
+    await worker.finish();
   });
 
   afterAll(async () => {
