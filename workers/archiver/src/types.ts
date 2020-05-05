@@ -1,4 +1,4 @@
-import { ObjectID, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 /**
  * Project representation
@@ -114,5 +114,5 @@ export interface ReleaseFileData {
   /**
    * When file will be saved to GridFS, there will be its id instead of 'content'
    */
-  _id?: ObjectID;
+  _id?: ObjectId;
 }

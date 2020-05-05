@@ -40,7 +40,6 @@ describe('Archiver worker', () => {
     repetitionsCollection = db.collection(`repetitions:${mockedProject._id.toString()}`);
     eventsCollection = db.collection(`events:${mockedProject._id.toString()}`);
 
-    await db.collection('releases-js').insertMany(mockedReleases);
     await projectCollection.insertOne(mockedProject);
     await dailyEventsCollection.insertMany(mockedDailyEvents);
     await repetitionsCollection.insertMany(mockedRepetitions);
@@ -105,9 +104,13 @@ describe('Archiver worker', () => {
   });
 
   test('Should remove old releases', async () => {
+    await db.collection('releases-js').insertMany(mockedReleases);
+
     const worker = new ArchiverWorker();
 
     await worker.start();
+    const gridFsDeleteMock = jest.spyOn(worker['gridFsBucket'], 'delete');
+
     await worker['removeOldReleases'](mockedProject);
 
     const newReleasesCollection = await db.collection('releases-js')
@@ -115,7 +118,7 @@ describe('Archiver worker', () => {
       .toArray();
 
     expect(newReleasesCollection).toEqual(mockedReleases.slice(mockedReleases.length - 3));
-
+    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length - 3);
     await worker.finish();
   });
 
