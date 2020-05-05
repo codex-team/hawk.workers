@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
-import * as webpack from 'webpack';
+import webpack from 'webpack';
 
 /**
  * Create a webpack-bundle for mock app in ./mock/src/
