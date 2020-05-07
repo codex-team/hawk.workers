@@ -312,7 +312,7 @@ export default class ArchiverWorker extends Worker {
       report += releasesReport;
     }
 
-    report += `\n\n<b>${totalArchivedEventsCount}</b> total events archived and <b>${totalRemovedReleasesCount}</b> total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
+    report += `\n\n<b>${totalArchivedEventsCount}</b> events and <b>${totalRemovedReleasesCount}</b> releases archived in ${archivingTimeInMinutes.toFixed(3)} min`;
     report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
     await axios({
