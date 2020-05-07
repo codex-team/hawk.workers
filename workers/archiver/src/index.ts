@@ -295,7 +295,7 @@ export default class ArchiverWorker extends Worker {
       }
     });
 
-    report += '\n\n<b>Releases</b>';
+    let releasesReport = '\n\n<b>Releases</b>';
 
     const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
 
@@ -303,12 +303,16 @@ export default class ArchiverWorker extends Worker {
 
     reportData.projectsData.forEach(dataByProject => {
       if (dataByProject.removedReleasesCount > 0) {
-        report += `\n${dataByProject.removedReleasesCount} releases | <b>${encodeURIComponent(dataByProject.project.name)}</b> | <code>${dataByProject.project._id}</code>`;
+        releasesReport += `\n${dataByProject.removedReleasesCount} releases | <b>${encodeURIComponent(dataByProject.project.name)}</b> | <code>${dataByProject.project._id}</code>`;
         totalRemovedReleasesCount += dataByProject.removedReleasesCount;
       }
     });
 
-    report += `\n\n${totalArchivedEventsCount} total events archived and ${totalRemovedReleasesCount} total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
+    if (totalRemovedReleasesCount > 0) {
+      report += releasesReport;
+    }
+
+    report += `\n\n<b>${totalArchivedEventsCount}</b> total events archived and <b>${totalRemovedReleasesCount}</b> total releases deleted in ${archivingTimeInMinutes.toFixed(3)} min`;
     report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
     await axios({
