@@ -1,11 +1,21 @@
-FROM node:lts-alpine as build-stage
+FROM node:12.16.3-stretch-slim as build-stage
+
+ARG WORKER_NAME
 
 WORKDIR /app
 
 COPY package.json yarn.lock ./
+COPY workers/ ./workers/
 
-RUN yarn install --prod
+RUN yarn install
 
-COPY . .
+COPY runner.ts tsconfig.json ./
+COPY lib/ ./lib/
 
-ENTRYPOINT ["yarn", "run-email"]
+RUN yarn tsc
+
+#RUN echo "#!/bin/bash \n node runner.js ${WORKER_NAME}" > ./entrypoint.sh
+#RUN chmod +x ./entrypoint.sh
+#RUN ls -la
+#ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["node", "runner.js", "hawk-worker-javascript"]
