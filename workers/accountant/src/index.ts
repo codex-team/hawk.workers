@@ -115,6 +115,8 @@ export default class AccountantWorker extends Worker {
     await this.transactions.insertOne(transaction);
 
     const updateData: UpdateQuery<any> = {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
       $inc: { balance: balanceDiff },
     };
 
