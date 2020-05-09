@@ -1,0 +1,12 @@
+version: "3.4"
+
+services:
+  javascript:
+    build:
+      dockerfile: "Dockerfile"
+      context: .
+      args:
+        -WORKER_NAME: hawk-worker-javascript
+    volumes:
+    - .env:/app/.env
+
