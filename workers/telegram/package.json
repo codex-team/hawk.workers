@@ -1,0 +1,12 @@
+{
+    "name": "hawk-worker-telegram",
+    "version": "0.0.1",
+    "main": "src/index.ts",
+    "license": "UNLICENSED",
+    "workerType": "sender/telegram",
+    "scripts": {},
+    "dependencies": {
+        "axios": "^0.19.2"
+    },
+    "devDependencies": {}
+}
