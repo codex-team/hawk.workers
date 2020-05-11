@@ -9,6 +9,7 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
 import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
+import {User} from "../../../lib/types/event-worker-task";
 
 /**
  * Worker for handling Javascript events
@@ -106,20 +107,7 @@ export default class GrouperWorker extends Worker {
         usersAffected: 1,
       } as GroupedEvent);
     } else {
-      let incrementAffectedUsers: boolean;
-      const eventUser = task.event.user;
-
-      if (!eventUser || existedEvent.payload.user.id === eventUser.id) {
-        incrementAffectedUsers = false;
-      } else {
-        const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
-          .findOne({
-            groupHash: uniqueEventHash,
-            'payload.user.id': eventUser.id,
-          });
-
-        incrementAffectedUsers = !repetition;
-      }
+      const incrementAffectedUsers = await this.shouldIncrementAffectedUsers(task, existedEvent);
 
       /**
        * Increment existed task's counter
@@ -157,6 +145,32 @@ export default class GrouperWorker extends Worker {
           isNew: isFirstOccurrence,
         },
       });
+    }
+  }
+
+  /**
+   * Decides whether to increase the number of affected users.
+   *
+   * @param task - worker task to process
+   * @param existedEvent - original event to get its user
+   */
+  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEvent): Promise<boolean> {
+    const eventUser = task.event.user;
+    const userNotFromOriginalEvent = !eventUser || existedEvent.payload.user.id === eventUser.id;
+
+    if (userNotFromOriginalEvent) {
+      return false;
+    } else {
+      const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        .findOne({
+          groupHash: existedEvent.groupHash,
+          'payload.user.id': eventUser.id,
+        });
+
+      /**
+       * If there is no repetitions from this user — return true
+       */
+      return !repetition;
     }
   }
 
