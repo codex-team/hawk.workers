@@ -9,7 +9,7 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
 import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
-import {User} from "../../../lib/types/event-worker-task";
+import { User } from '../../../lib/types/event-worker-task';
 
 /**
  * Worker for handling Javascript events
@@ -112,7 +112,7 @@ export default class GrouperWorker extends Worker {
       /**
        * Increment existed task's counter
        */
-      await this.incrementEventCounter(task.projectId, {
+      await this.incrementEventCounterAndAffectedUsers(task.projectId, {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
 
@@ -156,9 +156,13 @@ export default class GrouperWorker extends Worker {
    */
   private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEvent): Promise<boolean> {
     const eventUser = task.event.user;
-    const userNotFromOriginalEvent = !eventUser || existedEvent.payload.user.id === eventUser.id;
 
-    if (userNotFromOriginalEvent) {
+    if (!eventUser) {
+      return false;
+    }
+    const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
+
+    if (isUserFromOriginalEvent) {
       return false;
     } else {
       const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
@@ -252,7 +256,7 @@ export default class GrouperWorker extends Worker {
    * @param query - query to get event
    * @param incrementAffected - if true, usersAffected counter will be incremented
    */
-  private async incrementEventCounter(projectId, query, incrementAffected: boolean): Promise<number> {
+  private async incrementEventCounterAndAffectedUsers(projectId, query, incrementAffected: boolean): Promise<number> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }

@@ -3,6 +3,7 @@ import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
 import { Collection, MongoClient } from 'mongodb';
+import { User } from '../../../lib/types/event-worker-task';
 
 /**
  * Test Grouping task
@@ -30,9 +31,9 @@ function generateRandomId(): string {
 /**
  * Generates task for testing
  *
- * @param userId - user id in event
+ * @param userId - user id in event, if false provided, user field will be missed
  */
-function generateTask(userId = generateRandomId()): GroupWorkerTask {
+function generateTask(userId: string | false = generateRandomId()): GroupWorkerTask {
   return {
     projectId: '5d206f7f9aaf7c0071d64596',
     catcherType: 'grouper',
@@ -40,9 +41,11 @@ function generateTask(userId = generateRandomId()): GroupWorkerTask {
       title: 'Hawk client catcher test',
       timestamp: (new Date()).getTime(),
       backtrace: [],
-      user: {
-        id: userId,
-      },
+      ...(userId && {
+        user: {
+          id: userId,
+        },
+      }),
     },
   };
 }
@@ -109,6 +112,24 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask('kek'));
       await worker.handle(generateTask('foo'));
       await worker.handle(generateTask('kek'));
+      await worker.handle(generateTask('foo'));
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
+    });
+
+    test('Should increment usersAffected count if there is no user in original event', async () => {
+      await worker.handle(generateTask(false));
+      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask('kek'));
+      await worker.handle(generateTask('foo'));
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(3);
+    });
+
+    test('Should not increment usersAffected count if there is no user in processed event', async () => {
+      await worker.handle(generateTask('kek'));
+      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask(false));
       await worker.handle(generateTask('foo'));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
