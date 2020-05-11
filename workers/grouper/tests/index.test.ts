@@ -1,8 +1,8 @@
 /* tslint:disable:no-string-literal */
-import * as mongodb from 'mongodb';
 import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
+import { Collection, Db, MongoClient } from 'mongodb';
 
 /**
  * Test Grouping task
@@ -17,105 +17,142 @@ const testGroupingTask = {
   },
 } as GroupWorkerTask;
 
+/**
+ * Returns random string
+ */
+function generateRandomId(): string {
+  return Math.random().toString(36)
+    .substring(2, 15) +
+    Math.random().toString(36)
+      .substring(2, 15);
+}
+
+/**
+ * Generates task for testing
+ *
+ * @param userId
+ */
+function generateTask(userId = generateRandomId()): GroupWorkerTask {
+  return {
+    projectId: '5d206f7f9aaf7c0071d64596',
+    catcherType: 'grouper',
+    event: {
+      title: 'Hawk client catcher test',
+      timestamp: (new Date()).getTime(),
+      backtrace: [],
+      user: {
+        id: userId,
+      },
+    },
+  };
+}
+
 describe('GrouperWorker', () => {
   const worker = new GrouperWorker();
+  let connection: MongoClient;
+  let eventsCollection: Collection;
+  let dailyEventsCollection: Collection;
+  let repetitionsCollection: Collection;
 
-  test('should return correct worker type', () => {
-    expect(worker.type).toEqual('grouper');
-  });
-
-  test('should start correctly', async () => {
+  beforeAll(async () => {
     await worker.start();
+    connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    eventsCollection = connection.db().collection('events:' + testGroupingTask.projectId);
+    dailyEventsCollection = connection.db().collection('dailyEvents:' + testGroupingTask.projectId);
+    repetitionsCollection = connection.db().collection('repetitions:' + testGroupingTask.projectId);
   });
 
-  test('should correctly handle task', async () => {
-    await worker.handle(testGroupingTask);
+  beforeEach(async () => {
+    await eventsCollection.deleteMany({});
+    await dailyEventsCollection.deleteMany({});
+    await repetitionsCollection.deleteMany({});
   });
 
-  test('show save event and return id', async () => {
-    const result = await worker['saveEvent']('5d206f7f9aaf7c0071d64596', {
-      catcherType: 'grouper',
-      payload: {
-        title: 'testing',
-        timestamp: (new Date()).getTime(),
-      },
-      groupHash: '',
-      totalCount: 1,
+  describe('Saving events', () => {
+    test('Should save event to database', async () => {
+      await worker.handle(testGroupingTask);
+
+      expect(await eventsCollection.find().count()).toBe(1);
     });
 
-    const insertedId = mongodb.ObjectID.isValid(result);
+    test('Should increment total events count on each processing', async () => {
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
 
-    expect(insertedId).toBe(true);
-  });
-
-  test('throw error on saveEvent if projectId is not a MongoId', async () => {
-    await expect(
-      /**
-       * To test private method, we have to access it as dynamic prop.
-       */
-      worker['saveEvent']('10', {
-        totalCount: 1,
-        groupHash: '',
-        catcherType: '',
-        payload: {
-          title: 'Test event',
-          timestamp: Date.now() / 1000,
-        },
-      })
-    ).rejects.toThrowError();
-  });
-
-  test('save repetition should return mongodb id', async () => {
-    /**
-     * To test private method, we have to access it as dynamic prop.
-     */
-    const result = await worker['saveRepetition']('5d206f7f9aaf7c0071d64596', {
-      groupHash: '1234567890',
-      payload: {
-        title: 'Test event',
-        timestamp: Date.now() / 1000,
-      },
+      expect((await eventsCollection.findOne({})).totalCount).toBe(4);
     });
 
-    const insertedId = mongodb.ObjectID.isValid(result);
+    test('Should not increment total usersAffected count if it is event from first user', async () => {
+      await worker.handle(generateTask('123'));
+      await worker.handle(generateTask('123'));
+      await worker.handle(generateTask('123'));
+      await worker.handle(generateTask('123'));
 
-    expect(insertedId).toBe(true);
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(1);
+    });
+
+    test('Should increment usersAffected count if users are different', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(4);
+    });
+
+    test('Should not increment usersAffected count if already there is error from that user', async () => {
+      await worker.handle(generateTask('kek'));
+      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask('kek'));
+      await worker.handle(generateTask('foo'));
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
+    });
   });
 
-  test('throw error on saveRepetition if project id is not mongodb id', async () => {
-    await expect(
-      /**
-       * To test private method, we have to access it as dynamic prop.
-       */
-      worker['saveRepetition']('10', {
-        groupHash: '1234567890',
-        payload: {
-          title: 'Test event',
-          timestamp: Date.now() / 1000,
-        },
-      })
-    ).rejects.toThrowError();
+  describe('Saving daily events', () => {
+    test('Should save daily events record', async () => {
+      await worker.handle(testGroupingTask);
+
+      expect(await dailyEventsCollection.find().count()).toBe(1);
+    });
+
+    test('Should update events count per day', async () => {
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+
+      expect((await dailyEventsCollection.findOne({})).count).toBe(4);
+    });
+
+    test('Should update last repetition id', async () => {
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+
+      const repetition = await repetitionsCollection.findOne({});
+
+      expect((await dailyEventsCollection.findOne({})).lastRepetitionId).toEqual(repetition._id);
+    });
   });
 
-  test('throw error on incrementEventCounter if project id not mongodb id', async () => {
-    await expect(
-      /**
-       * To test private method, we have to access it as dynamic prop.
-       */
-      worker['incrementEventCounter']('10', {})
-    ).rejects.toThrowError();
+  describe('Saving repetitions', () => {
+    test('Should save event repetition on second processing', async () => {
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+      await worker.handle(testGroupingTask);
+
+      expect(await repetitionsCollection.find().count()).toBe(2);
+    });
   });
 
-  test('should increment event', async () => {
-    /**
-     * To test private method, we have to access it as dynamic prop.
-     */
-    const result = await worker['incrementEventCounter']('5d206f7f9aaf7c0071d64596', {});
-
-    expect(result).not.toBe(null);
-  });
-
-  test('should finish correctly', async () => {
+  afterAll(async () => {
     await worker.finish();
+    await connection.close();
   });
 });
