@@ -2,7 +2,7 @@
 import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
-import { Collection, Db, MongoClient } from 'mongodb';
+import { Collection, MongoClient } from 'mongodb';
 
 /**
  * Test Grouping task
@@ -30,7 +30,7 @@ function generateRandomId(): string {
 /**
  * Generates task for testing
  *
- * @param userId
+ * @param userId - user id in event
  */
 function generateTask(userId = generateRandomId()): GroupWorkerTask {
   return {
@@ -142,12 +142,16 @@ describe('GrouperWorker', () => {
   });
 
   describe('Saving repetitions', () => {
-    test('Should save event repetition on second processing', async () => {
+    test('Should save event repetitions on processing', async () => {
       await worker.handle(testGroupingTask);
       await worker.handle(testGroupingTask);
       await worker.handle(testGroupingTask);
 
-      expect(await repetitionsCollection.find().count()).toBe(2);
+      const originalEvent = await eventsCollection.findOne({});
+
+      expect((await repetitionsCollection.find({
+        groupHash: originalEvent.groupHash,
+      }).toArray()).length).toBe(2);
     });
   });
 
