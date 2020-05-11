@@ -3,7 +3,6 @@ import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
 import { Collection, MongoClient } from 'mongodb';
-import { User } from '../../../lib/types/event-worker-task';
 
 /**
  * Test Grouping task
