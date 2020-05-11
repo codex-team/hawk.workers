@@ -3,7 +3,7 @@ require('./env');
 // In this file you can configure migrate-mongo
 const config = {
   mongodb: {
-    url: process.env.MONGO_DSN,
+    url: process.env.MONGO_EVENTS_DATABASE_URI,
     databaseName: process.env.EVENTS_DB_NAME,
 
     options: {

@@ -24,6 +24,7 @@
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
+        "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
         "migrate:down": "migrate-mongo down",
         "worker": "ts-node ./runner.ts",
