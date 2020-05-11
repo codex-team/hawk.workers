@@ -25,6 +25,17 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
+   * Get unique hash from event data
+   *
+   * @param task - worker task to create hash
+   */
+  private static getUniqueEventHash(task: GroupWorkerTask): string {
+    return crypto.createHmac('sha256', process.env.EVENT_SECRET)
+      .update(task.catcherType + task.event.title)
+      .digest('hex');
+  }
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -46,9 +57,7 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask): Promise<void> {
-    const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
-      .update(task.catcherType + task.event.title)
-      .digest('hex');
+    const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
 
     // eslint-disable-next-line jsdoc/check-values
     /**
@@ -94,25 +103,41 @@ export default class GrouperWorker extends Worker {
         totalCount: 1,
         catcherType: task.catcherType,
         payload: task.event,
+        usersAffected: 1,
       } as GroupedEvent);
     } else {
+      let incrementAffectedUsers: boolean;
+      const eventUser = task.event.user;
+
+      if (!eventUser || existedEvent.payload.user.id === eventUser.id) {
+        incrementAffectedUsers = false;
+      } else {
+        const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
+          .findOne({
+            groupHash: uniqueEventHash,
+            'payload.user.id': eventUser.id,
+          });
+
+        incrementAffectedUsers = !repetition;
+      }
+
       /**
        * Increment existed task's counter
        */
       await this.incrementEventCounter(task.projectId, {
         groupHash: uniqueEventHash,
-      });
+      }, incrementAffectedUsers);
 
       /**
        * Save event's repetitions
        */
       const diff = utils.deepDiff(existedEvent.payload, task.event);
-      const repetition = {
+      const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
       } as Repetition;
 
-      repetitionId = await this.saveRepetition(task.projectId, repetition);
+      repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
 
     /**
@@ -211,20 +236,29 @@ export default class GrouperWorker extends Worker {
    *
    * @param projectId - project id to increment
    * @param query - query to get event
+   * @param incrementAffected - if true, usersAffected counter will be incremented
    */
-  private async incrementEventCounter(projectId, query): Promise<number> {
+  private async incrementEventCounter(projectId, query, incrementAffected: boolean): Promise<number> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
     try {
+      console.log(incrementAffected);
+      const updateQuery = incrementAffected ? {
+        $inc: {
+          totalCount: 1,
+          usersAffected: 1,
+        },
+      } : {
+        $inc: {
+          totalCount: 1,
+        },
+      };
+
       return (await this.db.getConnection()
         .collection(`events:${projectId}`)
-        .updateOne(query, {
-          $inc: {
-            totalCount: 1,
-          },
-        })).modifiedCount;
+        .updateOne(query, updateQuery)).modifiedCount;
     } catch (err) {
       throw new DatabaseError(err);
     }
