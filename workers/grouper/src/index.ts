@@ -244,7 +244,6 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      console.log(incrementAffected);
       const updateQuery = incrementAffected ? {
         $inc: {
           totalCount: 1,
