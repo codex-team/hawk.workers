@@ -9,7 +9,6 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
 import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
-import { User } from '../../../lib/types/event-worker-task';
 
 /**
  * Worker for handling Javascript events
