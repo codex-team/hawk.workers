@@ -180,7 +180,9 @@ class WorkerRunner {
     }
     console.log('\n\n');
 
-    utils.sendReport(`${this.workers[0]?.constructor.name}: Error has been occurred: ${error ? error.message : 'unknown'}`);
+    const workerConstructorNames = this.workers.map(worker => worker.constructor.name).join(', ');
+
+    utils.sendReport(`${workerConstructorNames}: Error has been occurred: ${error ? error.message : 'unknown'}`);
   }
 
   /**
