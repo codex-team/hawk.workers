@@ -1,4 +1,3 @@
-/* tslint:disable:no-shadowed-variable  */
 import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
@@ -24,9 +23,9 @@ class WorkerRunner {
   /**
    * Dispatched workers list
    */
-  private workers: any[] = [];
+  private workers: Worker[] = [];
 
-  private gateway: any;
+  private gateway?: promClient.Pushgateway;
 
   /**
    * Create runner instance
@@ -93,13 +92,16 @@ class WorkerRunner {
     // Pushing metrics to the pushgateway every second
     setInterval(() => {
       this.workers.forEach((worker) => {
+        if (!this.gateway || !instance) {
+          return;
+        }
         this.gateway.push({
           jobName: 'workers',
           groupings: {
             type: worker.type.replace('/', '_'),
             instance: instance,
           },
-        }, (err: Error) => {
+        }, (err?: Error) => {
           if (err) {
             console.log(`Error of pushing metrics to gateway: ${err}`);
           }
@@ -153,8 +155,6 @@ class WorkerRunner {
           this.exceptionHandler(startingError);
 
           utils.sendReport(worker.constructor.name + ' failed to start');
-
-          worker.logger.error(startingError);
 
           await this.stopWorker(worker);
         }
