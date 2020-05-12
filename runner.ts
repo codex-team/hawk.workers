@@ -128,10 +128,10 @@ class WorkerRunner {
   /**
    * Starts worker classes
    *
-   * @param workers
+   * @param workerConstructors - worker constructors to create new instances
    */
-  private constructWorkers(workers: WorkerConstructor[]): void {
-    return workers.forEach((WorkerClass) => {
+  private constructWorkers(workerConstructors: WorkerConstructor[]): void {
+    return workerConstructors.forEach((WorkerClass) => {
       this.workers.push(new WorkerClass());
     });
   }
@@ -180,7 +180,7 @@ class WorkerRunner {
     }
     console.log('\n\n');
 
-    utils.sendReport('Error has been occurred: ' + (error ? error.message : 'unknown'));
+    utils.sendReport(`${this.workers[0]?.constructor.name}: Error has been occurred: ${error ? error.message : 'unknown'}`);
   }
 
   /**
