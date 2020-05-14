@@ -29,7 +29,7 @@
         "worker": "ts-node ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-python": "yarn worker hawk-worker-python",
-        "run-grouper": "yarn worker hawk-worker-grouper",
+        "run-grouper": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-grouper",
         "run-archiver": "yarn worker hawk-worker-archiver",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
