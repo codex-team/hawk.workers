@@ -19,56 +19,47 @@ jobs:
       - name: Build email
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-email"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-email .
+          docker build -t ${DOCKER_IMAGE_NAME}-email  --build-arg WORKER_NAME=hawk-worker-email .
 
       - name: Build grouper
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-grouper"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-grouper .
+          docker build -t ${DOCKER_IMAGE_NAME}-grouper  --build-arg WORKER_NAME=hawk-worker-grouper .
 
       - name: Build js
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-js"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-js .
+          docker build -t ${DOCKER_IMAGE_NAME}-js  --build-arg WORKER_NAME=hawk-worker-javascript .
 
       - name: Build nodejs
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-nodejs"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-nodejs .
+          docker build -t ${DOCKER_IMAGE_NAME}-nodejs --build-arg WORKER_NAME=hawk-worker-nodejs .
 
       - name: Build notifier
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-notifier"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-notifier .
+          docker build -t ${DOCKER_IMAGE_NAME}-notifier  --build-arg WORKER_NAME=hawk-worker-notifier .
 
       - name: Build php
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-php"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-php .
+          docker build -t ${DOCKER_IMAGE_NAME}-php --build-arg WORKER_NAME=hawk-worker-php .
 
       - name: Build python
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-python"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-python .
+          docker build -t ${DOCKER_IMAGE_NAME}-python  --build-arg WORKER_NAME=hawk-worker-python .
 
       - name: Build sender
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-sender"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-sender .
+          docker build -t ${DOCKER_IMAGE_NAME}-sender  --build-arg WORKER_NAME=hawk-worker-sender .
 
       - name: Build source-maps
         if: endsWith(github.ref, '/stage')
         run: |
-          sed 's/run-.\+/run-maps"]/' Dockerfile
-          docker build -t ${DOCKER_IMAGE_NAME}-source-maps .
+          docker build -t ${DOCKER_IMAGE_NAME}-source-maps  --build-arg WORKER_NAME=hawk-worker-source-maps .
 
       - name: Push email
         if: endsWith(github.ref, '/stage')

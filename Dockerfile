@@ -18,4 +18,5 @@ RUN yarn tsc
 #RUN chmod +x ./entrypoint.sh
 #RUN ls -la
 #ENTRYPOINT ["./entrypoint.sh"]
-ENTRYPOINT ["node", "runner.js", "hawk-worker-javascript"]
+ENV WORKER_NAME=$WORKER_NAME
+ENTRYPOINT ["node", "runner.js", "${WORKER_NAME}"]
