@@ -26,7 +26,7 @@
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "migrate:up": "migrate-mongo up",
         "migrate:down": "migrate-mongo down",
-        "worker": "ts-node ./runner.ts",
+        "worker": "ts-node -T ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-python": "yarn worker hawk-worker-python",
         "run-grouper": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-grouper",
