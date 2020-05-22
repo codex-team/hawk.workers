@@ -257,22 +257,10 @@ export default class GrouperWorker extends Worker {
        * but the date always was current
        */
 
-      console.log('event time:', eventTimestamp);
-
-      /**
-       * Local: 01:30 may 11
-       * UTC: 22:30 may 10
-       */
-      eventTimestamp = 1589149800;
-
       const eventDate = new Date(eventTimestamp * 1000);
 
-      eventDate.setHours(0, 0, 0, 0); // get midnight
+      eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
       const midnight = eventDate.getTime() / 1000;
-
-      console.log('midnight:', midnight);
-      console.log('midnight [UTC]:', eventDate.setUTCHours(0, 0, 0, 0) / 1000);
-      console.log('midnight [UTC] on 24:', eventDate.setUTCHours(24, 0, 0, 0) / 1000);
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
