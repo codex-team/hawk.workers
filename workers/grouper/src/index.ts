@@ -256,7 +256,6 @@ export default class GrouperWorker extends Worker {
        * Problem was issued due to the numerous events that could be occurred in the past
        * but the date always was current
        */
-
       const eventDate = new Date(eventTimestamp * 1000);
 
       eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
