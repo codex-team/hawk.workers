@@ -1,4 +1,5 @@
 import { Collection, ObjectID, UpdateQuery } from 'mongodb';
+import Workspace from '../../../lib/types/workspace';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
@@ -114,7 +115,7 @@ export default class AccountantWorker extends Worker {
 
     await this.transactions.insertOne(transaction);
 
-    const updateData: UpdateQuery<any> = {
+    const updateData: UpdateQuery<Workspace> = {
       $inc: { balance: balanceDiff },
     };
 

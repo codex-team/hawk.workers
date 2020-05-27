@@ -139,7 +139,7 @@ export interface User {
   /**
    * Internal user's identifier inside an app
    */
-  id: number;
+  id: string;
 
   /**
    * User public name
