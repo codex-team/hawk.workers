@@ -1,12 +1,20 @@
+/* global Db, MongoClient */
 const terminal = require('../lib/utils/terminal');
+
 
 /**
  * This migration updates the groupingTimestamp fields in dailyEvents collections.
  *
  * The problem:
+ *  The previous version of grouper has midnight-timestamps that have been got using local setHours(0,0,0,0) method
+ *  that is actually 21:00 of the previous day by UTC (because the server has +3 timezone)
+ *
+ *  Then, the Grouper was updated for using setUTCHours(0,0,0,0) and now it correctly stores midnight-timestamps.
+ *  But we need to convert old records for the new scheme.
  *
  * The solution:
- *
+ *  Old timestamps is 21:00 of the previous day in UTC, we need to convert it to 00:00 of the next day,
+ *  so we will use oldDate.setUTCHours(24,0,0,0) method.
  */
 module.exports = {
   /**
