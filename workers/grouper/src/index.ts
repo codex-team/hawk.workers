@@ -308,7 +308,7 @@ export default class GrouperWorker extends Worker {
        */
       const eventDate = new Date(eventTimestamp * 1000);
 
-      eventDate.setHours(0, 0, 0, 0); // get midnight
+      eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
       const midnight = eventDate.getTime() / 1000;
 
       await this.db.getConnection()
