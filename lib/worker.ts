@@ -5,6 +5,7 @@ import * as client from 'prom-client';
 import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
+import { MongoError } from 'mongodb';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -283,6 +284,10 @@ export abstract class Worker {
       } else if (e instanceof NonCriticalError) {
         this.logger.info('Sending msg to stash');
         await this.sendToStash(msg);
+      } else if (e instanceof MongoError) {
+        this.logger.error('MongoError: ', e);
+
+        throw e;
       } else {
         this.logger.error('Unknown error:\n', e);
       }
