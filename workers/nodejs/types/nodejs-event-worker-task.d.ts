@@ -14,14 +14,4 @@ export interface NodeJSEventWorkerTask extends EventWorkerTask {
  * Describe a context passed from NodeJS Catcher
  */
 interface NodeJSEventPayload extends EventData {
-  /**
-   * Language-specific useful information from NodeJS Catcher
-   */
-  context: NodeJSEventContext;
-}
-
-/**
- * Information about client
- */
-interface NodeJSEventContext {
 }
