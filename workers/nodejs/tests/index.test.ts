@@ -10,7 +10,8 @@ const testEventData = {
   catcherType: 'errors/nodejs',
   payload: {
     title: 'TestError: Everything is fine.',
-    backtrace: null
+    backtrace: null,
+    addons: null
   },
 } as NodeJSEventWorkerTask;
 
