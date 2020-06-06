@@ -73,10 +73,11 @@ export default class GrouperWorker extends Worker {
         props: object;
         computed: object;
       }
-      const vueAddons = (task.event.addons as {vue: VueAddonsData}).vue;
+
+      const vueAddons = (task.event.addons as { vue: VueAddonsData }).vue;
 
       if (vueAddons && vueAddons.data) {
-        (task.event.addons as {vue: VueAddonsData}).vue.data = {};
+        (task.event.addons as { vue: VueAddonsData }).vue.data = {};
       }
     }
 
@@ -240,6 +241,14 @@ export default class GrouperWorker extends Worker {
         await collection.createIndex({
           groupHash: 'hashed',
         });
+      }
+
+      const hasUserIdIndex = await collection.indexExists('userId');
+
+      if (!hasUserIdIndex) {
+        await collection.createIndex({
+          'payload.user.id': 1,
+        }, { name: 'userId' });
       }
 
       return result;
