@@ -25,6 +25,11 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
+   * Index name for payload.user.id field
+   */
+  private readonly userIdIndexName = 'userId';
+
+  /**
    * Get unique hash from event data
    *
    * @param task - worker task to create hash
@@ -73,10 +78,11 @@ export default class GrouperWorker extends Worker {
         props: object;
         computed: object;
       }
-      const vueAddons = (task.event.addons as {vue: VueAddonsData}).vue;
+
+      const vueAddons = (task.event.addons as { vue: VueAddonsData }).vue;
 
       if (vueAddons && vueAddons.data) {
-        (task.event.addons as {vue: VueAddonsData}).vue.data = {};
+        (task.event.addons as { vue: VueAddonsData }).vue.data = {};
       }
     }
 
@@ -239,6 +245,17 @@ export default class GrouperWorker extends Worker {
       if (!hasIndex) {
         await collection.createIndex({
           groupHash: 'hashed',
+        });
+      }
+
+      const hasUserIdIndex = await collection.indexExists(this.userIdIndexName);
+
+      if (!hasUserIdIndex) {
+        await collection.createIndex({
+          'payload.user.id': 1,
+        }, {
+          name: this.userIdIndexName,
+          sparse: true,
         });
       }
 
