@@ -25,6 +25,11 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
+   * Index name for payload.user.id field
+   */
+  private readonly userIdIndexName = 'userId';
+
+  /**
    * Get unique hash from event data
    *
    * @param task - worker task to create hash
@@ -243,12 +248,15 @@ export default class GrouperWorker extends Worker {
         });
       }
 
-      const hasUserIdIndex = await collection.indexExists('userId');
+      const hasUserIdIndex = await collection.indexExists(this.userIdIndexName);
 
       if (!hasUserIdIndex) {
         await collection.createIndex({
           'payload.user.id': 1,
-        }, { name: 'userId' });
+        }, {
+          name: this.userIdIndexName,
+          sparse: true,
+        });
       }
 
       return result;
