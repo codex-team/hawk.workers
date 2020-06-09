@@ -1,7 +1,7 @@
 import NodeJSEventWorker from '../src';
 import { NodeJSEventWorkerTask } from '../types/nodejs-event-worker-task';
 import '../../../env-test';
-import { mockedAmqpChannel } from "./rabbit.mock";
+import { mockedAmqpChannel } from './rabbit.mock';
 jest.mock('amqplib');
 
 /**
@@ -21,21 +21,29 @@ const testEventData = {
 describe('NodeJSEventWorker', () => {
   const worker = new NodeJSEventWorker();
 
+  test('should start correctly', async () => {
+    await worker.start();
+  });
+
   test('should have correct catcher type', () => {
     expect(worker.type).toEqual('errors/nodejs');
   });
 
-  test('should not handle bad data', async () => {
+  test('should not handle bad event data', async () => {
     const handleEvent = async (): Promise<void> => {
       await worker.handle({} as NodeJSEventWorkerTask);
     };
 
-    await expect(handleEvent).rejects.toThrowError();
+    expect(handleEvent).rejects.toThrowError();
   });
 
-  test('should handle right messages', async () => {
+  test('should handle good event data', async () => {
     await worker.handle(testEventData);
 
     expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
+  });
+
+  test('should finish correctly', async () => {
+    await worker.finish();
   });
 });
