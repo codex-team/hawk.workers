@@ -34,7 +34,7 @@ export default class NodeJSEventWorker extends EventWorker {
    * @param {NodeJSEventWorkerTask} event - event to be validated
    */
   private validate(event: NodeJSEventWorkerTask): void {
-    if (!event.projectId || !event.catcherType || !event.payload) {
+    if (!event.projectId || !event.payload) {
       throw new Error('Bad data was given');
     }
   }
