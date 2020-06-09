@@ -7,6 +7,7 @@
     "license": "UNLICENSED",
     "workspaces": [
         "workers/javascript",
+        "workers/nodejs",
         "workers/grouper",
         "workers/accountant",
         "workers/paymaster",
@@ -29,6 +30,7 @@
         "migrate:down": "migrate-mongo down",
         "worker": "ts-node -T ./runner.ts",
         "run-js": "yarn worker hawk-worker-javascript",
+        "run-nodejs": "yarn worker hawk-worker-nodejs",
         "run-python": "yarn worker hawk-worker-python",
         "run-grouper": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-grouper",
         "run-archiver": "yarn worker hawk-worker-archiver",
