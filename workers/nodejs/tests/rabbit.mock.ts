@@ -4,7 +4,6 @@ import amqp from 'amqplib';
  * Amqp channel mock
  */
 export const mockedAmqpChannel = {
-  publish: jest.fn(),
   close: jest.fn(),
   assertQueue: jest.fn(),
   prefetch: jest.fn(),
