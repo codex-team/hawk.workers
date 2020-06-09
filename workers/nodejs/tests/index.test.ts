@@ -1,6 +1,8 @@
 import NodeJSEventWorker from '../src';
 import { NodeJSEventWorkerTask } from '../types/nodejs-event-worker-task';
 import '../../../env-test';
+import { mockedAmqpChannel } from "./rabbit.mock";
+jest.mock('amqplib');
 
 /**
  * Testing Event
@@ -10,8 +12,8 @@ const testEventData = {
   catcherType: 'errors/nodejs',
   payload: {
     title: 'TestError: Everything is fine.',
+    type: null,
     backtrace: null,
-    addons: null
   },
 } as NodeJSEventWorkerTask;
 
@@ -22,15 +24,17 @@ describe('NodeJSEventWorker', () => {
     expect(worker.type).toEqual('errors/nodejs');
   });
 
-  test('should start correctly', async () => {
-    await worker.start();
+  test('should not handle bad data', async () => {
+    const handleEvent = async (): Promise<void> => {
+      await worker.handle({} as NodeJSEventWorkerTask);
+    };
+
+    await expect(handleEvent).rejects.toThrowError();
   });
 
   test('should handle right messages', async () => {
     await worker.handle(testEventData);
-  });
 
-  test('should finish correctly', async () => {
-    await worker.finish();
+    expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
   });
 });
