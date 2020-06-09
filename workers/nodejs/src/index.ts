@@ -19,14 +19,23 @@ export default class NodeJSEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: NodeJSEventWorkerTask): Promise<void> {
-    if (!event.projectId || !event.catcherType || !event.payload) {
-      throw new Error('Bad data was given');
-    }
+    this.validate(event);
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
       catcherType: this.type,
       event: event.payload,
     } as GroupWorkerTask);
+  }
+
+  /**
+   * Validate passed event data
+   *
+   * @param {NodeJSEventWorkerTask} event - event to be validated
+   */
+  private validate(event: NodeJSEventWorkerTask): void {
+    if (!event.projectId || !event.catcherType || !event.payload) {
+      throw new Error('Bad data was given');
+    }
   }
 }
