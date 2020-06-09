@@ -1,13 +1,19 @@
 require('./env');
 
+/**
+ * Get events DB name from the db-connection url like "mongodb://localhost:27017/hawk_events"
+ */
+const EVENTS_DB_NAME = process.env.MONGO_EVENTS_DATABASE_URI.split('/').pop();
+
 // In this file you can configure migrate-mongo
 const config = {
   mongodb: {
-    url: process.env.MONGO_DSN,
-    databaseName: process.env.EVENTS_DB_NAME,
+    url: process.env.MONGO_EVENTS_DATABASE_URI,
+    databaseName: EVENTS_DB_NAME,
 
     options: {
       useNewUrlParser: true, // removes a deprecation warning when connecting
+      useUnifiedTopology: true, // enables the new unified topology layer
       // connectTimeoutMS: 3600000, // increase connection timeout to 1 hour
       // socketTimeoutMS: 3600000, // increase socket timeout to 1 hour
     },

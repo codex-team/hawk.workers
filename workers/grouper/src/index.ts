@@ -25,6 +25,22 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
+   * Index name for payload.user.id field
+   */
+  private readonly userIdIndexName = 'userId';
+
+  /**
+   * Get unique hash from event data
+   *
+   * @param task - worker task to create hash
+   */
+  private static getUniqueEventHash(task: GroupWorkerTask): string {
+    return crypto.createHmac('sha256', process.env.EVENT_SECRET)
+      .update(task.catcherType + task.event.title)
+      .digest('hex');
+  }
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -46,9 +62,7 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask): Promise<void> {
-    const uniqueEventHash = crypto.createHmac('sha256', process.env.EVENT_SECRET)
-      .update(task.catcherType + task.event.title)
-      .digest('hex');
+    const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
 
     // eslint-disable-next-line jsdoc/check-values
     /**
@@ -64,10 +78,11 @@ export default class GrouperWorker extends Worker {
         props: object;
         computed: object;
       }
-      const vueAddons = (task.event.addons as {vue: VueAddonsData}).vue;
+
+      const vueAddons = (task.event.addons as { vue: VueAddonsData }).vue;
 
       if (vueAddons && vueAddons.data) {
-        (task.event.addons as {vue: VueAddonsData}).vue.data = {};
+        (task.event.addons as { vue: VueAddonsData }).vue.data = {};
       }
     }
 
@@ -94,25 +109,28 @@ export default class GrouperWorker extends Worker {
         totalCount: 1,
         catcherType: task.catcherType,
         payload: task.event,
+        usersAffected: 1,
       } as GroupedEvent);
     } else {
+      const incrementAffectedUsers = await this.shouldIncrementAffectedUsers(task, existedEvent);
+
       /**
        * Increment existed task's counter
        */
-      await this.incrementEventCounter(task.projectId, {
+      await this.incrementEventCounterAndAffectedUsers(task.projectId, {
         groupHash: uniqueEventHash,
-      });
+      }, incrementAffectedUsers);
 
       /**
        * Save event's repetitions
        */
       const diff = utils.deepDiff(existedEvent.payload, task.event);
-      const repetition = {
+      const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
       } as Repetition;
 
-      repetitionId = await this.saveRepetition(task.projectId, repetition);
+      repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
 
     /**
@@ -132,6 +150,36 @@ export default class GrouperWorker extends Worker {
           isNew: isFirstOccurrence,
         },
       });
+    }
+  }
+
+  /**
+   * Decides whether to increase the number of affected users.
+   *
+   * @param task - worker task to process
+   * @param existedEvent - original event to get its user
+   */
+  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEvent): Promise<boolean> {
+    const eventUser = task.event.user;
+
+    if (!eventUser) {
+      return false;
+    }
+    const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
+
+    if (isUserFromOriginalEvent) {
+      return false;
+    } else {
+      const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        .findOne({
+          groupHash: existedEvent.groupHash,
+          'payload.user.id': eventUser.id,
+        });
+
+      /**
+       * If there is no repetitions from this user — return true
+       */
+      return !repetition;
     }
   }
 
@@ -200,6 +248,17 @@ export default class GrouperWorker extends Worker {
         });
       }
 
+      const hasUserIdIndex = await collection.indexExists(this.userIdIndexName);
+
+      if (!hasUserIdIndex) {
+        await collection.createIndex({
+          'payload.user.id': 1,
+        }, {
+          name: this.userIdIndexName,
+          sparse: true,
+        });
+      }
+
       return result;
     } catch (err) {
       throw new DatabaseError(err);
@@ -211,20 +270,28 @@ export default class GrouperWorker extends Worker {
    *
    * @param projectId - project id to increment
    * @param query - query to get event
+   * @param incrementAffected - if true, usersAffected counter will be incremented
    */
-  private async incrementEventCounter(projectId, query): Promise<number> {
+  private async incrementEventCounterAndAffectedUsers(projectId, query, incrementAffected: boolean): Promise<number> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
     try {
+      const updateQuery = incrementAffected ? {
+        $inc: {
+          totalCount: 1,
+          usersAffected: 1,
+        },
+      } : {
+        $inc: {
+          totalCount: 1,
+        },
+      };
+
       return (await this.db.getConnection()
         .collection(`events:${projectId}`)
-        .updateOne(query, {
-          $inc: {
-            totalCount: 1,
-          },
-        })).modifiedCount;
+        .updateOne(query, updateQuery)).modifiedCount;
     } catch (err) {
       throw new DatabaseError(err);
     }
@@ -258,7 +325,7 @@ export default class GrouperWorker extends Worker {
        */
       const eventDate = new Date(eventTimestamp * 1000);
 
-      eventDate.setHours(0, 0, 0, 0); // get midnight
+      eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
       const midnight = eventDate.getTime() / 1000;
 
       await this.db.getConnection()

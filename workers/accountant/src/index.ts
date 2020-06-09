@@ -1,4 +1,5 @@
 import { Collection, ObjectID, UpdateQuery } from 'mongodb';
+import Workspace from '../../../lib/types/workspace';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
@@ -114,9 +115,7 @@ export default class AccountantWorker extends Worker {
 
     await this.transactions.insertOne(transaction);
 
-    const updateData: UpdateQuery<any> = {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-      // @ts-ignore
+    const updateData: UpdateQuery<Workspace> = {
       $inc: { balance: balanceDiff },
     };
 
