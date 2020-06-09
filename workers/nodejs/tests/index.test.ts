@@ -14,6 +14,7 @@ const testEventData = {
     title: 'TestError: Everything is fine.',
     type: null,
     backtrace: null,
+    timestamp: 1564948772936,
   },
 } as NodeJSEventWorkerTask;
 
