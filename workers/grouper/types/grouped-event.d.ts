@@ -29,4 +29,9 @@ export interface GroupedEvent {
    * Event data
    */
   payload: EventData;
+
+  /**
+   * How many users catch this error
+   */
+  usersAffected: number;
 }

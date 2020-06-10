@@ -1,14 +1,13 @@
-import {Channel, Connection, ConsumeMessage, Message} from 'amqplib';
 import * as amqp from 'amqplib';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import winston from 'winston';
-import {createLogger, format, transports} from 'winston';
-import {WorkerTask} from './types/worker-task';
+import * as client from 'prom-client';
+import { createLogger, format, transports, Logger } from 'winston';
+import { WorkerTask } from './types/worker-task';
+import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
+import { MongoError } from 'mongodb';
 
-const {combine, timestamp, colorize, simple, printf} = format;
-
-dotenv.config({path: path.resolve(__dirname, '../.env')});
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Base worker class for processing tasks
@@ -46,15 +45,33 @@ dotenv.config({path: path.resolve(__dirname, '../.env')});
  */
 export abstract class Worker {
   /**
-   * Worker type
-   * (will pull tasks from Registry queue with the same name)
+   * Logger module
+   * (default level='info')
    */
-  public abstract readonly type: string;
+  protected logger: Logger = createLogger({
+    level: process.env.LOG_LEVEL || 'info',
+    transports: [
+      new transports.Console({
+        format: format.combine(
+          format.timestamp(),
+          format.colorize(),
+          format.simple(),
+          format.printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
+        ),
+      }),
+    ],
+  });
+
+  /**
+   * Prometheus metrics
+   * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
+   */
+  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint
    */
-  private readonly registryUrl: string = process.env.REGISTRY_URL || 'amqp://localhost';
+  private readonly registryUrl: string = process.env.REGISTRY_URL;
 
   /**
    * How many task Worker should do concurrently
@@ -64,24 +81,24 @@ export abstract class Worker {
   /**
    * Registry connection status true/false
    */
-  private registryConnected: boolean = false;
+  private registryConnected = false;
 
   /**
    * Registry Consumer Tag (unique worker identifier, even for one-type workers).
    * Used to cancel subscription
    */
-  private registryConsumerTag: string = '';
+  private registryConsumerTag = '';
 
   /**
    * Connection to Registry
    */
-  private registryConnection: Connection;
+  private registryConnection: amqp.Connection;
 
   /**
    * Channel is a "transport-way" between Consumer and Registry inside the connection
    * One connection can has several channels.
    */
-  private channelWithRegistry: Channel;
+  private channelWithRegistry: amqp.Channel;
 
   /**
    * {Map<Object, Promise>} tasksMap - current worker's tasks
@@ -89,22 +106,27 @@ export abstract class Worker {
   private tasksMap: Map<object, Promise<void>> = new Map();
 
   /**
-   * Logger module
-   * (default level='info')
+   * Worker type
+   * (will pull tasks from Registry queue with the same name)
    */
-  protected logger: winston.Logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: combine(
-          timestamp(),
-          colorize(),
-          simple(),
-          printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`),
-        ),
-      }),
-    ],
-  });
+  public abstract readonly type: string;
+
+  /**
+   * Initialize prometheus metrics
+   */
+  public initMetrics(): void {
+    this.metricSuccessfullyProcessedMessages = new client.Counter({
+      name: 'successfully_processed_messages',
+      help: 'number of successfully processed messages since last restart',
+    });
+  }
+
+  /**
+   * Get array of available prometheus metrics
+   */
+  public getMetrics(): client.Counter<string>[] {
+    return [ this.metricSuccessfullyProcessedMessages ];
+  }
 
   /**
    * Start consuming messages
@@ -118,13 +140,12 @@ export abstract class Worker {
       await this.connect();
     }
 
-    const {consumerTag} = await this.channelWithRegistry.consume(this.type, (msg: ConsumeMessage) => {
-        const promise = this.processMessage(msg) as Promise<void>;
+    const { consumerTag } = await this.channelWithRegistry.consume(this.type, (msg: amqp.ConsumeMessage) => {
+      const promise = this.processMessage(msg) as Promise<void>;
 
-        this.tasksMap.set(msg, promise);
-        promise.then(() => this.tasksMap.delete(msg));
-      },
-    );
+      this.tasksMap.set(msg, promise);
+      promise.then(() => this.tasksMap.delete(msg));
+    });
 
     /**
      * Remember consumer tag to cancel subscription in future
@@ -155,16 +176,9 @@ export abstract class Worker {
   public async addTask(worker: string, payload: object): Promise<boolean> {
     return this.channelWithRegistry.sendToQueue(
       worker,
-      Buffer.from(JSON.stringify(payload)),
+      Buffer.from(JSON.stringify(payload))
     );
   }
-
-  /**
-   * Message handle function
-   *
-   * @param {WorkerTask} event - Event object from consume method
-   */
-  protected abstract handle(event: WorkerTask): Promise<void>;
 
   /**
    * Connect to RabbitMQ server
@@ -199,20 +213,22 @@ export abstract class Worker {
   /**
    * Requeue a message to original queue in Registry
    * Invoked on `CriticalError` in `handle` method to not lose any data
-   * @param {Object} msg - Message object from consume method
+   *
+   * @param {object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
-  private async requeue(msg: Message): Promise<void> {
+  private async requeue(msg: amqp.Message): Promise<void> {
     await this.channelWithRegistry.nack(msg);
   }
 
   /**
    * Enqueue a message to stash queue
    * Invoked on `NonCriticalError` in `handle` method to not lose any data
-   * @param {Object} msg - Message object from consume method
+   *
+   * @param {object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
-  private async sendToStash(msg: Message): Promise<void> {
+  private async sendToStash(msg: amqp.Message): Promise<void> {
     return this.channelWithRegistry.reject(msg, false);
   }
 
@@ -221,10 +237,10 @@ export abstract class Worker {
    * Calls `handle(msg)` to do actual work.
    * After that does all the stuff connected to RabbitMQ (ACK, etc)
    *
-   * @param {Object} msg - Message object from consume method
+   * @param {object} msg - Message object from consume method
    * @param {Buffer} msg.content - Message content
    */
-  private async processMessage(msg: ConsumeMessage): Promise<void> {
+  private async processMessage(msg: amqp.ConsumeMessage): Promise<void> {
     let event: WorkerTask;
 
     try {
@@ -237,7 +253,7 @@ export abstract class Worker {
       });
     } catch (error) {
       throw new ParsingError(
-        'Worker::processMessage: Message parsing error' + error,
+        'Worker::processMessage: Message parsing error' + error
       );
     }
 
@@ -248,6 +264,11 @@ export abstract class Worker {
        * Let RabbitMQ know that we processed the message
        */
       this.channelWithRegistry.ack(msg);
+
+      /**
+       * Increment counter of successfully processed messages if metrics are enabled
+       */
+      this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
@@ -263,6 +284,10 @@ export abstract class Worker {
       } else if (e instanceof NonCriticalError) {
         this.logger.info('Sending msg to stash');
         await this.sendToStash(msg);
+      } else if (e instanceof MongoError) {
+        this.logger.error('MongoError: ', e);
+
+        throw e;
       } else {
         this.logger.error('Unknown error:\n', e);
       }
@@ -305,36 +330,11 @@ export abstract class Worker {
 
     this.registryConnected = false;
   }
-}
 
-/**
- * Class for critical errors
- * have to stop process
- */
-export class CriticalError extends Error {
-}
-
-/**
- * Class for non-critical errors
- * have not to stop process
- */
-export class NonCriticalError extends Error {
-}
-
-/**
- * Simple class for parsing errors
- */
-export class ParsingError extends NonCriticalError {
-}
-
-/**
- * Class for database errors in workers
- */
-export class DatabaseError extends CriticalError {
-}
-
-/**
- * Class for validation errors
- */
-export class ValidationError extends NonCriticalError {
+  /**
+   * Message handle function
+   *
+   * @param {WorkerTask} event - Event object from consume method
+   */
+  protected abstract handle(event: WorkerTask): Promise<void>;
 }

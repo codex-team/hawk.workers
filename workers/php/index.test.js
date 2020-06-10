@@ -3,7 +3,7 @@ const { PhpEventWorker } = require('./index');
 const { ParsingError } = require('../../lib/worker');
 const { resolve } = require('path');
 
-require('dotenv').config({ path: resolve(__dirname, '.', '.env') });
+require('dotenv').config({ path: resolve(__dirname, '../../.env.test') });
 
 let worker;
 
@@ -12,13 +12,13 @@ const TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI1ZDIwNmY3ZjlhYWY3YzAwNzFkNjQ1OTYiLCJpYXQiOjE1MTYyMzkwMjJ9.OpSEIe1AzeejBKqlaMfX_Jy2V24g5xqMfLpe5iyBdO8';
 
 const TITLE_OBJ = {
-  error_description: 'Some error'
+  error_description: 'Some error',
 };
 
 const TIMESTAMP_OBJ = {
   http_params: {
-    REQUEST_TIME: '2019-01-28T13:59:49.995Z'
-  }
+    REQUEST_TIME: '2019-01-28T13:59:49.995Z',
+  },
 };
 
 const DEBUG_STACK_OBJ = {
@@ -29,11 +29,11 @@ const DEBUG_STACK_OBJ = {
       trace: [
         {
           line: 1,
-          content: 'echo $Error'
-        }
-      ]
-    }
-  ]
+          content: 'echo $Error',
+        },
+      ],
+    },
+  ],
 };
 
 describe('PHP Worker parsing', () => {
@@ -52,8 +52,8 @@ describe('PHP Worker parsing', () => {
       payload: {
         ...TITLE_OBJ,
         ...TIMESTAMP_OBJ,
-        ...DEBUG_STACK_OBJ
-      }
+        ...DEBUG_STACK_OBJ,
+      },
     };
     const content = JSON.stringify(obj);
 
@@ -61,7 +61,11 @@ describe('PHP Worker parsing', () => {
   });
 
   it('returns right fields in payload', () => {
-    const obj = { ...TITLE_OBJ, ...TIMESTAMP_OBJ, ...DEBUG_STACK_OBJ };
+    const obj = {
+      ...TITLE_OBJ,
+      ...TIMESTAMP_OBJ,
+      ...DEBUG_STACK_OBJ,
+    };
     const payload = PhpEventWorker.parseData(obj);
 
     expect(payload).toHaveProperty('title');
@@ -80,7 +84,7 @@ describe('PHP Worker parsing', () => {
     const payload = PhpEventWorker.parseData({
       ...TITLE_OBJ,
       ...TIMESTAMP_OBJ,
-      ...DEBUG_STACK_OBJ
+      ...DEBUG_STACK_OBJ,
     });
 
     expect(payload.backtrace).toHaveLength(1);
@@ -90,9 +94,9 @@ describe('PHP Worker parsing', () => {
       sourceCode: [
         {
           line: 1,
-          content: 'echo $Error'
-        }
-      ]
+          content: 'echo $Error',
+        },
+      ],
     });
   });
 });

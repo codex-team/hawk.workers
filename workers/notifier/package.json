@@ -1,0 +1,7 @@
+{
+  "name": "hawk-worker-notifier",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "workerType": "notifier"
+}

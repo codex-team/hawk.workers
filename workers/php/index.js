@@ -1,5 +1,5 @@
 const { EventWorker } = require('../../lib/event-worker');
-const { ParsingError, DatabaseError } = require('../../lib/worker');
+const { ParsingError, DatabaseError } = require('../../lib/workerErrors');
 const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
 const { ValidationError } = require('yup');
@@ -17,11 +17,13 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
     super();
 
     this.type = 'errors/php';
-    this.db = new DatabaseController();
+    this.db = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
   }
 
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
+   *
+   * @returns {string}
    */
   static get type() {
     return 'errors/php';
@@ -31,7 +33,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Message handle function
    *
    * @override
-   * @param {Object} msg Message object from consume method
+   * @param {object} msg Message object from consume method
    * @param {Buffer} msg.content Message content
    */
   async handle(msg) {
@@ -54,7 +56,8 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
 
       try {
         await this.db.saveEvent(projectId, {
-          catcherType: PhpEventWorker.type, payload
+          catcherType: PhpEventWorker.type,
+          payload,
         });
       } catch (err) {
         if (err instanceof ValidationError) {
@@ -69,7 +72,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Start consuming messages and connect to db
    */
   async start() {
-    await this.db.connect(process.env.EVENTS_DB_NAME);
+    await this.db.connect();
     await super.start();
   }
 
@@ -84,19 +87,19 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
    * Parse php error from hawk.catcher format
    * to new universal format
    *
-   * @param {Object} obj - Object to parse
-   * @returns {Object}
+   * @param {object} obj - Object to parse
+   * @returns {object}
    */
   static parseData(obj) {
     const payload = {};
 
-    payload.title = obj['error_description'] || '';
+    payload.title = obj.error_description || '';
 
     // @todo откуда это брать?
     payload.level = -1;
 
     try {
-      const timestamp = obj['http_params']['REQUEST_TIME'];
+      const timestamp = obj.http_params.REQUEST_TIME;
 
       payload.timestamp = new Date(timestamp);
     } catch (err) {
@@ -104,14 +107,14 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
     }
 
     // Check optional field 'backtrace'
-    if (obj['debug_backtrace'] && obj['debug_backtrace'].length) {
+    if (obj.debug_backtrace && obj.debug_backtrace.length) {
       payload.backtrace = [];
-      obj['debug_backtrace'].forEach(item => {
+      obj.debug_backtrace.forEach(item => {
         if (item.file && item.line) {
           payload.backtrace.push({
             file: item.file,
             line: item.line,
-            sourceCode: item.trace && item.trace.length ? item.trace : []
+            sourceCode: item.trace && item.trace.length ? item.trace : [],
           });
 
           if (!item.trace) {

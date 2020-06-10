@@ -1,12 +1,7 @@
-import * as mongodb from 'mongodb';
-import {GridFSBucket, MongoClient} from 'mongodb';
-import {Db} from 'mongodb';
+import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
 
 /**
  * Database connection singleton
- *
- * @param {mongodb.MongoClient} connection - MongoDB connection
- * @param {mongodb.Db} db - MongoDB connection database instance
  */
 export class DatabaseController {
   /**
@@ -20,37 +15,46 @@ export class DatabaseController {
   private connection: MongoClient;
 
   /**
+   * MongoDB connection URI
+   */
+  private readonly connectionUri: string;
+
+  /**
    * GridFSBucket object
    * Used to store files in GridFS
    */
   private gridFsBucket: GridFSBucket;
 
   /**
+   * Creates controller instance
+   *
+   * @param connectionUri - mongo URI for connection
+   */
+  constructor(connectionUri) {
+    if (!connectionUri) {
+      throw new Error('Connection URI is not specified. Check .env');
+    }
+    this.connectionUri = connectionUri;
+  }
+
+  /**
    * Connect to database
    * Requires `MONGO_DSN` environment variable to be set
    *
-   * @param {string} dbName - database name
-   *
-   * @returns {Promise<void>}
    * @throws {Error} if `MONGO_DSN` is not set
    */
-  public async connect(dbName: string): Promise<void> {
+  public async connect(): Promise<Db> {
     if (this.db) {
       return;
     }
 
-    if (!process.env.MONGO_DSN) {
-      throw new Error('MONGO_DSN env variable is not set!');
-    }
-
-    if (!dbName) {
-      throw new Error('Database name is not specified. Check .env');
-    }
-
-    this.connection = await mongodb.connect(process.env.MONGO_DSN + '/' + dbName, {
+    this.connection = await connect(this.connectionUri, {
       useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
     this.db = await this.connection.db();
+
+    return this.db;
   }
 
   /**
@@ -71,7 +75,7 @@ export class DatabaseController {
   }
 
   /**
-   * @return {*|null}
+   * @returns {*|null}
    */
   public getConnection(): Db {
     return this.db;
@@ -79,17 +83,21 @@ export class DatabaseController {
 
   /**
    * Prepares GridFs bucket to store files
+   *
    * @param {string} name - The bucket name. Defaults to 'fs'.
    */
-  public createGridFsBucket(name: string = 'fs'): void {
-    this.gridFsBucket = new mongodb.GridFSBucket(this.db, {
+  public createGridFsBucket(name): GridFSBucket {
+    this.gridFsBucket = new GridFSBucket(this.db, {
       bucketName: name,
     });
+
+    return this.gridFsBucket;
   }
 
   /**
    * Returns GridFs Bucket
-   * @return {GridFSBucket}
+   *
+   * @returns {GridFSBucket}
    */
   public getBucket(): GridFSBucket {
     return this.gridFsBucket;

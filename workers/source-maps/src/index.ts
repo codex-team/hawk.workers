@@ -2,13 +2,15 @@
  * This worker gets source map from the Registry and puts it to Mongo
  * to provide access for it for JS Worker
  */
-import {RawSourceMap} from 'hawk-worker-javascript/node_modules/source-map';
+import { RawSourceMap } from 'hawk-worker-javascript/node_modules/source-map';
 import { Readable } from 'stream';
-import {DatabaseController} from '../../../lib/db/controller';
-import {DatabaseError, NonCriticalError, Worker} from '../../../lib/worker';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
+import { NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import {SourcemapCollectedData, SourceMapsEventWorkerTask} from '../types/source-maps-event-worker-task';
-import {SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord} from '../types/source-maps-record';
+import { SourcemapCollectedData, SourceMapsEventWorkerTask } from '../types/source-maps-event-worker-task';
+import { SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../types/source-maps-record';
+import { ObjectId } from 'mongodb';
 
 /**
  * Java Script source maps worker
@@ -22,7 +24,7 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Database Controller
    */
-  private db: DatabaseController = new DatabaseController();
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Source maps will stored in this collection
@@ -33,8 +35,8 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Start consuming messages
    */
-  public async start() {
-    await this.db.connect(process.env.EVENTS_DB_NAME);
+  public async start(): Promise<void> {
+    await this.db.connect();
     this.db.createGridFsBucket(this.dbCollectionName);
     await super.start();
   }
@@ -42,7 +44,7 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Finish everything
    */
-  public async finish() {
+  public async finish(): Promise<void> {
     await super.finish();
     await this.db.close();
   }
@@ -52,7 +54,7 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param {SourceMapsEventWorkerTask} task - Message object from consume method
    */
-  public async handle(task: SourceMapsEventWorkerTask) {
+  public async handle(task: SourceMapsEventWorkerTask): Promise<void> {
     /**
      * Extract original file name from source-map's "file" property
      * and extend data-to-save with it
@@ -68,7 +70,6 @@ export default class SourceMapsWorker extends Worker {
         release: task.release,
         files: sourceMapsFilesExtended,
       } as SourceMapsRecord);
-
     } catch (error) {
       this.logger.error('Can\'t extract release info:\n', {
         error,
@@ -109,7 +110,7 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param {SourceMapsRecord} releaseData - info with source map
    */
-  private async save(releaseData: SourceMapsRecord) {
+  private async save(releaseData: SourceMapsRecord): Promise<ObjectId | null> {
     try {
       const existedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)
@@ -143,7 +144,7 @@ export default class SourceMapsWorker extends Worker {
           delete map.content;
 
           return map;
-        } catch ( error ) {
+        } catch (error) {
           console.log(`Map ${map.mapFileName} was not saved: `, error);
         }
       }));
@@ -151,7 +152,7 @@ export default class SourceMapsWorker extends Worker {
       /**
        * Filter unsaved maps
        */
-      savedFiles = savedFiles.filter( (file) => file !== undefined);
+      savedFiles = savedFiles.filter((file) => file !== undefined);
 
       /**
        * Nothing to save: maps was previously saved
@@ -198,11 +199,12 @@ export default class SourceMapsWorker extends Worker {
 
   /**
    * Saves source map file to the GridFS
+   *
    * @param file - source map file extended
    */
   private saveFile(file: SourceMapDataExtended): Promise<SourceMapFileChunk> {
     return new Promise((resolve, reject) => {
-      const readable = Readable.from([file.content]);
+      const readable = Readable.from([ file.content ]);
       const writeStream = this.db.getBucket().openUploadStream(file.mapFileName);
 
       readable

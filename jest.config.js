@@ -10,10 +10,14 @@ module.exports = {
   testEnvironment: 'node',
 
   /**
+   * For testing mongodb queries
+   */
+  preset: '@shelf/jest-mongodb',
+
+  /**
    * TypeScript support
    */
-
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
-  }
+    '^.+\\.tsx?$': 'ts-jest',
+  },
 };

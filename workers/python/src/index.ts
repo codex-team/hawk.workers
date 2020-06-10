@@ -3,7 +3,7 @@ import { EventWorker } from '../../../lib/event-worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import * as pkg from '../package.json';
-import { PythonEventWorkerTask} from '../types/python-event-worker-task';
+import { PythonEventWorkerTask } from '../types/python-event-worker-task';
 
 /**
  * Worker for handling Python events
@@ -17,11 +17,7 @@ export default class PythonEventWorker extends EventWorker {
   /**
    * Database Controller
    */
-  private db: DatabaseController = new DatabaseController();
-
-  constructor() {
-    super();
-  }
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Start consuming messages
@@ -41,6 +37,8 @@ export default class PythonEventWorker extends EventWorker {
 
   /**
    * Message handle function
+   *
+   * @param event - event to handle
    */
   public async handle(event: PythonEventWorkerTask): Promise<void> {
     await this.addTask(WorkerNames.GROUPER, {

@@ -3,9 +3,10 @@
  * Tests for Source Maps Worker
  */
 import SourceMapsWorker from '../src/index';
-import {SourcemapCollectedData} from '../types/source-maps-event-worker-task';
-import {SourceMapDataExtended} from '../types/source-maps-record';
+import { SourcemapCollectedData } from '../types/source-maps-event-worker-task';
+import { SourceMapDataExtended } from '../types/source-maps-record';
 import MockBundle from './create-mock-bundle';
+import '../../../env-test';
 
 describe('SourceMaps Worker', () => {
   /**
@@ -34,10 +35,10 @@ describe('SourceMaps Worker', () => {
     const map = await mockBundle.getSourceMap();
     const workerInstance = new SourceMapsWorker();
 
-    const extendedInfo: SourceMapDataExtended[] = workerInstance['extendReleaseInfo']([{
+    const extendedInfo: SourceMapDataExtended[] = workerInstance['extendReleaseInfo']([ {
       name: 'main.js.map',
       payload: map,
-    }] as SourcemapCollectedData[]);
+    } ] as SourcemapCollectedData[]);
 
     /**
      * Maps should be array
