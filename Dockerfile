@@ -1,4 +1,4 @@
-FROM node:12.16.3-stretch-slim as build-stage
+FROM node:lts-slim as build-stage
 
 WORKDIR /app
 

@@ -32,6 +32,6 @@ do
     elif [ "$arg" == "--build" ]
     then build
     else
-      docker run --rm -d --network ${default_network} -v $(pwd)/.env:/app/.env --restart unless-stopped --entrypoint /usr/local/bin/node hawk-workers runner.js $arg
+      docker run -d --network ${default_network} -v $(pwd)/.env:/app/.env --restart unless-stopped --entrypoint /usr/local/bin/node hawk-workers runner.js $arg
     fi
 done
