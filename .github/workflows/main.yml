@@ -19,12 +19,12 @@ jobs:
       - name: Build docker image for stage
         if: endsWith(github.ref, '/stage')
         run: |
-          docker build -t ${DOCKER_IMAGE_NAME} --build-arg WORKER_NAME=hawk-worker-grouper .
+          docker build -t ${DOCKER_IMAGE_NAME} .
 
       - name: Build docker image for prod
         if: endsWith(github.ref, '/prod')
         run: |
-          docker build -t ${DOCKER_IMAGE_NAME} --build-arg WORKER_NAME=hawk-worker-grouper .
+          docker build -t ${DOCKER_IMAGE_NAME} .
 
       - name: Push docker image for stage
         if: endsWith(github.ref, '/stage')
