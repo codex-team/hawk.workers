@@ -16,6 +16,16 @@ build ()
   docker build -t hawk-workers .
 }
 
+load_env()
+{
+  CHECK_ENV_FILE=workers/$(echo $1 | sed -n -e 's/.*hawk-worker-\([^"]*\).*/\1/p')/.env
+  if test -f "$CHECK_ENV_FILE"; then
+    ENV_FILE="--env-file $CHECK_ENV_FILE"
+  else
+    ENV_FILE=
+  fi
+}
+
 if [[ "$(docker images -q hawk-workers 2> /dev/null)" == "" ]]; then
   echo "Not found docker image"
   build
@@ -32,6 +42,7 @@ do
     elif [ "$arg" == "--build" ]
     then build
     else
-      docker run -d --network ${default_network} -v $(pwd)/.env:/app/.env --restart unless-stopped --entrypoint /usr/local/bin/node hawk-workers runner.js $arg
+      load_env $arg
+      docker run --name "${arg}-"$(date +%s) $ENV_FILE -d --network ${default_network} -v $(pwd)/.env:/app/.env --restart unless-stopped --entrypoint /usr/local/bin/node hawk-workers runner.js $arg
     fi
 done
