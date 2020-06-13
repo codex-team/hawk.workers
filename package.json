@@ -32,7 +32,7 @@
         "run-js": "yarn worker hawk-worker-javascript",
         "run-nodejs": "yarn worker hawk-worker-nodejs",
         "run-python": "yarn worker hawk-worker-python",
-        "run-grouper": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-grouper",
+        "run-grouper": "yarn worker hawk-worker-grouper",
         "run-archiver": "yarn worker hawk-worker-archiver",
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
