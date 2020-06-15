@@ -6,9 +6,8 @@ import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
-import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, './.env') });
+dotenv.config();
 
 if (process.env.HAWK_CATCHER_TOKEN) {
   HawkCatcher.init(process.env.HAWK_CATCHER_TOKEN);
