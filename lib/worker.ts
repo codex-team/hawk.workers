@@ -6,6 +6,7 @@ import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
+import HawkCatcher from '@hawk.so/nodejs';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -270,6 +271,7 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
+      HawkCatcher.send(e);
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
       this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));

@@ -4,6 +4,12 @@ import * as utils from './lib/utils';
 import * as promClient from 'prom-client';
 import * as url from 'url';
 import { Worker } from './lib/worker';
+import HawkCatcher from '@hawk.so/nodejs';
+require('./env.js');
+
+if (process.env.HAWK_CATCHER_TOKEN) {
+  HawkCatcher.init(process.env.HAWK_CATCHER_TOKEN);
+}
 
 type WorkerConstructor = new () => Worker;
 
@@ -46,6 +52,7 @@ class WorkerRunner {
         try {
           this.startMetrics();
         } catch (e) {
+          HawkCatcher.send(e);
           console.error(`Metrics not started: ${e}`);
         }
 
@@ -58,6 +65,7 @@ class WorkerRunner {
         this.observeProcess();
       })
       .catch((loadingError) => {
+        HawkCatcher.send(loadingError);
         console.error('Worker loading error: ', loadingError);
       });
   }
@@ -103,6 +111,7 @@ class WorkerRunner {
           },
         }, (err?: Error) => {
           if (err) {
+            HawkCatcher.send(err);
             console.log(`Error of pushing metrics to gateway: ${err}`);
           }
         });
@@ -170,6 +179,8 @@ class WorkerRunner {
    * @param error - error to handle
    */
   private exceptionHandler(error: Error): void {
+    HawkCatcher.send(error);
+
     console.log(
       '\x1b[41m%s\x1b[0m',
       '\n\n (▀̿Ĺ̯▀̿ ̿) Hawk Workers Runner: an error has been occurred: \n'
@@ -241,6 +252,7 @@ class WorkerRunner {
         `\n\n Worker ${worker.constructor.name} stopped \n`
       );
     } catch (finishingError) {
+      HawkCatcher.send(finishingError);
       console.error('Error while finishing Worker: ', finishingError);
     }
   }
