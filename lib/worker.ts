@@ -1,13 +1,10 @@
 import * as amqp from 'amqplib';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import * as client from 'prom-client';
 import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
-
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+import HawkCatcher from '@hawk.so/nodejs';
 
 /**
  * Base worker class for processing tasks
@@ -270,6 +267,7 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
+      HawkCatcher.send(e);
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
       this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
