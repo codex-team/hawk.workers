@@ -5,7 +5,10 @@ import * as promClient from 'prom-client';
 import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
-require('./env.js');
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, './.env') });
 
 if (process.env.HAWK_CATCHER_TOKEN) {
   HawkCatcher.init(process.env.HAWK_CATCHER_TOKEN);

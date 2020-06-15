@@ -1,14 +1,10 @@
 import * as amqp from 'amqplib';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import * as client from 'prom-client';
 import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
-
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Base worker class for processing tasks
