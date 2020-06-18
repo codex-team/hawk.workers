@@ -1,0 +1,94 @@
+version: "3.2"
+services:
+  #
+  # Programming language workers: javascript (+sourcemaps), nodejs, python
+  #
+
+  hawk-worker-javascript:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-javascript
+
+  hawk-worker-sourcemaps:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      - SIMULTANEOUS_TASKS=1
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-sourcemaps
+
+  hawk-worker-nodejs:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-nodejs
+
+  hawk-worker-python:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-python
+
+  #
+  # Processing workers: grouper
+  #
+
+  hawk-worker-grouper:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-grouper
+
+  #
+  # System workers: archiver
+  #
+
+  hawk-worker-archiver:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+      - workers/archiver/.env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-archiver
+
+  #
+  # Notification workers: notifier, email, telegram
+  #
+
+  hawk-worker-notifier:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-notifier
+
+  hawk-worker-email:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+      - workers/email/.env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-email
+
+  hawk-worker-telegram:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+      - workers/telegram/.env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
