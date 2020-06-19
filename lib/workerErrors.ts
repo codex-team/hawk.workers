@@ -19,9 +19,15 @@ export class ParsingError extends NonCriticalError {
 }
 
 /**
+ * Class for failed database operation errors in workers
+ */
+export class DatabaseReadWriteError extends NonCriticalError {
+}
+
+/**
  * Class for database errors in workers
  */
-export class DatabaseError extends CriticalError {
+export class DatabaseConnectionError extends CriticalError {
 }
 
 /**

@@ -1,4 +1,5 @@
 import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
+import { DatabaseConnectionError } from "../workerErrors";
 
 /**
  * Database connection singleton
@@ -32,7 +33,7 @@ export class DatabaseController {
    */
   constructor(connectionUri) {
     if (!connectionUri) {
-      throw new Error('Connection URI is not specified. Check .env');
+      throw new DatabaseConnectionError('Connection URI is not specified. Check .env');
     }
     this.connectionUri = connectionUri;
   }
@@ -48,13 +49,17 @@ export class DatabaseController {
       return;
     }
 
-    this.connection = await connect(this.connectionUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    this.db = await this.connection.db();
+    try {
+      this.connection = await connect(this.connectionUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      this.db = await this.connection.db();
 
-    return this.db;
+      return this.db;
+    } catch (err) {
+      throw new DatabaseConnectionError(err);
+    }
   }
 
   /**

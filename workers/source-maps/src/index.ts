@@ -6,7 +6,7 @@ import { RawSourceMap } from 'hawk-worker-javascript/node_modules/source-map';
 import { Readable } from 'stream';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
-import { NonCriticalError } from '../../../lib/workerErrors';
+import {DatabaseReadWriteError, NonCriticalError} from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { SourcemapCollectedData, SourceMapsEventWorkerTask } from '../types/source-maps-event-worker-task';
 import { SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../types/source-maps-record';
@@ -193,7 +193,7 @@ export default class SourceMapsWorker extends Worker {
 
       return updating ? updating.value._id : null;
     } catch (err) {
-      this.logger.error('DatabaseError:', err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
