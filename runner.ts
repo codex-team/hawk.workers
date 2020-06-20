@@ -1,7 +1,10 @@
 import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
+import os from 'os';
 import * as promClient from 'prom-client';
+import gcStats from 'prometheus-gc-stats';
+import { nanoid } from 'nanoid';
 import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -80,11 +83,15 @@ class WorkerRunner {
       return;
     }
 
-    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY);
 
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
     const Registry = promClient.Registry;
+
     const register = new Registry();
+    const startGcStats = gcStats(register);
+
+    const hostname = os.hostname();
+    const id = nanoid(5);
 
     // eslint-disable-next-line node/no-deprecated-api
     const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY).host;
@@ -96,6 +103,9 @@ class WorkerRunner {
     });
 
     collectDefaultMetrics({ register });
+    startGcStats();
+
+    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY, null, register);
 
     console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY}`);
 
@@ -108,8 +118,9 @@ class WorkerRunner {
         this.gateway.push({
           jobName: 'workers',
           groupings: {
-            type: worker.type.replace('/', '_'),
-            instance: instance,
+            worker: worker.type.replace('/', '_'),
+            host: hostname,
+            id
           },
         }, (err?: Error) => {
           if (err) {
@@ -128,7 +139,7 @@ class WorkerRunner {
     return workerNames.reduce(async (accumulator, packageName) => {
       const workers = await accumulator;
 
-      const workerClass = (await import(`${packageName}/src/`)) as {default: WorkerConstructor};
+      const workerClass = (await import(`${packageName}`)) as { default: WorkerConstructor };
 
       workers.push(workerClass.default);
 
