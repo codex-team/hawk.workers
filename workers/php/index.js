@@ -1,5 +1,5 @@
 const { EventWorker } = require('../../lib/event-worker');
-const { ParsingError, DatabaseError } = require('../../lib/workerErrors');
+const { ParsingError, DatabaseReadWriteError } = require('../../lib/workerErrors');
 const { DatabaseController } = require('../../lib/db/controller');
 const path = require('path');
 const { ValidationError } = require('yup');
@@ -62,7 +62,7 @@ module.exports.PhpEventWorker = class PhpEventWorker extends EventWorker {
       } catch (err) {
         if (err instanceof ValidationError) {
           // @todo Send unprocessed msg back to queue?
-          throw new DatabaseError('Saving event to database error', err);
+          throw new DatabaseReadWriteError('Saving event to database error', err);
         }
       }
     }

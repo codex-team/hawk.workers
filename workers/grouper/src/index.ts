@@ -8,7 +8,7 @@ import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
-import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
+import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 
 /**
  * Worker for handling Javascript events
@@ -199,7 +199,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .findOne(query);
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -221,7 +221,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -261,7 +261,7 @@ export default class GrouperWorker extends Worker {
 
       return result;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -293,7 +293,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .updateOne(query, updateQuery)).modifiedCount;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -346,7 +346,7 @@ export default class GrouperWorker extends Worker {
           },
           { upsert: true });
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 }

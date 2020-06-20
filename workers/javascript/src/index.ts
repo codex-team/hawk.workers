@@ -3,7 +3,7 @@ import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPositio
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
 import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
-import { DatabaseError } from '../../../lib/workerErrors';
+import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
@@ -265,7 +265,7 @@ export default class JavascriptEventWorker extends EventWorker {
           },
         });
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
