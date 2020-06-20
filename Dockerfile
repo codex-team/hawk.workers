@@ -1,4 +1,4 @@
-FROM node:lts-slim as build-stage
+FROM node:12.18.1-slim as build-stage
 
 WORKDIR /app
 
