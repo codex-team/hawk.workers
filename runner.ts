@@ -139,7 +139,7 @@ class WorkerRunner {
     return workerNames.reduce(async (accumulator, packageName) => {
       const workers = await accumulator;
 
-      const workerClass = (await import(`${packageName}`)) as { default: WorkerConstructor };
+      const workerClass = (await import(`${packageName}/src`)) as { default: WorkerConstructor };
 
       workers.push(workerClass.default);
 
