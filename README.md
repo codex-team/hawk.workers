@@ -14,6 +14,8 @@ Registry - RabbitMQ
 
 > More info on setting up Registry [here](https://github.com/codex-team/hawk.registry)
 
+For simplicity, Hawk workers can be used as part of the [Mono repository](https://github.com/codex-team/hawk.mono)
+
 ## How to write a Worker
 
 - Inherit from `Worker` class and implement `handle` method which process tasks from registry (see more in [`lib/worker.js`](lib/worker.js)) [Example](workers/javascript/src/index.ts)
@@ -68,6 +70,37 @@ SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps
   ```
 
 > Feel free to tune your setting in `ecosystem.config.js` file, [more info](https://pm2.io/doc/en/runtime/reference/ecosystem-file/)
+
+## Running workers with Docker
+
+Basic configuration is in `docker-compose.dev.yml`. 
+Pull image from https://hub.docker.com/r/codexteamuser/hawk-workers
+```
+docker-compose -f docker-compose.dev.yml pull
+```
+
+If you run mongodb and rabbitmq with `hawk.mono` repository, by default your docker network will be named `hawkmono_default`. 
+This network name is written as external for workers.
+
+Run chosen worker (say hawk-worker-javascript)
+```
+docker-compose -f docker-compose.dev.yml up hawk-worker-javascript
+```
+
+### Adding new workers
+Make sure that your `.env` configurations exists.
+
+Add new section to the `docker-compose.{dev,prod}.yml` files.
+
+```
+ hawk-worker-telegram:
+    image: "codexteamuser/hawk-workers:prod"
+    env_file:
+      - .env
+      - workers/telegram/.env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
+```
 
 ## Error handling
 
