@@ -279,10 +279,10 @@
     eslint "^4.19.1"
     request "^2.85.0"
 
-"@hawk.so/nodejs@^2.0.6":
-  version "2.0.6"
-  resolved "https://registry.yarnpkg.com/@hawk.so/nodejs/-/nodejs-2.0.6.tgz#414696d61044c6b9f8ba9726a9994beeee0e7d42"
-  integrity sha512-8IaO1/6qBVnppQcqX2QYfviF9DQM12OEHIniVEYuJZo2J/483vsEqb53GMDfnpJrDu0nxkZMI5V4usyl2oIpKA==
+"@hawk.so/nodejs@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@hawk.so/nodejs/-/nodejs-2.0.7.tgz#766ff475984be338376a283ea9d6f567b31c27fa"
+  integrity sha512-2tTAQfczIk2GDwFLewF+OvGKlg5RVP0d5Kn3HXCBe51C06oVhIE3es83Zbm2SDSmy9rKKkF845V++0UcnXSlOw==
   dependencies:
     axios "^0.19.2"
     stack-trace "^0.0.10"
