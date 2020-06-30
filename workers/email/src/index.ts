@@ -22,19 +22,4 @@ export default class EmailSenderWorker extends SenderWorker {
    * Email provider
    */
   protected provider = new EmailProvider();
-
-  /**
-   * Constructor uses to check required ENV params
-   */
-  constructor() {
-    super();
-
-    if (!process.env.GARAGE_URL) {
-      throw Error('procces.env.GARAGE_URL does not specified');
-    }
-
-    if (!process.env.API_STATIC_URL) {
-      throw Error('procces.env.API_STATIC_URL does not specified');
-    }
-  }
 }
