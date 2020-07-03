@@ -1,5 +1,5 @@
 /**
- * @file This migration creates drops indexes for groupHash field in events
+ * @file This migration drops indexes for groupHash field in events
  */
 
 /**

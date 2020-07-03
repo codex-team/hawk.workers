@@ -2,17 +2,7 @@
  * @file This migration creates indexes for repetition collection on payload.user.id field
  */
 
-/**
- * Asynchronous forEach function
- *
- * @param array - array to iterate
- * @param callback - callback for processing array items
- */
-async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
-  }
-}
+const { asyncForEach } = require('./utils');
 
 /**
  * Index name for payload.user.id field

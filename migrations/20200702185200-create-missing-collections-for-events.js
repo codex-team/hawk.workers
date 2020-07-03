@@ -2,6 +2,7 @@
  * @file Migration for creating collections for storing events and setup indexes for them
  * The problem:
  *  not for all projects there are corresponding collections for storing events (events, repetitions, dailyEvents)
+ *  if the grouper creates these collections itself, they will be without an index, which will lead to problems with duplication of events
  *
  * The solution:
  *  Create necessary collections and setup indexes for them
@@ -9,6 +10,7 @@
 const dotenv = require('dotenv');
 const path = require('path');
 const mongodb = require('mongodb');
+const { isCollectionExists, asyncForEach } = require('./utils');
 
 const EVENTS_GROUP_HASH_INDEX_NAME = 'groupHashUnique';
 const REPETITIONS_GROUP_HASH_INDEX_NAME = 'groupHash_hashed';
@@ -88,25 +90,3 @@ module.exports = {
   down() {},
 
 };
-
-/**
- * Asynchronous forEach function
- *
- * @param array - array to iterate
- * @param callback - callback for processing array items
- */
-async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
-  }
-}
-
-/**
- * Returns true if collection exists in database
- *
- * @param db - database to check
- * @param collectionName - collection name to check
- */
-async function isCollectionExists(db, collectionName) {
-  return db.listCollections({ name: collectionName }).hasNext();
-}
