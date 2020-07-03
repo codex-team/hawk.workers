@@ -1,5 +1,7 @@
 /**
  * @file This migration drops indexes for groupHash field in events
+ * The problem:
+ *  For grouper parallel working we need to drop not-unique index on groupHash field to build unique index in next migration
  */
 
 /**
