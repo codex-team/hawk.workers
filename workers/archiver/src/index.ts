@@ -159,13 +159,16 @@ export default class ArchiverWorker extends Worker {
    */
   private async removeOldRepetitions(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<number> {
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
-    const deleteRepetitionsResult = await repetitionsCollection.deleteMany({
+
+    const repetitionsBulk = repetitionsCollection.initializeUnorderedBulkOp();
+    repetitionsBulk.find({
       'payload.timestamp': {
         $lt: maxOldTimestamp,
       },
-    });
+    }).remove();
+    const deleteRepetitionsResult = await repetitionsBulk.execute();
 
-    return deleteRepetitionsResult.deletedCount || 0;
+    return deleteRepetitionsResult.nRemoved || 0;
   }
 
   /**
@@ -177,11 +180,13 @@ export default class ArchiverWorker extends Worker {
   private async removeOldDailyEvents(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<void> {
     const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
 
-    await dailyEventsCollection.deleteMany({
+    const dailyEventsBulk = dailyEventsCollection.initializeUnorderedBulkOp();
+    dailyEventsBulk.find({
       groupingTimestamp: {
         $lt: maxOldTimestamp,
       },
-    });
+    }).remove();
+    await dailyEventsBulk.execute();
   }
 
   /**
@@ -262,13 +267,16 @@ export default class ArchiverWorker extends Worker {
     const noDailyRecords = (events: AggregationResult): boolean => events.dailyEvent.length === 0;
 
     const groupHashesToRemove = result.filter(noDailyRecords).map(res => res.groupHash);
-    const deleteOriginalEventsResult = await eventsCollection.deleteMany({
+
+    const eventsBulk = eventsCollection.initializeUnorderedBulkOp();
+    eventsBulk.find({
       groupHash: {
         $in: groupHashesToRemove,
       },
-    });
+    }).remove();
+    const deleteOriginalEventsResult = await eventsBulk.execute();
 
-    return deleteOriginalEventsResult.deletedCount || 0;
+    return deleteOriginalEventsResult.nRemoved || 0;
   }
 
   /**
@@ -363,14 +371,16 @@ export default class ArchiverWorker extends Worker {
       return acc;
     }, []);
 
-    const result = await this.releasesCollection.deleteMany({
+    const releasesBulk = this.releasesCollection.initializeUnorderedBulkOp();
+    releasesBulk.find({
       _id: {
         $in: releasesIdsToDelete,
       },
-    });
+    }).remove();
+    const result = await releasesBulk.execute();
 
-    this.logger.info(`Summary deleted releases for project ${project._id.toString()}: ${result.deletedCount}`);
+    this.logger.info(`Summary deleted releases for project ${project._id.toString()}: ${result.nRemoved}`);
 
-    return result.deletedCount;
+    return result.nRemoved;
   }
 }
