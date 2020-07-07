@@ -53,7 +53,7 @@ export default class SlackProvider extends NotificationsProvider {
 
       await webhook.send(message);
     } catch (e) {
-      this.logger.log('error', 'Can deliver Incoming Webhook. Slack returns an error: ', e);
+      this.logger.log('error', 'Can\'t deliver Incoming Webhook. Slack returns an error: ', e);
     }
   }
 }

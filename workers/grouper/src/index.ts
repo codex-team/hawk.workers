@@ -8,7 +8,7 @@ import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEvent } from '../types/grouped-event';
 import { Repetition } from '../types/repetition';
-import { DatabaseError, ValidationError } from '../../../lib/workerErrors';
+import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 
 /**
  * Worker for handling Javascript events
@@ -23,11 +23,6 @@ export default class GrouperWorker extends Worker {
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
-
-  /**
-   * Index name for payload.user.id field
-   */
-  private readonly userIdIndexName = 'userId';
 
   /**
    * Get unique hash from event data
@@ -199,7 +194,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .findOne(query);
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -217,11 +212,12 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      return (await this.db.getConnection()
-        .collection(`events:${projectId}`)
+      const collection = this.db.getConnection().collection(`events:${projectId}`);
+
+      return (await collection
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -238,30 +234,10 @@ export default class GrouperWorker extends Worker {
 
     try {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
-      const result = (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
 
-      const hasIndex = await collection.indexExists('groupHash_hashed');
-
-      if (!hasIndex) {
-        await collection.createIndex({
-          groupHash: 'hashed',
-        });
-      }
-
-      const hasUserIdIndex = await collection.indexExists(this.userIdIndexName);
-
-      if (!hasUserIdIndex) {
-        await collection.createIndex({
-          'payload.user.id': 1,
-        }, {
-          name: this.userIdIndexName,
-          sparse: true,
-        });
-      }
-
-      return result;
+      return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -293,7 +269,7 @@ export default class GrouperWorker extends Worker {
         .collection(`events:${projectId}`)
         .updateOne(query, updateQuery)).modifiedCount;
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 
@@ -346,7 +322,7 @@ export default class GrouperWorker extends Worker {
           },
           { upsert: true });
     } catch (err) {
-      throw new DatabaseError(err);
+      throw new DatabaseReadWriteError(err);
     }
   }
 }
