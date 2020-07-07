@@ -22,6 +22,7 @@ export interface TemplateEventData {
 export interface EventsTemplateVariables extends TemplateVariables {
   events: TemplateEventData[];
   host: string;
+  hostOfStatic: string;
   project: Project;
   period: number;
 }

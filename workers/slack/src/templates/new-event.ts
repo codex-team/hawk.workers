@@ -2,53 +2,12 @@ import { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/t
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { block, element, object, TEXT_FORMAT_MRKDWN, TEXT_FORMAT_PLAIN } from 'slack-block-kit';
 import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { getEventLocation, getEventUrl, toMaxLen } from './utils';
 
 const { text } = object;
 const { button } = element;
 const { section, actions, divider, context } = block;
 
-/**
- * Returns JSON with data substitutions
- *
- * @param tplData - event template data
- */
-export default function render(tplData: EventsTemplateVariables): IncomingWebhookSendArguments {
-  const eventInfo = tplData.events[0] as TemplateEventData;
-  const event = eventInfo.event;
-  const eventURL = tplData.host + '/project/' + tplData.project._id + '/event/' + event._id + '/';
-  let location = '';
-
-  if (event.payload.backtrace && event.payload.backtrace.length > 0) {
-    location = event.payload.backtrace[0].file || (event.payload.addons.url as string) || 'Unknown location';
-  }
-
-  const blocks = [
-    section(
-      text(event.payload.title),
-      TEXT_FORMAT_PLAIN
-    ),
-    context([
-      text(`${location}`),
-    ]),
-    context([
-      text(`\`\`\`${renderBacktrace(event)}\`\`\``, TEXT_FORMAT_MRKDWN),
-    ]),
-    context([
-      text(`*${eventInfo.newCount} new*   ${event.totalCount} total`, TEXT_FORMAT_MRKDWN),
-    ]),
-    divider(),
-    actions([
-      button('action', 'View event', {
-        style: 'danger',
-        url: eventURL,
-      }),
-    ]),
-  ];
-
-  return {
-    blocks,
-  };
-};
 
 /**
  * Renders backtrace overview
@@ -78,15 +37,39 @@ function renderBacktrace(event: GroupedEvent): string {
 }
 
 /**
- * Trim string to max length
+ * Returns JSON with data substitutions
  *
- * @param str - string to trim
- * @param len - max length
+ * @param tplData - event template data
  */
-function toMaxLen(str: string, len = 50): string {
-  if (str.length <= len) {
-    return str;
-  }
+export default function render(tplData: EventsTemplateVariables): IncomingWebhookSendArguments {
+  const eventInfo = tplData.events[0] as TemplateEventData;
+  const event = eventInfo.event;
+  const eventURL = getEventUrl(tplData.host, tplData.project, event);
+  const location = getEventLocation(event);
 
-  return str.substr(0, len) + '…';
-}
+  const blocks = [
+    section(
+      text(event.payload.title, TEXT_FORMAT_PLAIN)
+    ),
+    context([
+      text(`${location}`),
+    ]),
+    context([
+      text(`\`\`\`${renderBacktrace(event)}\`\`\``, TEXT_FORMAT_MRKDWN),
+    ]),
+    context([
+      text(`*${eventInfo.newCount} new*   ${event.totalCount} total`, TEXT_FORMAT_MRKDWN),
+    ]),
+    divider(),
+    actions([
+      button('action', 'View event', {
+        style: 'danger',
+        url: eventURL,
+      }),
+    ]),
+  ];
+
+  return {
+    blocks,
+  };
+};

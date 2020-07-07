@@ -46,10 +46,14 @@ export default class SlackProvider extends NotificationsProvider {
    * @param message - what to send
    */
   private async deliver(endpoint: string, message: IncomingWebhookSendArguments): Promise<void> {
-    const webhook = new IncomingWebhook(endpoint, {
-      username: 'Hawk',
-    });
+    try {
+      const webhook = new IncomingWebhook(endpoint, {
+        username: 'Hawk',
+      });
 
-    await webhook.send(message);
+      await webhook.send(message);
+    } catch (e) {
+      this.logger.log('error', 'Can deliver Incoming Webhook. Slack returns an error: ', e);
+    }
   }
 }

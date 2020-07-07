@@ -1,7 +1,6 @@
 /* global Db, MongoClient */
 const terminal = require('../lib/utils/terminal');
 
-
 /**
  * This migration updates the groupingTimestamp fields in dailyEvents collections.
  *
@@ -39,7 +38,6 @@ module.exports = {
     const targetCollections = collections
       .filter(({ name }) => /dailyEvents/.test(name))
       .map(({ name }) => name);
-
 
     /**
      * Use one transaction for all requests
