@@ -8,7 +8,6 @@ const { text } = object;
 const { button } = element;
 const { section, actions, divider, context } = block;
 
-
 /**
  * Renders backtrace overview
  *

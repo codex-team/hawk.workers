@@ -1,5 +1,5 @@
 import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
-import { DatabaseConnectionError } from "../workerErrors";
+import { DatabaseConnectionError } from '../workerErrors';
 
 /**
  * Database connection singleton

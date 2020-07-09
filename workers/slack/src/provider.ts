@@ -1,13 +1,29 @@
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates from './templates';
-import { IncomingWebhookSendArguments, IncomingWebhook } from '@slack/webhook';
+import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { SlackTemplate } from '../types/template';
+import SlackDeliverer from './deliverer';
 
 /**
  * This class provides a 'send' method that will renders and sends a notification
  */
 export default class SlackProvider extends NotificationsProvider {
+  /**
+   * Class with the 'deliver' method for sending messages to the Slack
+   */
+  private readonly deliverer: SlackDeliverer;
+
+  /**
+   * Constructor allows to separate dependencies that can't be tested,
+   * so in tests they will be mocked.
+   */
+  constructor() {
+    super();
+
+    this.deliverer = new SlackDeliverer();
+  }
+
   /**
    * Send telegram message to recipient
    *
@@ -25,7 +41,7 @@ export default class SlackProvider extends NotificationsProvider {
 
     const webhookArgs = await this.render(template, variables);
 
-    await this.deliver(to, webhookArgs);
+    await this.deliverer.deliver(to, webhookArgs);
   }
 
   /**
@@ -36,24 +52,5 @@ export default class SlackProvider extends NotificationsProvider {
    */
   private async render(template: SlackTemplate, variables: EventsTemplateVariables): Promise<IncomingWebhookSendArguments> {
     return template(variables);
-  }
-
-  /**
-   * Sends message to the Slack through the Incoming Webhook app
-   * https://api.slack.com/messaging/webhooks
-   *
-   * @param endpoint - where to send
-   * @param message - what to send
-   */
-  private async deliver(endpoint: string, message: IncomingWebhookSendArguments): Promise<void> {
-    try {
-      const webhook = new IncomingWebhook(endpoint, {
-        username: 'Hawk',
-      });
-
-      await webhook.send(message);
-    } catch (e) {
-      this.logger.log('error', 'Can\'t deliver Incoming Webhook. Slack returns an error: ', e);
-    }
   }
 }

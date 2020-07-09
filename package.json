@@ -25,6 +25,7 @@
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:nodejs": "jest workers/nodejs",
+        "test:slack": "jest workers/slack",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",

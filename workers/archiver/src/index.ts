@@ -161,6 +161,7 @@ export default class ArchiverWorker extends Worker {
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
 
     const repetitionsBulk = repetitionsCollection.initializeUnorderedBulkOp();
+
     repetitionsBulk.find({
       'payload.timestamp': {
         $lt: maxOldTimestamp,
@@ -181,6 +182,7 @@ export default class ArchiverWorker extends Worker {
     const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + project._id.toString());
 
     const dailyEventsBulk = dailyEventsCollection.initializeUnorderedBulkOp();
+
     dailyEventsBulk.find({
       groupingTimestamp: {
         $lt: maxOldTimestamp,
@@ -269,6 +271,7 @@ export default class ArchiverWorker extends Worker {
     const groupHashesToRemove = result.filter(noDailyRecords).map(res => res.groupHash);
 
     const eventsBulk = eventsCollection.initializeUnorderedBulkOp();
+
     eventsBulk.find({
       groupHash: {
         $in: groupHashesToRemove,
@@ -372,6 +375,7 @@ export default class ArchiverWorker extends Worker {
     }, []);
 
     const releasesBulk = this.releasesCollection.initializeUnorderedBulkOp();
+
     releasesBulk.find({
       _id: {
         $in: releasesIdsToDelete,

@@ -4,6 +4,9 @@ import { Project } from 'hawk-worker-sender/types/project';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
 
+/**
+ * @todo We need to test only public methods, so these tests should be rewrited similar with SlackProvider tests
+ */
 describe('TelegramProvider', () => {
   /**
    * Check templates rendering
