@@ -54,7 +54,7 @@ describe('SlackProvider', () => {
     /**
      * If there is a single event in payload, use the 'new-event' template
      */
-    it('Select new-event if there is a single event in notify payload', async () => {
+    it('Select the new-event template if there is a single event in notify payload', async () => {
       const provider = new SlackProvider();
       const NewEventTpl = jest.spyOn(templates, 'NewEventTpl');
       const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
@@ -68,7 +68,7 @@ describe('SlackProvider', () => {
     /**
      * If there are several events in payload, use the 'several-events' template
      */
-    it('Select several-events if there are events in notify payload', async () => {
+    it('Select the several-events template if there are several events in notify payload', async () => {
       const provider = new SlackProvider();
       const NewEventTpl = jest.spyOn(templates, 'NewEventTpl');
       const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
