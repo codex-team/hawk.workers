@@ -83,7 +83,6 @@ class WorkerRunner {
       return;
     }
 
-
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
     const Registry = promClient.Registry;
 
@@ -120,7 +119,7 @@ class WorkerRunner {
           groupings: {
             worker: worker.type.replace('/', '_'),
             host: hostname,
-            id
+            id,
           },
         }, (err?: Error) => {
           if (err) {

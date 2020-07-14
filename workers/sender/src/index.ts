@@ -3,6 +3,7 @@ import { ObjectID } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
+import './env.ts';
 
 import { Project } from '../types/project';
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
@@ -35,6 +36,21 @@ export default abstract class SenderWorker extends Worker {
    * Sender type. Used to get correct notifications endpoint from DB
    */
   protected abstract channelType: ChannelType;
+
+  /**
+   * Constructor uses to check required ENV params
+   */
+  constructor() {
+    super();
+
+    if (!process.env.GARAGE_URL) {
+      throw Error('procces.env.GARAGE_URL does not specified. Check workers/sender/.env');
+    }
+
+    if (!process.env.API_STATIC_URL) {
+      throw Error('procces.env.API_STATIC_URL does not specified. Check workers/sender/.env');
+    }
+  }
 
   /**
    * Start consuming messages
