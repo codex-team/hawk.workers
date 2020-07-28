@@ -9,6 +9,7 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import useragent from 'useragent';
 
 /**
  * Worker for handling Javascript events
@@ -74,6 +75,10 @@ export default class JavascriptEventWorker extends EventWorker {
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
       event.payload.backtrace = await this.beautifyBacktrace(event);
+    }
+
+    if (event.payload.addons?.userAgent) {
+      event.payload.addons.userAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
 
     await this.addTask(WorkerNames.GROUPER, {
@@ -281,5 +286,17 @@ export default class JavascriptEventWorker extends EventWorker {
         resolve(consumer);
       });
     });
+  }
+
+  /**
+   * Converts userAgent to strict format: browser browserVersion / OS OsVersion
+   * 
+   * @param {string} userAgent
+   * @returns {string}
+   */
+  private beautifyUserAgent(userAgent: string): string {
+    userAgent = useragent.parse(userAgent).toString();
+
+    return userAgent;
   }
 }
