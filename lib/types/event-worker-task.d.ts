@@ -63,7 +63,14 @@ export interface EventData {
   /**
    * Catcher-specific information
    */
-  addons?: {[key: string]: string|object};
+  addons?: {
+    [key: string]: string|object;
+
+    /**
+     * Parsed user agent of current user
+     */
+    userAgent?: UserAgent;
+  };
 
   /**
    * Current release (aka version, revision) of an application
@@ -155,4 +162,14 @@ export interface User {
    * User's public picture
    */
   image?: string;
+}
+
+/**
+ * User agent
+ */
+export interface UserAgent {
+  os: string;
+  osVersion: string;
+  browser: string;
+  browserVersion: string;
 }

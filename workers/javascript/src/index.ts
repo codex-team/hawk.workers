@@ -2,7 +2,7 @@ import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
-import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
+import { BacktraceFrame, SourceCodeLine, UserAgent } from '../../../lib/types/event-worker-task';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
@@ -294,9 +294,15 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {string} userAgent
    * @returns {string}
    */
-  private beautifyUserAgent(userAgent: string): string {
-    userAgent = useragent.parse(userAgent).toString();
+  private beautifyUserAgent(userAgent: string): UserAgent {
+    const agent = useragent.parse(userAgent);
+    const beautifiedAgent: UserAgent = {
+      os: agent.os.family,
+      osVersion: agent.os.toVersion(),
+      browser: agent.family,
+      browserVersion: agent.toVersion(),
+    }
 
-    return userAgent;
+    return beautifiedAgent;
   }
 }
