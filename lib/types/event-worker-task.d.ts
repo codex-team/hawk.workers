@@ -65,11 +65,6 @@ export interface EventData {
    */
   addons?: {
     [key: string]: string|object;
-
-    /**
-     * Parsed user agent of current user
-     */
-    userAgent?: UserAgent;
   };
 
   /**
@@ -165,7 +160,7 @@ export interface User {
 }
 
 /**
- * User agent
+ * Parsed user agent
  */
 export interface UserAgent {
   os: string;

@@ -14,6 +14,9 @@ const testEventData = {
     timestamp: 1564948772936,
     backtrace: null,
     get: null,
+    addons: {
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'
+    },
     user: null,
     context: null,
   },
