@@ -28,6 +28,10 @@ interface WorkspaceDBScheme {
    * Workspace balance
    */
   balance: number;
+
+  tariffPlanId: ObjectId;
+
+  lastChargeDate: Date;
 }
 
 export default WorkspaceDBScheme;
