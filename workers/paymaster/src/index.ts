@@ -13,13 +13,15 @@ import {
   EventType,
   PaymasterEvent,
   PlanChangedEvent,
-  TariffPlan, WorkspacePlan
+  WorkspacePlan
 } from '../types/paymaster-worker-events';
+import TariffPlan from '../../../lib/types/tariffPlan';
+import Workspace from '../../../lib/types/workspace';
 
 /**
  * Worker to check workspaces balance and handle tariff plan changes
  */
-export default class Paymaster extends Worker {
+export default class PaymasterWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -30,19 +32,19 @@ export default class Paymaster extends Worker {
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
-  private workspaces: Collection;
-  private plans: Collection;
+  private workspaces: Collection<Workspace>;
+  private plans: TariffPlan[];
 
   /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
-
-    const connection = this.db.getConnection();
+    const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    this.plans = connection.collection('plans');
+    const plansCollection = connection.collection<TariffPlan>('plans');
+
+    this.plans = await plansCollection.find({}).toArray();
 
     await super.start();
   }
@@ -81,17 +83,18 @@ export default class Paymaster extends Worker {
    */
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
-    const plans = await this.plans.find({}).toArray();
 
-    workspaces.forEach(({ _id, plan }) => {
-      const currentPlan: TariffPlan = plans.find((p) => p.name === plan.name);
+    workspaces.forEach((workspace) => {
+      const currentPlan = this.plans.find((plan) => plan._id === workspace.tariffPlanId);
 
       /**
        * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
        */
-      if (!this.isTodayIsPayDay(plan.lastChargeDate) || this.isToday(plan.lastChargeDate)) {
+      if (!this.isTodayIsPayDay(workspace.lastChargeDate) || this.isToday(workspace.lastChargeDate)) {
         return;
       }
+      // todo: Check that workspace did not exceed the limit
+      // todo: withdraw the required amount of funds (how to calculate it?)
 
       this.sendTransaction(TransactionType.Charge, _id.toString(), currentPlan.monthlyCharge);
     });
@@ -161,33 +164,25 @@ export default class Paymaster extends Worker {
    *
    * Pay day is calculated by formula: last charge date + number of days in last charged month
    *
-   * @param {number} tmstp - last charge date timestamp
-   * @returns {boolean}
+   * @param date - last charge date
    */
-  private isTodayIsPayDay(tmstp: number): boolean {
-    tmstp *= 1000;
-
-    const date = new Date(tmstp);
-
+  private isTodayIsPayDay(date: Date): boolean {
     const numberOfDays = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
-    const expectedPayDay = new Date(tmstp);
+    const expectedPayDay = new Date(date);
 
     expectedPayDay.setDate(date.getDate() + numberOfDays);
 
-    return this.isToday(expectedPayDay.getTime());
+    return this.isToday(expectedPayDay);
   }
 
   /**
    * Check if passed timestamp is today
    *
-   * @param {number} tmstp - timestamp to check
+   * @param date - date to check
    * @returns {boolean}
    */
-  private isToday(tmstp: number): boolean {
-    tmstp *= 1000;
-
+  private isToday(date: Date): boolean {
     const now = new Date();
-    const date = new Date(tmstp);
 
     return (
       now.getFullYear() === date.getFullYear() &&
