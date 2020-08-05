@@ -1,8 +1,8 @@
 import PaymasterWorker from '../src';
-import {Collection, MongoClient, ObjectId} from 'mongodb';
+import { Collection, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
 import './rabbit.mock';
-import {EventType} from '../types/paymaster-worker-events';
+import { EventType } from '../types/paymaster-worker-events';
 import Workspace from '../../../lib/types/workspace';
 import TariffPlan from '../../../lib/types/tariffPlan';
 import {
