@@ -1,13 +1,19 @@
 import PaymasterWorker from '../src';
-import { Collection, MongoClient, ObjectId } from 'mongodb';
+import {Collection, MongoClient, ObjectId} from 'mongodb';
 import '../../../env-test';
 import './rabbit.mock';
-import { EventType } from '../types/paymaster-worker-events';
+import {EventType} from '../types/paymaster-worker-events';
 import Workspace from '../../../lib/types/workspace';
 import TariffPlan from '../../../lib/types/tariffPlan';
-import Transaction from '../../../lib/types/transaction';
+import {
+  BusinessOperationDBScheme,
+  BusinessOperationStatus,
+  BusinessOperationType
+} from '../../../lib/types/businessOperation';
+import MockDate from 'mockdate';
 
 jest.mock('amqplib');
+const mockedDate = new Date('2005-11-22');
 
 const plan: TariffPlan = {
   eventsLimit: 10000,
@@ -21,7 +27,7 @@ const workspace: Workspace = {
   name: 'My workspace',
   _id: new ObjectId('5e5fb6303e3a9d0a1933739a'),
   tariffPlanId: plan._id,
-  lastChargeDate: new Date(2020, 8, 1),
+  lastChargeDate: new Date(2003, 8, 1),
 };
 
 describe('PaymasterWorker', () => {
@@ -29,10 +35,11 @@ describe('PaymasterWorker', () => {
   let connection: MongoClient;
   let workspacesCollection: Collection<Workspace>;
   let tariffCollection: Collection<TariffPlan>;
-  let transactionsCollection: Collection<Transaction>;
+  let businessOperationsCollection: Collection<BusinessOperationDBScheme>;
 
   beforeAll(async () => {
-    await worker.start();
+    MockDate.set(mockedDate);
+
     connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -40,15 +47,18 @@ describe('PaymasterWorker', () => {
 
     workspacesCollection = connection.db().collection<Workspace>('workspaces');
     tariffCollection = connection.db().collection<TariffPlan>('tariff_plans');
+    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('business_operations');
+
+    await tariffCollection.insertOne(plan);
+
+    await worker.start();
   });
 
   beforeEach(async () => {
     await workspacesCollection.deleteMany({});
-    await tariffCollection.deleteMany({});
-    await transactionsCollection.deleteMany({});
+    await businessOperationsCollection.deleteMany({});
 
     await workspacesCollection.insertOne(workspace);
-    await tariffCollection.insertOne(plan);
   });
 
   test('Should change lastChargeDate for workspace', async () => {
@@ -59,11 +69,7 @@ describe('PaymasterWorker', () => {
 
     const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
-    const now = new Date();
-
-    expect(updatedWorkspace.lastChargeDate.getMonth()).toEqual(now.getMonth());
-    expect(updatedWorkspace.lastChargeDate.getFullYear()).toEqual(now.getFullYear());
-    expect(updatedWorkspace.lastChargeDate.getDate()).toEqual(now.getDate());
+    expect(updatedWorkspace.lastChargeDate).toEqual(mockedDate);
   });
 
   test('Should correctly calculate amount of money to write off', async () => {
@@ -72,15 +78,24 @@ describe('PaymasterWorker', () => {
       payload: undefined,
     });
 
-    const transaction = await transactionsCollection.findOne({});
+    const transaction = await businessOperationsCollection.findOne({});
 
     expect(transaction).toEqual(expect.objectContaining({
       _id: expect.any(ObjectId),
-      type: 'charge',
-      amount: 100,
-      workspace: workspace._id,
-      date: expect.any(Date),
-      user: expect.any(ObjectId),
-    } as Transaction));
+      type: BusinessOperationType.WorkspacePlanPurchase,
+      transactionId: expect.any(String),
+      payload: {
+        amount: 100,
+        workspaceId: workspace._id,
+      },
+      status: BusinessOperationStatus.Confirmed,
+      dtCreated: mockedDate,
+    } as BusinessOperationDBScheme));
+  });
+
+  afterAll(async () => {
+    await worker.finish();
+    await connection.close();
+    MockDate.reset();
   });
 });
