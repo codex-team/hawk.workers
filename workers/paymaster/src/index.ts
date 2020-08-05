@@ -3,20 +3,20 @@ import {
   TransactionEvent,
   TransactionType
 } from 'hawk-worker-accountant/types/accountant-worker-events';
-import { Collection, ObjectID } from 'mongodb';
+import { Collection, ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import {
-  DailyCheckEvent,
-  EventType,
-  PaymasterEvent,
-  PlanChangedEvent,
-  WorkspacePlan
-} from '../types/paymaster-worker-events';
+import { DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
 import TariffPlan from '../../../lib/types/tariffPlan';
 import Workspace from '../../../lib/types/workspace';
+import { v4 as uuid } from 'uuid';
+import {
+  BusinessOperationDBScheme,
+  BusinessOperationStatus,
+  BusinessOperationType
+} from '../../../lib/types/businessOperation';
 
 /**
  * Worker to check workspaces balance and handle tariff plan changes
@@ -33,6 +33,7 @@ export default class PaymasterWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
   private workspaces: Collection<Workspace>;
+  private businessOperations: Collection<BusinessOperationDBScheme>;
   private plans: TariffPlan[];
 
   /**
@@ -42,9 +43,14 @@ export default class PaymasterWorker extends Worker {
     const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    const plansCollection = connection.collection<TariffPlan>('plans');
+    this.businessOperations = connection.collection('business_operations');
+    const plansCollection = connection.collection<TariffPlan>('tariff_plans');
 
     this.plans = await plansCollection.find({}).toArray();
+
+    if (this.plans.length === 0) {
+      throw new Error('Please add tariff plans to the database');
+    }
 
     await super.start();
   }
@@ -84,20 +90,62 @@ export default class PaymasterWorker extends Worker {
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    workspaces.forEach((workspace) => {
-      const currentPlan = this.plans.find((plan) => plan._id === workspace.tariffPlanId);
+    await Promise.all(workspaces.map(async (workspace) => {
+      const currentPlan = this.plans.find(
+        (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
+      );
 
       /**
        * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
        */
-      if (!this.isTodayIsPayDay(workspace.lastChargeDate) || this.isToday(workspace.lastChargeDate)) {
+      if (this.isToday(workspace.lastChargeDate)) {
         return;
       }
       // todo: Check that workspace did not exceed the limit
       // todo: withdraw the required amount of funds (how to calculate it?)
 
-      this.sendTransaction(TransactionType.Charge, _id.toString(), currentPlan.monthlyCharge);
+      const moneyToWriteOff = this.calculateMoneyToWriteOff(currentPlan.monthlyCharge, workspace.lastChargeDate);
+
+      await this.makeTransaction(workspace._id, moneyToWriteOff);
+    }));
+  }
+
+  /**
+   * Makes transaction in accounting and returns it
+   *
+   * @param workspaceId
+   * @param moneyToWriteOff
+   */
+  private async makeTransaction(workspaceId: ObjectId, moneyToWriteOff: number): Promise<void> {
+    const date = new Date();
+
+    await this.businessOperations.insertOne({
+      transactionId: uuid(),
+      payload: {
+        workspaceId: workspaceId,
+        amount: moneyToWriteOff,
+      },
+      status: BusinessOperationStatus.Confirmed,
+      type: BusinessOperationType.WorkspacePlanPurchase,
+      dtCreated: date,
     });
+
+    await this.workspaces.updateOne({
+      _id: workspaceId,
+    }, {
+      $set: {
+        lastChargeDate: date,
+      },
+    });
+  }
+
+  /**
+   *
+   * @param monthlyCharge
+   * @param lastChargeDate
+   */
+  private calculateMoneyToWriteOff(monthlyCharge: number, lastChargeDate: Date): number {
+    return 100;
   }
 
   /**
@@ -114,12 +162,11 @@ export default class PaymasterWorker extends Worker {
   private async handlePlanChangedEvent(event: PlanChangedEvent): Promise<void> {
     const { payload } = event;
 
-    const plans: TariffPlan[] = await this.plans.find({}).toArray();
-    const workspace = await this.workspaces.findOne({ _id: new ObjectID(payload.workspaceId) });
-    const oldPlan: TariffPlan = plans.find((p) => p.name === payload.oldPlan);
-    const newPlan: TariffPlan = plans.find((p) => p.name === payload.newPlan);
+    const workspace = await this.workspaces.findOne({ _id: new ObjectId(payload.workspaceId) });
+    const oldPlan: TariffPlan = this.plans.find((p) => p.name === payload.oldPlan);
+    const newPlan: TariffPlan = this.plans.find((p) => p.name === payload.newPlan);
 
-    const { lastChargeDate } = workspace.plan as WorkspacePlan;
+    const lastChargeDate = workspace.lastChargeDate;
 
     /**
      * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
