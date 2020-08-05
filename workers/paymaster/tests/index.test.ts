@@ -72,7 +72,7 @@ describe('PaymasterWorker', () => {
     expect(updatedWorkspace.lastChargeDate).toEqual(mockedDate);
   });
 
-  test('Should correctly calculate amount of money to write off', async () => {
+  test('Should create business operation in database', async () => {
     await worker.handle({
       type: EventType.DailyCheck,
       payload: undefined,
