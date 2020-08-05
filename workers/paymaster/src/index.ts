@@ -17,6 +17,13 @@ import {
   BusinessOperationStatus,
   BusinessOperationType
 } from '../../../lib/types/businessOperation';
+import dotenv from 'dotenv';
+import path from 'path';
+import axios from 'axios';
+
+dotenv.config({
+  path: path.resolve(__dirname, '../.env'),
+});
 
 /**
  * Worker to check workspaces balance and handle tariff plan changes
@@ -50,6 +57,10 @@ export default class PaymasterWorker extends Worker {
 
     if (this.plans.length === 0) {
       throw new Error('Please add tariff plans to the database');
+    }
+
+    if (!process.env.ACCOUNTING_API_ENDPOINT) {
+      throw new Error('Please specify ACCOUNTING_API_ENDPOINT in .env file');
     }
 
     await super.start();
@@ -106,23 +117,43 @@ export default class PaymasterWorker extends Worker {
 
       const moneyToWriteOff = this.calculateMoneyToWriteOff(currentPlan.monthlyCharge, workspace.lastChargeDate);
 
-      await this.makeTransaction(workspace._id, moneyToWriteOff);
+      await this.makeTransaction(workspace, moneyToWriteOff);
     }));
   }
 
   /**
    * Makes transaction in accounting and returns it
    *
-   * @param workspaceId
+   * @param workspace
    * @param moneyToWriteOff
    */
-  private async makeTransaction(workspaceId: ObjectId, moneyToWriteOff: number): Promise<void> {
+  private async makeTransaction(workspace: Workspace, moneyToWriteOff: number): Promise<void> {
     const date = new Date();
 
+    const request = `
+mutation Purchase($input: PurchaseInput!){
+  purchase(input: $input) {
+    recordId
+  }
+}
+`;
+
+    const response = await axios.post(process.env.ACCOUNTING_API_ENDPOINT, {
+      query: request,
+      variables: {
+        input: {
+          amount: moneyToWriteOff,
+          accountId: workspace.accountId,
+        },
+      },
+    });
+
+    const savedTransactionId = response.data.data.purchase.recordId;
+
     await this.businessOperations.insertOne({
-      transactionId: uuid(),
+      transactionId: savedTransactionId,
       payload: {
-        workspaceId: workspaceId,
+        workspaceId: workspace._id,
         amount: moneyToWriteOff,
       },
       status: BusinessOperationStatus.Confirmed,
@@ -131,7 +162,7 @@ export default class PaymasterWorker extends Worker {
     });
 
     await this.workspaces.updateOne({
-      _id: workspaceId,
+      _id: workspace._id,
     }, {
       $set: {
         lastChargeDate: date,

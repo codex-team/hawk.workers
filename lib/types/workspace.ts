@@ -29,6 +29,8 @@ interface WorkspaceDBScheme {
    */
   balance: number;
 
+  accountId: string;
+
   tariffPlanId: ObjectId;
 
   lastChargeDate: Date;

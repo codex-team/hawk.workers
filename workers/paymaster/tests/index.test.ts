@@ -11,8 +11,21 @@ import {
   BusinessOperationType
 } from '../../../lib/types/businessOperation';
 import MockDate from 'mockdate';
+import axios from 'axios';
+import { v4 as uuid } from 'uuid';
 
 jest.mock('amqplib');
+jest.mock('axios');
+
+(axios.post as jest.Mock).mockImplementation(() => Promise.resolve({
+  data: {
+    data: {
+      purchase: {
+        recordId: uuid(),
+      },
+    },
+  },
+}));
 const mockedDate = new Date('2005-11-22');
 
 const plan: TariffPlan = {
@@ -28,6 +41,7 @@ const workspace: Workspace = {
   _id: new ObjectId('5e5fb6303e3a9d0a1933739a'),
   tariffPlanId: plan._id,
   lastChargeDate: new Date(2003, 8, 1),
+  accountId: '34562453',
 };
 
 describe('PaymasterWorker', () => {
