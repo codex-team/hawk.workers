@@ -111,7 +111,7 @@ export default class PaymasterWorker extends Worker {
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    await Promise.all(workspaces.map(this.processDailyCheckEventOnWorkspace));
+    await Promise.all(workspaces.map((workspace) => this.processDailyCheckEventOnWorkspace(workspace)));
   }
 
   /**
