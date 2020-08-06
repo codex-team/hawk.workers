@@ -1,12 +1,13 @@
 # Worker / Paymaster
 
-Daily checks workspaces balance and send notification to Accountant worker if today is pay day.
-Also handles tariff plan changes
+Daily checks workspaces balance and write off money if today is pay day.
+Also handles tariff plan changes.
 
 ## How to run
 
 1. Make sure you are in Workers root directory
 2. `yarn install`
+3. Create `.env` file from `.env.sample` and fill necessary variables
 3. `yarn run-paymaster`
 
 ## Supported events
@@ -22,7 +23,7 @@ Format:
 
 ### DailyCheckEvent
 
-When receives DailyCheckEvent worker goes through workspaces and check if today is a payday. If so, sends event to the accountant worker. 
+When receives DailyCheckEvent worker goes through workspaces and check if today is a payday. If so, write off money from balance workspace. 
 
 DailyCheckEvent doesn't have any payload.
 
