@@ -274,7 +274,6 @@ mutation Purchase($input: PurchaseInput!){
    * Check if passed timestamp is today
    *
    * @param date - date to check
-   * @returns {boolean}
    */
   private isToday(date: Date): boolean {
     const now = new Date();
