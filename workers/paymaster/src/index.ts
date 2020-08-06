@@ -38,8 +38,19 @@ export default class PaymasterWorker extends Worker {
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
+  /**
+   * Collection with workspaces
+   */
   private workspaces: Collection<Workspace>;
+
+  /**
+   * Collection with businessOperations
+   */
   private businessOperations: Collection<BusinessOperationDBScheme>;
+
+  /**
+   * List of tariff plans
+   */
   private plans: TariffPlan[];
 
   /**
@@ -100,22 +111,29 @@ export default class PaymasterWorker extends Worker {
   private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    await Promise.all(workspaces.map(async (workspace) => {
-      const currentPlan = this.plans.find(
-        (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
-      );
+    await Promise.all(workspaces.map(this.processDailyCheckEventOnWorkspace));
+  }
 
-      /**
-       * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
-       */
-      if (!this.isTimeToPay(workspace.lastChargeDate)) {
-        return;
-      }
-      // todo: Check that workspace did not exceed the limit
-      // todo: withdraw the required amount of funds (how to calculate it?)
+  /**
+   * Handles daily check on specific workspace
+   *
+   * @param workspace - workspace to check
+   */
+  private async processDailyCheckEventOnWorkspace(workspace: Workspace): Promise<void> {
+    const currentPlan = this.plans.find(
+      (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
+    );
 
-      await this.makeTransaction(workspace, currentPlan.monthlyCharge);
-    }));
+    /**
+     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     */
+    if (!this.isTimeToPay(workspace.lastChargeDate)) {
+      return;
+    }
+    // todo: Check that workspace did not exceed the limit
+    // todo: withdraw the required amount of funds (how to calculate it?)
+
+    await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
   }
 
   /**
@@ -124,9 +142,37 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for plan purchasing
    * @param planCost - amount of money needed to by plan
    */
-  private async makeTransaction(workspace: Workspace, planCost: number): Promise<void> {
+  private async makeTransactionForPurchasing(workspace: Workspace, planCost: number): Promise<void> {
     const date = new Date();
+    const transactionId = await this.makePurchaseInAccounting(planCost, workspace);
 
+    await this.businessOperations.insertOne({
+      transactionId: transactionId,
+      payload: {
+        workspaceId: workspace._id,
+        amount: planCost,
+      },
+      status: BusinessOperationStatus.Confirmed,
+      type: BusinessOperationType.WorkspacePlanPurchase,
+      dtCreated: date,
+    });
+
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        lastChargeDate: date,
+      },
+    });
+  }
+
+  /**
+   * Makes transaction in accounting system and returns its id
+   *
+   * @param planCost - amount of money needed to by plan
+   * @param workspace - workspace for purchasing
+   */
+  private async makePurchaseInAccounting(planCost: number, workspace: Workspace): Promise<string> {
     const request = `
 mutation Purchase($input: PurchaseInput!){
   purchase(input: $input) {
@@ -145,26 +191,7 @@ mutation Purchase($input: PurchaseInput!){
       },
     });
 
-    const savedTransactionId = response.data.data.purchase.recordId;
-
-    await this.businessOperations.insertOne({
-      transactionId: savedTransactionId,
-      payload: {
-        workspaceId: workspace._id,
-        amount: planCost,
-      },
-      status: BusinessOperationStatus.Confirmed,
-      type: BusinessOperationType.WorkspacePlanPurchase,
-      dtCreated: date,
-    });
-
-    await this.workspaces.updateOne({
-      _id: workspace._id,
-    }, {
-      $set: {
-        lastChargeDate: date,
-      },
-    });
+    return response.data.data.purchase.recordId;
   }
 
   /**
