@@ -1,6 +1,6 @@
 # Worker / Paymaster
 
-Daily checks workspaces balance and write off money if today is pay day.
+Daily checks need to purchase a plan if today is pay day.
 Also handles tariff plan changes.
 
 ## How to run
@@ -23,7 +23,8 @@ Format:
 
 ### DailyCheckEvent
 
-When receives DailyCheckEvent worker goes through workspaces and check if today is a payday. If so, write off money from balance workspace. 
+When receives DailyCheckEvent worker goes through workspaces and check if today is a payday.
+If so, purchase workspace plan. 
 
 DailyCheckEvent doesn't have any payload.
 

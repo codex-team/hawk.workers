@@ -89,7 +89,7 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
-  test(`Shouldn't write off workspace balance if today is not payday`, async () => {
+  test(`Shouldn't trigger purchasing of the workspace plan if today is not payday`, async () => {
     MockDate.set(new Date('2005-12-20'));
 
     await worker.handle({
@@ -97,14 +97,14 @@ describe('PaymasterWorker', () => {
       payload: undefined,
     });
 
-    const transaction = await businessOperationsCollection.findOne({});
+    const businessOperation = await businessOperationsCollection.findOne({});
 
-    expect(transaction).toEqual(null);
+    expect(businessOperation).toEqual(null);
 
     MockDate.reset();
   });
 
-  test('Should write off workspace balance if today is payday', async () => {
+  test('Should trigger purchasing of the workspace plan if today is payday', async () => {
     MockDate.set(mockedDate);
 
     await worker.handle({
@@ -112,9 +112,9 @@ describe('PaymasterWorker', () => {
       payload: undefined,
     });
 
-    const transaction = await businessOperationsCollection.findOne({});
+    const businessOperation = await businessOperationsCollection.findOne({});
 
-    expect(transaction).toEqual(expect.objectContaining({
+    expect(businessOperation).toEqual(expect.objectContaining({
       _id: expect.any(ObjectId),
       type: BusinessOperationType.WorkspacePlanPurchase,
       transactionId: expect.any(String),
@@ -129,7 +129,7 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
-  test('Should write off workspace balance if payday has come recently', async () => {
+  test('Should trigger purchasing of the workspace plan if payday has come recently', async () => {
     MockDate.set(new Date('2005-12-25'));
 
     await worker.handle({
@@ -137,9 +137,9 @@ describe('PaymasterWorker', () => {
       payload: undefined,
     });
 
-    const transaction = await businessOperationsCollection.findOne({});
+    const businessOperation = await businessOperationsCollection.findOne({});
 
-    expect(transaction).toEqual(expect.objectContaining({
+    expect(businessOperation).toEqual(expect.objectContaining({
       _id: expect.any(ObjectId),
       type: BusinessOperationType.WorkspacePlanPurchase,
       transactionId: expect.any(String),

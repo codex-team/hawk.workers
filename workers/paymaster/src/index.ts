@@ -121,10 +121,10 @@ export default class PaymasterWorker extends Worker {
   /**
    * Makes transaction in accounting and returns it
    *
-   * @param workspace - workspace to write off
-   * @param moneyToWriteOff - amount of money to write off
+   * @param workspace - workspace for plan purchasing
+   * @param planCost - amount of money needed to by plan
    */
-  private async makeTransaction(workspace: Workspace, moneyToWriteOff: number): Promise<void> {
+  private async makeTransaction(workspace: Workspace, planCost: number): Promise<void> {
     const date = new Date();
 
     const request = `
@@ -139,7 +139,7 @@ mutation Purchase($input: PurchaseInput!){
       query: request,
       variables: {
         input: {
-          amount: moneyToWriteOff,
+          amount: planCost,
           accountId: workspace.accountId,
         },
       },
@@ -151,7 +151,7 @@ mutation Purchase($input: PurchaseInput!){
       transactionId: savedTransactionId,
       payload: {
         workspaceId: workspace._id,
-        amount: moneyToWriteOff,
+        amount: planCost,
       },
       status: BusinessOperationStatus.Confirmed,
       type: BusinessOperationType.WorkspacePlanPurchase,
