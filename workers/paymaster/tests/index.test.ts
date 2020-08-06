@@ -26,21 +26,22 @@ jest.mock('axios');
     },
   },
 }));
-const mockedDate = new Date('2005-11-22');
+
+const mockedDate = new Date('2005-12-22');
 
 const plan: TariffPlan = {
   eventsLimit: 10000,
   _id: new ObjectId('5eec1fcde748a04c16632ae2'),
-  monthlyCharge: 100,
+  monthlyCharge: 1000,
   name: 'Mocked plan',
 };
 
 const workspace: Workspace = {
-  balance: 100000,
+  balance: 10000,
   name: 'My workspace',
   _id: new ObjectId('5e5fb6303e3a9d0a1933739a'),
   tariffPlanId: plan._id,
-  lastChargeDate: new Date(2003, 8, 1),
+  lastChargeDate: new Date('2005-11-22'),
   accountId: '34562453',
 };
 
@@ -52,8 +53,6 @@ describe('PaymasterWorker', () => {
   let businessOperationsCollection: Collection<BusinessOperationDBScheme>;
 
   beforeAll(async () => {
-    MockDate.set(mockedDate);
-
     connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -76,6 +75,8 @@ describe('PaymasterWorker', () => {
   });
 
   test('Should change lastChargeDate for workspace', async () => {
+    MockDate.set(mockedDate);
+
     await worker.handle({
       type: EventType.DailyCheck,
       payload: undefined,
@@ -84,9 +85,27 @@ describe('PaymasterWorker', () => {
     const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
     expect(updatedWorkspace.lastChargeDate).toEqual(mockedDate);
+    MockDate.reset();
   });
 
-  test('Should create business operation in database', async () => {
+  test(`Shouldn't write off workspace balance if today is not payday`, async () => {
+    MockDate.set(new Date('2005-12-20'));
+
+    await worker.handle({
+      type: EventType.DailyCheck,
+      payload: undefined,
+    });
+
+    const transaction = await businessOperationsCollection.findOne({});
+
+    expect(transaction).toEqual(null);
+
+    MockDate.reset();
+  });
+
+  test('Should write off workspace balance if today is payday', async () => {
+    MockDate.set(mockedDate);
+
     await worker.handle({
       type: EventType.DailyCheck,
       payload: undefined,
@@ -99,12 +118,39 @@ describe('PaymasterWorker', () => {
       type: BusinessOperationType.WorkspacePlanPurchase,
       transactionId: expect.any(String),
       payload: {
-        amount: 100,
+        amount: 1000,
         workspaceId: workspace._id,
       },
       status: BusinessOperationStatus.Confirmed,
       dtCreated: mockedDate,
     } as BusinessOperationDBScheme));
+
+    MockDate.reset();
+  });
+
+  test('Should write off workspace balance if payday has come recently', async () => {
+    MockDate.set(new Date('2005-12-25'));
+
+    await worker.handle({
+      type: EventType.DailyCheck,
+      payload: undefined,
+    });
+
+    const transaction = await businessOperationsCollection.findOne({});
+
+    expect(transaction).toEqual(expect.objectContaining({
+      _id: expect.any(ObjectId),
+      type: BusinessOperationType.WorkspacePlanPurchase,
+      transactionId: expect.any(String),
+      payload: {
+        amount: 1000,
+        workspaceId: workspace._id,
+      },
+      status: BusinessOperationStatus.Confirmed,
+      dtCreated: new Date('2005-12-25'),
+    } as BusinessOperationDBScheme));
+
+    MockDate.reset();
   });
 
   afterAll(async () => {

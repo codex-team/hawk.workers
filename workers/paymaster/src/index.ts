@@ -11,7 +11,6 @@ import * as pkg from '../package.json';
 import { DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
 import TariffPlan from '../../../lib/types/tariffPlan';
 import Workspace from '../../../lib/types/workspace';
-import { v4 as uuid } from 'uuid';
 import {
   BusinessOperationDBScheme,
   BusinessOperationStatus,
@@ -109,15 +108,13 @@ export default class PaymasterWorker extends Worker {
       /**
        * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
        */
-      if (this.isToday(workspace.lastChargeDate)) {
+      if (!this.isTimeToPay(workspace.lastChargeDate)) {
         return;
       }
       // todo: Check that workspace did not exceed the limit
       // todo: withdraw the required amount of funds (how to calculate it?)
 
-      const moneyToWriteOff = this.calculateMoneyToWriteOff(currentPlan.monthlyCharge, workspace.lastChargeDate);
-
-      await this.makeTransaction(workspace, moneyToWriteOff);
+      await this.makeTransaction(workspace, currentPlan.monthlyCharge);
     }));
   }
 
@@ -171,15 +168,6 @@ mutation Purchase($input: PurchaseInput!){
   }
 
   /**
-   *
-   * @param monthlyCharge
-   * @param lastChargeDate
-   */
-  private calculateMoneyToWriteOff(monthlyCharge: number, lastChargeDate: Date): number {
-    return 100;
-  }
-
-  /**
    * PlanChanged event handler
    *
    * Called when user changes tariff plan for workspace:
@@ -202,7 +190,7 @@ mutation Purchase($input: PurchaseInput!){
     /**
      * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
      */
-    if (this.isTodayIsPayDay(lastChargeDate) && !this.isToday(lastChargeDate)) {
+    if (this.isTimeToPay(lastChargeDate) && !this.isToday(lastChargeDate)) {
       return;
     }
 
@@ -244,13 +232,15 @@ mutation Purchase($input: PurchaseInput!){
    *
    * @param date - last charge date
    */
-  private isTodayIsPayDay(date: Date): boolean {
+  private isTimeToPay(date: Date): boolean {
     const numberOfDays = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
 
-    return this.isToday(expectedPayDay);
+    const now = new Date().getTime();
+
+    return now >= expectedPayDay.getTime();
   }
 
   /**
