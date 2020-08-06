@@ -109,5 +109,8 @@ export interface BusinessOperationDBScheme<T extends BusinessOperationPayloadTyp
    */
   payload: T;
 
+  /**
+   * Date when operation was created
+   */
   dtCreated: Date;
 }
