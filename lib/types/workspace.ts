@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb';
 /**
  * Workspace representation in DataBase
  */
-interface WorkspaceDBScheme {
+interface Workspace {
   /**
    * Workspace's id
    */
@@ -29,11 +29,20 @@ interface WorkspaceDBScheme {
    */
   balance: number;
 
+  /**
+   * Workspace account id in accounting system
+   */
   accountId: string;
 
+  /**
+   * Tariff plan of workspace
+   */
   tariffPlanId: ObjectId;
 
+  /**
+   * Date when workspace was charged last time
+   */
   lastChargeDate: Date;
 }
 
-export default WorkspaceDBScheme;
+export default Workspace;

@@ -121,8 +121,8 @@ export default class PaymasterWorker extends Worker {
   /**
    * Makes transaction in accounting and returns it
    *
-   * @param workspace
-   * @param moneyToWriteOff
+   * @param workspace - workspace to write off
+   * @param moneyToWriteOff - amount of money to write off
    */
   private async makeTransaction(workspace: Workspace, moneyToWriteOff: number): Promise<void> {
     const date = new Date();

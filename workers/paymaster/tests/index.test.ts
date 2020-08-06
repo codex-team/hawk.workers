@@ -34,6 +34,7 @@ const plan: TariffPlan = {
   _id: new ObjectId('5eec1fcde748a04c16632ae2'),
   monthlyCharge: 1000,
   name: 'Mocked plan',
+  isDefault: false,
 };
 
 const workspace: Workspace = {
