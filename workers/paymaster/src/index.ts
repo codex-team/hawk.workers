@@ -146,6 +146,12 @@ export default class PaymasterWorker extends Worker {
     const date = new Date();
     const transactionId = await this.makePurchaseInAccounting(planCost, workspace);
 
+    this.sendTransaction(
+      TransactionType.Charge,
+      workspace._id.toString(),
+      planCost
+    );
+
     await this.businessOperations.insertOne({
       transactionId: transactionId,
       payload: {
@@ -169,10 +175,10 @@ export default class PaymasterWorker extends Worker {
   /**
    * Makes transaction in accounting system and returns its id
    *
-   * @param planCost - amount of money needed to by plan
+   * @param cost - amount of money needed to pay
    * @param workspace - workspace for purchasing
    */
-  private async makePurchaseInAccounting(planCost: number, workspace: Workspace): Promise<string> {
+  private async makePurchaseInAccounting(cost: number, workspace: Workspace): Promise<string> {
     const request = `
 mutation Purchase($input: PurchaseInput!){
   purchase(input: $input) {
@@ -185,7 +191,7 @@ mutation Purchase($input: PurchaseInput!){
       query: request,
       variables: {
         input: {
-          amount: planCost,
+          amount: cost,
           accountId: workspace.accountId,
         },
       },
@@ -212,6 +218,7 @@ mutation Purchase($input: PurchaseInput!){
     const oldPlan: TariffPlan = this.plans.find((p) => p.name === payload.oldPlan);
     const newPlan: TariffPlan = this.plans.find((p) => p.name === payload.newPlan);
 
+    const planDiff = newPlan.monthlyCharge - oldPlan.monthlyCharge;
     const lastChargeDate = workspace.lastChargeDate;
 
     /**
@@ -220,17 +227,15 @@ mutation Purchase($input: PurchaseInput!){
     if (this.isTimeToPay(lastChargeDate) && !this.isToday(lastChargeDate)) {
       return;
     }
-
+    
     /**
-     * If new plan charge is more than old one, withdraw the difference.
+     * If old plan charge is more than new one, don't withdraw the difference.
      */
-    if (newPlan.monthlyCharge > oldPlan.monthlyCharge) {
-      this.sendTransaction(
-        TransactionType.Charge,
-        workspace._id.toString(),
-        newPlan.monthlyCharge - oldPlan.monthlyCharge
-      );
+    if (planDiff <= 0) {
+      return;
     }
+
+    await this.makeTransactionForPurchasing(workspace, planDiff);
   }
 
   /**
