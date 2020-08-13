@@ -16,7 +16,7 @@ Format:
 
 ```json
 {
-  "type": "daily-check|plan-changed",
+  "type": "workspace-plan-charge|plan-changed",
   "payload": {}
 }
 ```
@@ -35,7 +35,7 @@ When receives this event, change plan for workspace in the database and calculat
 Payload:
 ```json
 {
-  "workspaceId": "Id of workspace for which plan is changesd",
+  "workspaceId": "Id of workspace for which plan is changed",
   "oldPlan": "Name of the old tariff plan",
   "newPlan": "Name of the new tariff plan"
 }

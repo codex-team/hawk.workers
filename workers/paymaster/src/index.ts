@@ -91,7 +91,7 @@ export default class PaymasterWorker extends Worker {
    */
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
-      case EventType.DailyCheck:
+      case EventType.WorkspacePlanCharge:
         await this.handleWorkspacePlanChargeEvent(event as WorkspacePlanChargeEvent);
 
         return;

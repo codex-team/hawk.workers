@@ -79,7 +79,7 @@ describe('PaymasterWorker', () => {
     MockDate.set(mockedDate);
 
     await worker.handle({
-      type: EventType.DailyCheck,
+      type: EventType.WorkspacePlanCharge,
       payload: undefined,
     });
 
@@ -93,7 +93,7 @@ describe('PaymasterWorker', () => {
     MockDate.set(new Date('2005-12-20'));
 
     await worker.handle({
-      type: EventType.DailyCheck,
+      type: EventType.WorkspacePlanCharge,
       payload: undefined,
     });
 
@@ -108,7 +108,7 @@ describe('PaymasterWorker', () => {
     MockDate.set(mockedDate);
 
     await worker.handle({
-      type: EventType.DailyCheck,
+      type: EventType.WorkspacePlanCharge,
       payload: undefined,
     });
 
@@ -133,7 +133,7 @@ describe('PaymasterWorker', () => {
     MockDate.set(new Date('2005-12-25'));
 
     await worker.handle({
-      type: EventType.DailyCheck,
+      type: EventType.WorkspacePlanCharge,
       payload: undefined,
     });
 
