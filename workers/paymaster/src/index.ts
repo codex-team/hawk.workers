@@ -111,7 +111,11 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspacePlanChargeEvent(event: WorkspacePlanChargeEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    await Promise.all(workspaces.map((workspace) => this.processWorkspacePlanCharge(workspace)));
+    try {
+      await Promise.all(workspaces.map((workspace) => this.processWorkspacePlanCharge(workspace)));
+    } catch (e) {
+      this.logger.error(e);
+    }
   }
 
   /**
@@ -181,17 +185,21 @@ mutation Purchase($input: PurchaseInput!){
 }
 `;
 
-    const response = await axios.post(process.env.ACCOUNTING_API_ENDPOINT, {
-      query: request,
-      variables: {
-        input: {
-          amount: planCost,
-          accountId: workspace.accountId,
+    try {
+      const response = await axios.post(process.env.ACCOUNTING_API_ENDPOINT, {
+        query: request,
+        variables: {
+          input: {
+            amount: planCost,
+            accountId: workspace.accountId,
+          },
         },
-      },
-    });
+      });
 
-    return response.data.data.purchase.recordId;
+      return response.data.data.purchase.recordId;
+    } catch (e) {
+      this.logger.error(e);
+    }
   }
 
   /**
