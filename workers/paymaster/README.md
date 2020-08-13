@@ -1,6 +1,6 @@
 # Worker / Paymaster
 
-Daily checks need to purchase a plan if today is pay day.
+Daily checks if we need to charge money for the workspace tariff plan.
 Also handles tariff plan changes.
 
 ## How to run
