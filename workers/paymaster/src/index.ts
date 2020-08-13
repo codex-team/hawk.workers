@@ -8,7 +8,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import { DailyCheckEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
+import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
 import TariffPlan from '../../../lib/types/tariffPlan';
 import Workspace from '../../../lib/types/workspace';
 import {
@@ -92,7 +92,7 @@ export default class PaymasterWorker extends Worker {
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
       case EventType.DailyCheck:
-        await this.handleDailyCheckEvent(event as DailyCheckEvent);
+        await this.handleWorkspacePlanChargeEvent(event as WorkspacePlanChargeEvent);
 
         return;
 
@@ -102,24 +102,24 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * DailyCheck event handler
+   * WorkspacePlanChargeEvent event handler
    *
-   * Called every day, enumerate through workspaces and check if today is a payday for workspace plan
+   * Called periodically, enumerate through workspaces and check if today is a payday for workspace plan
    *
-   * @param {DailyCheckEvent} event - event to handle
+   * @param {WorkspacePlanChargeEvent} event - event to handle
    */
-  private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
+  private async handleWorkspacePlanChargeEvent(event: WorkspacePlanChargeEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    await Promise.all(workspaces.map((workspace) => this.processDailyCheckEventOnWorkspace(workspace)));
+    await Promise.all(workspaces.map((workspace) => this.processWorkspacePlanCharge(workspace)));
   }
 
   /**
-   * Handles daily check on specific workspace
+   * Handles charging
    *
    * @param workspace - workspace to check
    */
-  private async processDailyCheckEventOnWorkspace(workspace: Workspace): Promise<void> {
+  private async processWorkspacePlanCharge(workspace: Workspace): Promise<void> {
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
@@ -215,7 +215,7 @@ mutation Purchase($input: PurchaseInput!){
     const lastChargeDate = workspace.lastChargeDate;
 
     /**
-     * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
+     * If today is payday and payment has not been proceed, do nothing
      */
     if (this.isTimeToPay(lastChargeDate) && !this.isToday(lastChargeDate)) {
       return;

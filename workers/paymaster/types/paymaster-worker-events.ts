@@ -74,7 +74,7 @@ export interface PaymasterEvent {
 /**
  * Daily check event interface
  */
-export interface DailyCheckEvent extends PaymasterEvent {
+export interface WorkspacePlanChargeEvent extends PaymasterEvent {
   type: EventType.DailyCheck;
   payload: DailyCheckEventPayload;
 }
