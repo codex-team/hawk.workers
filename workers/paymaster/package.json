@@ -6,5 +6,9 @@
   "author": "CodeX",
   "license": "UNLICENSED",
   "private": true,
-  "workerType": "paymaster"
+  "workerType": "paymaster",
+  "dependencies": {
+    "mockdate": "^3.0.2",
+    "uuid": "^8.3.0"
+  }
 }

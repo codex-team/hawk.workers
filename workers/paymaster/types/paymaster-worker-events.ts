@@ -7,9 +7,9 @@
  */
 export enum EventType {
   /**
-   * Daily check event
+   * Workspace plan charge event to purchase plan if today is payday
    */
-  DailyCheck = 'daily-check',
+  WorkspacePlanCharge = 'workspace-plan-charge',
   /**
    * Plan changed event
    */
@@ -74,8 +74,8 @@ export interface PaymasterEvent {
 /**
  * Daily check event interface
  */
-export interface DailyCheckEvent extends PaymasterEvent {
-  type: EventType.DailyCheck;
+export interface WorkspacePlanChargeEvent extends PaymasterEvent {
+  type: EventType.WorkspacePlanCharge;
   payload: DailyCheckEventPayload;
 }
 
