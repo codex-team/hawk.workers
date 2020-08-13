@@ -1,6 +1,6 @@
 # Worker / Paymaster
 
-Daily checks if we need to charge money for the workspace tariff plan.
+Periodically checks if we need to charge money for the workspace tariff plan.
 Also handles tariff plan changes.
 
 ## How to run
@@ -21,12 +21,12 @@ Format:
 }
 ```
 
-### DailyCheckEvent
+### WorkspacePlanChargeEvent
 
-When receives DailyCheckEvent worker goes through workspaces and check if today is a payday.
+When receives WorkspacePlanChargeEvent worker goes through workspaces and check if today is a payday.
 If so, purchase workspace plan. 
 
-DailyCheckEvent doesn't have any payload.
+WorkspacePlanChargeEvent doesn't have any payload.
 
 ### PlanChangedEvent
 
