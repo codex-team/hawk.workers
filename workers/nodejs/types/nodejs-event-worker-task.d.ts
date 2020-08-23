@@ -25,4 +25,5 @@ interface NodeJSEventPayload extends EventData {
  */
 interface NodeJSEventAddons {
   /** Empty yet */
+  [key: string]: string|object
 }
