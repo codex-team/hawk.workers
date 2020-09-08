@@ -228,7 +228,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param event - event to encode its fields
    */
-  private encodeUnsafeFields(event: GroupedEvent): void {
+  private encodeUnsafeFields(event: GroupedEvent | Repetition): void {
     try {
       event.payload.context = JSON.stringify(event.payload.context);
     } catch {
@@ -255,6 +255,8 @@ export default class GrouperWorker extends Worker {
 
     try {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
+
+      this.encodeUnsafeFields(repetition);
 
       return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {

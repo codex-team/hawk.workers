@@ -196,6 +196,19 @@ describe('GrouperWorker', () => {
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
     });
+
+    test('Should stringify payload`s addons and context fields', async () => {
+      await worker.handle(testGroupingTask);
+      await worker.handle({
+        ...testGroupingTask,
+        event: {
+          ...testGroupingTask.event,
+          addons: { test: '8fred' },
+        },
+      });
+
+      expect(typeof (await repetitionsCollection.findOne({})).payload.addons).toBe('string');
+    });
   });
 
   afterAll(async () => {
