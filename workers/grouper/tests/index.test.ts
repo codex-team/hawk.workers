@@ -1,8 +1,9 @@
-/* tslint:disable:no-string-literal */
 import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
 import { Collection, MongoClient } from 'mongodb';
+import './rabbit.mock';
+jest.mock('amqplib');
 
 /**
  * Test Grouping task
@@ -14,6 +15,14 @@ const testGroupingTask = {
     title: 'Hawk client catcher test',
     timestamp: (new Date()).getTime(),
     backtrace: [],
+    context: {
+      testField: 87,
+    },
+    addons: {
+      vue: {
+        data: { 'test-test': false },
+      },
+    },
   },
 } as GroupWorkerTask;
 
@@ -45,6 +54,14 @@ function generateTask(userId: string | false = generateRandomId()): GroupWorkerT
           id: userId,
         },
       }),
+      context: {
+        testField: 8,
+      },
+      addons: {
+        vue: {
+          props: { 'test-test': false },
+        },
+      },
     },
   };
 }
@@ -132,6 +149,12 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask('foo'));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
+    });
+
+    test('Should stringify payload`s addons and context fields', async () => {
+      await worker.handle(testGroupingTask);
+
+      expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
     });
   });
 

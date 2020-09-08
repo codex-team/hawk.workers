@@ -214,10 +214,31 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`events:${projectId}`);
 
+      this.encodeUnsafeFields(groupedEventData);
+
       return (await collection
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseReadWriteError(err);
+    }
+  }
+
+  /**
+   * Stringifies some event fields because some object keys can contain dots and MongoDB will throw error on save
+   *
+   * @param event - event to encode its fields
+   */
+  private encodeUnsafeFields(event: GroupedEvent): void {
+    try {
+      event.payload.context = JSON.stringify(event.payload.context);
+    } catch {
+      event.payload.context = undefined;
+    }
+
+    try {
+      event.payload.addons = JSON.stringify(event.payload.addons);
+    } catch {
+      event.payload.addons = undefined;
     }
   }
 

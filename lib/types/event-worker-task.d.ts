@@ -63,7 +63,7 @@ export interface EventData {
   /**
    * Catcher-specific information
    */
-  addons?: {[key: string]: string|object};
+  addons?: {[key: string]: string|object} | string;
 
   /**
    * Current release (aka version, revision) of an application
@@ -78,7 +78,7 @@ export interface EventData {
   /**
    * Any other information collected and passed by user
    */
-  context?: object;
+  context?: object | string;
 }
 
 /**
