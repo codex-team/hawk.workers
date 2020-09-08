@@ -59,28 +59,6 @@ export default class GrouperWorker extends Worker {
   public async handle(task: GroupWorkerTask): Promise<void> {
     const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
 
-    // eslint-disable-next-line jsdoc/check-values
-    /**
-     * @since April 01, 2020
-     * Do not save event with unexpected structure caused due to js-vue integration
-     * @todo remove after changing payload data format
-     */
-    if (task.event.title === 'this.editor is undefined' && task.event.addons) {
-      interface VueAddonsData {
-        lifecycle: string;
-        component: string;
-        data: object;
-        props: object;
-        computed: object;
-      }
-
-      const vueAddons = (task.event.addons as { vue: VueAddonsData }).vue;
-
-      if (vueAddons && vueAddons.data) {
-        (task.event.addons as { vue: VueAddonsData }).vue.data = {};
-      }
-    }
-
     /**
      * Find event by group hash.
      */
