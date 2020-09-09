@@ -209,6 +209,42 @@ describe('GrouperWorker', () => {
 
       expect(typeof (await repetitionsCollection.findOne({})).payload.addons).toBe('string');
     });
+
+    test('Should correctly calculate diff after encoding original event when they are the same', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+
+      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{}');
+
+      /**
+       * Should to be true when bug in utils.deepDiff will be fixed
+       */
+      // expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{}');
+    });
+
+    test('Should correctly calculate diff after encoding original event when they are different', async () => {
+      await worker.handle(generateTask());
+
+      const generatedTask = generateTask();
+
+      await worker.handle({
+        ...generatedTask,
+        event: {
+          ...generatedTask.event,
+          context: {
+            testField: 9,
+          },
+          addons: {
+            vue: {
+              props: { 'test-test': true },
+            },
+          },
+        },
+      });
+
+      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
+      expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+    });
   });
 
   afterAll(async () => {

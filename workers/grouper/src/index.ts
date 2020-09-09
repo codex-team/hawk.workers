@@ -36,6 +36,53 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Stringifies some event fields because some object keys can contain dots and MongoDB will throw error on save
+   *
+   * @param event - event to encode its fields
+   */
+  private static encodeUnsafeFields(event: GroupedEvent | Repetition): void {
+    try {
+      if (typeof event.payload.context !== 'string') {
+        event.payload.context = JSON.stringify(event.payload.context);
+      }
+    } catch {
+      event.payload.context = undefined;
+    }
+
+    try {
+      if (typeof event.payload.addons !== 'string') {
+        event.payload.addons = JSON.stringify(event.payload.addons);
+      }
+    } catch {
+      event.payload.addons = undefined;
+    }
+  }
+
+  /**
+   * Decodes some event fields
+   * Some object keys can contain dots and MongoDB will throw error on save, that's because they were encoded
+   *
+   * @param event - event to encode its fields
+   */
+  private static decodeUnsafeFields(event: GroupedEvent | Repetition): void {
+    try {
+      if (typeof event.payload.context === 'string') {
+        event.payload.context = JSON.parse(event.payload.context);
+      }
+    } catch {
+      event.payload.context = undefined;
+    }
+
+    try {
+      if (typeof event.payload.addons === 'string') {
+        event.payload.addons = JSON.parse(event.payload.addons);
+      }
+    } catch {
+      event.payload.addons = undefined;
+    }
+  }
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -93,6 +140,8 @@ export default class GrouperWorker extends Worker {
       await this.incrementEventCounterAndAffectedUsers(task.projectId, {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
+
+      GrouperWorker.decodeUnsafeFields(existedEvent);
 
       /**
        * Save event's repetitions
@@ -192,31 +241,12 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`events:${projectId}`);
 
-      this.encodeUnsafeFields(groupedEventData);
+      GrouperWorker.encodeUnsafeFields(groupedEventData);
 
       return (await collection
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
       throw new DatabaseReadWriteError(err);
-    }
-  }
-
-  /**
-   * Stringifies some event fields because some object keys can contain dots and MongoDB will throw error on save
-   *
-   * @param event - event to encode its fields
-   */
-  private encodeUnsafeFields(event: GroupedEvent | Repetition): void {
-    try {
-      event.payload.context = JSON.stringify(event.payload.context);
-    } catch {
-      event.payload.context = undefined;
-    }
-
-    try {
-      event.payload.addons = JSON.stringify(event.payload.addons);
-    } catch {
-      event.payload.addons = undefined;
     }
   }
 
@@ -234,7 +264,7 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
 
-      this.encodeUnsafeFields(repetition);
+      GrouperWorker.encodeUnsafeFields(repetition);
 
       return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
