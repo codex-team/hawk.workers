@@ -21,7 +21,7 @@ const EventEmitter = require('events');
 const randomWords = require('random-words');
 
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-const Hawk = require('@codexteam/hawk.nodejs');
+const Hawk = require('@hawk.so/nodejs');
 
 /**
  * Hawk catcher url
@@ -43,8 +43,8 @@ const ERRORS_TYPE_COUNT = 10;
 const errorEmitter = new EventEmitter();
 
 const hawkCatcher = Hawk({
-  url: CATCHER_URL,
-  accessToken: CATCHER_TOKEN,
+  collectorEndpoint: CATCHER_URL,
+  token: CATCHER_TOKEN,
 });
 
 /**
@@ -114,19 +114,7 @@ const main = async () => {
 
       return true;
     } catch (e) {
-      hawkCatcher.catchException(
-        e,
-        { comment: 'Exception in namedFunc' },
-        (error, response, body) => {
-          if (error) {
-            console.log('error:', error); // Print the error if one occurred
-          }
-          console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-          if (body) {
-            console.log('body:', body); // Print the HTML for the Google homepage.
-          }
-        }
-      );
+      hawkCatcher.send(e);
     }
   }
 
