@@ -57,6 +57,7 @@ class WorkerRunner {
       .then(() => {
         try {
           this.startMetrics();
+          this.startTracing();
         } catch (e) {
           HawkCatcher.send(e);
           console.error(`Metrics not started: ${e}`);
@@ -136,7 +137,8 @@ class WorkerRunner {
    * Start tracing
    */
   private startTracing(): void {
-    setupTracing();
+    setupTracing(workerNames[0]); // If many workers running, bug here
+    console.log("Trasing initialized")
   }
 
   /**

@@ -149,6 +149,8 @@ export abstract class Worker {
       throw new Error('Worker type is not defined');
     }
 
+    this.initTracing();
+
     if (!this.registryConnected) {
       await this.connect();
     }
