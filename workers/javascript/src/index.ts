@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
+import { Span } from "@opentelemetry/api";
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
 import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
@@ -70,17 +71,26 @@ export default class JavascriptEventWorker extends EventWorker {
    * Message handle function
    *
    * @param event - event to handle
+   * @param span - opentracing's Span
    */
-  public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+  public async handle(event: JavaScriptEventWorkerTask, span: Span): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
-      event.payload.backtrace = await this.beautifyBacktrace(event);
+      const beautifySpan = this.tracer.startSpan('beautify', { parent: span });
+
+      event.payload.backtrace = await this.beautifyBacktrace(event, beautifySpan);
+
+      beautifySpan.end();
     }
+
+    const mqSpan = this.tracer.startSpan('mq',{ parent: span });
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
       catcherType: this.type,
       event: event.payload,
     } as GroupWorkerTask);
+
+    mqSpan.end();
   }
 
   /**
@@ -88,15 +98,21 @@ export default class JavascriptEventWorker extends EventWorker {
    * and overrides a backtrace with parsed source-map
    *
    * @param {JavaScriptEventWorkerTask} event — js error minified
+   * @param {Span} span — opentracing's Span
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
-  private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
+  private async beautifyBacktrace(event: JavaScriptEventWorkerTask, span: Span): Promise<BacktraceFrame[]> {
     /**
      * Find source map in Mongo
      */
+
+    const currentSpan = this.tracer.startSpan('get release', { parent: span });
+
     const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
       event.projectId,
       event.payload.release.toString());
+
+    currentSpan.end();
 
     if (!releaseRecord) {
       return event.payload.backtrace;
