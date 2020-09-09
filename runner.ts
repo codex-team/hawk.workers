@@ -9,6 +9,7 @@ import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
+import { setupTracing, stopTracing } from './lib/tracer';
 
 dotenv.config();
 
@@ -129,6 +130,13 @@ class WorkerRunner {
         });
       });
     }, 1000);
+  }
+
+  /**
+   * Start tracing
+   */
+  private startTracing(): void {
+    setupTracing();
   }
 
   /**
@@ -258,6 +266,7 @@ class WorkerRunner {
   private async stopWorker(worker: Worker): Promise<void> {
     try {
       await worker.finish();
+      stopTracing();
 
       console.log(
         '\x1b[33m%s\x1b[0m',

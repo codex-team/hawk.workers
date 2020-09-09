@@ -1,5 +1,6 @@
 import * as amqp from 'amqplib';
 import * as client from 'prom-client';
+import opentelemetry, { Tracer, Span } from '@opentelemetry/api';
 import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
@@ -53,11 +54,18 @@ export abstract class Worker {
           format.timestamp(),
           format.colorize(),
           format.simple(),
-          format.printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
+          format.printf(
+            (msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`
+          )
         ),
       }),
     ],
   });
+
+  /**
+   * Opentracing tracer
+   */
+  protected tracer: Tracer;
 
   /**
    * Prometheus metrics
@@ -73,7 +81,8 @@ export abstract class Worker {
   /**
    * How many task Worker should do concurrently
    */
-  private readonly simultaneousTasks: number = +process.env.SIMULTANEOUS_TASKS || 1;
+  private readonly simultaneousTasks: number =
+    +process.env.SIMULTANEOUS_TASKS || 1;
 
   /**
    * Registry connection status true/false
@@ -122,7 +131,14 @@ export abstract class Worker {
    * Get array of available prometheus metrics
    */
   public getMetrics(): client.Counter<string>[] {
-    return [ this.metricSuccessfullyProcessedMessages ];
+    return [this.metricSuccessfullyProcessedMessages];
+  }
+
+  /**
+   * Initialize opentracing tracer
+   */
+  public initTracing(): void {
+    this.tracer = opentelemetry.trace.getTracer(this.type);
   }
 
   /**
@@ -137,12 +153,15 @@ export abstract class Worker {
       await this.connect();
     }
 
-    const { consumerTag } = await this.channelWithRegistry.consume(this.type, (msg: amqp.ConsumeMessage) => {
-      const promise = this.processMessage(msg) as Promise<void>;
+    const { consumerTag } = await this.channelWithRegistry.consume(
+      this.type,
+      (msg: amqp.ConsumeMessage) => {
+        const promise = this.processMessage(msg) as Promise<void>;
 
-      this.tasksMap.set(msg, promise);
-      promise.then(() => this.tasksMap.delete(msg));
-    });
+        this.tasksMap.set(msg, promise);
+        promise.then(() => this.tasksMap.delete(msg));
+      }
+    );
 
     /**
      * Remember consumer tag to cancel subscription in future
@@ -240,6 +259,8 @@ export abstract class Worker {
   private async processMessage(msg: amqp.ConsumeMessage): Promise<void> {
     let event: WorkerTask;
 
+    const span = this.tracer.startSpan('processMessage');
+
     try {
       const stringifiedEvent = msg.content.toString();
 
@@ -255,7 +276,11 @@ export abstract class Worker {
     }
 
     try {
-      await this.handle(event);
+      const handleSpan = this.tracer.startSpan('handle', { parent: span });
+
+      await this.handle(event, handleSpan);
+
+      handleSpan.end();
 
       /**
        * Let RabbitMQ know that we processed the message
@@ -270,8 +295,12 @@ export abstract class Worker {
       HawkCatcher.send(e);
       this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
-      this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
-      this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
+      this.logger.debug(
+        'instanceof CriticalError? ' + (e instanceof CriticalError)
+      );
+      this.logger.debug(
+        'instanceof NonCriticalError? ' + (e instanceof NonCriticalError)
+      );
 
       /**
        * Send back message to registry since we failed to handle it
@@ -290,6 +319,7 @@ export abstract class Worker {
         this.logger.error('Unknown error:\n', e);
       }
     }
+    span.end();
   }
 
   /**
@@ -334,5 +364,5 @@ export abstract class Worker {
    *
    * @param {WorkerTask} event - Event object from consume method
    */
-  protected abstract handle(event: WorkerTask): Promise<void>;
+  protected abstract handle(event: WorkerTask, span: Span): Promise<void>;
 }
