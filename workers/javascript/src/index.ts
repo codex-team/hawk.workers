@@ -73,7 +73,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    * @param span - opentracing's Span
    */
-  public async handle(event: JavaScriptEventWorkerTask, span: Span): Promise<void> {
+  public async handle(event: JavaScriptEventWorkerTask, span: Span = undefined /* to pass tests */): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
       const beautifySpan = this.tracer.startSpan('beautify', { parent: span });
 
