@@ -69,17 +69,13 @@ export default class GrouperWorker extends Worker {
       if (typeof event.payload.context === 'string') {
         event.payload.context = JSON.parse(event.payload.context);
       }
-    } catch {
-      event.payload.context = undefined;
-    }
+    } catch { /* ignore if caught */ }
 
     try {
       if (typeof event.payload.addons === 'string') {
         event.payload.addons = JSON.parse(event.payload.addons);
       }
-    } catch {
-      event.payload.addons = undefined;
-    }
+    } catch { /* ignore if caught */ }
   }
 
   /**
