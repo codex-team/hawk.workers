@@ -17,8 +17,12 @@ Date.prototype.getTime = (): number => 1588334400 * 1000;
 process.env.MAX_DAYS_NUMBER = '30';
 
 const mockedProject = {
-  _id: new ObjectId('5e4ff518628a6c714515f4da'),
-  name: 'Test project',
+  _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
+  token: 'project-token',
+  name: 'Project',
+  workspaceId: new ObjectId('5d206f7f9aaf7c0071d64596'),
+  uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
+  notifications: [],
 };
 
 describe('Archiver worker', () => {
