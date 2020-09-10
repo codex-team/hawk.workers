@@ -40,8 +40,11 @@ describe('TelegramProvider', () => {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
         project: {
-          _id: 'projectId',
+          _id: new ObjectId('projectId'),
+          token: 'project-token',
           name: 'Project',
+          workspaceId: new ObjectId('workspace-id'),
+          uidAdded: new ObjectId('used-id'),
           notifications: [],
         } as ProjectDBScheme,
       };
