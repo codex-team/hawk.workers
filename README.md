@@ -4,8 +4,6 @@
 
 Workers are services for processing hawk's background tasks
 
-
-
 ## Requirements
 
 - [Registry](https://github.com/codex-team/hawk.registry)
@@ -29,8 +27,7 @@ For simplicity, Hawk workers can be used as part of the [Mono repository](https:
 - Set `LOG_LEVEL` to `verbose` if you want message logs
 
   > Also you can use `worker.logger` which is [`winston.Logger`](https://github.com/winstonjs/winston) to log something
-                                                           >
-                                                           >
+
 ## How to run workers
 
 1. Make sure you are in Workers root directory
@@ -73,21 +70,24 @@ SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps
 
 ## Running workers with Docker
 
-Basic configuration is in `docker-compose.dev.yml`. 
+Basic configuration is in `docker-compose.dev.yml`.
 Pull image from https://hub.docker.com/r/codexteamuser/hawk-workers
+
 ```
 docker-compose -f docker-compose.dev.yml pull
 ```
 
-If you run mongodb and rabbitmq with `hawk.mono` repository, by default your docker network will be named `hawkmono_default`. 
+If you run mongodb and rabbitmq with `hawk.mono` repository, by default your docker network will be named `hawkmono_default`.
 This network name is written as external for workers.
 
 Run chosen worker (say hawk-worker-javascript)
+
 ```
 docker-compose -f docker-compose.dev.yml up hawk-worker-javascript
 ```
 
 ### Adding new workers
+
 Make sure that your `.env` configurations exists.
 
 Add new section to the `docker-compose.{dev,prod}.yml` files.
@@ -145,7 +145,7 @@ You can tweak it (add schemas, etc) and use it in your workers to handle databas
 ### Example
 
 ```javascript
-const db = require("lib/db/mongoose-controller");
+const db = require('lib/db/mongoose-controller');
 
 await db.connect(); // Requires `MONGO_URL`
 
@@ -201,3 +201,26 @@ yarn migrate
 Refactor mongo-migrate commands to have an opportunity to create or rollback
 
 [More details](https://www.npmjs.com/package/migrate-mongo)
+
+## Tracing
+
+Worker supports Opentracing with Jaeger exporter
+
+To test add `JAEGER_ENDPOINT` in `.env`, set `TRACING_ENABLED=true`, and run Jaeger:
+
+```shell
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:latest
+```
+
+Start worker, send events
+
+Navigate to `http://localhost:16686`
