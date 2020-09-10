@@ -1,6 +1,5 @@
 import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { Project } from 'hawk-worker-sender/types/project';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
 
@@ -32,7 +31,7 @@ describe('TelegramProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEvent,
+          } as GroupedEventDBScheme,
           daysRepeated: 1,
           newCount: 1,
         } ],
@@ -43,7 +42,7 @@ describe('TelegramProvider', () => {
           _id: 'projectId',
           name: 'Project',
           notifications: [],
-        } as Project,
+        } as ProjectDBScheme,
       };
 
       const provider = new TelegramProvider();
@@ -78,7 +77,7 @@ describe('TelegramProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEvent,
+          } as GroupedEventDBScheme,
           daysRepeated: 1,
           newCount: 1,
         } ],
@@ -88,7 +87,7 @@ describe('TelegramProvider', () => {
           _id: 'projectId',
           name: 'Project',
           notifications: [],
-        } as Project,
+        } as ProjectDBScheme,
         period: 60,
       };
 

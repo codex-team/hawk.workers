@@ -3,13 +3,7 @@ import { Collection, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
 import './rabbit.mock';
 import { EventType } from '../types/paymaster-worker-events';
-import Workspace from '../../../lib/types/workspace';
-import TariffPlan from '../../../lib/types/tariffPlan';
-import {
-  BusinessOperationDBScheme,
-  BusinessOperationStatus,
-  BusinessOperationType
-} from '../../../lib/types/businessOperation';
+import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import MockDate from 'mockdate';
 import axios from 'axios';
 import { v4 as uuid } from 'uuid';
@@ -29,7 +23,7 @@ jest.mock('axios');
 
 const mockedDate = new Date('2005-12-22');
 
-const plan: TariffPlan = {
+const plan: PlanDBScheme = {
   eventsLimit: 10000,
   _id: new ObjectId('5eec1fcde748a04c16632ae2'),
   monthlyCharge: 1000,
@@ -37,7 +31,7 @@ const plan: TariffPlan = {
   isDefault: false,
 };
 
-const workspace: Workspace = {
+const workspace: WorkspaceDBScheme = {
   balance: 10000,
   name: 'My workspace',
   _id: new ObjectId('5e5fb6303e3a9d0a1933739a'),
@@ -49,8 +43,8 @@ const workspace: Workspace = {
 describe('PaymasterWorker', () => {
   const worker = new PaymasterWorker();
   let connection: MongoClient;
-  let workspacesCollection: Collection<Workspace>;
-  let tariffCollection: Collection<TariffPlan>;
+  let workspacesCollection: Collection<WorkspaceDBScheme>;
+  let tariffCollection: Collection<PlanDBScheme>;
   let businessOperationsCollection: Collection<BusinessOperationDBScheme>;
 
   beforeAll(async () => {
@@ -59,8 +53,8 @@ describe('PaymasterWorker', () => {
       useUnifiedTopology: true,
     });
 
-    workspacesCollection = connection.db().collection<Workspace>('workspaces');
-    tariffCollection = connection.db().collection<TariffPlan>('tariff_plans');
+    workspacesCollection = connection.db().collection<WorkspaceDBScheme>('workspaces');
+    tariffCollection = connection.db().collection<PlanDBScheme>('tariff_plans');
     businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('business_operations');
 
     await tariffCollection.insertOne(plan);

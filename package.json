@@ -53,6 +53,7 @@
         "amqplib": "^0.5.5",
         "debug": "^4.1.1",
         "dotenv": "^8.2.0",
+        "hawk.types": "https://github.com/codex-team/hawk.types#workers",
         "lodash.mergewith": "^4.6.2",
         "migrate-mongo": "^7.2.1",
         "mongodb": "^3.5.7",
