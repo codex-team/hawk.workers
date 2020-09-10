@@ -2,6 +2,7 @@ import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-varia
 import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
+import { ObjectId } from 'mongodb';
 
 /**
  * @todo We need to test only public methods, so these tests should be rewrited similar with SlackProvider tests
@@ -84,8 +85,11 @@ describe('TelegramProvider', () => {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
         project: {
-          _id: 'projectId',
+          _id: new ObjectId('projectId'),
+          token: 'project-token',
           name: 'Project',
+          workspaceId: new ObjectId('workspace-id'),
+          uidAdded: new ObjectId('used-id'),
           notifications: [],
         } as ProjectDBScheme,
         period: 60,
