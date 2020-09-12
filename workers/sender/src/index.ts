@@ -93,7 +93,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const rule = project.notifications.find((r: Rule) => r._id.toString() === ruleId);
+    const rule = project.notifications.find((r) => r._id.toString() === ruleId);
 
     if (!rule) {
       return;
