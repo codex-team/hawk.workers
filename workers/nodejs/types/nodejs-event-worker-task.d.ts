@@ -1,4 +1,5 @@
-import { EventData, EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { EventData } from 'hawk.types';
 
 /**
  * Format of task for NodeJS Event Worker

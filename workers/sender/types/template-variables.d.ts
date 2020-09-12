@@ -1,5 +1,4 @@
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { Project } from './project';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Common interface for template variables
@@ -10,7 +9,7 @@ export interface TemplateVariables {
 }
 
 export interface TemplateEventData {
-  event: GroupedEvent;
+  event: GroupedEventDBScheme;
   daysRepeated: number;
   newCount: number;
   usersAffected?: number;
@@ -23,6 +22,6 @@ export interface EventsTemplateVariables extends TemplateVariables {
   events: TemplateEventData[];
   host: string;
   hostOfStatic: string;
-  project: Project;
+  project: ProjectDBScheme;
   period: number;
 }

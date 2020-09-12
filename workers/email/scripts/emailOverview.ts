@@ -13,11 +13,10 @@ import templates, { Template } from '../src/templates';
 import { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { ObjectID, ObjectId } from 'mongodb';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { Project } from 'hawk-worker-sender/types/project';
 
 /**
  * Merge email worker .env and root workers .env
@@ -281,7 +280,7 @@ class EmailTestServer {
   private async getEventData(
     projectId: string,
     eventId: string
-  ): Promise<[GroupedEvent, number]> {
+  ): Promise<[GroupedEventDBScheme, number]> {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({
@@ -300,10 +299,10 @@ class EmailTestServer {
    * @param {string} projectId - project id
    * @returns {Promise<Project>}
    */
-  private async getProject(projectId: string): Promise<Project | null> {
+  private async getProject(projectId: string): Promise<ProjectDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('projects').findOne({ _id: new ObjectID(projectId) });
+    return connection.collection('projects').findOne({ _id: new ObjectId(projectId) });
   }
 
   /**
@@ -311,7 +310,7 @@ class EmailTestServer {
    *
    * @returns {Promise<Project>}
    */
-  private async getAllProjects(): Promise<Project[]> {
+  private async getAllProjects(): Promise<ProjectDBScheme[]> {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('projects').find(null, { limit: 10 })
@@ -324,7 +323,7 @@ class EmailTestServer {
    * @param {string} projectId - project id
    * @returns {Promise<GroupedEvent[]>}
    */
-  private async getEventsByProjectId(projectId: string): Promise<GroupedEvent[]> {
+  private async getEventsByProjectId(projectId: string): Promise<GroupedEventDBScheme[]> {
     const connection = await this.eventsDb.getConnection();
 
     return connection.collection(`events:${projectId}`).find(null, {

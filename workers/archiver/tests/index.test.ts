@@ -6,6 +6,7 @@ import { mockedEvents } from './events.mock';
 import '../../../env-test';
 import { mockedReleases } from './releases.mock';
 import './rabbit.mock';
+import { ProjectDBScheme } from 'hawk.types';
 jest.mock('axios');
 jest.mock('amqplib');
 
@@ -16,7 +17,11 @@ jest.mock('amqplib');
 Date.prototype.getTime = (): number => 1588334400 * 1000;
 process.env.MAX_DAYS_NUMBER = '30';
 
-const mockedProject = {
+const mockedProject: ProjectDBScheme = {
+  notifications: [],
+  token: '5342',
+  uidAdded: new ObjectId('5e4ff518628a6c714515f4db'),
+  workspaceId: new ObjectId('5e4ff518628a6c714515f4de'),
   _id: new ObjectId('5e4ff518628a6c714515f4da'),
   name: 'Test project',
 };

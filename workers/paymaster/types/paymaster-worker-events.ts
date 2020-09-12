@@ -17,46 +17,6 @@ export enum EventType {
 }
 
 /**
- * Tariff plan interface
- */
-export interface TariffPlan {
-  /**
-   * Plan name
-   */
-  name: string;
-
-  /**
-   * Monthly charge for current plan
-   */
-  monthlyCharge: number;
-
-  /**
-   * Event limits for current plan
-   */
-  eventsLimit: number;
-}
-
-/**
- * Plan object of workspace
- */
-export interface WorkspacePlan {
-  /**
-   * Plan name
-   */
-  name: string;
-
-  /**
-   * Last charge date timestamp
-   */
-  lastChargeDate: number;
-
-  /**
-   * Subscription date timestamp
-   */
-  subscriptionDate: number;
-}
-
-/**
  * Paymaster worker task interface
  */
 export interface PaymasterEvent {

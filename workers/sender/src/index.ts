@@ -1,11 +1,10 @@
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { ObjectID } from 'mongodb';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env.ts';
 
-import { Project } from '../types/project';
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
 import { Rule } from 'hawk-worker-notifier/types/rule';
 import NotificationsProvider from './provider';
@@ -94,7 +93,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const rule = project.notifications.find((r: Rule) => r._id.toString() === ruleId);
+    const rule = project.notifications.find((r) => r._id.toString() === ruleId);
 
     if (!rule) {
       return;
@@ -135,12 +134,12 @@ export default abstract class SenderWorker extends Worker {
    * @param {string} projectId - project events are related to
    * @param {string} groupHash - event group hash
    *
-   * @returns {Promise<[GroupedEvent, number]>}
+   * @returns {Promise<[GroupedEventDBScheme, number]>}
    */
   private async getEventDataByGroupHash(
     projectId: string,
     groupHash: string
-  ): Promise<[GroupedEvent, number]> {
+  ): Promise<[GroupedEventDBScheme, number]> {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({ groupHash });
@@ -155,11 +154,11 @@ export default abstract class SenderWorker extends Worker {
    * Get project info
    *
    * @param {string} projectId - project id
-   * @returns {Promise<Project>}
+   * @returns {Promise<ProjectDBScheme>}
    */
-  private async getProject(projectId: string): Promise<Project | null> {
+  private async getProject(projectId: string): Promise<ProjectDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('projects').findOne({ _id: new ObjectID(projectId) });
+    return connection.collection('projects').findOne({ _id: new ObjectId(projectId) });
   }
 }
