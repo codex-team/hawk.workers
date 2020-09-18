@@ -9,13 +9,7 @@ import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
-import TariffPlan from '../../../lib/types/tariffPlan';
-import Workspace from '../../../lib/types/workspace';
-import {
-  BusinessOperationDBScheme,
-  BusinessOperationStatus,
-  BusinessOperationType
-} from '../../../lib/types/businessOperation';
+import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
 import axios from 'axios';
@@ -41,7 +35,7 @@ export default class PaymasterWorker extends Worker {
   /**
    * Collection with workspaces
    */
-  private workspaces: Collection<Workspace>;
+  private workspaces: Collection<WorkspaceDBScheme>;
 
   /**
    * Collection with businessOperations
@@ -51,7 +45,7 @@ export default class PaymasterWorker extends Worker {
   /**
    * List of tariff plans
    */
-  private plans: TariffPlan[];
+  private plans: PlanDBScheme[];
 
   /**
    * Start consuming messages
@@ -61,7 +55,7 @@ export default class PaymasterWorker extends Worker {
 
     this.workspaces = connection.collection('workspaces');
     this.businessOperations = connection.collection('business_operations');
-    const plansCollection = connection.collection<TariffPlan>('tariff_plans');
+    const plansCollection = connection.collection<PlanDBScheme>('tariff_plans');
 
     this.plans = await plansCollection.find({}).toArray();
 
@@ -123,7 +117,7 @@ export default class PaymasterWorker extends Worker {
    *
    * @param workspace - workspace to check
    */
-  private async processWorkspacePlanCharge(workspace: Workspace): Promise<void> {
+  private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<void> {
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
@@ -146,7 +140,7 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for plan purchasing
    * @param planCost - amount of money needed to by plan
    */
-  private async makeTransactionForPurchasing(workspace: Workspace, planCost: number): Promise<void> {
+  private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number): Promise<void> {
     const date = new Date();
     const transactionId = await this.makePurchaseInAccounting(planCost, workspace);
 
@@ -176,7 +170,7 @@ export default class PaymasterWorker extends Worker {
    * @param planCost - amount of money needed to by plan
    * @param workspace - workspace for purchasing
    */
-  private async makePurchaseInAccounting(planCost: number, workspace: Workspace): Promise<string> {
+  private async makePurchaseInAccounting(planCost: number, workspace: WorkspaceDBScheme): Promise<string> {
     const request = `
 mutation Purchase($input: PurchaseInput!){
   purchase(input: $input) {
@@ -217,8 +211,8 @@ mutation Purchase($input: PurchaseInput!){
     const { payload } = event;
 
     const workspace = await this.workspaces.findOne({ _id: new ObjectId(payload.workspaceId) });
-    const oldPlan: TariffPlan = this.plans.find((p) => p.name === payload.oldPlan);
-    const newPlan: TariffPlan = this.plans.find((p) => p.name === payload.newPlan);
+    const oldPlan: PlanDBScheme = this.plans.find((p) => p.name === payload.oldPlan);
+    const newPlan: PlanDBScheme = this.plans.find((p) => p.name === payload.newPlan);
 
     const lastChargeDate = workspace.lastChargeDate;
 

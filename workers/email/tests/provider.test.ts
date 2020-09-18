@@ -10,11 +10,11 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';
-import { Project } from 'hawk-worker-sender/types/project';
+import { ObjectId } from 'mongodb';
 
 describe('EmailProvider', () => {
   describe('SMTP Transport', () => {
@@ -68,7 +68,7 @@ describe('EmailProvider', () => {
                 }],
               }],
             },
-          } as GroupedEvent,
+          } as GroupedEventDBScheme,
           daysRepeated: 1,
           newCount: 1,
         }],
@@ -76,10 +76,13 @@ describe('EmailProvider', () => {
         host: process.env.GARAGE_URL!,
         hostOfStatic: process.env.API_STATIC_URL!,
         project: {
-          _id: 'projectId',
+          _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          token: 'project-token',
           name: 'Project',
+          workspaceId: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
           notifications: [],
-        } as Project,
+        } as ProjectDBScheme,
       };
 
       const provider = new EmailProvider();
@@ -116,17 +119,20 @@ describe('EmailProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEvent,
+          } as GroupedEventDBScheme,
           daysRepeated: 1,
           newCount: 1,
         } ],
         host: process.env.GARAGE_URL!,
         hostOfStatic: process.env.API_STATIC_URL!,
         project: {
-          _id: 'projectId',
+          _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          token: 'project-token',
           name: 'Project',
+          workspaceId: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
           notifications: [],
-        } as Project,
+        } as ProjectDBScheme,
         period: 60,
       };
 

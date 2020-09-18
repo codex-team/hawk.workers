@@ -2,15 +2,14 @@
  * Some helpers used in templates
  */
 
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { Project } from 'hawk-worker-sender/types/project';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Returns event location based on the first backtrace frame or URL
  *
  * @param event - event from which we need to get location
  */
-export function getEventLocation(event: GroupedEvent): string {
+export function getEventLocation(event: GroupedEventDBScheme): string {
   const { backtrace, addons } = event.payload;
 
   if (!backtrace || !backtrace.length) {
@@ -35,7 +34,7 @@ export function getEventLocation(event: GroupedEvent): string {
  * @param project - parent project
  * @param event - event to compose its URL
  */
-export function getEventUrl(host: string, project: Project, event: GroupedEvent): string {
+export function getEventUrl(host: string, project: ProjectDBScheme, event: GroupedEventDBScheme): string {
   return host + '/project/' + project._id + '/event/' + event._id + '/';
 }
 
