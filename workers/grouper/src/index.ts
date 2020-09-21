@@ -8,6 +8,7 @@ import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
+import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
  * Worker for handling Javascript events
@@ -17,11 +18,6 @@ export default class GrouperWorker extends Worker {
    * Worker type
    */
   public readonly type: string = pkg.workerType;
-
-  /**
-   * Fields in event payload with unsafe data for encoding before saving in database
-   */
-  private static unsafeFields = ['context', 'addons'] as const;
 
   /**
    * Database Controller
@@ -37,45 +33,6 @@ export default class GrouperWorker extends Worker {
     return crypto.createHmac('sha256', process.env.EVENT_SECRET)
       .update(task.catcherType + task.event.title)
       .digest('hex');
-  }
-
-  /**
-   * Stringifies some event fields because some object keys can contain dots and MongoDB will throw error on save
-   *
-   * @param event - event to encode its fields
-   */
-  private static encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
-    GrouperWorker.unsafeFields.forEach((field) => {
-      const fieldValue = event.payload[field];
-      let newValue: string;
-
-      try {
-        if (typeof fieldValue !== 'string') {
-          newValue = JSON.stringify(fieldValue);
-        }
-      } catch {
-        newValue = undefined;
-      }
-      event.payload[field] = newValue;
-    });
-  }
-
-  /**
-   * Decodes some event fields
-   * Some object keys can contain dots and MongoDB will throw error on save, that's because they were encoded
-   *
-   * @param event - event to encode its fields
-   */
-  private static decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
-    GrouperWorker.unsafeFields.forEach((field) => {
-      try {
-        const fieldValue = event.payload[field];
-
-        if (typeof fieldValue === 'string') {
-          event.payload[field] = JSON.parse(fieldValue);
-        }
-      } catch { /* ignore if caught */ }
-    });
   }
 
   /**
@@ -137,7 +94,7 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
 
-      GrouperWorker.decodeUnsafeFields(existedEvent);
+      decodeUnsafeFields(existedEvent);
 
       /**
        * Save event's repetitions
@@ -237,7 +194,7 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`events:${projectId}`);
 
-      GrouperWorker.encodeUnsafeFields(groupedEventData);
+      encodeUnsafeFields(groupedEventData);
 
       return (await collection
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
@@ -260,7 +217,7 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
 
-      GrouperWorker.encodeUnsafeFields(repetition);
+      encodeUnsafeFields(repetition);
 
       return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
