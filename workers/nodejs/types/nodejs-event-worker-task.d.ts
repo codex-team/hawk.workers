@@ -14,17 +14,4 @@ export interface NodeJSEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from NodeJS Catcher
  */
-interface NodeJSEventPayload extends DecodedEventData {
-  /**
-   * Some useful details
-   */
-  addons?: NodeJSEventAddons;
-}
-
-/**
- * Addons object for event
- */
-interface NodeJSEventAddons {
-  /** Empty yet */
-  [key: string]: undefined;
-}
+interface NodeJSEventPayload extends DecodedEventData {}

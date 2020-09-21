@@ -14,17 +14,4 @@ export interface PythonEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from Python Catcher
  */
-interface PythonEventPayload extends DecodedEventData {
-  /**
-   * Language-specific useful information from Python Catcher
-   */
-  context: PythonEventContext;
-}
-
-/**
- * Information about client
- */
-interface PythonEventContext {
-  /** Empty yet */
-  [key: string]: undefined;
-}
+interface PythonEventPayload extends DecodedEventData {}

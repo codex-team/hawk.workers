@@ -14,17 +14,4 @@ export interface JavaScriptEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from JavaScript Catcher
  */
-interface JavaScriptEventPayload extends DecodedEventData {
-  /**
-   * Language-specific useful information from JavaScript Catcher
-   */
-  context: JavaScriptEventContext;
-}
-
-/**
- * Information about client
- */
-interface JavaScriptEventContext {
-  /** Empty yet */
-  [key: string]: undefined;
-}
+interface JavaScriptEventPayload extends DecodedEventData {}
