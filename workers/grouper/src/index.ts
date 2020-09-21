@@ -19,6 +19,11 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
+   * Fields in event payload with unsafe data for encoding before saving in database
+   */
+  private static unsafeFields = ['context', 'addons'] as const;
+
+  /**
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -39,22 +44,20 @@ export default class GrouperWorker extends Worker {
    *
    * @param event - event to encode its fields
    */
-  private static encodeUnsafeFields(event: GroupedEvent | Repetition): void {
-    try {
-      if (typeof event.payload.context !== 'string') {
-        event.payload.context = JSON.stringify(event.payload.context);
-      }
-    } catch {
-      event.payload.context = undefined;
-    }
+  private static encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
+    GrouperWorker.unsafeFields.forEach((field) => {
+      const fieldValue = event.payload[field];
+      let newValue: string;
 
-    try {
-      if (typeof event.payload.addons !== 'string') {
-        event.payload.addons = JSON.stringify(event.payload.addons);
+      try {
+        if (typeof fieldValue !== 'string') {
+          newValue = JSON.stringify(fieldValue);
+        }
+      } catch {
+        newValue = undefined;
       }
-    } catch {
-      event.payload.addons = undefined;
-    }
+      event.payload[field] = newValue;
+    });
   }
 
   /**
@@ -63,18 +66,16 @@ export default class GrouperWorker extends Worker {
    *
    * @param event - event to encode its fields
    */
-  private static decodeUnsafeFields(event: GroupedEvent | Repetition): void {
-    try {
-      if (typeof event.payload.context === 'string') {
-        event.payload.context = JSON.parse(event.payload.context);
-      }
-    } catch { /* ignore if caught */ }
+  private static decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
+    GrouperWorker.unsafeFields.forEach((field) => {
+      try {
+        const fieldValue = event.payload[field];
 
-    try {
-      if (typeof event.payload.addons === 'string') {
-        event.payload.addons = JSON.parse(event.payload.addons);
-      }
-    } catch { /* ignore if caught */ }
+        if (typeof fieldValue === 'string') {
+          event.payload[field] = JSON.parse(fieldValue);
+        }
+      } catch { /* ignore if caught */ }
+    });
   }
 
   /**

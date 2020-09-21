@@ -152,9 +152,10 @@ describe('GrouperWorker', () => {
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
-      await worker.handle(testGroupingTask);
+      await worker.handle(generateTask());
 
       expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
+      expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
     });
   });
 
@@ -198,16 +199,21 @@ describe('GrouperWorker', () => {
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
-      await worker.handle(testGroupingTask);
+      const generatedTask = generateTask();
+
+      await worker.handle(generatedTask);
       await worker.handle({
-        ...testGroupingTask,
+        ...generatedTask,
         event: {
-          ...testGroupingTask.event,
+          ...generatedTask.event,
           addons: { test: '8fred' },
         },
       });
 
-      expect(typeof (await repetitionsCollection.findOne({})).payload.addons).toBe('string');
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(typeof savedRepetition.payload.addons).toBe('string');
+      expect(typeof savedRepetition.payload.context).toBe('string');
     });
 
     test('Should correctly calculate diff after encoding original event when they are the same', async () => {
