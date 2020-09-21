@@ -2,7 +2,8 @@
  * Some helpers used in templates
  */
 
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { decodeUnsafeFields } from '../../../../lib/utils/unsafeFields';
 
 /**
  * Returns event location based on the first backtrace frame or URL
@@ -10,7 +11,11 @@ import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
  * @param event - event from which we need to get location
  */
 export function getEventLocation(event: GroupedEventDBScheme): string {
-  const { backtrace, addons } = event.payload;
+  decodeUnsafeFields(event);
+
+  const decodedEvent = event as DecodedGroupedEvent;
+
+  const { backtrace, addons } = decodedEvent.payload;
 
   if (!backtrace || !backtrace.length) {
     return '';
