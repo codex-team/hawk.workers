@@ -199,9 +199,9 @@ describe('GrouperWorker', () => {
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
-      const generatedTask = generateTask();
+      const generatedTask = generateTask(false);
 
-      await worker.handle(generatedTask);
+      await worker.handle(generateTask(false));
       await worker.handle({
         ...generatedTask,
         event: {
