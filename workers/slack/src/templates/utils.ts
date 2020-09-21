@@ -1,21 +1,15 @@
 /**
  * Some helpers used in templates
  */
-
 import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
-import { decodeUnsafeFields } from '../../../../lib/utils/unsafeFields';
 
 /**
  * Returns event location based on the first backtrace frame or URL
  *
  * @param event - event from which we need to get location
  */
-export function getEventLocation(event: GroupedEventDBScheme): string {
-  decodeUnsafeFields(event);
-
-  const decodedEvent = event as DecodedGroupedEvent;
-
-  const { backtrace, addons } = decodedEvent.payload;
+export function getEventLocation(event: DecodedGroupedEvent): string {
+  const { backtrace, addons } = event.payload;
 
   if (!backtrace || !backtrace.length) {
     return '';
