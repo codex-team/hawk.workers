@@ -1,5 +1,5 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { EventData } from 'hawk.types';
+import { DecodedEventData } from 'hawk.types';
 
 /**
  * Format of task for NodeJS Event Worker
@@ -14,7 +14,7 @@ export interface NodeJSEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from NodeJS Catcher
  */
-interface NodeJSEventPayload extends EventData {
+interface NodeJSEventPayload extends DecodedEventData {
   /**
    * Some useful details
    */
@@ -26,5 +26,5 @@ interface NodeJSEventPayload extends EventData {
  */
 interface NodeJSEventAddons {
   /** Empty yet */
-  [key: string]: string|object;
+  [key: string]: undefined;
 }

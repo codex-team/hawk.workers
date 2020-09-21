@@ -1,5 +1,5 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { EventData } from 'hawk.types';
+import { DecodedEventData } from 'hawk.types';
 
 /**
  * Format of task for JavaScript Event Worker
@@ -14,7 +14,7 @@ export interface JavaScriptEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from JavaScript Catcher
  */
-interface JavaScriptEventPayload extends EventData {
+interface JavaScriptEventPayload extends DecodedEventData {
   /**
    * Language-specific useful information from JavaScript Catcher
    */
@@ -25,4 +25,6 @@ interface JavaScriptEventPayload extends EventData {
  * Information about client
  */
 interface JavaScriptEventContext {
+  /** Empty yet */
+  [key: string]: undefined;
 }
