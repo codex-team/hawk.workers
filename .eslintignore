@@ -3,3 +3,4 @@ ecosystem.config.js
 node_modules
 /workers/source-maps/tests/mock
 /workers/migrations
+.github

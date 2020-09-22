@@ -1,4 +1,5 @@
-import { EventData, EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { DecodedEventData } from 'hawk.types';
 
 /**
  * Format of task for Python Event Worker
@@ -13,15 +14,4 @@ export interface PythonEventWorkerTask extends EventWorkerTask {
 /**
  * Describe a context passed from Python Catcher
  */
-interface PythonEventPayload extends EventData {
-  /**
-   * Language-specific useful information from Python Catcher
-   */
-  context: PythonEventContext;
-}
-
-/**
- * Information about client
- */
-interface PythonEventContext {
-}
+interface PythonEventPayload extends DecodedEventData {}

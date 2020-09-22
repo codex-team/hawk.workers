@@ -4,10 +4,11 @@ import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
 import axios from 'axios';
-import { Project, ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
+import { ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
+import { ProjectDBScheme } from 'hawk.types';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -38,7 +39,7 @@ export default class ArchiverWorker extends Worker {
   /**
    * Collection with projects
    */
-  private projectCollection!: Collection<Project>;
+  private projectCollection!: Collection<ProjectDBScheme>;
 
   /**
    * Collection with Javascript releases
@@ -57,7 +58,7 @@ export default class ArchiverWorker extends Worker {
     this.eventsDbConnection = await this.eventsDb.connect();
     const accountDbConnection = await this.accountsDb.connect();
 
-    this.projectCollection = accountDbConnection.collection<Project>('projects');
+    this.projectCollection = accountDbConnection.collection<ProjectDBScheme>('projects');
     this.releasesCollection = this.eventsDbConnection.collection('releases-js');
 
     this.gridFsBucket = this.eventsDb.createGridFsBucket('releases-js');
@@ -118,7 +119,7 @@ export default class ArchiverWorker extends Worker {
    *
    * @param project - project data to remove events
    */
-  private async archiveProjectEvents(project: Project): Promise<number> {
+  private async archiveProjectEvents(project: ProjectDBScheme): Promise<number> {
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
     const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
 
@@ -296,7 +297,7 @@ export default class ArchiverWorker extends Worker {
 
     reportData.projectsData.sort((a, b) => b.archivedEventsCount - a.archivedEventsCount);
 
-    let report = 'Hawk Archiver 📦️ \n';
+    let report = process.env.SERVER_NAME ? ` Hawk Archiver (${process.env.SERVER_NAME}) 📦️\n` : ' Hawk Archiver 📦️\n';
     let totalArchivedEventsCount = 0;
 
     reportData.projectsData.forEach(dataByProject => {
@@ -338,7 +339,7 @@ export default class ArchiverWorker extends Worker {
    *
    * @param project - project to handle
    */
-  private async removeOldReleases(project: Project): Promise<number> {
+  private async removeOldReleases(project: ProjectDBScheme): Promise<number> {
     const releasesToRemove = await this.releasesCollection
       .find({
         projectId: project._id.toString(),

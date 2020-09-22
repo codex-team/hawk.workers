@@ -1,19 +1,5 @@
 import { ObjectId } from 'mongodb';
-
-/**
- * Project representation
- */
-export interface Project {
-  /**
-   * Project id
-   */
-  _id: ObjectId;
-
-  /**
-   * Project name
-   */
-  name: string;
-}
+import { ProjectDBScheme } from 'hawk.types';
 
 /**
  * Report data for specific project
@@ -22,7 +8,7 @@ export interface ReportDataByProject {
   /**
    * Project data to report
    */
-  project: Project;
+  project: ProjectDBScheme;
 
   /**
    * Number of archived events
