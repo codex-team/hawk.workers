@@ -94,6 +94,9 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
 
+      /**
+       * Decode existed event to calculate diffs correctly
+       */
       decodeUnsafeFields(existedEvent);
 
       /**
