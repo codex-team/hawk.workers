@@ -8,6 +8,7 @@ import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
+import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
  * Worker for handling Javascript events
@@ -58,28 +59,6 @@ export default class GrouperWorker extends Worker {
   public async handle(task: GroupWorkerTask): Promise<void> {
     const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
 
-    // eslint-disable-next-line jsdoc/check-values
-    /**
-     * @since April 01, 2020
-     * Do not save event with unexpected structure caused due to js-vue integration
-     * @todo remove after changing payload data format
-     */
-    if (task.event.title === 'this.editor is undefined' && task.event.addons) {
-      interface VueAddonsData {
-        lifecycle: string;
-        component: string;
-        data: object;
-        props: object;
-        computed: object;
-      }
-
-      const vueAddons = (task.event.addons as { vue: VueAddonsData }).vue;
-
-      if (vueAddons && vueAddons.data) {
-        (task.event.addons as { vue: VueAddonsData }).vue.data = {};
-      }
-    }
-
     /**
      * Find event by group hash.
      */
@@ -114,6 +93,11 @@ export default class GrouperWorker extends Worker {
       await this.incrementEventCounterAndAffectedUsers(task.projectId, {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
+
+      /**
+       * Decode existed event to calculate diffs correctly
+       */
+      decodeUnsafeFields(existedEvent);
 
       /**
        * Save event's repetitions
@@ -213,6 +197,8 @@ export default class GrouperWorker extends Worker {
     try {
       const collection = this.db.getConnection().collection(`events:${projectId}`);
 
+      encodeUnsafeFields(groupedEventData);
+
       return (await collection
         .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
     } catch (err) {
@@ -233,6 +219,8 @@ export default class GrouperWorker extends Worker {
 
     try {
       const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
+
+      encodeUnsafeFields(repetition);
 
       return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {

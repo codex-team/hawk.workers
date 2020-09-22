@@ -1,4 +1,4 @@
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
@@ -6,10 +6,10 @@ import * as pkg from '../package.json';
 import './env.ts';
 
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
-import { Rule } from 'hawk-worker-notifier/types/rule';
 import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 import { SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
+import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
  * Worker to send email notifications
@@ -139,10 +139,13 @@ export default abstract class SenderWorker extends Worker {
   private async getEventDataByGroupHash(
     projectId: string,
     groupHash: string
-  ): Promise<[GroupedEventDBScheme, number]> {
+  ): Promise<[DecodedGroupedEvent, number]> {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({ groupHash });
+
+    decodeUnsafeFields(event);
+
     const daysRepeated = await connection.collection(`dailyEvents:${projectId}`).countDocuments({
       groupHash,
     });

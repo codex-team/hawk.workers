@@ -1,4 +1,4 @@
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Common interface for template variables
@@ -9,7 +9,7 @@ export interface TemplateVariables {
 }
 
 export interface TemplateEventData {
-  event: GroupedEventDBScheme;
+  event: DecodedGroupedEvent;
   daysRepeated: number;
   newCount: number;
   usersAffected?: number;

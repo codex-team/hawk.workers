@@ -10,7 +10,7 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import {DecodedGroupedEvent, ProjectDBScheme} from 'hawk.types';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';
@@ -68,7 +68,7 @@ describe('EmailProvider', () => {
                 }],
               }],
             },
-          } as GroupedEventDBScheme,
+          } as DecodedGroupedEvent,
           daysRepeated: 1,
           newCount: 1,
         }],
@@ -119,7 +119,7 @@ describe('EmailProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEventDBScheme,
+          } as DecodedGroupedEvent,
           daysRepeated: 1,
           newCount: 1,
         } ],
