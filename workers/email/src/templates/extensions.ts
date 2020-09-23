@@ -1,6 +1,6 @@
 import * as shortNumber from 'short-number';
 import * as Twig from 'twig';
-import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import { BacktraceFrame } from 'hawk.types';
 
 /**

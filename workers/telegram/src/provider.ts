@@ -1,4 +1,4 @@
-import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import templates from './templates';
 import { TelegramTemplate } from '../types/template';
