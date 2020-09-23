@@ -17,10 +17,14 @@ const testGroupingTask = {
     backtrace: [],
     context: {
       testField: 87,
+      'ima$ge.jpg': 'img',
     },
     addons: {
       vue: {
-        data: { 'test-test': false },
+        data: {
+          'test-test': false,
+          'ima$ge.jpg': 'img',
+        },
       },
     },
   },
@@ -56,10 +60,14 @@ function generateTask(userId: string | false = generateRandomId()): GroupWorkerT
       }),
       context: {
         testField: 8,
+        'ima$ge.jpg': 'img',
       },
       addons: {
         vue: {
-          props: { 'test-test': false },
+          props: {
+            'test-test': false,
+            'ima$ge.jpg': 'img',
+          },
         },
       },
     },
