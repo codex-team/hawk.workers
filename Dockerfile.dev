@@ -1,0 +1,17 @@
+FROM node:12.18.1-slim as builder
+
+WORKDIR /usr/src/app
+
+RUN apt update
+RUN apt install git -y
+
+COPY . .
+
+RUN ls -la
+RUN ls workers/telegram
+
+RUN yarn install
+
+RUN ls -la
+
+RUN ls workers/telegram
