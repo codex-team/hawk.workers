@@ -12,7 +12,6 @@ import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent }
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
-import axios from 'axios';
 import Accounting from 'codex-accounting-sdk';
 
 dotenv.config({
