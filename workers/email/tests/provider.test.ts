@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 
 const nodemailerMock = jest.genMockFromModule('nodemailer') as any;
 const sendMailMock = jest.fn();

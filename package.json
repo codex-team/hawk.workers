@@ -6,19 +6,7 @@
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "UNLICENSED",
     "workspaces": [
-        "workers/javascript",
-        "workers/nodejs",
-        "workers/grouper",
-        "workers/accountant",
-        "workers/paymaster",
-        "workers/source-maps",
-        "workers/python",
-        "workers/slack",
-        "workers/notifier",
-        "workers/email",
-        "workers/telegram",
-        "workers/sender",
-        "workers/archiver"
+        "workers/*"
     ],
     "scripts": {
         "test": "jest --coverage",

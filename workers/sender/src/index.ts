@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import './env.ts';
+import './env';
 
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
 import NotificationsProvider from './provider';
