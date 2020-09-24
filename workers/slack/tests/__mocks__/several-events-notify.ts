@@ -1,4 +1,4 @@
-import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 
