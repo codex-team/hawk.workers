@@ -1853,9 +1853,9 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-"codex-accounting-sdk@https://github.com/codex-team/codex-accounting-sdk#feature/add-purchase-mutation":
-  version "1.0.1"
-  resolved "https://github.com/codex-team/codex-accounting-sdk#0ed74d796910867cfe5c9fb97eb8c0de0b807547"
+"codex-accounting-sdk@https://github.com/codex-team/codex-accounting-sdk":
+  version "1.1.0"
+  resolved "https://github.com/codex-team/codex-accounting-sdk#8b7b208ba9a4fba9235a1201ad2b84e367cbf20c"
   dependencies:
     "@types/node" "^14.6.4"
     axios "^0.20.0"
