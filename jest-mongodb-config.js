@@ -5,7 +5,7 @@ module.exports = {
       dbName: 'hawk',
     },
     binary: {
-      version: '4.2.0',
+      version: '4.0.3',
       skipMD5: true,
     },
     autoStart: false,
