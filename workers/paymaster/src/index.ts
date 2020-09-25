@@ -75,6 +75,9 @@ export default class PaymasterWorker extends Worker {
     this.accounting = new Accounting({
       baseURL: process.env.ACCOUNTING_API_ENDPOINT,
       tlsVerify: process.env.TLS_VERIFY === 'true',
+      tlsCaCertPath: `${process.env.TLS_CA_CERT}`,
+      tlsCertPath: `${process.env.TLS_CERT}`,
+      tlsKeyPath: `${process.env.TLS_KEY}`,
     });
 
     await super.start();
