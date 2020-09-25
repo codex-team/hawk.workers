@@ -1855,7 +1855,7 @@ code-point-at@^1.0.0:
 
 "codex-accounting-sdk@https://github.com/codex-team/codex-accounting-sdk":
   version "1.1.0"
-  resolved "https://github.com/codex-team/codex-accounting-sdk#8b7b208ba9a4fba9235a1201ad2b84e367cbf20c"
+  resolved "https://github.com/codex-team/codex-accounting-sdk#6aee52ddbee09cf0ee5b4b0a5181ef1fea0f4ebd"
   dependencies:
     "@types/node" "^14.6.4"
     axios "^0.20.0"
