@@ -5,20 +5,14 @@ import './rabbit.mock';
 import { EventType } from '../types/paymaster-worker-events';
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import MockDate from 'mockdate';
-import axios from 'axios';
+import Accounting from 'codex-accounting-sdk';
 import { v4 as uuid } from 'uuid';
 
 jest.mock('amqplib');
-jest.mock('axios');
+jest.mock('codex-accounting-sdk');
 
-(axios.post as jest.Mock).mockImplementation(() => Promise.resolve({
-  data: {
-    data: {
-      purchase: {
-        recordId: uuid(),
-      },
-    },
-  },
+(Accounting.prototype.purchase as jest.Mock).mockImplementation(() => Promise.resolve({
+  recordId: uuid(),
 }));
 
 const mockedDate = new Date('2005-12-22');
