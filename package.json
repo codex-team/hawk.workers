@@ -39,7 +39,7 @@
         "@types/mongodb": "^3.5.15",
         "@types/node": "^13.13.4",
         "amqplib": "^0.5.5",
-        "codex-accounting-sdk": "https://github.com/codex-team/codex-accounting-sdk#feature/add-purchase-mutation",
+        "codex-accounting-sdk": "https://github.com/codex-team/codex-accounting-sdk",
         "debug": "^4.1.1",
         "dotenv": "^8.2.0",
         "hawk.types": "https://github.com/codex-team/hawk.types#workers",
