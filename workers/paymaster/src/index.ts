@@ -12,7 +12,7 @@ import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent }
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
-import axios from 'axios';
+import Accounting from 'codex-accounting-sdk';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -48,6 +48,11 @@ export default class PaymasterWorker extends Worker {
   private plans: PlanDBScheme[];
 
   /**
+   * Accounting SDK
+   */
+  private accounting: Accounting;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -66,6 +71,15 @@ export default class PaymasterWorker extends Worker {
     if (!process.env.ACCOUNTING_API_ENDPOINT) {
       throw new Error('Please specify ACCOUNTING_API_ENDPOINT in .env file');
     }
+
+    this.accounting = new Accounting({
+      baseURL: process.env.ACCOUNTING_API_ENDPOINT,
+      tlsVerify: {
+        tlsCaCertPath: `${process.env.TLS_CA_CERT}`,
+        tlsCertPath: `${process.env.TLS_CERT}`,
+        tlsKeyPath: `${process.env.TLS_KEY}`,
+      },
+    });
 
     await super.start();
   }
@@ -142,7 +156,11 @@ export default class PaymasterWorker extends Worker {
    */
   private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number): Promise<void> {
     const date = new Date();
-    const transactionId = await this.makePurchaseInAccounting(planCost, workspace);
+    const purchaseResponse = await this.accounting.purchase({
+      accountId: workspace.accountId,
+      amount: planCost,
+    });
+    const transactionId = purchaseResponse.recordId;
 
     await this.businessOperations.insertOne({
       transactionId: transactionId,
@@ -162,38 +180,6 @@ export default class PaymasterWorker extends Worker {
         lastChargeDate: date,
       },
     });
-  }
-
-  /**
-   * Makes transaction in accounting system and returns its id
-   *
-   * @param planCost - amount of money needed to by plan
-   * @param workspace - workspace for purchasing
-   */
-  private async makePurchaseInAccounting(planCost: number, workspace: WorkspaceDBScheme): Promise<string> {
-    const request = `
-mutation Purchase($input: PurchaseInput!){
-  purchase(input: $input) {
-    recordId
-  }
-}
-`;
-
-    try {
-      const response = await axios.post(process.env.ACCOUNTING_API_ENDPOINT, {
-        query: request,
-        variables: {
-          input: {
-            amount: planCost,
-            accountId: workspace.accountId,
-          },
-        },
-      });
-
-      return response.data.data.purchase.recordId;
-    } catch (e) {
-      this.logger.error(e);
-    }
   }
 
   /**
