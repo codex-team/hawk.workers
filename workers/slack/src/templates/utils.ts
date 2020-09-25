@@ -1,15 +1,14 @@
 /**
  * Some helpers used in templates
  */
-
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Returns event location based on the first backtrace frame or URL
  *
  * @param event - event from which we need to get location
  */
-export function getEventLocation(event: GroupedEventDBScheme): string {
+export function getEventLocation(event: DecodedGroupedEvent): string {
   const { backtrace, addons } = event.payload;
 
   if (!backtrace || !backtrace.length) {

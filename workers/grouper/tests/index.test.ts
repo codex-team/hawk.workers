@@ -1,8 +1,9 @@
-/* tslint:disable:no-string-literal */
 import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
 import { Collection, MongoClient } from 'mongodb';
+import './rabbit.mock';
+jest.mock('amqplib');
 
 /**
  * Test Grouping task
@@ -14,6 +15,18 @@ const testGroupingTask = {
     title: 'Hawk client catcher test',
     timestamp: (new Date()).getTime(),
     backtrace: [],
+    context: {
+      testField: 87,
+      'ima$ge.jpg': 'img',
+    },
+    addons: {
+      vue: {
+        data: {
+          'test-test': false,
+          'ima$ge.jpg': 'img',
+        },
+      },
+    },
   },
 } as GroupWorkerTask;
 
@@ -45,6 +58,18 @@ function generateTask(userId: string | false = generateRandomId()): GroupWorkerT
           id: userId,
         },
       }),
+      context: {
+        testField: 8,
+        'ima$ge.jpg': 'img',
+      },
+      addons: {
+        vue: {
+          props: {
+            'test-test': false,
+            'ima$ge.jpg': 'img',
+          },
+        },
+      },
     },
   };
 }
@@ -133,6 +158,13 @@ describe('GrouperWorker', () => {
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
     });
+
+    test('Should stringify payload`s addons and context fields', async () => {
+      await worker.handle(generateTask());
+
+      expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
+      expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
+    });
   });
 
   describe('Saving daily events', () => {
@@ -172,6 +204,60 @@ describe('GrouperWorker', () => {
       expect((await repetitionsCollection.find({
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
+    });
+
+    test('Should stringify payload`s addons and context fields', async () => {
+      const generatedTask = generateTask(false);
+
+      await worker.handle(generateTask(false));
+      await worker.handle({
+        ...generatedTask,
+        event: {
+          ...generatedTask.event,
+          addons: { test: '8fred' },
+        },
+      });
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(typeof savedRepetition.payload.addons).toBe('string');
+      expect(typeof savedRepetition.payload.context).toBe('string');
+    });
+
+    test('Should correctly calculate diff after encoding original event when they are the same', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+
+      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{}');
+
+      /**
+       * Should to be true when bug in utils.deepDiff will be fixed
+       */
+      // expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{}');
+    });
+
+    test('Should correctly calculate diff after encoding original event when they are different', async () => {
+      await worker.handle(generateTask());
+
+      const generatedTask = generateTask();
+
+      await worker.handle({
+        ...generatedTask,
+        event: {
+          ...generatedTask.event,
+          context: {
+            testField: 9,
+          },
+          addons: {
+            vue: {
+              props: { 'test-test': true },
+            },
+          },
+        },
+      });
+
+      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
+      expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
     });
   });
 

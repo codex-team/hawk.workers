@@ -1,5 +1,5 @@
 # folders
-/**/node_modules
+node_modules
 coverage
 /**/tests
 migrations

@@ -1,5 +1,5 @@
-import { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
 import { ObjectId } from 'mongodb';
@@ -32,7 +32,7 @@ describe('TelegramProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEventDBScheme,
+          } as DecodedGroupedEvent,
           daysRepeated: 1,
           newCount: 1,
         } ],
@@ -81,7 +81,7 @@ describe('TelegramProvider', () => {
                 } ],
               } ],
             },
-          } as GroupedEventDBScheme,
+          } as DecodedGroupedEvent,
           daysRepeated: 1,
           newCount: 1,
         } ],
