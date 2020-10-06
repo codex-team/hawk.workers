@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-javascript
+    entrypoint: yarn run-js
     volumes:
       - ./:/usr/src/app
 
@@ -24,7 +24,7 @@ services:
     environment:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-sourcemaps
+    entrypoint: yarn run-maps
     volumes:
       - ./:/usr/src/app
 
@@ -35,7 +35,7 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-nodejs
+    entrypoint: yarn run-nodejs
     volumes:
       - ./:/usr/src/app
 
@@ -46,7 +46,7 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-python
+    entrypoint: yarn run-python
     volumes:
       - ./:/usr/src/app
 
@@ -61,7 +61,7 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-grouper
+    entrypoint: yarn run-grouper
     volumes:
       - ./:/usr/src/app
 
@@ -77,7 +77,7 @@ services:
       - .env
       - workers/archiver/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-archiver
+    entrypoint: yarn run-archiver
     volumes:
       - ./:/usr/src/app
 
@@ -92,7 +92,7 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-notifier
+    entrypoint: yarn run-notifier
     volumes:
       - ./:/usr/src/app
 
@@ -104,7 +104,7 @@ services:
       - .env
       - workers/email/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-email
+    entrypoint: yarn run-email
     volumes:
       - ./:/usr/src/app
 
