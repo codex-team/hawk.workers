@@ -9,6 +9,17 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import CacheClass from '../../../lib/cache/controller';
+import crypto from 'crypto';
+import HawkCatcher from '@hawk.so/nodejs';
+import { ObjectID } from 'mongodb';
+
+const hash: Function = function (value): string {
+  value = JSON.stringify(value);
+
+  return crypto.createHash('md5').update(value)
+    .digest('hex');
+};
 
 /**
  * Worker for handling Javascript events
@@ -72,9 +83,13 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+    // console.time('TIMER: prepare backtrace');
+
     if (event.payload.release && event.payload.backtrace) {
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
+
+    // console.timeEnd('TIMER: prepare backtrace');
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
@@ -94,9 +109,19 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Find source map in Mongo
      */
-    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
-      event.projectId,
-      event.payload.release.toString());
+    // const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
+    //   event.projectId,
+    //   event.payload.release.toString()
+    // );
+    const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+      `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
+      () => {
+        return this.getReleaseRecord(
+          event.projectId,
+          event.payload.release.toString()
+        );
+      }
+    );
 
     if (!releaseRecord) {
       return event.payload.backtrace;
@@ -108,7 +133,9 @@ export default class JavascriptEventWorker extends EventWorker {
     return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
       return this.consumeBacktraceFrame(frame, releaseRecord)
         .catch((error) => {
-          this.logger.error('Error while consuming ' + error);
+          this.logger.error('Error while consuming ' + error.stack);
+
+          HawkCatcher.send(error);
 
           return event.payload.backtrace[index];
         });
@@ -151,16 +178,25 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Load source map content from Grid fs
      */
-    const mapContent = await this.loadSourceMapFile(mapForFrame);
+    // const mapContent = await this.loadSourceMapFile(mapForFrame);
+    const mapContent = await CacheClass.getCached(
+      `javascript:mapContent:${hash(mapForFrame)}}`,
+      () => {
+        return this.loadSourceMapFile(mapForFrame);
+      }
+    );
 
     if (!mapContent) {
       return stackFrame;
     }
 
-    /**
-     * @todo cache source map consumer for file-keys
-     */
     let consumer = await this.consumeSourceMap(mapContent);
+    // let consumer = await CacheClass.getCached(
+    //   `javascript:consumer:${hash(mapContent)}}`,
+    //   () => {
+    //     return this.consumeSourceMap(mapContent);
+    //   }
+    // );
 
     /**
      * Error's original position
@@ -190,11 +226,17 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Downloads source map file from Grid FS
    *
-   * @param map - saved file info without content.
+   * @param {SourceMapDataExtended} map - saved file info without content
    */
   private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
+    console.log('loadSourceMapFile');
+
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
+
+      if (typeof map._id === 'string') {
+        map._id = new ObjectID(map._id);
+      }
 
       const readstream = this.db.getBucket().openDownloadStream(map._id)
         .on('data', (chunk) => {
