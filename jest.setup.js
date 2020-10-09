@@ -1,6 +1,6 @@
-const amqp = require('amqplib');
-
 jest.mock('amqplib');
+
+const amqp = require('amqplib');
 
 /**
  * Amqp channel mock
