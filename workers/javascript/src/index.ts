@@ -13,6 +13,7 @@ import CacheClass from '../../../lib/cache/controller';
 import crypto from 'crypto';
 import HawkCatcher from '@hawk.so/nodejs';
 import { ObjectID } from 'mongodb';
+import Timer from '../../../lib/utils/timer';
 
 const hash: Function = function (value): string {
   value = JSON.stringify(value);
@@ -20,6 +21,8 @@ const hash: Function = function (value): string {
   return crypto.createHash('md5').update(value)
     .digest('hex');
 };
+
+let eventTagTimer;
 
 /**
  * Worker for handling Javascript events
@@ -83,13 +86,15 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
-    // console.time('TIMER: prepare backtrace');
+    eventTagTimer = hash(event.payload);
 
     if (event.payload.release && event.payload.backtrace) {
-      event.payload.backtrace = await this.beautifyBacktrace(event);
-    }
+      const timer = new Timer('Total time', eventTagTimer);
 
-    // console.timeEnd('TIMER: prepare backtrace');
+      event.payload.backtrace = await this.beautifyBacktrace(event);
+
+      timer.stop();
+    }
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
@@ -109,11 +114,18 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Find source map in Mongo
      */
-    // const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
-    //   event.projectId,
-    //   event.payload.release.toString()
-    // );
-    const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+    const timer = new Timer('getReleaseRecord (old)', eventTagTimer);
+    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
+      event.projectId,
+      event.payload.release.toString()
+    );
+
+    timer.stop();
+
+    const timer1 = new Timer('getReleaseRecord (new)', eventTagTimer);
+
+    // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+    await CacheClass.getCached(
       `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
       () => {
         return this.getReleaseRecord(
@@ -122,6 +134,17 @@ export default class JavascriptEventWorker extends EventWorker {
         );
       }
     );
+    timer1.stop();
+
+    // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+    //   `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
+    //   () => {
+    //     return this.getReleaseRecord(
+    //       event.projectId,
+    //       event.payload.release.toString()
+    //     );
+    //   }
+    // );
 
     if (!releaseRecord) {
       return event.payload.backtrace;
@@ -178,39 +201,51 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Load source map content from Grid fs
      */
-    // const mapContent = await this.loadSourceMapFile(mapForFrame);
-    const mapContent = await CacheClass.getCached(
+    const timer = new Timer('loadSourceMapFile (old)', eventTagTimer);
+    const mapContent = await this.loadSourceMapFile(mapForFrame);
+
+    timer.stop();
+
+    const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
+
+    // const mapContent = await CacheClass.getCached(
+    await CacheClass.getCached(
       `javascript:mapContent:${hash(mapForFrame)}}`,
       () => {
         return this.loadSourceMapFile(mapForFrame);
       }
     );
 
+    timer1.stop();
+
     if (!mapContent) {
       return stackFrame;
     }
 
+    const timer2 = new Timer('consumeSourceMap', eventTagTimer);
     let consumer = await this.consumeSourceMap(mapContent);
-    // let consumer = await CacheClass.getCached(
-    //   `javascript:consumer:${hash(mapContent)}}`,
-    //   () => {
-    //     return this.consumeSourceMap(mapContent);
-    //   }
-    // );
+
+    timer2.stop();
 
     /**
      * Error's original position
      */
+    const timer3 = new Timer('originalPositionFor', eventTagTimer);
     const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
     });
 
+    timer3.stop();
+
     /**
      * Source code lines
      * 5 above and 5 below
      */
+    const timer4 = new Timer('readSourceLines', eventTagTimer);
     const lines = this.readSourceLines(consumer, originalLocation);
+
+    timer4.stop();
 
     consumer.destroy();
     consumer = null;
@@ -229,8 +264,6 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {SourceMapDataExtended} map - saved file info without content
    */
   private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
-    console.log('loadSourceMapFile');
-
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
 
