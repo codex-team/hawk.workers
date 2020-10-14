@@ -2,6 +2,15 @@ import { GroupedEventDBScheme } from 'hawk.types';
 import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
 import { ObjectId } from 'mongodb';
 import '../../../env-test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+/**
+ * Load local environment configuration
+ */
+const testEnv = dotenv.config({ path: path.resolve(__dirname, '../.env.test') }).parsed;
+
+Object.assign(process.env, testEnv);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
