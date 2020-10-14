@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   lint:
-    name: ESlint
+    name: Unit testing
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
