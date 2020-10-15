@@ -9,11 +9,12 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import CacheClass from '../../../lib/cache/controller';
 import crypto from 'crypto';
 import HawkCatcher from '@hawk.so/nodejs';
 import { ObjectID } from 'mongodb';
 import Timer from '../../../lib/utils/timer';
+// import CacheClass from '../../../lib/cache/controller';
+import CacheClass from '../../../lib/cache/memory';
 
 const hash: Function = function (value): string {
   value = JSON.stringify(value);
