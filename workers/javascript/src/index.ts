@@ -87,14 +87,14 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
-    eventTagTimer = hash(event.payload);
+    // eventTagTimer = hash(event.payload);
 
     if (event.payload.release && event.payload.backtrace) {
-      const timer = new Timer('Total time', eventTagTimer);
+      // const timer = new Timer('Total time', eventTagTimer);
 
       event.payload.backtrace = await this.beautifyBacktrace(event);
 
-      timer.stop();
+      // timer.stop();
     }
 
     await this.addTask(WorkerNames.GROUPER, {
@@ -112,32 +112,21 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    /**
-     * Find source map in Mongo
-     */
-    const timer = new Timer('getReleaseRecord (old)', eventTagTimer);
-    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
-      event.projectId,
-      event.payload.release.toString()
-    );
-
-    timer.stop();
-
-    const timer1 = new Timer('getReleaseRecord (new)', eventTagTimer);
-
-    // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
-    await CacheClass.getCached(
-      `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
-      () => {
-        return this.getReleaseRecord(
-          event.projectId,
-          event.payload.release.toString()
-        );
-      }
-    );
-    timer1.stop();
-
-    // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+    // /**
+    //  * Find source map in Mongo
+    //  */
+    // const timer = new Timer('getReleaseRecord (old)', eventTagTimer);
+    // const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
+    //   event.projectId,
+    //   event.payload.release.toString()
+    // );
+    //
+    // timer.stop();
+    //
+    // const timer1 = new Timer('getReleaseRecord (new)', eventTagTimer);
+    //
+    // // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+    // await CacheClass.getCached(
     //   `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
     //   () => {
     //     return this.getReleaseRecord(
@@ -146,6 +135,17 @@ export default class JavascriptEventWorker extends EventWorker {
     //     );
     //   }
     // );
+    // timer1.stop();
+
+    const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
+      `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
+      () => {
+        return this.getReleaseRecord(
+          event.projectId,
+          event.payload.release.toString()
+        );
+      }
+    );
 
     if (!releaseRecord) {
       return event.payload.backtrace;
@@ -199,34 +199,34 @@ export default class JavascriptEventWorker extends EventWorker {
       return stackFrame;
     }
 
-    /**
-     * Load source map content from Grid fs
-     */
-    const timer = new Timer('loadSourceMapFile (old)', eventTagTimer);
-    const mapContent = await this.loadSourceMapFile(mapForFrame);
+    // /**
+    //  * Load source map content from Grid fs
+    //  */
+    // const timer = new Timer('loadSourceMapFile (old)', eventTagTimer);
+    // const mapContent = await this.loadSourceMapFile(mapForFrame);
+    //
+    // timer.stop();
+    //
+    // const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
 
-    timer.stop();
-
-    const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
-
-    // const mapContent = await CacheClass.getCached(
-    await CacheClass.getCached(
+    const mapContent = await CacheClass.getCached(
+    // await CacheClass.getCached(
       `javascript:mapContent:${hash(mapForFrame)}}`,
       () => {
         return this.loadSourceMapFile(mapForFrame);
       }
     );
 
-    timer1.stop();
+    // timer1.stop();
 
     if (!mapContent) {
       return stackFrame;
     }
 
-    const timer2 = new Timer('consumeSourceMap', eventTagTimer);
+    // const timer2 = new Timer('consumeSourceMap', eventTagTimer);
     let consumer = await this.consumeSourceMap(mapContent);
 
-    timer2.stop();
+    // timer2.stop();
 
     /**
      * Error's original position
