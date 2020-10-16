@@ -208,16 +208,12 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    try {
-      const collection = this.db.getConnection().collection(`events:${projectId}`);
+    const collection = this.db.getConnection().collection(`events:${projectId}`);
 
-      encodeUnsafeFields(groupedEventData);
+    encodeUnsafeFields(groupedEventData);
 
-      return (await collection
-        .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
-    }
+    return (await collection
+      .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
   }
 
   /**
