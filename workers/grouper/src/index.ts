@@ -9,6 +9,7 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
+import HawkCatcher from '@hawk.so/nodejs';
 
 /**
  * Error code of MongoDB key duplication error
@@ -96,6 +97,7 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code.toString() === DB_DUPLICATE_KEY_ERROR) {
+          HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
         } else {
           throw e;
