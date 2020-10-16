@@ -231,22 +231,22 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Error's original position
      */
-    const timer3 = new Timer('originalPositionFor', eventTagTimer);
+    // const timer3 = new Timer('originalPositionFor', eventTagTimer);
     const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
     });
 
-    timer3.stop();
+    // timer3.stop();
 
     /**
      * Source code lines
      * 5 above and 5 below
      */
-    const timer4 = new Timer('readSourceLines', eventTagTimer);
+    // const timer4 = new Timer('readSourceLines', eventTagTimer);
     const lines = this.readSourceLines(consumer, originalLocation);
 
-    timer4.stop();
+    // timer4.stop();
 
     consumer.destroy();
     consumer = null;
