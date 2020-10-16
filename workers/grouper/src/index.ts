@@ -10,6 +10,9 @@ import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
+/**
+ * Error code of MongoDB key duplication error
+ */
 const DB_DUPLICATE_KEY_ERROR = '11000';
 
 /**
