@@ -10,6 +10,8 @@ import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
+const DB_DUPLICATE_KEY_ERROR = '11000';
+
 /**
  * Worker for handling Javascript events
  */
@@ -74,16 +76,28 @@ export default class GrouperWorker extends Worker {
     let repetitionId = null;
 
     if (isFirstOccurrence) {
-      /**
-       * Insert new event
-       */
-      await this.saveEvent(task.projectId, {
-        groupHash: uniqueEventHash,
-        totalCount: 1,
-        catcherType: task.catcherType,
-        payload: task.event,
-        usersAffected: 1,
-      } as GroupedEventDBScheme);
+      try {
+        /**
+         * Insert new event
+         */
+        await this.saveEvent(task.projectId, {
+          groupHash: uniqueEventHash,
+          totalCount: 1,
+          catcherType: task.catcherType,
+          payload: task.event,
+          usersAffected: 1,
+        } as GroupedEventDBScheme);
+      } catch (e) {
+        /**
+         * If we caught Database duplication error, then another worker thread has already saved it to the database
+         * and we need to process this event as repetition
+         */
+        if (e.code.toString() === DB_DUPLICATE_KEY_ERROR) {
+          await this.handle(task);
+        } else {
+          throw e;
+        }
+      }
     } else {
       const incrementAffectedUsers = await this.shouldIncrementAffectedUsers(task, existedEvent);
 
