@@ -223,41 +223,27 @@ export default class JavascriptEventWorker extends EventWorker {
       return stackFrame;
     }
 
-    // const timer2 = new Timer('consumeSourceMap', eventTagTimer);
-
-    // let consumer = await this.consumeSourceMap(mapContent);
-    let consumer = await CacheClass.getCached(
-      `javascript:consumeSourceMap:${hash(mapContent)}}`,
-      () => {
-        return this.consumeSourceMap(mapContent);
-      }
-    );
-
-    // console.log('typeof consumer');
-    //
-    // return;
-
-    // timer2.stop();
+    let consumer = await this.consumeSourceMap(mapContent);
+    // let consumer = await CacheClass.getCached(
+    //   `javascript:consumeSourceMap:${hash(mapContent)}}`,
+    //   () => {
+    //     return this.consumeSourceMap(mapContent);
+    //   }
+    // );
 
     /**
      * Error's original position
      */
-    // const timer3 = new Timer('originalPositionFor', eventTagTimer);
     const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
     });
 
-    // timer3.stop();
-
     /**
      * Source code lines
      * 5 above and 5 below
      */
-    // const timer4 = new Timer('readSourceLines', eventTagTimer);
     const lines = this.readSourceLines(consumer, originalLocation);
-
-    // timer4.stop();
 
     consumer.destroy();
     consumer = null;
