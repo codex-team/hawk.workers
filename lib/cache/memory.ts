@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 type CacheValue = any; // eslint-disable-line
 
 // const CACHE_FILE = path.join(__dirname, '..', '..', 'cache', 'store.json');
-const CACHE_LIFE = 300;
+const CACHE_LIFE = 60;
 
 /**
  * File cache controller
@@ -68,8 +68,7 @@ class CacheController {
 
 const CacheClass = new CacheController({
   stdTTL: CACHE_LIFE,
-  checkperiod: 150,
-  maxKeys: 50,
+  checkperiod: 30,
   useClones: false,
 });
 
