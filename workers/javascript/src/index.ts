@@ -224,7 +224,18 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     // const timer2 = new Timer('consumeSourceMap', eventTagTimer);
-    let consumer = await this.consumeSourceMap(mapContent);
+
+    // let consumer = await this.consumeSourceMap(mapContent);
+    let consumer = await CacheClass.getCached(
+      `javascript:consumeSourceMap:${hash(mapContent)}}`,
+      () => {
+        return this.consumeSourceMap(mapContent);
+      }
+    );
+
+    // console.log('typeof consumer');
+    //
+    // return;
 
     // timer2.stop();
 
