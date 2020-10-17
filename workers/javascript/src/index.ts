@@ -155,14 +155,19 @@ export default class JavascriptEventWorker extends EventWorker {
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
-      return this.consumeBacktraceFrame(frame, releaseRecord)
-        .catch((error) => {
-          this.logger.error('Error while consuming ' + error.stack);
+      return CacheClass.getCached(
+        `javascript:consumeBacktraceFrame:${hash(event.payload.release.toString())}:${hash(frame)}:${hash(index)}`,
+        () => {
+          return this.consumeBacktraceFrame(frame, releaseRecord)
+            .catch((error) => {
+              this.logger.error('Error while consuming ' + error.stack);
 
-          HawkCatcher.send(error);
+              HawkCatcher.send(error);
 
-          return event.payload.backtrace[index];
-        });
+              return event.payload.backtrace[index];
+            });
+        }
+      );
     }));
   }
 
