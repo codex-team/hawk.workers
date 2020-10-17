@@ -209,13 +209,13 @@ export default class JavascriptEventWorker extends EventWorker {
     //
     // const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
 
-    const mapContent = await this.loadSourceMapFile(mapForFrame);
-    // const mapContent = await CacheClass.getCached(
-    //   `javascript:mapContent:${hash(mapForFrame)}}`,
-    //   () => {
-    //     return this.loadSourceMapFile(mapForFrame);
-    //   }
-    // );
+    // const mapContent = await this.loadSourceMapFile(mapForFrame);
+    const mapContent = await CacheClass.getCached(
+      `javascript:mapContent:${hash(mapForFrame)}}`,
+      () => {
+        return this.loadSourceMapFile(mapForFrame);
+      }
+    );
 
     // timer1.stop();
 
