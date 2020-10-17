@@ -209,13 +209,13 @@ export default class JavascriptEventWorker extends EventWorker {
     //
     // const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
 
-    const mapContent = await CacheClass.getCached(
-    // await CacheClass.getCached(
-      `javascript:mapContent:${hash(mapForFrame)}}`,
-      () => {
-        return this.loadSourceMapFile(mapForFrame);
-      }
-    );
+    const mapContent = await this.loadSourceMapFile(mapForFrame);
+    // const mapContent = await CacheClass.getCached(
+    //   `javascript:mapContent:${hash(mapForFrame)}}`,
+    //   () => {
+    //     return this.loadSourceMapFile(mapForFrame);
+    //   }
+    // );
 
     // timer1.stop();
 
@@ -225,13 +225,13 @@ export default class JavascriptEventWorker extends EventWorker {
 
     // const timer2 = new Timer('consumeSourceMap', eventTagTimer);
 
-    // let consumer = await this.consumeSourceMap(mapContent);
-    let consumer = await CacheClass.getCached(
-      `javascript:consumeSourceMap:${hash(mapContent)}}`,
-      () => {
-        return this.consumeSourceMap(mapContent);
-      }
-    );
+    let consumer = await this.consumeSourceMap(mapContent);
+    // let consumer = await CacheClass.getCached(
+    //   `javascript:consumeSourceMap:${hash(mapContent)}}`,
+    //   () => {
+    //     return this.consumeSourceMap(mapContent);
+    //   }
+    // );
 
     // console.log('typeof consumer');
     //
