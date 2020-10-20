@@ -1853,9 +1853,9 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-"codex-accounting-sdk@https://github.com/codex-team/codex-accounting-sdk":
-  version "1.1.0"
-  resolved "https://github.com/codex-team/codex-accounting-sdk#6aee52ddbee09cf0ee5b4b0a5181ef1fea0f4ebd"
+codex-accounting-sdk@codex-team/codex-accounting-sdk:
+  version "1.2.2"
+  resolved "https://codeload.github.com/codex-team/codex-accounting-sdk/tar.gz/a0f09a1014b30bedf934ac1e73b89d70a6661605"
   dependencies:
     "@types/node" "^14.6.4"
     axios "^0.20.0"
