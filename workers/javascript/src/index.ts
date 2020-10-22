@@ -264,15 +264,11 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Downloads source map file from Grid FS
    *
-   * @param {SourceMapDataExtended} map - saved file info without content
+   * @param map - saved file info without content.
    */
   private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
-
-      if (typeof map._id === 'string') {
-        map._id = new ObjectID(map._id);
-      }
 
       const readstream = this.db.getBucket().openDownloadStream(map._id)
         .on('data', (chunk) => {
