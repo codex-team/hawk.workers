@@ -11,7 +11,6 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import crypto from 'crypto';
 import HawkCatcher from '@hawk.so/nodejs';
-// import CacheClass from '../../../lib/cache/controller';
 import CacheClass from '../../../lib/cache/controller';
 
 const hash: Function = function (value): string {
@@ -20,8 +19,6 @@ const hash: Function = function (value): string {
   return crypto.createHash('md5').update(value)
     .digest('hex');
 };
-
-let eventTagTimer;
 
 /**
  * Worker for handling Javascript events
@@ -177,12 +174,18 @@ export default class JavascriptEventWorker extends EventWorker {
       return stackFrame;
     }
 
+    /**
+     * Load source map content from Grid fs
+     */
     const mapContent = await this.loadSourceMapFile(mapForFrame);
 
     if (!mapContent) {
       return stackFrame;
     }
 
+    /**
+     * @todo cache source map consumer for file-keys
+     */
     let consumer = await this.consumeSourceMap(mapContent);
 
     /**
