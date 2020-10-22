@@ -1,14 +1,14 @@
 import NodeCache from 'node-cache';
 
+/**
+ * @typedef {any} CacheValue
+ */
 type CacheValue = any; // eslint-disable-line
 
-// const CACHE_FILE = path.join(__dirname, '..', '..', 'cache', 'store.json');
-const CACHE_LIFE = 60;
-
 /**
- * File cache controller
+ * Controller object for cache engine
  */
-class CacheController {
+class Cache {
   /**
    * Cache class
    *
@@ -17,35 +17,43 @@ class CacheController {
   private cache: NodeCache;
 
   /**
-   * Create a new cache
-   *
-   * @param {} options - Cache class options
+   * Create a new cache instance
    */
-  constructor(options) {
+  constructor() {
+    /**
+     * NodeCache options
+     */
+    const options = {
+      stdTTL: 60,
+      checkperiod: 30,
+      useClones: false,
+    };
+
     this.cache = new NodeCache(options);
   }
 
   /**
-   * Save
+   * Save data to cache
    *
-   * @param key
-   * @param value
+   * @param {string} key — cache key
+   * @param {CacheValue} value — cached data
    */
   public set(key: string, value: CacheValue): boolean {
     return this.cache.set(key, value);
   }
 
   /**
-   * Get
+   * Get data from cache
    *
-   * @param key
+   * @param {string} key — cache key
+   * @returns {CacheValue} — cached data
    */
   public get(key: string): CacheValue {
     return this.cache.get(key);
   }
 
   /**
-   * Method for getting cached value or resolve and cache one
+   * Method for getting cached value (or resolve and cache if it is necessary)
    *
    * @param {string} key - cache key
    * @param {Function} resolver - function for getting value
@@ -53,23 +61,28 @@ class CacheController {
   public async getCached(key, resolver: Function): Promise<any> { // eslint-disable-line
     let value = this.get(key);
 
+    /**
+     * If value is missing then resolve it and save
+     */
     if (!value) {
+      /**
+       * Get value from resolver function
+       */
       value = await resolver();
 
+      /**
+       * Save data
+       */
       this.set(key, value);
-    //   console.log(`Save to cache. Key ${key}`);
-    // } else {
-    //   console.log(`Get from cache. Key ${key}`);
     }
 
     return value;
   }
 }
 
-const CacheClass = new CacheController({
-  stdTTL: CACHE_LIFE,
-  checkperiod: 30,
-  useClones: false,
-});
+/**
+ * Create a class instance
+ */
+const CacheClass = new Cache();
 
 export default CacheClass;

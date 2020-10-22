@@ -11,10 +11,8 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import crypto from 'crypto';
 import HawkCatcher from '@hawk.so/nodejs';
-import { ObjectID } from 'mongodb';
-import Timer from '../../../lib/utils/timer';
 // import CacheClass from '../../../lib/cache/controller';
-import CacheClass from '../../../lib/cache/memory';
+import CacheClass from '../../../lib/cache/controller';
 
 const hash: Function = function (value): string {
   value = JSON.stringify(value);
@@ -87,14 +85,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
-    // eventTagTimer = hash(event.payload);
-
     if (event.payload.release && event.payload.backtrace) {
-      // const timer = new Timer('Total time', eventTagTimer);
-
       event.payload.backtrace = await this.beautifyBacktrace(event);
-
-      // timer.stop();
     }
 
     await this.addTask(WorkerNames.GROUPER, {
@@ -112,31 +104,6 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    // /**
-    //  * Find source map in Mongo
-    //  */
-    // const timer = new Timer('getReleaseRecord (old)', eventTagTimer);
-    // const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
-    //   event.projectId,
-    //   event.payload.release.toString()
-    // );
-    //
-    // timer.stop();
-    //
-    // const timer1 = new Timer('getReleaseRecord (new)', eventTagTimer);
-    //
-    // // const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
-    // await CacheClass.getCached(
-    //   `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
-    //   () => {
-    //     return this.getReleaseRecord(
-    //       event.projectId,
-    //       event.payload.release.toString()
-    //     );
-    //   }
-    // );
-    // timer1.stop();
-
     const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
       `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
       () => {
@@ -155,6 +122,9 @@ export default class JavascriptEventWorker extends EventWorker {
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
+      /**
+       * Get cached (or set if the value is missing) real backtrace frame
+       */
       return CacheClass.getCached(
         `javascript:consumeBacktraceFrame:${hash(event.payload.release.toString())}:${hash(frame)}:${hash(index)}`,
         () => {
@@ -162,6 +132,9 @@ export default class JavascriptEventWorker extends EventWorker {
             .catch((error) => {
               this.logger.error('Error while consuming ' + error.stack);
 
+              /**
+               * Send error to Hawk
+               */
               HawkCatcher.send(error);
 
               return event.payload.backtrace[index];
@@ -204,37 +177,13 @@ export default class JavascriptEventWorker extends EventWorker {
       return stackFrame;
     }
 
-    // /**
-    //  * Load source map content from Grid fs
-    //  */
-    // const timer = new Timer('loadSourceMapFile (old)', eventTagTimer);
-    // const mapContent = await this.loadSourceMapFile(mapForFrame);
-    //
-    // timer.stop();
-    //
-    // const timer1 = new Timer('loadSourceMapFile (new)', eventTagTimer);
-
     const mapContent = await this.loadSourceMapFile(mapForFrame);
-    // const mapContent = await CacheClass.getCached(
-    //   `javascript:mapContent:${hash(mapForFrame)}}`,
-    //   () => {
-    //     return this.loadSourceMapFile(mapForFrame);
-    //   }
-    // );
-
-    // timer1.stop();
 
     if (!mapContent) {
       return stackFrame;
     }
 
     let consumer = await this.consumeSourceMap(mapContent);
-    // let consumer = await CacheClass.getCached(
-    //   `javascript:consumeSourceMap:${hash(mapContent)}}`,
-    //   () => {
-    //     return this.consumeSourceMap(mapContent);
-    //   }
-    // );
 
     /**
      * Error's original position
