@@ -9,16 +9,9 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import crypto from 'crypto';
 import HawkCatcher from '@hawk.so/nodejs';
-import CacheClass from '../../../lib/cache/controller';
-
-const hash: Function = function (value): string {
-  value = JSON.stringify(value);
-
-  return crypto.createHash('md5').update(value)
-    .digest('hex');
-};
+import CacheManager from '../../../lib/cache/controller';
+import Crypto from '../../../lib/utils/crypto';
 
 /**
  * Worker for handling Javascript events
@@ -101,8 +94,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    const releaseRecord: SourceMapsRecord = await CacheClass.getCached(
-      `javascript:releaseRecord:${event.projectId}:${hash(event.payload.release.toString())}`,
+    const releaseRecord: SourceMapsRecord = await CacheManager.getCached(
+      `javascript:releaseRecord:${event.projectId}:${Crypto.hash(event.payload.release.toString())}`,
       () => {
         return this.getReleaseRecord(
           event.projectId,
@@ -122,8 +115,8 @@ export default class JavascriptEventWorker extends EventWorker {
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
-      return CacheClass.getCached(
-        `javascript:consumeBacktraceFrame:${hash(event.payload.release.toString())}:${hash(frame)}:${hash(index)}`,
+      return CacheManager.getCached(
+        `javascript:consumeBacktraceFrame:${Crypto.hash(event.payload.release.toString())}:${Crypto.hash(frame)}:${Crypto.hash(index)}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
             .catch((error) => {

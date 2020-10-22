@@ -83,6 +83,6 @@ class Cache {
 /**
  * Create a class instance
  */
-const CacheClass = new Cache();
+const CacheManager = new Cache();
 
-export default CacheClass;
+export default CacheManager;
