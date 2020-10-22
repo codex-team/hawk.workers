@@ -5,4 +5,3 @@ coverage
 .idea
 .DS_Store
 globalConfig.json
-cache/store.json
