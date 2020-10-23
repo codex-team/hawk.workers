@@ -187,7 +187,7 @@ Methods:
 - `CacheManager.set(key: string, value: any)` — cache data
 - `CacheManager.get(key: string)` — get cached data
 - `CacheManager.del(key: string|string[])` — delete cached data
-- `CacheManager.getCached(key: string, resolver: Function)` — get data (cached / resolved and cached)  public flushAll(): void {
+- `CacheManager.getCached(key: string, resolver: Function)` — get data (cached / resolved and cached)
 - `CacheManager.flushAll()` — flush the whole data
  
 
