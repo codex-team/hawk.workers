@@ -190,7 +190,6 @@ Methods:
 - `CacheManager.getCached(key: string, resolver: Function)` — get data (cached / resolved and cached)
 - `CacheManager.flushAll()` — flush the whole data
  
-
 ## Migrations
 
 To create new migration use command
