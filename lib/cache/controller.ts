@@ -53,6 +53,16 @@ class Cache {
   }
 
   /**
+   * Delete value(-s) by key (or array of keys)
+   *
+   * @param {string|string[]} key
+   * @returns {number} — number of deleted keys
+   */
+  public del(key: string|string[]): number {
+    return this.cache.del(key);
+  }
+
+  /**
    * Method for getting cached value (or resolve and cache if it is necessary)
    *
    * @param {string} key - cache key
@@ -77,6 +87,15 @@ class Cache {
     }
 
     return value;
+  }
+
+  /**
+   * Flush the whole data
+   *
+   * @returns {void}
+   */
+  public flushAll(): void {
+    this.cache.flushAll();
   }
 }
 

@@ -12,6 +12,7 @@
         "test": "jest --coverage",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
+        "test:cache": "jest lib/cache",
         "test:nodejs": "jest workers/nodejs",
         "test:slack": "jest workers/slack",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",

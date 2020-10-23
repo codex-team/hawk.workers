@@ -176,6 +176,21 @@ await db.saveEvent(event);
 }
 ```
 
+## Cache controller
+
+To reduce an amount of requests or any performance improvements you can use internal cache module.
+
+CacheManager class available to be exported from [lib/cache/controller](./lib/cache/controller)
+
+Methods:
+
+- `CacheManager.set(key: string, value: any)` — cache data
+- `CacheManager.get(key: string)` — get cached data
+- `CacheManager.del(key: string|string[])` — delete cached data
+- `CacheManager.getCached(key: string, resolver: Function)` — get data (cached / resolved and cached)  public flushAll(): void {
+- `CacheManager.flushAll()` — flush the whole data
+ 
+
 ## Migrations
 
 To create new migration use command
