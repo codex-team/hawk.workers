@@ -6,7 +6,7 @@
   "author": "CodeX",
   "license": "UNLICENSED",
   "private": true,
-  "workerType": "paymaster",
+  "workerType": "cron-tasks/paymaster",
   "dependencies": {
     "axios": "^0.21.0"
   }
