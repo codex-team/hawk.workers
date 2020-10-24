@@ -303,7 +303,7 @@ export default class PaymasterWorker extends Worker {
       return;
     }
 
-    reportData
+    reportData = reportData
       .filter(([, chargedAmount]) => chargedAmount > 0)
       .sort(([, a], [, b]) => b - a);
 
