@@ -60,8 +60,8 @@ export default class PaymasterWorker extends Worker {
     const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    this.businessOperations = connection.collection('business_operations');
-    const plansCollection = connection.collection<PlanDBScheme>('tariff_plans');
+    this.businessOperations = connection.collection('businessOperations');
+    const plansCollection = connection.collection<PlanDBScheme>('plans');
 
     this.plans = await plansCollection.find({}).toArray();
 
