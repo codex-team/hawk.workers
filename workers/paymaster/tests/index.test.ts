@@ -49,8 +49,8 @@ describe('PaymasterWorker', () => {
     });
 
     workspacesCollection = connection.db().collection<WorkspaceDBScheme>('workspaces');
-    tariffCollection = connection.db().collection<PlanDBScheme>('tariff_plans');
-    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('business_operations');
+    tariffCollection = connection.db().collection<PlanDBScheme>('plans');
+    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('businessOperations');
 
     await tariffCollection.insertOne(plan);
 
