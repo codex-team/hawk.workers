@@ -10,6 +10,7 @@ import { v4 as uuid } from 'uuid';
 
 jest.mock('amqplib');
 jest.mock('codex-accounting-sdk');
+jest.mock('axios');
 
 (Accounting.prototype.purchase as jest.Mock).mockImplementation(() => Promise.resolve({
   recordId: uuid(),
@@ -48,8 +49,8 @@ describe('PaymasterWorker', () => {
     });
 
     workspacesCollection = connection.db().collection<WorkspaceDBScheme>('workspaces');
-    tariffCollection = connection.db().collection<PlanDBScheme>('tariff_plans');
-    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('business_operations');
+    tariffCollection = connection.db().collection<PlanDBScheme>('plans');
+    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('businessOperations');
 
     await tariffCollection.insertOne(plan);
 
