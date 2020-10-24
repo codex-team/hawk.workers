@@ -154,11 +154,19 @@ export default class PaymasterWorker extends Worker {
     );
 
     /**
-     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If workspace use free tariff plan then do nothing
      */
-    if (!this.isTimeToPay(workspace.lastChargeDate)) {
+    if (currentPlan.monthlyCharge === 0) {
       return [workspace, 0]; // no charging
     }
+
+    /**
+     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     */
+    if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
+      return [workspace, 0]; // no charging
+    }
+
     // todo: Check that workspace did not exceed the limit
 
     await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
