@@ -144,6 +144,7 @@ export default class PaymasterWorker extends Worker {
 
   /**
    * Handles charging
+   * Returns tuple with workspace data and charged amount
    *
    * @param workspace - workspace to check
    */
@@ -156,7 +157,7 @@ export default class PaymasterWorker extends Worker {
      * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
      */
     if (!this.isTimeToPay(workspace.lastChargeDate)) {
-      return [workspace, 0];
+      return [workspace, 0]; // no charging
     }
     // todo: Check that workspace did not exceed the limit
 
