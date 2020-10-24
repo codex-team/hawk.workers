@@ -10,6 +10,7 @@ import { v4 as uuid } from 'uuid';
 
 jest.mock('amqplib');
 jest.mock('codex-accounting-sdk');
+jest.mock('axios');
 
 (Accounting.prototype.purchase as jest.Mock).mockImplementation(() => Promise.resolve({
   recordId: uuid(),

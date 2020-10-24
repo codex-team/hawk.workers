@@ -306,7 +306,7 @@ export default class PaymasterWorker extends Worker {
       .filter(([, chargedAmount]) => chargedAmount > 0)
       .sort(([, a], [, b]) => b - a);
 
-    let report = process.env.SERVER_NAME ? ` Hawk Paymaster worker (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster worker 💰\n';
+    let report = process.env.SERVER_NAME ? ` Hawk Paymaster (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster 💰\n';
     let totalChargedAmount = 0;
 
     reportData.forEach(([workspace, chargedAmount]) => {
