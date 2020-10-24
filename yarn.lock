@@ -1861,8 +1861,8 @@ code-point-at@^1.0.0:
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
 codex-accounting-sdk@codex-team/codex-accounting-sdk:
-  version "1.2.2"
-  resolved "https://codeload.github.com/codex-team/codex-accounting-sdk/tar.gz/a0f09a1014b30bedf934ac1e73b89d70a6661605"
+  version "1.2.3"
+  resolved "https://codeload.github.com/codex-team/codex-accounting-sdk/tar.gz/d8332f669817da67ac0dd3d4165edf8b2cc6e24e"
   dependencies:
     "@types/node" "^14.6.4"
     axios "^0.20.0"
