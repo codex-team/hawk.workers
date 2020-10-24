@@ -13,6 +13,7 @@ import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOpe
 import dotenv from 'dotenv';
 import path from 'path';
 import Accounting from 'codex-accounting-sdk';
+import axios from 'axios';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -134,11 +135,11 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspacePlanChargeEvent(event: WorkspacePlanChargeEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    try {
-      await Promise.all(workspaces.map((workspace) => this.processWorkspacePlanCharge(workspace)));
-    } catch (e) {
-      this.logger.error(e);
-    }
+    const result = await Promise.all(workspaces.map(
+      (workspace) => this.processWorkspacePlanCharge(workspace)
+    ));
+
+    await this.sendReport(result);
   }
 
   /**
@@ -146,7 +147,7 @@ export default class PaymasterWorker extends Worker {
    *
    * @param workspace - workspace to check
    */
-  private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<void> {
+  private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, number]> {
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
@@ -155,12 +156,13 @@ export default class PaymasterWorker extends Worker {
      * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
      */
     if (!this.isTimeToPay(workspace.lastChargeDate)) {
-      return;
+      return [workspace, 0];
     }
     // todo: Check that workspace did not exceed the limit
-    // todo: withdraw the required amount of funds (how to calculate it?)
 
     await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
+
+    return [workspace, currentPlan.monthlyCharge];
   }
 
   /**
@@ -286,5 +288,38 @@ export default class PaymasterWorker extends Worker {
       now.getMonth() === date.getMonth() &&
       now.getDate() === date.getDate()
     );
+  }
+
+  /**
+   * Send report with charged workspaces to Telegram
+   *
+   * @param reportData - data for sending report
+   */
+  private async sendReport(reportData: [WorkspaceDBScheme, number][]): Promise<void> {
+    if (!process.env.REPORT_NOTIFY_URL) {
+      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
+
+      return;
+    }
+
+    reportData
+      .filter(([, chargedAmount]) => chargedAmount > 0)
+      .sort(([, a], [, b]) => b - a);
+
+    let report = process.env.SERVER_NAME ? ` Hawk Paymaster worker (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster worker 💰\n';
+    let totalChargedAmount = 0;
+
+    reportData.forEach(([workspace, chargedAmount]) => {
+      report += `\n${chargedAmount}$ | <b>${encodeURIComponent(workspace.name)}</b> | <code>${workspace._id}</code>`;
+      totalChargedAmount += chargedAmount;
+    });
+
+    report += `\n\n<b>${totalChargedAmount}$</b> totally charged`;
+
+    await axios({
+      method: 'post',
+      url: process.env.REPORT_NOTIFY_URL,
+      data: 'message=' + report + '&parse_mode=HTML',
+    });
   }
 }
