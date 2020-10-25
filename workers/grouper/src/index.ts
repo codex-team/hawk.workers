@@ -10,6 +10,7 @@ import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
+import CacheManager from '../../../lib/cache/controller';
 
 /**
  * Error code of MongoDB key duplication error
@@ -167,11 +168,14 @@ export default class GrouperWorker extends Worker {
     if (isUserFromOriginalEvent) {
       return false;
     } else {
-      const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
-        .findOne({
-          groupHash: existedEvent.groupHash,
-          'payload.user.id': eventUser.id,
-        });
+      const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
+      const repetition = CacheManager.get(repetitionCacheKey, () => {
+        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+          .findOne({
+            groupHash: existedEvent.groupHash,
+            'payload.user.id': eventUser.id,
+          });
+      })
 
       /**
        * If there is no repetitions from this user — return true
@@ -191,13 +195,15 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    try {
+    const eventCacheKey = `${projectId}:${query.toString()}`
+    return CacheManager.get(eventCacheKey, () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
-        .findOne(query);
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
-    }
+        .findOne(query)
+        .catch((err) => {
+          throw new DatabaseReadWriteError(err);
+        })
+    });
   }
 
   /**
