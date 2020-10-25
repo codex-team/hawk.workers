@@ -32,14 +32,26 @@ export default class GrouperWorker extends Worker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
+   * Memoized Hashing computation
+   */
+  private static cachedHashValues: {[key: string]: string} = {};
+
+  /**
    * Get unique hash from event data
    *
    * @param task - worker task to create hash
    */
   private static getUniqueEventHash(task: GroupWorkerTask): string {
-    return crypto.createHmac('sha256', process.env.EVENT_SECRET)
-      .update(task.catcherType + task.event.title)
-      .digest('hex');
+    const computedHashValueCacheKey = `${task.catcherType}:${task.event.title}`;
+
+    if (!this.cachedHashValues[computedHashValueCacheKey]) {
+      this.cachedHashValues[computedHashValueCacheKey] = crypto.createHmac('sha256', process.env.EVENT_SECRET)
+        .update(task.catcherType + task.event.title)
+        .digest('hex');
+    }
+
+    return this.cachedHashValues[computedHashValueCacheKey];
+
   }
 
   /**
