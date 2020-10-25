@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache';
 
 /**
- * @typedef {any} CacheValue
+ * @typedef {any} CacheValue — cached data
  */
 type CacheValue = any; // eslint-disable-line
 
@@ -43,38 +43,19 @@ class Cache {
   }
 
   /**
-   * Get data from cache
+   * Get cached value (or resolve and cache if it is necessary)
    *
    * @param {string} key — cache key
+   * @param {Function} resolver — function for getting value
    * @returns {CacheValue} — cached data
    */
-  public get(key: string): CacheValue {
-    return this.cache.get(key);
-  }
-
-  /**
-   * Delete value(-s) by key (or array of keys)
-   *
-   * @param {string|string[]} key
-   * @returns {number} — number of deleted keys
-   */
-  public del(key: string|string[]): number {
-    return this.cache.del(key);
-  }
-
-  /**
-   * Method for getting cached value (or resolve and cache if it is necessary)
-   *
-   * @param {string} key - cache key
-   * @param {Function} resolver - function for getting value
-   */
-  public async getCached(key, resolver: Function): Promise<any> { // eslint-disable-line
-    let value = this.get(key);
+  public async get(key: string, resolver?: Function): Promise<CacheValue> {
+    let value = this.cache.get(key);
 
     /**
      * If value is missing then resolve it and save
      */
-    if (!value) {
+    if (!value && resolver) {
       /**
        * Get value from resolver function
        */
@@ -87,6 +68,16 @@ class Cache {
     }
 
     return value;
+  }
+
+  /**
+   * Delete value(-s) by key (or array of keys)
+   *
+   * @param {string|string[]} key - cache key
+   * @returns {number} — number of deleted keys
+   */
+  public del(key: string|string[]): number {
+    return this.cache.del(key);
   }
 
   /**

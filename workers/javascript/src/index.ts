@@ -94,7 +94,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    const releaseRecord: SourceMapsRecord = await CacheManager.getCached(
+    const releaseRecord: SourceMapsRecord = await CacheManager.get(
       `javascript:releaseRecord:${event.projectId}:${Crypto.hash(event.payload.release.toString())}`,
       () => {
         return this.getReleaseRecord(
@@ -115,7 +115,7 @@ export default class JavascriptEventWorker extends EventWorker {
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
-      return CacheManager.getCached(
+      return CacheManager.get(
         `javascript:consumeBacktraceFrame:${Crypto.hash(event.payload.release.toString())}:${Crypto.hash(frame)}:${Crypto.hash(index)}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
