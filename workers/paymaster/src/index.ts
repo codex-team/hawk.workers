@@ -12,7 +12,7 @@ import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent }
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
-import Accounting from 'codex-accounting-sdk';
+import Accounting, { PENNY_MULTIPLIER } from 'codex-accounting-sdk';
 import axios from 'axios';
 
 dotenv.config({
@@ -154,11 +154,20 @@ export default class PaymasterWorker extends Worker {
     );
 
     /**
-     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If workspace use free tariff plan then do nothing
      */
-    if (!this.isTimeToPay(workspace.lastChargeDate)) {
+    if (currentPlan.monthlyCharge === 0) {
       return [workspace, 0]; // no charging
     }
+
+    /**
+     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If lastChargeDate is undefined then charge tariff plan and set it
+     */
+    if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
+      return [workspace, 0]; // no charging
+    }
+
     // todo: Check that workspace did not exceed the limit
 
     await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
@@ -184,7 +193,7 @@ export default class PaymasterWorker extends Worker {
       transactionId: transactionId,
       payload: {
         workspaceId: workspace._id,
-        amount: planCost,
+        amount: planCost * PENNY_MULTIPLIER,
       },
       status: BusinessOperationStatus.Confirmed,
       type: BusinessOperationType.WorkspacePlanPurchase,
