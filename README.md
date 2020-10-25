@@ -185,9 +185,8 @@ CacheManager class available to be exported from [lib/cache/controller](./lib/ca
 Methods:
 
 - `CacheManager.set(key: string, value: any)` — cache data
-- `CacheManager.get(key: string)` — get cached data
+- `CacheManager.get(key: string, resolver?: Function)` — get cached data (or resolve and cache)
 - `CacheManager.del(key: string|string[])` — delete cached data
-- `CacheManager.getCached(key: string, resolver: Function)` — get data (cached / resolved and cached)
 - `CacheManager.flushAll()` — flush the whole data
  
 ## Migrations
