@@ -37,19 +37,25 @@ class Cache {
    *
    * @param {string} key — cache key
    * @param {CacheValue} value — cached data
+   * @param {number} ttl — data's time to live
    */
-  public set(key: string, value: CacheValue): boolean {
-    return this.cache.set(key, value);
+  public set(key: string, value: CacheValue, ttl?: number): boolean {
+    if (ttl) {
+      return this.cache.set(key, value, ttl);
+    } else {
+      return this.cache.set(key, value);
+    }
   }
 
   /**
    * Get cached value (or resolve and cache if it is necessary)
    *
    * @param {string} key — cache key
-   * @param {Function} resolver — function for getting value
+   * @param {Function} [resolver] — function for getting value
+   * @param {number} [ttl] — data's time to live
    * @returns {CacheValue} — cached data
    */
-  public async get(key: string, resolver?: Function): Promise<CacheValue> {
+  public async get(key: string, resolver?: Function, ttl?: number): Promise<CacheValue> {
     let value = this.cache.get(key);
 
     /**
@@ -64,7 +70,11 @@ class Cache {
       /**
        * Save data
        */
-      this.set(key, value);
+      if (ttl) {
+        this.set(key, value, ttl);
+      } else {
+        this.set(key, value);
+      }
     }
 
     return value;
