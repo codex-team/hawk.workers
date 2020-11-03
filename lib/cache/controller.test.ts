@@ -119,10 +119,23 @@ describe('Cache Controller', () => {
       // .get() will return undefined
       (cacheProvider.get as jest.Mock).mockImplementation(() => undefined);
 
+      /**
+       * Without ttl
+       */
       await cacheController.get(cacheKey, resolver);
 
       expect(resolver).toHaveBeenCalled();
       expect(cacheProvider.set).toHaveBeenCalledWith(cacheKey, resolvedValue);
+
+      /**
+       * And with ttl
+       */
+      const ttl = 10000;
+
+      await cacheController.get(cacheKey, resolver, ttl);
+
+      expect(resolver).toHaveBeenCalled();
+      expect(cacheProvider.set).toHaveBeenCalledWith(cacheKey, resolvedValue, ttl); 
     });
 
     it('should call .set() without prefix, because it is internal call', async () => {
@@ -182,6 +195,22 @@ describe('Cache Controller', () => {
       cacheController.del(cacheKey);
 
       expect(cacheProvider.del).toHaveBeenCalledWith(`${prefix}:${cacheKey}`);
+    });
+
+    it('should call provider\'s del() with prefix (array of keys)', () => {
+      const cacheKey1 = 'key1';
+      const cacheKey2 = 'key2';
+      const prefix = 'prefix';
+
+      const cacheProvider = new NodeCache();
+      const cacheController = new CacheController({
+        provider: cacheProvider,
+        prefix,
+      });
+
+      cacheController.del([cacheKey1, cacheKey2]);
+
+      expect(cacheProvider.del).toHaveBeenCalledWith([`${prefix}:${cacheKey1}`, `${prefix}:${cacheKey2}`]);
     });
   });
 
