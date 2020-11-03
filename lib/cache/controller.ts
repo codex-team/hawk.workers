@@ -24,7 +24,9 @@ export default class CacheController {
   /**
    * Create a new cache instance
    *
-   * @param {NodeCache} cacheProvider - cache provider (allows to mock in tests)
+   * @param {object} options - cache controller options
+   * @param {NodeCache} [options.provider] - cache provider (allows to mock in tests)
+   * @param {string} [options.prefix] - prefix for all the keys
    */
   constructor({ provider = undefined, prefix = '' }: { provider?: NodeCache; prefix?: string} = {}) {
     this.prefix = prefix || '';
