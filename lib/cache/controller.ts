@@ -8,28 +8,36 @@ type CacheValue = any; // eslint-disable-line
 /**
  * Controller object for cache engine
  */
-class Cache {
+export default class CacheController {
   /**
-   * Cache class
+   * Cache provider class
    *
    * @private
    */
   private cache: NodeCache;
 
   /**
-   * Create a new cache instance
+   * Cache key prefix
    */
-  constructor() {
-    /**
-     * NodeCache options
-     */
-    const options = {
-      stdTTL: 60,
-      checkperiod: 30,
-      useClones: false,
-    };
+  private readonly prefix: string;
 
-    this.cache = new NodeCache(options);
+  /**
+   * Create a new cache instance
+   *
+   * @param {NodeCache} cacheProvider - cache provider (allows to mock in tests)
+   */
+  constructor({ provider = undefined, prefix = '' }: { provider?: NodeCache; prefix?: string} = {}) {
+    this.prefix = prefix || '';
+
+    if (provider) {
+      this.cache = provider;
+    } else {
+      this.cache = new NodeCache({
+        stdTTL: 60,
+        checkperiod: 30,
+        useClones: false,
+      });
+    }
   }
 
   /**
@@ -40,10 +48,12 @@ class Cache {
    * @param {number} [ttl] — data's time to live in seconds
    */
   public set(key: string, value: CacheValue, ttl?: number): boolean {
+    const keyPrefixed = this.getKey(key);
+
     if (ttl) {
-      return this.cache.set(key, value, ttl);
+      return this.cache.set(keyPrefixed, value, ttl);
     } else {
-      return this.cache.set(key, value);
+      return this.cache.set(keyPrefixed, value);
     }
   }
 
@@ -56,7 +66,9 @@ class Cache {
    * @returns {CacheValue} — cached data
    */
   public async get(key: string, resolver?: Function, ttl?: number): Promise<CacheValue> {
-    let value = this.cache.get(key);
+    const keyPrefixed = this.getKey(key);
+
+    let value = this.cache.get(keyPrefixed);
 
     /**
      * If value is missing then resolve it and save
@@ -87,6 +99,12 @@ class Cache {
    * @returns {number} — number of deleted keys
    */
   public del(key: string|string[]): number {
+    if (Array.isArray(key)) {
+      key = key.map(k => this.getKey(k));
+    } else {
+      key = this.getKey(key);
+    }
+
     return this.cache.del(key);
   }
 
@@ -98,11 +116,17 @@ class Cache {
   public flushAll(): void {
     this.cache.flushAll();
   }
+
+  /**
+   * Return key with prefix
+   *
+   * @param {string} key - cache prefix key
+   */
+  private getKey(key: string): string {
+    if (!this.prefix) {
+      return key;
+    }
+
+    return this.prefix + ':' + key;
+  }
 }
-
-/**
- * Create a class instance
- */
-const CacheManager = new Cache();
-
-export default CacheManager;

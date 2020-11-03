@@ -16,6 +16,7 @@
         "test:javascript": "jest workers/javascript",
         "test:nodejs": "jest workers/nodejs",
         "test:slack": "jest workers/slack",
+        "test:clear": "jest --clearCache",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
