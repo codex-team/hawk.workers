@@ -185,9 +185,12 @@ CacheManager class available to be exported from [lib/cache/controller](./lib/ca
 Methods:
 
 - `CacheManager.set(key: string, value: any, ttl?: number)` — cache data
-- `CacheManager.get(key: string, resolver?: Function, ttl?: number)` — get cached data (or resolve and cache)
+- `CacheManager.get(key: string, resolver?: Function, ttl?: number)` — get cached data (or resolve and cache). If you
+'ve passed a resolver, you may pass ttl too (for internal **set** command with resolver)
 - `CacheManager.del(key: string|string[])` — delete cached data
 - `CacheManager.flushAll()` — flush the whole data
+ 
+> `ttl` (time to live) in seconds
  
 ## Migrations
 

@@ -37,7 +37,7 @@ class Cache {
    *
    * @param {string} key — cache key
    * @param {CacheValue} value — cached data
-   * @param {number} ttl — data's time to live
+   * @param {number} [ttl] — data's time to live in seconds
    */
   public set(key: string, value: CacheValue, ttl?: number): boolean {
     if (ttl) {
@@ -52,7 +52,7 @@ class Cache {
    *
    * @param {string} key — cache key
    * @param {Function} [resolver] — function for getting value
-   * @param {number} [ttl] — data's time to live
+   * @param {number} [ttl] — data's time to live in seconds
    * @returns {CacheValue} — cached data
    */
   public async get(key: string, resolver?: Function, ttl?: number): Promise<CacheValue> {
