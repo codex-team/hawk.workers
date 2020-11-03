@@ -135,7 +135,7 @@ describe('Cache Controller', () => {
       await cacheController.get(cacheKey, resolver, ttl);
 
       expect(resolver).toHaveBeenCalled();
-      expect(cacheProvider.set).toHaveBeenCalledWith(cacheKey, resolvedValue, ttl); 
+      expect(cacheProvider.set).toHaveBeenCalledWith(cacheKey, resolvedValue, ttl);
     });
 
     it('should call .set() without prefix, because it is internal call', async () => {

@@ -10,7 +10,6 @@ import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
-import CacheManager from '../../../lib/cache/controller';
 import Crypto from '../../../lib/utils/crypto';
 
 /**
