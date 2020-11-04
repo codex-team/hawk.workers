@@ -20,7 +20,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ env.DOCKER_REPO }}
           tag_with_ref: true
-          push: ${{ endsWith(github.ref, '/stage') || endsWith(github.ref, '/prod') }}
+          push: ${{ endsWith(github.ref, '/stage') || endsWith(github.ref, '/prod') || endsWith(github.ref, '/experimental') }}
 
       - name: Deploy on stage
         if: endsWith(github.ref, '/stage')

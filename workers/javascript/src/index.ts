@@ -9,6 +9,8 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import HawkCatcher from '@hawk.so/nodejs';
+import Crypto from '../../../lib/utils/crypto';
 
 /**
  * Worker for handling Javascript events
@@ -25,7 +27,7 @@ export default class JavascriptEventWorker extends EventWorker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
-   * Collection where source maps stroed
+   * Collection where source maps stored
    */
   private releasesDbCollectionName = 'releases-js';
 
@@ -55,6 +57,7 @@ export default class JavascriptEventWorker extends EventWorker {
   public async start(): Promise<void> {
     await this.db.connect();
     this.db.createGridFsBucket(this.releasesDbCollectionName);
+    this.prepareCache();
     await super.start();
   }
 
@@ -91,12 +94,15 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    /**
-     * Find source map in Mongo
-     */
-    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(
-      event.projectId,
-      event.payload.release.toString());
+    const releaseRecord: SourceMapsRecord = await this.cache.get(
+      `releaseRecord:${event.projectId}:${event.payload.release.toString()}`,
+      () => {
+        return this.getReleaseRecord(
+          event.projectId,
+          event.payload.release.toString()
+        );
+      }
+    );
 
     if (!releaseRecord) {
       return event.payload.backtrace;
@@ -106,12 +112,25 @@ export default class JavascriptEventWorker extends EventWorker {
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
-      return this.consumeBacktraceFrame(frame, releaseRecord)
-        .catch((error) => {
-          this.logger.error('Error while consuming ' + error);
+      /**
+       * Get cached (or set if the value is missing) real backtrace frame
+       */
+      return this.cache.get(
+        `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
+        () => {
+          return this.consumeBacktraceFrame(frame, releaseRecord)
+            .catch((error) => {
+              this.logger.error('Error while consuming ' + error.stack);
 
-          return event.payload.backtrace[index];
-        });
+              /**
+               * Send error to Hawk
+               */
+              HawkCatcher.send(error);
+
+              return event.payload.backtrace[index];
+            });
+        }
+      );
     }));
   }
 

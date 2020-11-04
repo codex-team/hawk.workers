@@ -6,7 +6,7 @@ services:
 
   hawk-worker-javascript:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -17,7 +17,7 @@ services:
 
   hawk-worker-sourcemaps:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -30,7 +30,7 @@ services:
 
   hawk-worker-nodejs:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -41,7 +41,7 @@ services:
 
   hawk-worker-python:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -56,7 +56,7 @@ services:
 
   hawk-worker-grouper:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -71,7 +71,7 @@ services:
 
   hawk-worker-archiver:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -87,7 +87,7 @@ services:
 
   hawk-worker-notifier:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -98,7 +98,7 @@ services:
 
   hawk-worker-email:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env
@@ -110,7 +110,7 @@ services:
 
   hawk-worker-telegram:
     build:
-      dockerfile: "Dockerfile.dev"
+      dockerfile: "dev.Dockerfile"
       context: .
     env_file:
       - .env

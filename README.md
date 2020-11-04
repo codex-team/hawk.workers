@@ -176,6 +176,24 @@ await db.saveEvent(event);
 }
 ```
 
+## Cache controller
+
+To reduce an amount of requests or any performance improvements you can use an [lib/cache/controller](./lib/cache/controller).
+
+To use it in worker, you need to:
+
+1. Call `this.prepareCache();` somewhere in worker to activate the cache module. For example, in `start()` method
+2. Use `this.cache.get(key, resover?, ttl?)` or `this.cache.set(key, value, ttl?)`
+
+Available methods:
+
+- `set(key: string, value: any, ttl?: number)` — cache data
+- `get(key: string, resolver?: Function, ttl?: number)` — get cached data (or resolve and cache). If you're passing a resolver, you may pass ttl too (for internal **set** command with resolver)
+- `del(key: string|string[])` — delete cached data
+- `flushAll()` — flush the whole data
+ 
+> `ttl` (time to live) in seconds
+ 
 ## Migrations
 
 To create new migration use command

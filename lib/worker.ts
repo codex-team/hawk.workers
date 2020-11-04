@@ -5,6 +5,7 @@ import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
+import CacheController from '../lib/cache/controller';
 
 /**
  * Base worker class for processing tasks
@@ -58,6 +59,12 @@ export abstract class Worker {
       }),
     ],
   });
+
+  /**
+   * Cache module.
+   * To use it in workers, call this.prepareCache()
+   */
+  protected cache: CacheController;
 
   /**
    * Prometheus metrics
@@ -175,6 +182,15 @@ export abstract class Worker {
       worker,
       Buffer.from(JSON.stringify(payload))
     );
+  }
+
+  /**
+   * Create cache controller instance
+   */
+  protected prepareCache(): void {
+    this.cache = new CacheController({
+      prefix: this.type,
+    });
   }
 
   /**
