@@ -227,7 +227,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
       await worker.handle(generateTask());
 
-      expect((await repetitionsCollection.find({})).toArray()[1].payload.context).toBe('{}');
+      expect((await repetitionsCollection.find({}).toArray())[1].payload.context).toBe('{}');
 
       /**
        * Should to be true when bug in utils.deepDiff will be fixed
@@ -255,8 +255,8 @@ describe('GrouperWorker', () => {
         },
       });
 
-      expect((await repetitionsCollection.find({})).toArray()[1].payload.context).toBe('{"testField":9}');
-      expect((await repetitionsCollection.find({})).toArray()[1].payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+      expect((await repetitionsCollection.find({}).toArray())[1].payload.context).toBe('{"testField":9}');
+      expect((await repetitionsCollection.find({}).toArray())[1].payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
     });
   });
 
