@@ -185,7 +185,6 @@ describe('GrouperWorker', () => {
 
     test('Should update last repetition id', async () => {
       await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
 
       const repetition = await repetitionsCollection.findOne({});
 
@@ -203,7 +202,7 @@ describe('GrouperWorker', () => {
 
       expect((await repetitionsCollection.find({
         groupHash: originalEvent.groupHash,
-      }).toArray()).length).toBe(2);
+      }).toArray()).length).toBe(3);
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
@@ -228,7 +227,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
       await worker.handle(generateTask());
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{}');
+      expect((await repetitionsCollection.findOne({})).toArray()[1].payload.context).toBe('{}');
 
       /**
        * Should to be true when bug in utils.deepDiff will be fixed
@@ -256,8 +255,8 @@ describe('GrouperWorker', () => {
         },
       });
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
-      expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+      expect((await repetitionsCollection.findOne({})).toArray()[1].payload.context).toBe('{"testField":9}');
+      expect((await repetitionsCollection.findOne({})).toArray()[1].payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
     });
   });
 
