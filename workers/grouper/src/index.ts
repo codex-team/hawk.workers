@@ -84,13 +84,28 @@ export default class GrouperWorker extends Worker {
         /**
          * Insert new event
          */
-        await this.saveEvent(task.projectId, {
+        const eventId = await this.saveEvent(task.projectId, {
           groupHash: uniqueEventHash,
           totalCount: 1,
           catcherType: task.catcherType,
           payload: task.event,
           usersAffected: 1,
         } as GroupedEventDBScheme);
+
+        const event = await this.getEvent(task.projectId, {
+          _id: eventId,
+        });
+
+        /**
+         * Save event's repetitions
+         */
+        const diff = utils.deepDiff(event.payload, task.event);
+        const newRepetition = {
+          groupHash: uniqueEventHash,
+          payload: diff,
+        } as RepetitionDBScheme;
+
+        repetitionId = await this.saveRepetition(task.projectId, newRepetition);
       } catch (e) {
         /**
          * If we caught Database duplication error, then another worker thread has already saved it to the database
