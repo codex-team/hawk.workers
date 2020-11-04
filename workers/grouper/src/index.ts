@@ -97,12 +97,16 @@ export default class GrouperWorker extends Worker {
         });
 
         /**
+         * Decode existed event to calculate diffs correctly
+         */
+        decodeUnsafeFields(event);
+
+        /**
          * Save event's repetitions
          */
-        const diff = utils.deepDiff(event.payload, task.event);
         const newRepetition = {
           groupHash: uniqueEventHash,
-          payload: diff,
+          payload: event.payload,
         } as RepetitionDBScheme;
 
         repetitionId = await this.saveRepetition(task.projectId, newRepetition);
