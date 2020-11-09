@@ -8,7 +8,7 @@ import './env';
 import { EventsTemplateVariables, TemplateEventData } from '../types/template-variables';
 import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerPersonalTask, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -74,7 +74,15 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
-  public async handle({ projectId, ruleId, events }: SenderWorkerTask): Promise<void> {
+  public async handle<T extends SenderWorkerTask>(taskData: T): Promise<void> {
+    if ('assigneeId' in taskData) {
+      return this.handlePersonalTask(taskData as SenderWorkerPersonalTask);
+    }
+
+    return this.handleEventTask(taskData as SenderWorkerEventTask);
+  }
+
+  private async handleEventTask({ projectId, ruleId, events }: SenderWorkerEventTask): Promise<void> {
     if (!this.channelType) {
       throw new Error('channelType for Sender worker is not set');
     }
@@ -126,6 +134,10 @@ export default abstract class SenderWorker extends Worker {
       events: eventsData,
       period: channel.minPeriod,
     } as EventsTemplateVariables);
+  }
+
+  private async handlePersonalTask(taskData: SenderWorkerPersonalTask): Promise<void> {
+    console.log('Send personal notification with this data', taskData);
   }
 
   /**
