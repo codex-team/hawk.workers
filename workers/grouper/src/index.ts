@@ -58,6 +58,7 @@ export default class GrouperWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.db.connect();
+    this.prepareCache();
     await super.start();
   }
 
