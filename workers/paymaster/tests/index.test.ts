@@ -1,15 +1,14 @@
 import PaymasterWorker from '../src';
 import { Collection, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import './rabbit.mock';
 import { EventType } from '../types/paymaster-worker-events';
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import MockDate from 'mockdate';
 import Accounting from 'codex-accounting-sdk';
 import { v4 as uuid } from 'uuid';
 
-jest.mock('amqplib');
 jest.mock('codex-accounting-sdk');
+jest.mock('axios');
 
 (Accounting.prototype.purchase as jest.Mock).mockImplementation(() => Promise.resolve({
   recordId: uuid(),
@@ -23,6 +22,14 @@ const plan: PlanDBScheme = {
   monthlyCharge: 1000,
   name: 'Mocked plan',
   isDefault: false,
+};
+
+const freePlan = {
+  eventsLimit: 1000,
+  _id: new ObjectId('5eec1fcde748a04c16632ae3'),
+  monthlyCharge: 0,
+  name: 'Mocked free plan',
+  isDefault: true,
 };
 
 const workspace: WorkspaceDBScheme = {
@@ -48,10 +55,10 @@ describe('PaymasterWorker', () => {
     });
 
     workspacesCollection = connection.db().collection<WorkspaceDBScheme>('workspaces');
-    tariffCollection = connection.db().collection<PlanDBScheme>('tariff_plans');
-    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('business_operations');
+    tariffCollection = connection.db().collection<PlanDBScheme>('plans');
+    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('businessOperations');
 
-    await tariffCollection.insertOne(plan);
+    await tariffCollection.insertMany([plan, freePlan]);
 
     await worker.start();
   });
@@ -92,6 +99,30 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
+  test(`Shouldn't trigger purchasing of the workspace plan if plan is free`, async () => {
+    MockDate.set(mockedDate);
+
+    /**
+     * Change tariff plan for mocked workspace for this test
+     */
+    await workspacesCollection.updateOne({ _id: workspace._id }, {
+      $set: {
+        tariffPlanId: freePlan._id,
+      },
+    });
+
+    await worker.handle({
+      type: EventType.WorkspacePlanCharge,
+      payload: undefined,
+    });
+
+    const businessOperation = await businessOperationsCollection.findOne({});
+
+    expect(businessOperation).toEqual(null);
+
+    MockDate.reset();
+  });
+
   test('Should trigger purchasing of the workspace plan if today is payday', async () => {
     MockDate.set(mockedDate);
 
@@ -107,7 +138,41 @@ describe('PaymasterWorker', () => {
       type: BusinessOperationType.WorkspacePlanPurchase,
       transactionId: expect.any(String),
       payload: {
-        amount: 1000,
+        amount: 100000,
+        workspaceId: workspace._id,
+      },
+      status: BusinessOperationStatus.Confirmed,
+      dtCreated: mockedDate,
+    } as BusinessOperationDBScheme));
+
+    MockDate.reset();
+  });
+
+  test('Should trigger purchasing of the workspace plan if last charge date is not defined', async () => {
+    MockDate.set(mockedDate);
+
+    /**
+     * Remove lastChargeDate for mocked workspace for this test
+     */
+    await workspacesCollection.updateOne({ _id: workspace._id }, {
+      $set: {
+        lastChargeDate: undefined,
+      },
+    });
+
+    await worker.handle({
+      type: EventType.WorkspacePlanCharge,
+      payload: undefined,
+    });
+
+    const businessOperation = await businessOperationsCollection.findOne({});
+
+    expect(businessOperation).toEqual(expect.objectContaining({
+      _id: expect.any(ObjectId),
+      type: BusinessOperationType.WorkspacePlanPurchase,
+      transactionId: expect.any(String),
+      payload: {
+        amount: 100000,
         workspaceId: workspace._id,
       },
       status: BusinessOperationStatus.Confirmed,
@@ -132,7 +197,7 @@ describe('PaymasterWorker', () => {
       type: BusinessOperationType.WorkspacePlanPurchase,
       transactionId: expect.any(String),
       payload: {
-        amount: 1000,
+        amount: 100000,
         workspaceId: workspace._id,
       },
       status: BusinessOperationStatus.Confirmed,

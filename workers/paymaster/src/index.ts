@@ -12,7 +12,8 @@ import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent }
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
-import Accounting from 'codex-accounting-sdk';
+import Accounting, { PENNY_MULTIPLIER } from 'codex-accounting-sdk';
+import axios from 'axios';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -59,8 +60,8 @@ export default class PaymasterWorker extends Worker {
     const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    this.businessOperations = connection.collection('business_operations');
-    const plansCollection = connection.collection<PlanDBScheme>('tariff_plans');
+    this.businessOperations = connection.collection('businessOperations');
+    const plansCollection = connection.collection<PlanDBScheme>('plans');
 
     this.plans = await plansCollection.find({}).toArray();
 
@@ -72,13 +73,28 @@ export default class PaymasterWorker extends Worker {
       throw new Error('Please specify ACCOUNTING_API_ENDPOINT in .env file');
     }
 
-    this.accounting = new Accounting({
-      baseURL: process.env.ACCOUNTING_API_ENDPOINT,
-      tlsVerify: {
+    /**
+     * Initializing accounting SDK
+     */
+    let tlsVerify;
+
+    /**
+     * Checking env variables
+     * If at least one path is not transmitted, the variable tlsVerify is undefined
+     */
+    if (
+      ![process.env.TLS_CA_CERT, process.env.TLS_CERT, process.env.TLS_KEY].some(value => value === undefined || value.length === 0)
+    ) {
+      tlsVerify = {
         tlsCaCertPath: `${process.env.TLS_CA_CERT}`,
         tlsCertPath: `${process.env.TLS_CERT}`,
         tlsKeyPath: `${process.env.TLS_KEY}`,
-      },
+      };
+    }
+
+    this.accounting = new Accounting({
+      baseURL: process.env.ACCOUNTING_API_ENDPOINT,
+      tlsVerify,
     });
 
     await super.start();
@@ -119,33 +135,44 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspacePlanChargeEvent(event: WorkspacePlanChargeEvent): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    try {
-      await Promise.all(workspaces.map((workspace) => this.processWorkspacePlanCharge(workspace)));
-    } catch (e) {
-      this.logger.error(e);
-    }
+    const result = await Promise.all(workspaces.map(
+      (workspace) => this.processWorkspacePlanCharge(workspace)
+    ));
+
+    await this.sendReport(result);
   }
 
   /**
    * Handles charging
+   * Returns tuple with workspace data and charged amount
    *
    * @param workspace - workspace to check
    */
-  private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<void> {
+  private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, number]> {
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
 
     /**
-     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If workspace use free tariff plan then do nothing
      */
-    if (!this.isTimeToPay(workspace.lastChargeDate)) {
-      return;
+    if (currentPlan.monthlyCharge === 0) {
+      return [workspace, 0]; // no charging
     }
+
+    /**
+     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If lastChargeDate is undefined then charge tariff plan and set it
+     */
+    if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
+      return [workspace, 0]; // no charging
+    }
+
     // todo: Check that workspace did not exceed the limit
-    // todo: withdraw the required amount of funds (how to calculate it?)
 
     await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
+
+    return [workspace, currentPlan.monthlyCharge];
   }
 
   /**
@@ -166,7 +193,7 @@ export default class PaymasterWorker extends Worker {
       transactionId: transactionId,
       payload: {
         workspaceId: workspace._id,
-        amount: planCost,
+        amount: planCost * PENNY_MULTIPLIER,
       },
       status: BusinessOperationStatus.Confirmed,
       type: BusinessOperationType.WorkspacePlanPurchase,
@@ -271,5 +298,38 @@ export default class PaymasterWorker extends Worker {
       now.getMonth() === date.getMonth() &&
       now.getDate() === date.getDate()
     );
+  }
+
+  /**
+   * Send report with charged workspaces to Telegram
+   *
+   * @param reportData - data for sending report
+   */
+  private async sendReport(reportData: [WorkspaceDBScheme, number][]): Promise<void> {
+    if (!process.env.REPORT_NOTIFY_URL) {
+      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
+
+      return;
+    }
+
+    reportData = reportData
+      .filter(([, chargedAmount]) => chargedAmount > 0)
+      .sort(([, a], [, b]) => b - a);
+
+    let report = process.env.SERVER_NAME ? ` Hawk Paymaster (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster 💰\n';
+    let totalChargedAmount = 0;
+
+    reportData.forEach(([workspace, chargedAmount]) => {
+      report += `\n${chargedAmount}$ | <b>${encodeURIComponent(workspace.name)}</b> | <code>${workspace._id}</code>`;
+      totalChargedAmount += chargedAmount;
+    });
+
+    report += `\n\n<b>${totalChargedAmount}$</b> totally charged`;
+
+    await axios({
+      method: 'post',
+      url: process.env.REPORT_NOTIFY_URL,
+      data: 'message=' + report + '&parse_mode=HTML',
+    });
   }
 }

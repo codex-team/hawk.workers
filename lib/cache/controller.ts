@@ -8,28 +8,38 @@ type CacheValue = any; // eslint-disable-line
 /**
  * Controller object for cache engine
  */
-class Cache {
+export default class CacheController {
   /**
-   * Cache class
+   * Cache provider class
    *
    * @private
    */
   private cache: NodeCache;
 
   /**
-   * Create a new cache instance
+   * Cache key prefix
    */
-  constructor() {
-    /**
-     * NodeCache options
-     */
-    const options = {
-      stdTTL: 60,
-      checkperiod: 30,
-      useClones: false,
-    };
+  private readonly prefix: string;
 
-    this.cache = new NodeCache(options);
+  /**
+   * Create a new cache instance
+   *
+   * @param {object} options - cache controller options
+   * @param {NodeCache} [options.provider] - cache provider (allows to mock in tests)
+   * @param {string} [options.prefix] - prefix for all the keys
+   */
+  constructor({ provider = undefined, prefix = '' }: { provider?: NodeCache; prefix?: string} = {}) {
+    this.prefix = prefix || '';
+
+    if (provider) {
+      this.cache = provider;
+    } else {
+      this.cache = new NodeCache({
+        stdTTL: 60,
+        checkperiod: 30,
+        useClones: false,
+      });
+    }
   }
 
   /**
@@ -37,20 +47,30 @@ class Cache {
    *
    * @param {string} key — cache key
    * @param {CacheValue} value — cached data
+   * @param {number} [ttl] — data's time to live in seconds
    */
-  public set(key: string, value: CacheValue): boolean {
-    return this.cache.set(key, value);
+  public set(key: string, value: CacheValue, ttl?: number): boolean {
+    const keyPrefixed = this.getKey(key);
+
+    if (ttl) {
+      return this.cache.set(keyPrefixed, value, ttl);
+    } else {
+      return this.cache.set(keyPrefixed, value);
+    }
   }
 
   /**
    * Get cached value (or resolve and cache if it is necessary)
    *
    * @param {string} key — cache key
-   * @param {Function} resolver — function for getting value
+   * @param {Function} [resolver] — function for getting value
+   * @param {number} [ttl] — data's time to live in seconds
    * @returns {CacheValue} — cached data
    */
-  public async get(key: string, resolver?: Function): Promise<CacheValue> {
-    let value = this.cache.get(key);
+  public async get(key: string, resolver?: Function, ttl?: number): Promise<CacheValue> {
+    const keyPrefixed = this.getKey(key);
+
+    let value = this.cache.get(keyPrefixed);
 
     /**
      * If value is missing then resolve it and save
@@ -64,7 +84,11 @@ class Cache {
       /**
        * Save data
        */
-      this.set(key, value);
+      if (ttl) {
+        this.set(key, value, ttl);
+      } else {
+        this.set(key, value);
+      }
     }
 
     return value;
@@ -77,6 +101,12 @@ class Cache {
    * @returns {number} — number of deleted keys
    */
   public del(key: string|string[]): number {
+    if (Array.isArray(key)) {
+      key = key.map(k => this.getKey(k));
+    } else {
+      key = this.getKey(key);
+    }
+
     return this.cache.del(key);
   }
 
@@ -88,11 +118,17 @@ class Cache {
   public flushAll(): void {
     this.cache.flushAll();
   }
+
+  /**
+   * Return key with prefix
+   *
+   * @param {string} key - cache prefix key
+   */
+  private getKey(key: string): string {
+    if (!this.prefix) {
+      return key;
+    }
+
+    return this.prefix + ':' + key;
+  }
 }
-
-/**
- * Create a class instance
- */
-const CacheManager = new Cache();
-
-export default CacheManager;

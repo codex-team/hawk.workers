@@ -10,7 +10,6 @@ import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
-import CacheManager from '../../../lib/cache/controller';
 import Crypto from '../../../lib/utils/crypto';
 
 /**
@@ -28,7 +27,7 @@ export default class JavascriptEventWorker extends EventWorker {
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
-   * Collection where source maps stroed
+   * Collection where source maps stored
    */
   private releasesDbCollectionName = 'releases-js';
 
@@ -58,6 +57,7 @@ export default class JavascriptEventWorker extends EventWorker {
   public async start(): Promise<void> {
     await this.db.connect();
     this.db.createGridFsBucket(this.releasesDbCollectionName);
+    this.prepareCache();
     await super.start();
   }
 
@@ -94,8 +94,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
   private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    const releaseRecord: SourceMapsRecord = await CacheManager.get(
-      `javascript:releaseRecord:${event.projectId}:${Crypto.hash(event.payload.release.toString())}`,
+    const releaseRecord: SourceMapsRecord = await this.cache.get(
+      `releaseRecord:${event.projectId}:${event.payload.release.toString()}`,
       () => {
         return this.getReleaseRecord(
           event.projectId,
@@ -115,8 +115,8 @@ export default class JavascriptEventWorker extends EventWorker {
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
-      return CacheManager.get(
-        `javascript:consumeBacktraceFrame:${Crypto.hash(event.payload.release.toString())}:${Crypto.hash(frame)}:${Crypto.hash(index)}`,
+      return this.cache.get(
+        `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
             .catch((error) => {
