@@ -15,15 +15,9 @@ export default class GoEventWorker extends EventWorker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Database Controller
-   */
-  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
-
-  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
     await super.start();
   }
 
@@ -32,7 +26,6 @@ export default class GoEventWorker extends EventWorker {
    */
   public async finish(): Promise<void> {
     await super.finish();
-    await this.db.close();
   }
 
   /**
