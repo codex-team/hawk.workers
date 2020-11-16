@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import type { TemplateVariables, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateVariables, EventsTemplateVariables, PersonalTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -38,15 +38,69 @@ export default class EmailProvider extends NotificationsProvider {
    * @param {string} to - recipient email
    * @param {TemplateVariables} variables - variables for template
    */
-  public async send(to: string, variables: EventsTemplateVariables): Promise<void> {
+  public async send(to: string, variables: EventsTemplateVariables | PersonalTemplateVariables): Promise<void> {
     let templateName: Templates;
-
-    if (variables.events.length === 1) {
+ 
+    if (variables?.events?.length === 1) {
       templateName = Templates.NewEvent;
-    } else {
+      this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
+    } else if (variables?.events?.length > 1) {
       templateName = Templates.SeveralEvents;
+      this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
+    } else if (variables?.whoAssignedId) {
+      templateName = Templates.Assignee;
+      this.sendAssigneeNotification(to, variables as PersonalTemplateVariables, templateName);
+    }
+  }
+
+  /**
+   * Send personal notification
+   * 
+   * @param to 
+   * @param variables 
+   * @param templateName 
+   */
+  public async sendAssigneeNotification(to: string, variables: PersonalTemplateVariables, templateName: Templates) {
+    let content: Template;
+    console.log('VARIABLES', variables);
+
+    try {
+      content = await this.render(templateName, variables);
+    } catch (e) {
+      this.logger.error(`Failed to render ${templateName} template `, e);
+
+      return;
     }
 
+    const mailOptions = {
+      from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
+      to,
+      ...content,
+    };
+
+    
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.info(`Mail sent to ${to}: \n\n + ${content}`);
+    }
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (e) {
+      this.logger.error(
+        'Error sending letter. Try to check the environment settings (in .env file).', e
+      );
+
+      utils.sendReport('📮 Email worker\n\n' + (e.message || e.toString()));
+    }
+  }
+
+  /**
+   * Send event notification
+   * 
+   * @param templateName 
+   * @param variables 
+   */
+  public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates) {
     let content: Template;
 
     try {

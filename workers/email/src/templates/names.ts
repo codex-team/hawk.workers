@@ -4,6 +4,7 @@
 enum Templates {
   NewEvent = 'new-event',
   SeveralEvents = 'several-events',
+  Assignee = 'assignee'
 }
 
 export default Templates;

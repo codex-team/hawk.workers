@@ -9,6 +9,7 @@ export interface SenderWorkerEventTask extends WorkerTask {
    * Project events related to
    */
   projectId: string;
+
   /**
    * Notification Rule id that should be used for sending
    */
@@ -28,11 +29,26 @@ export interface SenderWorkerPersonalTask {
    * Project event related to
    */
   projectId: string;
+  
+  /**
+   * Notification Rule id that should be used for sending
+   */
+  ruleId: string;
 
   /**
    * ID of the user assigned to this event
    */
   assigneeId: string;
+
+  /**
+   * Event id
+   */
+  eventId: string;
+
+  /**
+   * Id of the user who assigned this person
+   */
+  whoAssignedId: string;
 
   /**
    * Total count of current event
