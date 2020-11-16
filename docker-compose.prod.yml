@@ -38,6 +38,14 @@ services:
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-python
 
+  hawk-worker-go:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-go
+
   #
   # Processing workers: grouper
   #
