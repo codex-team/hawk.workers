@@ -1,0 +1,14 @@
+{
+    "name": "hawk-worker-limiter",
+    "version": "0.0.1",
+    "description": "Worker for archiving old events",
+    "main": "src/index.ts",
+    "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/limiter",
+    "author": "CodeX <codex.so>",
+    "license": "UNLICENSED",
+    "private": true,
+    "workerType": "cron-tasks/limiter",
+    "dependencies": {
+        "redis": "^3.0.2"
+    }
+}

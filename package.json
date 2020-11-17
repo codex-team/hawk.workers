@@ -33,7 +33,8 @@
         "run-notifier": "yarn worker hawk-worker-notifier",
         "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps",
         "run-email": "yarn worker hawk-worker-email",
-        "run-telegram": "yarn worker hawk-worker-telegram"
+        "run-telegram": "yarn worker hawk-worker-telegram",
+        "run-limiter": "yarn worker hawk-worker-limiter"
     },
     "dependencies": {
         "@hawk.so/nodejs": "^2.0.7",
