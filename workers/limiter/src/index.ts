@@ -8,12 +8,15 @@ import * as dotenv from 'dotenv';
 import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import redis from 'redis';
 
+/**
+ * Workspace with its tariff plan
+ */
 type WorkspaceWithTariffPlan = WorkspaceDBScheme & {tariffPlan: PlanDBScheme}
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
- *
+ * Worker for checking current total events count in workspaces and limits events receiving if workspace exceed the limit
  */
 export default class LimiterWorker extends Worker {
   /**
@@ -46,8 +49,14 @@ export default class LimiterWorker extends Worker {
    */
   private workspacesCollection!: Collection<WorkspaceDBScheme>;
 
+  /**
+   * Redis client for making queries
+   */
   private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
 
+  /**
+   * Redis key for storing banned projects
+   */
   private readonly redisDisabledProjectsKey = 'DisabledProjectsSet'
 
   /**
@@ -75,56 +84,52 @@ export default class LimiterWorker extends Worker {
    * Task handling function
    */
   public async handle(): Promise<void> {
-    const [projects, workspaces] = await Promise.all([
-      this.projectsCollection.find({}).toArray(),
-      this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
-        {
-          $lookup: {
-            from: 'plans',
-            localField: 'tariffPlanId',
-            foreignField: '_id',
-            as: 'tariffPlan',
-          },
-        }, {
-          $unwind: {
-            path: '$tariffPlan',
-          },
-        },
-      ]).toArray(),
-    ]);
-    const workspacesMap = workspaces.reduce((acc, workspace) => {
-      acc[workspace._id.toString()] = workspace;
+    const projectIdsToBan = await this.getProjectsIdsToBan();
 
-      return acc;
-    }, {} as Record<string, WorkspaceWithTariffPlan>);
+    return this.saveToRedis(projectIdsToBan);
+  }
 
-    const workspaceEventsCount: Record<string, number> = {};
+  /**
+   * Saves banned project ids to redis
+   *
+   * @param projectIdsToBan - ids to ban
+   */
+  private saveToRedis(projectIdsToBan: string[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.redisClient.multi()
+        .del(this.redisDisabledProjectsKey)
+        .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
+        .exec(function (execError) {
+          if (execError) {
+            console.log('error');
 
-    await asyncForEach(projects, async (project) => {
-      this.logger.info('Processing project with id ' + project._id);
-      const workspace = workspacesMap[project.workspaceId.toString()];
+            reject(execError);
 
-      if (!workspace.lastChargeDate) {
-        return;
-      }
-
-      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
-      const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
-
-      const query = {
-        'payload.timestamp': {
-          $gt: Math.floor(new Date(workspace.lastChargeDate).getTime() / 1000),
-        },
-      };
-
-      const [repetitionsCount, originalEventCount] = await Promise.all([repetitionsCollection.find(query).count(), eventsCollection.find(query).count()]);
-
-      workspaceEventsCount[project.workspaceId.toString()] = (workspaceEventsCount[project.workspaceId.toString()] || 0) + repetitionsCount + originalEventCount;
+            return;
+          }
+          console.log('success');
+          resolve();
+        });
     });
+  }
+
+  /**
+   * Returns array of project ids for banning
+   */
+  private async getProjectsIdsToBan(): Promise<string[]> {
+    const [projects, workspacesMap] = await Promise.all([
+      this.projectsCollection.find({}).toArray(),
+      this.getWorkspacesWithTariffPlans(),
+    ]);
+
+    /**
+     * Stores id and events count for each workspace
+     */
+    const totalEventsCountByWorkspace = await this.getTotalEventsCountByWorkspace(projects, workspacesMap);
 
     let projectIds: string[] = [];
 
-    await asyncForEach(Object.entries(workspaceEventsCount), async ([workspaceId, eventsCount]) => {
+    await asyncForEach(Object.entries(totalEventsCountByWorkspace), async ([workspaceId, eventsCount]) => {
       const workspace = workspacesMap[workspaceId];
 
       await this.workspacesCollection.updateOne(
@@ -140,21 +145,78 @@ export default class LimiterWorker extends Worker {
       }
     });
 
-    return new Promise((resolve, reject) => {
-      this.redisClient.multi()
-        .del(this.redisDisabledProjectsKey)
-        .sadd(this.redisDisabledProjectsKey, projectIds)
-        .exec(function (execError, results) {
-          if (execError) {
-            console.log('error');
+    return projectIds;
+  }
 
-            reject(execError);
+  /**
+   * Returns info about total events count for each workspace for the last billing period
+   *
+   * @param projects - projects to check
+   * @param workspacesMap - workspaces to check
+   */
+  private async getTotalEventsCountByWorkspace(projects: ProjectDBScheme[], workspacesMap: Record<string, WorkspaceWithTariffPlan>): Promise<Record<string, number>> {
+    const totalEventsCountByWorkspace: Record<string, number> = {};
 
-            return;
-          }
-          console.log('success');
-          resolve(results);
-        });
+    await asyncForEach(projects, async (project) => {
+      const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()]);
+
+      totalEventsCountByWorkspace[project.workspaceId.toString()] = (totalEventsCountByWorkspace[project.workspaceId.toString()] || 0) + totalEventsCount;
     });
+
+    return totalEventsCountByWorkspace;
+  }
+
+  /**
+   * Returns workspaces with their tariff plans
+   */
+  private async getWorkspacesWithTariffPlans(): Promise<Record<string, WorkspaceWithTariffPlan>> {
+    const workspaces = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
+      {
+        $lookup: {
+          from: 'plans',
+          localField: 'tariffPlanId',
+          foreignField: '_id',
+          as: 'tariffPlan',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tariffPlan',
+        },
+      },
+    ]).toArray();
+
+    return workspaces.reduce((acc, workspace) => {
+      acc[workspace._id.toString()] = workspace;
+
+      return acc;
+    }, {} as Record<string, WorkspaceWithTariffPlan>);
+  }
+
+  /**
+   * Returns total event counts for last billing period
+   *
+   * @param project - project to check
+   * @param workspace - workspace that project belongs to
+   */
+  private async getProjectEventsCount(project: ProjectDBScheme, workspace: WorkspaceWithTariffPlan): Promise<number> {
+    this.logger.info('Processing project with id ' + project._id);
+
+    if (!workspace.lastChargeDate) {
+      return;
+    }
+
+    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
+    const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
+
+    const query = {
+      'payload.timestamp': {
+        $gt: Math.floor(new Date(workspace.lastChargeDate).getTime() / 1000),
+      },
+    };
+
+    const [repetitionsCount, originalEventCount] = await Promise.all([repetitionsCollection.find(query).count(), eventsCollection.find(query).count()]);
+
+    return repetitionsCount + originalEventCount;
   }
 }
