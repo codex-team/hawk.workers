@@ -29,7 +29,7 @@ export interface SenderWorkerAssigneeTask {
    * Project event related to
    */
   projectId: string;
-  
+
   /**
    * Notification Rule id that should be used for sending
    */
@@ -54,7 +54,7 @@ export interface SenderWorkerAssigneeTask {
    * Total count of current event
    */
   totalCount: number;
-  
+
   /**
    * Number of repetitions
    */

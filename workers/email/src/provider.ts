@@ -40,7 +40,7 @@ export default class EmailProvider extends NotificationsProvider {
    */
   public async send(to: string, variables: EventsTemplateVariables | AssigneeTemplateVariables): Promise<void> {
     let templateName: Templates;
- 
+
     if (variables?.events?.length === 1) {
       templateName = Templates.NewEvent;
       this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
@@ -55,7 +55,7 @@ export default class EmailProvider extends NotificationsProvider {
 
   /**
    * Send notification when someone was assigned
-   * 
+   *
    * @param to - recipient email. Person who was assigned to solve the issue
    * @param variables - variables for template
    * @param templateName - name of the template to render
@@ -77,7 +77,6 @@ export default class EmailProvider extends NotificationsProvider {
       ...content,
     };
 
-    
     if (process.env.NODE_ENV === 'development') {
       this.logger.info(`Mail sent to ${to}: \n\n + ${content}`);
     }
@@ -95,8 +94,9 @@ export default class EmailProvider extends NotificationsProvider {
 
   /**
    * Send event notification
-   * 
+   *
    * @param templateName - name of the template to render
+   * @param to
    * @param variables - variables for template
    */
   public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates) {

@@ -1,4 +1,4 @@
-import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
@@ -7,7 +7,7 @@ import './env';
 
 import { EventsTemplateVariables, TemplateEventData, AssigneeTemplateVariables } from '../types/template-variables';
 import NotificationsProvider from './provider';
-import { GroupedEventDBScheme } from 'hawk.types';
+
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -87,7 +87,7 @@ export default abstract class SenderWorker extends Worker {
     if (!this.provider.logger) {
       this.provider.setLogger(this.logger);
     }
-    
+
     if ('whoAssignedId' in task) {
       return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
     }
@@ -97,11 +97,19 @@ export default abstract class SenderWorker extends Worker {
 
   /**
    * Handle event task
-   * 
+   *
    * @param task - task to handke
    */
 
-  private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
+  private async handleEventTask/**
+                                *
+                                *//**
+                                   *
+                                   *//**
+                                      *
+                                      *//**
+                                         *
+                                         */(task: SenderWorkerEventTask): Promise<void> {
     const { projectId, ruleId, events } = task;
 
     const project = await this.getProject(projectId);
@@ -147,18 +155,18 @@ export default abstract class SenderWorker extends Worker {
 
   /**
    * Handle task when someone was assigned
-   * 
+   *
    * @param task - task to handle
    */
   private async handleAssigneeTask(task: SenderWorkerAssigneeTask): Promise<void> {
     const { projectId, ruleId, whoAssignedId, eventId } = task;
-    
+
     const project = await this.getProject(projectId);
-    
+
     if (!project || !project.notifications) {
       return;
     }
-    
+
     const rule = project.notifications.find((r) => r._id.toString() === ruleId);
 
     if (!rule) {
@@ -171,7 +179,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const [ event, daysRepeated ] = await this.getEventData(projectId, eventId);
+    const [event, daysRepeated] = await this.getEventData(projectId, eventId);
 
     if (!event) {
       return;
@@ -220,9 +228,9 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
-   * 
-   * @param projectId 
-   * @param eventId 
+   *
+   * @param projectId
+   * @param eventId
    */
   private async getEventData(
     projectId: string,
@@ -254,12 +262,12 @@ export default abstract class SenderWorker extends Worker {
 
   /**
    * Get user
-   * 
+   *
    * @param userId - user id
    */
   private async getUser(userId: string): Promise<UserDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('users').findOne({ _id: new ObjectId(userId)});
+    return connection.collection('users').findOne({ _id: new ObjectId(userId) });
   }
 }
