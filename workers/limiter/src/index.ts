@@ -84,9 +84,13 @@ export default class LimiterWorker extends Worker {
    * Task handling function
    */
   public async handle(): Promise<void> {
+    this.logger.info('Limiter worker started task');
     const projectIdsToBan = await this.getProjectsIdsToBan();
 
-    return this.saveToRedis(projectIdsToBan);
+    if (projectIdsToBan.length) {
+      await this.saveToRedis(projectIdsToBan);
+    }
+    this.logger.info('Limiter worker finished task');
   }
 
   /**
@@ -158,6 +162,8 @@ export default class LimiterWorker extends Worker {
     const totalEventsCountByWorkspace: Record<string, number> = {};
 
     await asyncForEach(projects, async (project) => {
+      this.logger.info('Processing project with id ' + project._id);
+
       const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()]);
 
       totalEventsCountByWorkspace[project.workspaceId.toString()] = (totalEventsCountByWorkspace[project.workspaceId.toString()] || 0) + totalEventsCount;
@@ -200,8 +206,6 @@ export default class LimiterWorker extends Worker {
    * @param workspace - workspace that project belongs to
    */
   private async getProjectEventsCount(project: ProjectDBScheme, workspace: WorkspaceWithTariffPlan): Promise<number> {
-    this.logger.info('Processing project with id ' + project._id);
-
     if (!workspace.lastChargeDate) {
       return;
     }
