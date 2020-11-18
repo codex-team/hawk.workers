@@ -60,7 +60,7 @@ export default class EmailProvider extends NotificationsProvider {
    * @param variables - variables for template
    * @param templateName - name of the template to render
    */
-  public async sendAssigneeNotification(to: string, variables: AssigneeTemplateVariables, templateName: Templates) {
+  public async sendAssigneeNotification(to: string, variables: AssigneeTemplateVariables, templateName: Templates): Promise<void> {
     let content: Template;
 
     try {
@@ -99,7 +99,7 @@ export default class EmailProvider extends NotificationsProvider {
    * @param to
    * @param variables - variables for template
    */
-  public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates) {
+  public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates): Promise<void> {
     let content: Template;
 
     try {

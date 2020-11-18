@@ -100,16 +100,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handke
    */
-
-  private async handleEventTask/**
-                                *
-                                *//**
-                                   *
-                                   *//**
-                                      *
-                                      *//**
-                                         *
-                                         */(task: SenderWorkerEventTask): Promise<void> {
+  private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
     const { projectId, ruleId, events } = task;
 
     const project = await this.getProject(projectId);
