@@ -1,11 +1,12 @@
-import {DatabaseController} from '../../../lib/db/controller';
-import {Worker} from '../../../lib/worker';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import {Collection, Db} from 'mongodb';
+import { Collection, Db } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import {PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme} from 'hawk.types';
+import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import redis from 'redis';
 
 type WorkspaceWithTariffPlan = WorkspaceDBScheme & {tariffPlan: PlanDBScheme}
 
@@ -44,6 +45,10 @@ export default class LimiterWorker extends Worker {
    * Collection with workspaces
    */
   private workspacesCollection!: Collection<WorkspaceDBScheme>;
+
+  private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
+
+  private readonly redisDisabledProjectsKey = 'DisabledProjectsSet'
 
   /**
    * Start consuming messages
@@ -93,8 +98,6 @@ export default class LimiterWorker extends Worker {
       return acc;
     }, {} as Record<string, WorkspaceWithTariffPlan>);
 
-    console.log(workspacesMap);
-
     const workspaceEventsCount: Record<string, number> = {};
 
     await asyncForEach(projects, async (project) => {
@@ -119,6 +122,8 @@ export default class LimiterWorker extends Worker {
       workspaceEventsCount[project.workspaceId.toString()] = (workspaceEventsCount[project.workspaceId.toString()] || 0) + repetitionsCount + originalEventCount;
     });
 
+    let projectIds: string[] = [];
+
     await asyncForEach(Object.entries(workspaceEventsCount), async ([workspaceId, eventsCount]) => {
       const workspace = workspacesMap[workspaceId];
 
@@ -127,9 +132,29 @@ export default class LimiterWorker extends Worker {
         { $set: { billingPeriodEventsCount: eventsCount } }
       );
 
-      if (workspace.tariffPlan.eventsLimit < eventsCount) {
-        // @todo наложить в редис
+      if (workspace.tariffPlan.eventsLimit <= eventsCount) {
+        projectIds = [
+          ...projectIds,
+          ...projects.filter(project => project.workspaceId.toString() === workspaceId).map(project => project._id.toString()),
+        ];
       }
+    });
+
+    return new Promise((resolve, reject) => {
+      this.redisClient.multi()
+        .del(this.redisDisabledProjectsKey)
+        .sadd(this.redisDisabledProjectsKey, projectIds)
+        .exec(function (execError, results) {
+          if (execError) {
+            console.log('error');
+
+            reject(execError);
+
+            return;
+          }
+          console.log('success');
+          resolve(results);
+        });
     });
   }
 }
