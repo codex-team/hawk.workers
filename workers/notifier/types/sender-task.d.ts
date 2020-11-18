@@ -24,7 +24,7 @@ export interface SenderWorkerEventTask extends WorkerTask {
 /**
  * Interface describes personal notifications
  */
-export interface SenderWorkerPersonalTask {
+export interface SenderWorkerAssigneeTask {
   /**
    * Project event related to
    */
@@ -66,4 +66,4 @@ export interface SenderWorkerPersonalTask {
   usersAffected: number;
 }
 
-export type SenderWorkerTask = SenderWorkerEventTask | SenderWorkerPersonalTask;
+export type SenderWorkerTask = SenderWorkerEventTask | SenderWorkerAssigneeTask;

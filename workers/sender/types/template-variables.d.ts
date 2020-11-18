@@ -1,4 +1,4 @@
-import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme, UserDBScheme } from 'hawk.types';
 
 /**
  * Common interface for template variables
@@ -29,16 +29,16 @@ export interface EventsTemplateVariables extends TemplateVariables {
 /**
  * Variables for events template
  */
-export interface PersonalTemplateVariables extends TemplateVariables {
+export interface AssigneeTemplateVariables extends TemplateVariables {
   host: string;
   hostOfStatic: string;
   project: ProjectDBScheme;
   event: GroupedEventDBScheme;
-  whoAssignedId: string;
+  whoAssigned: UserDBScheme;
   repeating: number;
 }
 
 /**
  * All templates
  */
-export type AllTemplateVariables = EventsTemplateVariables | PersonalTemplateVariables;
+export type AllTemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables;

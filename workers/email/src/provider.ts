@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import type { TemplateVariables, EventsTemplateVariables, PersonalTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateVariables, EventsTemplateVariables, AssigneeTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -38,7 +38,7 @@ export default class EmailProvider extends NotificationsProvider {
    * @param {string} to - recipient email
    * @param {TemplateVariables} variables - variables for template
    */
-  public async send(to: string, variables: EventsTemplateVariables | PersonalTemplateVariables): Promise<void> {
+  public async send(to: string, variables: EventsTemplateVariables | AssigneeTemplateVariables): Promise<void> {
     let templateName: Templates;
  
     if (variables?.events?.length === 1) {
@@ -47,22 +47,21 @@ export default class EmailProvider extends NotificationsProvider {
     } else if (variables?.events?.length > 1) {
       templateName = Templates.SeveralEvents;
       this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
-    } else if (variables?.whoAssignedId) {
+    } else if (variables?.whoAssigned) {
       templateName = Templates.Assignee;
-      this.sendAssigneeNotification(to, variables as PersonalTemplateVariables, templateName);
+      this.sendAssigneeNotification(to, variables as AssigneeTemplateVariables, templateName);
     }
   }
 
   /**
-   * Send personal notification
+   * Send notification when someone was assigned
    * 
-   * @param to 
-   * @param variables 
-   * @param templateName 
+   * @param to - recipient email. Person who was assigned to solve the issue
+   * @param variables - variables for template
+   * @param templateName - name of the template to render
    */
-  public async sendAssigneeNotification(to: string, variables: PersonalTemplateVariables, templateName: Templates) {
+  public async sendAssigneeNotification(to: string, variables: AssigneeTemplateVariables, templateName: Templates) {
     let content: Template;
-    console.log('VARIABLES', variables);
 
     try {
       content = await this.render(templateName, variables);
@@ -97,8 +96,8 @@ export default class EmailProvider extends NotificationsProvider {
   /**
    * Send event notification
    * 
-   * @param templateName 
-   * @param variables 
+   * @param templateName - name of the template to render
+   * @param variables - variables for template
    */
   public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates) {
     let content: Template;

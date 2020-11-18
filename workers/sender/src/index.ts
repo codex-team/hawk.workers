@@ -5,11 +5,11 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { EventsTemplateVariables, TemplateEventData, PersonalTemplateVariables } from '../types/template-variables';
+import { EventsTemplateVariables, TemplateEventData, AssigneeTemplateVariables } from '../types/template-variables';
 import NotificationsProvider from './provider';
 import { GroupedEventDBScheme } from 'hawk.types';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerPersonalTask, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -75,7 +75,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
-  public async handle<T extends SenderWorkerTask>(taskData: T): Promise<void> {
+  public async handle<T extends SenderWorkerTask>(task: T): Promise<void> {
     if (!this.channelType) {
       throw new Error('channelType for Sender worker is not set');
     }
@@ -88,14 +88,22 @@ export default abstract class SenderWorker extends Worker {
       this.provider.setLogger(this.logger);
     }
     
-    if ('whoAssignedId' in taskData) {
-      return this.handlePersonalTask(taskData as SenderWorkerPersonalTask);
+    if ('whoAssignedId' in task) {
+      return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
     }
 
-    return this.handleEventTask(taskData as SenderWorkerEventTask);
+    return this.handleEventTask(task as SenderWorkerEventTask);
   }
 
-  private async handleEventTask({ projectId, ruleId, events }: SenderWorkerEventTask): Promise<void> {
+  /**
+   * Handle event task
+   * 
+   * @param task - task to handke
+   */
+
+  private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
+    const { projectId, ruleId, events } = task;
+
     const project = await this.getProject(projectId);
 
     if (!project) {
@@ -137,8 +145,13 @@ export default abstract class SenderWorker extends Worker {
     } as EventsTemplateVariables);
   }
 
-  private async handlePersonalTask(taskData: SenderWorkerPersonalTask): Promise<void> {
-    const { projectId, ruleId, whoAssignedId, eventId } = taskData
+  /**
+   * Handle task when someone was assigned
+   * 
+   * @param task - task to handle
+   */
+  private async handleAssigneeTask(task: SenderWorkerAssigneeTask): Promise<void> {
+    const { projectId, ruleId, whoAssignedId, eventId } = task;
     
     const project = await this.getProject(projectId);
     
@@ -164,15 +177,21 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
+    const whoAssigned = await this.getUser(whoAssignedId);
+
+    if (!whoAssigned) {
+      return;
+    }
+
     this.provider.send(channel.endpoint, {
       host: process.env.GARAGE_URL,
       hostOfStatic: process.env.API_STATIC_URL,
       project,
       period: channel.minPeriod,
       event,
-      whoAssignedId,
+      whoAssigned,
       repeating: daysRepeated,
-    } as PersonalTemplateVariables);
+    } as AssigneeTemplateVariables);
   }
 
   /**
@@ -231,5 +250,16 @@ export default abstract class SenderWorker extends Worker {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('projects').findOne({ _id: new ObjectId(projectId) });
+  }
+
+  /**
+   * Get user
+   * 
+   * @param userId - user id
+   */
+  private async getUser(userId: string): Promise<UserDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').findOne({ _id: new ObjectId(userId)});
   }
 }
