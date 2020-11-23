@@ -133,7 +133,7 @@ export default class LimiterWorker extends Worker {
      */
     const totalEventsCountByWorkspace = await this.getTotalEventsCountByWorkspace(projects, workspacesMap);
 
-    let projectIds: string[] = [];
+    const projectIds: string[] = [];
 
     await asyncForEach(Object.entries(totalEventsCountByWorkspace), async ([workspaceId, eventsCount]) => {
       const workspace = workspacesMap[workspaceId];
@@ -144,10 +144,11 @@ export default class LimiterWorker extends Worker {
       );
 
       if (workspace.tariffPlan.eventsLimit <= eventsCount) {
-        projectIds = [
-          ...projectIds,
-          ...projects.filter(project => project.workspaceId.toString() === workspaceId).map(project => project._id.toString()),
-        ];
+        projectIds.push(
+          ...projects
+            .filter(project => project.workspaceId.toString() === workspaceId)
+            .map(project => project._id.toString())
+        );
       }
     });
 
