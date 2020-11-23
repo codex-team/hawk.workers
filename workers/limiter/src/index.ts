@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import redis from 'redis';
+import HawkCatcher from '@hawk.so/nodejs';
 
 /**
  * Workspace with its tariff plan
@@ -103,15 +104,16 @@ export default class LimiterWorker extends Worker {
       this.redisClient.multi()
         .del(this.redisDisabledProjectsKey)
         .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
-        .exec(function (execError) {
+        .exec((execError) => {
           if (execError) {
-            console.log('error');
+            this.logger.error(execError);
+            HawkCatcher.send(execError);
 
             reject(execError);
 
             return;
           }
-          console.log('success');
+          this.logger.info('Successfully saved to Redis');
           resolve();
         });
     });
