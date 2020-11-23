@@ -125,7 +125,9 @@ export default class JavascriptEventWorker extends EventWorker {
               /**
                * Send error to Hawk
                */
-              HawkCatcher.send(error);
+              HawkCatcher.send(error, {
+                payload: event.payload,
+              });
 
               return event.payload.backtrace[index];
             });
