@@ -124,7 +124,7 @@ export default class LimiterWorker extends Worker {
    */
   private async getProjectsIdsToBan(): Promise<string[]> {
     const [projects, workspacesMap] = await Promise.all([
-      this.projectsCollection.find({}).toArray(),
+      this.getAllProjects(),
       this.getWorkspacesWithTariffPlans(),
     ]);
 
@@ -152,6 +152,13 @@ export default class LimiterWorker extends Worker {
     });
 
     return projectIds;
+  }
+
+  /**
+   * Returns all projects from Database
+   */
+  private getAllProjects(): Promise<ProjectDBScheme[]> {
+    return this.projectsCollection.find({}).toArray();
   }
 
   /**
