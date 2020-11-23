@@ -216,6 +216,11 @@ export default class LimiterWorker extends Worker {
    * @param workspace - workspace that project belongs to
    */
   private async getProjectEventsCount(project: ProjectDBScheme, workspace: WorkspaceWithTariffPlan): Promise<number> {
+    /**
+     * If last charge date is not specified, then we skip checking it
+     * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
+     * and limiter will process it successfully
+     */
     if (!workspace.lastChargeDate) {
       return;
     }
