@@ -11,7 +11,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
 import ReportData from '../types/reportData';
-import {CriticalError} from "../../../lib/workerErrors";
+import { CriticalError } from '../../../lib/workerErrors';
 
 /**
  * Workspace with its tariff plan
@@ -128,6 +128,10 @@ export default class LimiterWorker extends Worker {
      */
     await asyncForEach(Object.values(workspacesMap), async (workspace) => {
       await this.updateWorkspaceEventsCount(workspace);
+
+      if (!workspace.lastChargeDate) {
+        return;
+      }
 
       if (workspace.tariffPlan.eventsLimit <= workspace.billingPeriodEventsCount) {
         bannedWorkspaces.add(workspace);
@@ -317,6 +321,8 @@ export default class LimiterWorker extends Worker {
       report += `\nBanned workspaces:\n`;
       reportData.bannedWorkspaces.forEach((workspace) => {
         const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
+
+        console.log(workspace.lastChargeDate, new Date(workspace.lastChargeDate), timeFromLastChargeDate);
         const millisecondsInDay = 24 * 60 * 60 * 1000;
         const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
 
