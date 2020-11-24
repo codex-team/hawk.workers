@@ -2,7 +2,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import { Collection, Db, ObjectId } from 'mongodb';
+import { Collection, Db } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
@@ -89,13 +89,6 @@ export default class LimiterWorker extends Worker {
    */
   public async handle(): Promise<void> {
     this.logger.info('Limiter worker started task');
-    const reportData: ReportData = {
-      workspacesWithoutLastChargeDate: new Set(),
-      bannedWorkspaces: [],
-      bannedProjectIds: [],
-    };
-
-    const projectIdsToBan: string[] = [];
 
     const [projects, workspacesMap] = await Promise.all([
       this.getAllProjects(),
@@ -105,48 +98,69 @@ export default class LimiterWorker extends Worker {
     /**
      * Stores id and events count for each workspace
      */
-    const totalEventsCountByWorkspace = await this.calculateWorkspacesTotalEventsCount(projects, workspacesMap);
+    await this.calculateWorkspacesTotalEventsCount(projects, workspacesMap);
 
-    /**
-     * Iterate over all workspaces and collect banned projects
-     */
-    await asyncForEach(Object.entries(totalEventsCountByWorkspace), async ([workspaceId, eventsCount]) => {
-      const workspace = workspacesMap[workspaceId];
+    const bannedWorkspaces = await this.getWorkspacesToBan(workspacesMap);
 
-      await this.updateWorkspaceEventsCount(workspace._id, eventsCount);
+    const bannedProjectIds = this.getBannedProjectIds(projects, bannedWorkspaces);
 
-      if (workspace.tariffPlan.eventsLimit <= eventsCount) {
-        workspace.billingPeriodEventsCount = eventsCount;
-        reportData.bannedWorkspaces.push(workspace);
-        projectIdsToBan.push(
-          ...projects
-            .filter(project => project.workspaceId.toString() === workspaceId)
-            .map(project => project._id.toString())
-        );
-      }
+    await this.saveToRedis(bannedProjectIds);
+
+    await this.sendReport({
+      bannedWorkspaces,
+      bannedProjectIds,
     });
-
-    reportData.bannedProjectIds = projectIdsToBan;
-
-    if (projectIdsToBan.length) {
-      await this.saveToRedis(projectIdsToBan);
-    }
-
-    await this.sendReport(reportData);
 
     this.logger.info('Limiter worker finished task');
   }
 
   /**
+   * Returns array of banned workspaces
+   *
+   * @param workspacesMap - workspaces to filter
+   */
+  private async getWorkspacesToBan(workspacesMap: Record<string, WorkspaceWithTariffPlan>): Promise<WorkspaceDBScheme[]> {
+    const bannedWorkspaces = new Set<WorkspaceDBScheme>();
+
+    /**
+     * Iterate over all workspaces and collect banned projects
+     */
+    await asyncForEach(Object.values(workspacesMap), async (workspace) => {
+      await this.updateWorkspaceEventsCount(workspace);
+
+      if (workspace.tariffPlan.eventsLimit <= workspace.billingPeriodEventsCount) {
+        bannedWorkspaces.add(workspace);
+      }
+    });
+
+    return Array.from(bannedWorkspaces);
+  }
+
+  /**
+   * Returns array of banned projects
+   *
+   * @param projects - projects to filter
+   * @param bannedWorkspaces - workspaces these projects belongs to
+   */
+  private getBannedProjectIds(projects: ProjectDBScheme[], bannedWorkspaces: WorkspaceDBScheme[]): string[] {
+    const bannedWorkspacesIds = bannedWorkspaces.map(workspace => workspace._id.toString());
+
+    return [
+      ...projects
+        .filter(project => bannedWorkspacesIds.includes(project.workspaceId.toString()))
+        .map(project => project._id.toString()),
+    ];
+  }
+
+  /**
    * Updates events counter during billing period for workspace
    *
-   * @param workspaceId — workspace id for updating
-   * @param eventsCount - events count to set
+   * @param workspace — workspace id for updating
    */
-  private async updateWorkspaceEventsCount(workspaceId: ObjectId, eventsCount: number): Promise<void> {
+  private async updateWorkspaceEventsCount(workspace: WorkspaceDBScheme): Promise<void> {
     await this.workspacesCollection.updateOne(
-      { _id: workspaceId },
-      { $set: { billingPeriodEventsCount: eventsCount } }
+      { _id: workspace._id },
+      { $set: { billingPeriodEventsCount: workspace.billingPeriodEventsCount } }
     );
   }
 
@@ -157,21 +171,27 @@ export default class LimiterWorker extends Worker {
    */
   private saveToRedis(projectIdsToBan: string[]): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.redisClient.multi()
-        .del(this.redisDisabledProjectsKey)
-        .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
-        .exec((execError) => {
-          if (execError) {
-            this.logger.error(execError);
-            HawkCatcher.send(execError);
+      const callback = (execError: Error|null): void => {
+        if (execError) {
+          this.logger.error(execError);
+          HawkCatcher.send(execError);
 
-            reject(execError);
+          reject(execError);
 
-            return;
-          }
-          this.logger.info('Successfully saved to Redis');
-          resolve();
-        });
+          return;
+        }
+        this.logger.info('Successfully saved to Redis');
+        resolve();
+      };
+
+      if (projectIdsToBan.length) {
+        this.redisClient.multi()
+          .del(this.redisDisabledProjectsKey)
+          .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
+          .exec(callback);
+      } else {
+        this.redisClient.del(this.redisDisabledProjectsKey, callback);
+      }
     });
   }
 
@@ -191,18 +211,15 @@ export default class LimiterWorker extends Worker {
   private async calculateWorkspacesTotalEventsCount(
     projects: ProjectDBScheme[],
     workspacesMap: Record<string, WorkspaceWithTariffPlan>
-  ): Promise<Record<string, number>> {
-    const totalEventsCountByWorkspace: Record<string, number> = {};
-
+  ): Promise<void> {
     await asyncForEach(projects, async (project) => {
       this.logger.info('Processing project with id ' + project._id);
+      const workspace = workspacesMap[project.workspaceId.toString()];
 
       const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()]);
 
-      totalEventsCountByWorkspace[project.workspaceId.toString()] = (totalEventsCountByWorkspace[project.workspaceId.toString()] || 0) + totalEventsCount;
+      workspace.billingPeriodEventsCount += totalEventsCount;
     });
-
-    return totalEventsCountByWorkspace;
   }
 
   /**
@@ -221,6 +238,11 @@ export default class LimiterWorker extends Worker {
       {
         $unwind: {
           path: '$tariffPlan',
+        },
+      },
+      {
+        $addFields: {
+          billingPeriodEventsCount: 0,
         },
       },
     ]).toArray();
@@ -266,7 +288,7 @@ export default class LimiterWorker extends Worker {
 
     const [repetitionsCount, originalEventCount] = await Promise.all([
       repetitionsCollection.find(query).count(),
-      eventsCollection.find(query).count()
+      eventsCollection.find(query).count(),
     ]);
 
     return repetitionsCount + originalEventCount;
@@ -294,13 +316,6 @@ export default class LimiterWorker extends Worker {
         const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
 
         report += `\n${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code> | ${shortNumber(workspace.billingPeriodEventsCount)} in ${timeInDays} days`;
-      });
-    }
-
-    if (reportData.workspacesWithoutLastChargeDate.size) {
-      report += `\n\nAlert ⚠️\nWorkspaces without last charge date:\n`;
-      reportData.workspacesWithoutLastChargeDate.forEach((workspace) => {
-        report += `\n${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code>`;
       });
     }
 

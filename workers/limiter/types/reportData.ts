@@ -10,11 +10,6 @@ export default interface ReportData {
   bannedWorkspaces: WorkspaceDBScheme[];
 
   /**
-   * Data about workspaces with missing lastChargeDate field
-   */
-  workspacesWithoutLastChargeDate: Set<WorkspaceDBScheme>;
-
-  /**
    * Projects ids to ban
    */
   bannedProjectIds: string[];
