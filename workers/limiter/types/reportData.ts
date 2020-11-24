@@ -3,7 +3,7 @@ import { WorkspaceDBScheme } from 'hawk.types';
 /**
  * Data for sending notification after task handling
  */
-interface ReportData {
+export default interface ReportData {
   /**
    * Banned workspaces data
    */
@@ -19,5 +19,3 @@ interface ReportData {
    */
   bannedProjectIds: string[];
 }
-
-export default ReportData;

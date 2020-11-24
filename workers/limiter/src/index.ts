@@ -15,7 +15,7 @@ import ReportData from '../types/reportData';
 /**
  * Workspace with its tariff plan
  */
-type WorkspaceWithTariffPlan = WorkspaceDBScheme & {tariffPlan: PlanDBScheme}
+type WorkspaceWithTariffPlan = WorkspaceDBScheme & {tariffPlan: PlanDBScheme};
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -61,7 +61,7 @@ export default class LimiterWorker extends Worker {
   /**
    * Redis key for storing banned projects
    */
-  private readonly redisDisabledProjectsKey = 'DisabledProjectsSet'
+  private readonly redisDisabledProjectsKey = 'DisabledProjectsSet';
 
   /**
    * Start consuming messages
