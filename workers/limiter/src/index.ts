@@ -11,6 +11,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
 import ReportData from '../types/reportData';
+import {CriticalError} from "../../../lib/workerErrors";
 
 /**
  * Workspace with its tariff plan
@@ -145,11 +146,9 @@ export default class LimiterWorker extends Worker {
   private getBannedProjectIds(projects: ProjectDBScheme[], bannedWorkspaces: WorkspaceDBScheme[]): string[] {
     const bannedWorkspacesIds = bannedWorkspaces.map(workspace => workspace._id.toString());
 
-    return [
-      ...projects
-        .filter(project => bannedWorkspacesIds.includes(project.workspaceId.toString()))
-        .map(project => project._id.toString()),
-    ];
+    return projects
+      .filter(project => bannedWorkspacesIds.includes(project.workspaceId.toString()))
+      .map(project => project._id.toString());
   }
 
   /**
@@ -166,6 +165,7 @@ export default class LimiterWorker extends Worker {
 
   /**
    * Saves banned project ids to redis
+   * If there is no projects, then previous data in Redis will be erased
    *
    * @param projectIdsToBan - ids to ban
    */
@@ -286,12 +286,17 @@ export default class LimiterWorker extends Worker {
       },
     };
 
-    const [repetitionsCount, originalEventCount] = await Promise.all([
-      repetitionsCollection.find(query).count(),
-      eventsCollection.find(query).count(),
-    ]);
+    try {
+      const [repetitionsCount, originalEventCount] = await Promise.all([
+        repetitionsCollection.find(query).count(),
+        eventsCollection.find(query).count(),
+      ]);
 
-    return repetitionsCount + originalEventCount;
+      return repetitionsCount + originalEventCount;
+    } catch (e) {
+      HawkCatcher.send(e);
+      throw new CriticalError(e);
+    }
   }
 
   /**
