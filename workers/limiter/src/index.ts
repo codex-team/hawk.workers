@@ -264,7 +264,10 @@ export default class LimiterWorker extends Worker {
       },
     };
 
-    const [repetitionsCount, originalEventCount] = await Promise.all([repetitionsCollection.find(query).count(), eventsCollection.find(query).count()]);
+    const [repetitionsCount, originalEventCount] = await Promise.all([
+      repetitionsCollection.find(query).count(),
+      eventsCollection.find(query).count()
+    ]);
 
     return repetitionsCount + originalEventCount;
   }
