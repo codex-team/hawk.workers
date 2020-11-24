@@ -2,7 +2,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import { Collection, Db } from 'mongodb';
+import { Collection, Db, ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
@@ -94,16 +94,60 @@ export default class LimiterWorker extends Worker {
       bannedWorkspaces: [],
       bannedProjectIds: [],
     };
-    const projectIdsToBan = await this.getProjectsIdsToBan(reportData);
+
+    const projectIdsToBan: string[] = [];
+
+    const [projects, workspacesMap] = await Promise.all([
+      this.getAllProjects(),
+      this.getWorkspacesWithTariffPlans(),
+    ]);
+
+    /**
+     * Stores id and events count for each workspace
+     */
+    const totalEventsCountByWorkspace = await this.calculateWorkspacesTotalEventsCount(projects, workspacesMap);
+
+    /**
+     * Iterate over all workspaces and collect banned projects
+     */
+    await asyncForEach(Object.entries(totalEventsCountByWorkspace), async ([workspaceId, eventsCount]) => {
+      const workspace = workspacesMap[workspaceId];
+
+      await this.updateWorkspaceEventsCount(workspace._id, eventsCount);
+
+      if (workspace.tariffPlan.eventsLimit <= eventsCount) {
+        workspace.billingPeriodEventsCount = eventsCount;
+        reportData.bannedWorkspaces.push(workspace);
+        projectIdsToBan.push(
+          ...projects
+            .filter(project => project.workspaceId.toString() === workspaceId)
+            .map(project => project._id.toString())
+        );
+      }
+    });
 
     reportData.bannedProjectIds = projectIdsToBan;
 
     if (projectIdsToBan.length) {
       await this.saveToRedis(projectIdsToBan);
     }
+
     await this.sendReport(reportData);
 
     this.logger.info('Limiter worker finished task');
+  }
+
+  /**
+   * Updates events counter during billing period for workspace
+   *
+   * @param workspaceId — workspace id for updating
+   * @param eventsCount - events count to set
+   */
+  private async updateWorkspaceEventsCount(workspaceId: ObjectId, eventsCount: number): Promise<void> {
+    await this.workspacesCollection.updateOne(
+      { _id: workspaceId },
+      { $set: { billingPeriodEventsCount: eventsCount } }
+    );
   }
 
   /**
@@ -132,46 +176,6 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Returns array of project ids for banning
-   *
-   * @param reportData - data for sending notification after task handling
-   */
-  private async getProjectsIdsToBan(reportData: ReportData): Promise<string[]> {
-    const [projects, workspacesMap] = await Promise.all([
-      this.getAllProjects(),
-      this.getWorkspacesWithTariffPlans(),
-    ]);
-
-    /**
-     * Stores id and events count for each workspace
-     */
-    const totalEventsCountByWorkspace = await this.getTotalEventsCountByWorkspace(projects, workspacesMap, reportData);
-
-    const projectIds: string[] = [];
-
-    await asyncForEach(Object.entries(totalEventsCountByWorkspace), async ([workspaceId, eventsCount]) => {
-      const workspace = workspacesMap[workspaceId];
-
-      await this.workspacesCollection.updateOne(
-        { _id: workspace._id },
-        { $set: { billingPeriodEventsCount: eventsCount } }
-      );
-
-      if (workspace.tariffPlan.eventsLimit <= eventsCount) {
-        workspace.billingPeriodEventsCount = eventsCount;
-        reportData.bannedWorkspaces.push(workspace);
-        projectIds.push(
-          ...projects
-            .filter(project => project.workspaceId.toString() === workspaceId)
-            .map(project => project._id.toString())
-        );
-      }
-    });
-
-    return projectIds;
-  }
-
-  /**
    * Returns all projects from Database
    */
   private getAllProjects(): Promise<ProjectDBScheme[]> {
@@ -183,19 +187,17 @@ export default class LimiterWorker extends Worker {
    *
    * @param projects - projects to check
    * @param workspacesMap - workspaces to check
-   * @param reportData - data for sending notification after task handling
    */
-  private async getTotalEventsCountByWorkspace(
+  private async calculateWorkspacesTotalEventsCount(
     projects: ProjectDBScheme[],
-    workspacesMap: Record<string, WorkspaceWithTariffPlan>,
-    reportData: ReportData
+    workspacesMap: Record<string, WorkspaceWithTariffPlan>
   ): Promise<Record<string, number>> {
     const totalEventsCountByWorkspace: Record<string, number> = {};
 
     await asyncForEach(projects, async (project) => {
       this.logger.info('Processing project with id ' + project._id);
 
-      const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()], reportData);
+      const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()]);
 
       totalEventsCountByWorkspace[project.workspaceId.toString()] = (totalEventsCountByWorkspace[project.workspaceId.toString()] || 0) + totalEventsCount;
     });
@@ -235,12 +237,10 @@ export default class LimiterWorker extends Worker {
    *
    * @param project - project to check
    * @param workspace - workspace that project belongs to
-   * @param reportData - data for sending notification after task handling
    */
   private async getProjectEventsCount(
     project: ProjectDBScheme,
-    workspace: WorkspaceWithTariffPlan,
-    reportData: ReportData
+    workspace: WorkspaceWithTariffPlan
   ): Promise<number> {
     /**
      * If last charge date is not specified, then we skip checking it
@@ -248,7 +248,9 @@ export default class LimiterWorker extends Worker {
      * and limiter will process it successfully
      */
     if (!workspace.lastChargeDate) {
-      reportData.workspacesWithoutLastChargeDate.add(workspace);
+      HawkCatcher.send(new Error('Workspace without lastChargeDate detected'), {
+        workspaceId: workspace._id,
+      });
 
       return;
     }
