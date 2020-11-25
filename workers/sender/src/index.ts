@@ -123,7 +123,7 @@ export default abstract class SenderWorker extends Worker {
 
     const eventsData = await Promise.all(
       events.map(
-        async ({ key: groupHash, count }: {key: string; count: number}): Promise<TemplateEventData> => {
+        async ({ key: groupHash, count }: { key: string; count: number }): Promise<TemplateEventData> => {
           const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
 
           return {
@@ -189,7 +189,7 @@ export default abstract class SenderWorker extends Worker {
       period: channel.minPeriod,
       event,
       whoAssigned,
-      repeating: daysRepeated,
+      daysRepeated,
     } as AssigneeTemplateVariables);
   }
 

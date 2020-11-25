@@ -1,33 +1,30 @@
 <div>
-    <div style="display: inline-block; padding: 0 9px; border-radius: 16px; background-color: #4979e4; text-align: center; margin-bottom: 5px">
-        <font color="#dbe6ff"
-              style="font-size: 12px; line-height: 20px; font-weight: 500; letter-spacing: -0.09px; color: #dbe6ff;">
-            <nobr>
-                {{ event.newCount | abbrNumber }}&nbsp;new
-            </nobr>
-        </font>
-    </div>
-    &nbsp;&nbsp;
-    <font color="#969FB3"
-          style="font-size: 12px; line-height: 20px;letter-spacing: 0.17px;text-align: center; color: #969FB3;">
+    {% if event.newCount %}
+        <div style="display: inline-block; padding: 0 9px; border-radius: 16px; background-color: #4979e4; text-align: center; margin-bottom: 5px">
+            <font color="#dbe6ff" style="font-size: 12px; line-height: 20px; font-weight: 500; letter-spacing: -0.09px; color: #dbe6ff;">
+                <nobr>
+                    {{ event.newCount | abbrNumber }}&nbsp;new&nbsp;&nbsp;
+                </nobr>
+            </font>
+        </div>
+    {% endif %}
+    <font color="#969FB3" style="font-size: 12px; line-height: 20px;letter-spacing: 0.17px;text-align: center; color: #969FB3;">
         <nobr>
             {{ event.event.totalCount | abbrNumber }}&nbsp;total
         </nobr>
     </font>
     &nbsp;&nbsp;
-    <font color="#969FB3"
-          style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
+    <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
         <nobr>
             {{ event.daysRepeated }}&nbsp;days&nbsp;repeating
         </nobr>
     </font>
     &nbsp;&nbsp;
     {% if event.usersAffected %}
-            <font color="#969FB3"
-                  style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
-                <nobr>
-                    {{ event.usersAffected }}&nbsp;users&nbsp;affected
-                </nobr>
-            </font>
+        <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
+            <nobr>
+                {{ event.usersAffected }}&nbsp;users&nbsp;affected
+            </nobr>
+        </font>
     {% endif %}
 </div>

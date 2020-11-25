@@ -3,7 +3,7 @@
 {{ event.payload.title }}
 
 {{ event.totalCount }} total
-{{ repeating }} {% if repeating == 1 %}day{% else %}days{% endif %} repeating
+{{ daysRepeated }} {% if daysRepeated == 1 %}day{% else %}days{% endif %} repeating
 {{ event.usersAffected }} {% if event.usersAffected  == 1 %}user{% else %}users{% endif %} affected
 
 View event: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview

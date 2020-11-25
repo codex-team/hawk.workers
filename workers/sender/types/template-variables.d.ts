@@ -35,7 +35,7 @@ export interface AssigneeTemplateVariables extends TemplateVariables {
   project: ProjectDBScheme;
   event: GroupedEventDBScheme;
   whoAssigned: UserDBScheme;
-  repeating: number;
+  daysRepeated: number;
 }
 
 /**

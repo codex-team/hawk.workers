@@ -58,7 +58,7 @@ export interface SenderWorkerAssigneeTask {
   /**
    * Number of repetitions
    */
-  repeating: number;
+  daysRepeated: number;
 
   /**
    * How many users were affected

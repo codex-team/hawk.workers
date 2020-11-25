@@ -27,37 +27,13 @@
 					{{ event.payload.title }}
 				</span>
 			</font>
-			<font color="#969FB3" style="font-size: 12px; text-align: center; color: #969FB3; letter-spacing: 0.17px;">
-				<span style="vertical-align: middle; display: inline-block; padding-right: 7px;">
-					{{ event.totalCount }}
-					total
-				</span>
-				<span style="vertical-align: middle; display: inline-block; padding-right: 7px;">
-					{{ repeating }}
-					{% if repeating == 1 %}
-						day
-					{% else %}
-						days
-					{% endif %}
-					repeating
-				</span>
-				<span style="vertical-align: middle; display: inline-block;">
-					{{ event.usersAffected }}
-					{% if event.usersAffected  == 1 %}
-						user
-					{% else %}
-						users
-					{% endif %}
-					affected
-				</span>
-			</font>
+			{% include '../../components/event-info.twig' with {event: { daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: event.usersAffected}} %}
 		</td>
 	</tr>
 	<tr>
-		<td>
-			<a href="{{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview" style="display: block; padding-top: 12px; padding-bottom: 12px; text-align: center; width: 90%; background: #4979e4; color: #dbe6ff; border-width: 0; border-radius: 4px; margin-left: auto; margin-right: auto; margin-bottom: 40px; text-decoration: none;">
-				View event
-			</a>
+		<td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+			{% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}
+			{% include '../../components/button.twig' with {href: url, label: 'View event'} %}
 		</td>
 	</tr>
 
