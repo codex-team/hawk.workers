@@ -193,9 +193,20 @@ export default class JavascriptEventWorker extends EventWorker {
 
     /**
      * Source code lines
-     * 5 above and 5 below
      */
-    const lines = this.readSourceLines(consumer, originalLocation);
+    let lines = [];
+
+    if (originalLocation.source) {
+      /**
+       * Get 5 lines above and 5 below
+       */
+      lines = this.readSourceLines(consumer, originalLocation);
+    } else {
+      HawkCatcher.send(new Error('JS Worker (parsing maps): originalLocation.source is missing'), {
+        stackFrame,
+        originalLocation,
+      });
+    }
 
     consumer.destroy();
     consumer = null;
@@ -248,13 +259,7 @@ export default class JavascriptEventWorker extends EventWorker {
     consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer,
     original: NullableMappedPosition
   ): SourceCodeLine[] {
-    let sourceContent;
-
-    try {
-      sourceContent = consumer.sourceContentFor(original.source, true);
-    } catch (e) {
-      HawkCatcher.send(new Error(`Catch error: ${e.message}`), original);
-    }
+    const sourceContent = consumer.sourceContentFor(original.source, true);
 
     if (!sourceContent) {
       return null;
