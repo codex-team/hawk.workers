@@ -118,11 +118,16 @@ export default class JavascriptEventWorker extends EventWorker {
       return this.cache.get(
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
+          /**
+           * Frame data is missing
+           */
           if (!frame.file) {
-            HawkCatcher.send(new Error('frame.file is missing'), {
-              event,
-              frame,
-            });
+            return Object.assign({
+              line: 0,
+              column: 0,
+              file: '',
+              sourceCode: [],
+            }, frame) as BacktraceFrame;
           }
 
           return this.consumeBacktraceFrame(frame, releaseRecord)
