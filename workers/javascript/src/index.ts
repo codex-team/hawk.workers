@@ -118,18 +118,6 @@ export default class JavascriptEventWorker extends EventWorker {
       return this.cache.get(
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
-          // /**
-          //  * Frame data is missing
-          //  */
-          // if (!frame.file) {
-          //   return Object.assign({
-          //     line: 0,
-          //     column: 0,
-          //     file: '',
-          //     sourceCode: [],
-          //   }, frame) as BacktraceFrame;
-          // }
-
           return this.consumeBacktraceFrame(frame, releaseRecord)
             .catch((error) => {
               this.logger.error('Error while consuming ' + error.stack);
@@ -213,11 +201,6 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get 5 lines above and 5 below
        */
       lines = this.readSourceLines(consumer, originalLocation);
-    // } else {
-    //   HawkCatcher.send(new Error('JS Worker (parsing maps): originalLocation.source is missing'), {
-    //     stackFrame,
-    //     originalLocation,
-    //   });
     }
 
     consumer.destroy();
