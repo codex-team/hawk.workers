@@ -235,38 +235,6 @@ class EmailTestServer {
       html: '',
     };
 
-    if (templateName == 'assignee') {
-      // variables = {
-      // host: 'http://localhost:8080',
-      // hostOfStatic: 'http://localhost:4000/static',
-      // project: {
-      //     _id: new ObjectId('5f205ef827228c00236d5117'),
-      //     name: 'New gamma proj',
-      //     workspaceId: new ObjectId('5ec4004969c0030022f88f27'),
-      //     uidAdded: new ObjectId('5f205ef827228c00236d5117'),
-      //     image: null,
-      //     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI1ZjIwNWVmODI3MjI4YzAwMjM2ZDUxMTciLCJpYXQiOjE1OTU5NTY5ODR9.KvbyuJ8Ct5icuFic2TjDfwjEOA5c72rEVbG3yGNi3zA",
-      //     "notifications": [{
-      //       "_id": new ObjectId('5fac1dfea1e1ef00403fcf27'),
-      //       "uidAdded": new ObjectId('5ec3ffe769c0030022f88f24'),
-      //       "isEnabled": true,
-      //       "whatToReceive": ReceiveTypes.ONLY_NEW,
-      //       "channels": {
-      //         "email": { "isEnabled": true, "endpoint": "geekan@bk.ru", "minPeriod": 60 },
-      //         "telegram": { "isEnabled": false, "endpoint": "", "minPeriod": 60 },
-      //         "slack": { "isEnabled": false, "endpoint": "", "minPeriod": 60 } },
-      //         "including": [],
-      //         "excluding": []
-      //     }]
-      // },
-      // period: 60,
-      // assigneeId: '5fac1dfea1e1ef00403fcf27',
-      // totalCount: 355,
-      // repeating: 333,
-      // usersAffected: 123
-      // }
-    }
-
     await Promise.all(Object.keys(template).map((key) => {
       return new Promise(
         (resolve, reject) => Twig.renderFile(

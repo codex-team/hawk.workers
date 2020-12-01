@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import type { TemplateVariables, EventsTemplateVariables, AssigneeTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { AllNotifications, TemplateVariables, AssigneeTemplateVariables, EventsTemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -38,18 +38,18 @@ export default class EmailProvider extends NotificationsProvider {
    * @param {string} to - recipient email
    * @param {TemplateVariables} variables - variables for template
    */
-  public async send(to: string, variables: EventsTemplateVariables | AssigneeTemplateVariables): Promise<void> {
+  public async send(to: string, variables: AllNotifications): Promise<void> {
     let templateName: Templates;
 
-    if (variables?.events?.length === 1) {
+    if (variables?.type == NotificationTypes.EVENT) {
       templateName = Templates.NewEvent;
-      this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
-    } else if (variables?.events?.length > 1) {
+      this.sendEventNotification(to, variables.payload as EventsTemplateVariables, templateName);
+    } else if (variables?.type == NotificationTypes.SEVERAL_EVENTS) {
       templateName = Templates.SeveralEvents;
-      this.sendEventNotification(to, variables as EventsTemplateVariables, templateName);
-    } else if (variables?.whoAssigned) {
+      this.sendEventNotification(to, variables.payload as EventsTemplateVariables, templateName);
+    } else if (variables?.type == NotificationTypes.ASSIGNEE) {
       templateName = Templates.Assignee;
-      this.sendAssigneeNotification(to, variables as AssigneeTemplateVariables, templateName);
+      this.sendAssigneeNotification(to, variables.payload as AssigneeTemplateVariables, templateName);
     }
   }
 
@@ -96,7 +96,7 @@ export default class EmailProvider extends NotificationsProvider {
    * Send event notification
    *
    * @param templateName - name of the template to render
-   * @param to
+   * @param to - recipient's email address
    * @param variables - variables for template
    */
   public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates): Promise<void> {

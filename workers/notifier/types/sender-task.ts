@@ -4,7 +4,7 @@ import { BufferData } from '../src/buffer';
 /**
  * Interface describes task for notifications` senders workers
  */
-export interface SenderWorkerEventTask extends WorkerTask {
+export interface SenderWorkerEventPayload extends WorkerTask {
   /**
    * Project events related to
    */
@@ -24,7 +24,7 @@ export interface SenderWorkerEventTask extends WorkerTask {
 /**
  * Interface describes personal notifications
  */
-export interface SenderWorkerAssigneeTask {
+export interface SenderWorkerAssigneePayload {
   /**
    * Project event related to
    */
@@ -66,4 +66,4 @@ export interface SenderWorkerAssigneeTask {
   usersAffected: number;
 }
 
-export type SenderWorkerTask = SenderWorkerEventTask | SenderWorkerAssigneeTask;
+export type SenderWorkerTask = SenderWorkerEventPayload | SenderWorkerAssigneePayload;

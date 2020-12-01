@@ -5,11 +5,11 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { EventsTemplateVariables, TemplateEventData, AssigneeTemplateVariables } from '../types/template-variables';
+import { TemplateEventData, NotificationTypes } from '../types/template-variables';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
+import { SenderWorkerEventPayload, SenderWorkerAssigneePayload, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -89,10 +89,10 @@ export default abstract class SenderWorker extends Worker {
     }
 
     if ('whoAssignedId' in task) {
-      return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
+      return this.handleAssigneeTask(task as SenderWorkerAssigneePayload);
     }
 
-    return this.handleEventTask(task as SenderWorkerEventTask);
+    return this.handleEventTask(task as SenderWorkerEventPayload);
   }
 
   /**
@@ -100,7 +100,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handke
    */
-  private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
+  private async handleEventTask(task: SenderWorkerEventPayload): Promise<void> {
     const { projectId, ruleId, events } = task;
 
     const project = await this.getProject(projectId);
@@ -135,13 +135,18 @@ export default abstract class SenderWorker extends Worker {
       )
     );
 
+    const notificationType = NotificationTypes.EVENT;
+
     this.provider.send(channel.endpoint, {
-      host: process.env.GARAGE_URL,
-      hostOfStatic: process.env.API_STATIC_URL,
-      project,
-      events: eventsData,
-      period: channel.minPeriod,
-    } as EventsTemplateVariables);
+      type: NotificationTypes.EVENT,
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        project,
+        events: eventsData,
+        period: channel.minPeriod,
+      },
+    });
   }
 
   /**
@@ -149,7 +154,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
-  private async handleAssigneeTask(task: SenderWorkerAssigneeTask): Promise<void> {
+  private async handleAssigneeTask(task: SenderWorkerAssigneePayload): Promise<void> {
     const { projectId, ruleId, whoAssignedId, eventId } = task;
 
     const project = await this.getProject(projectId);
@@ -183,14 +188,17 @@ export default abstract class SenderWorker extends Worker {
     }
 
     this.provider.send(channel.endpoint, {
-      host: process.env.GARAGE_URL,
-      hostOfStatic: process.env.API_STATIC_URL,
-      project,
-      period: channel.minPeriod,
-      event,
-      whoAssigned,
-      daysRepeated,
-    } as AssigneeTemplateVariables);
+      type: NotificationTypes.ASSIGNEE,
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        project,
+        period: channel.minPeriod,
+        event,
+        whoAssigned,
+        daysRepeated,
+      },
+    });
   }
 
   /**
@@ -219,14 +227,12 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Get event data by projectId and eventId
    *
-   * @param projectId
-   * @param eventId
+   * @param projectId - project id of the event
+   * @param eventId - id of the event
    */
-  private async getEventData(
-    projectId: string,
-    eventId: string
-  ): Promise<[GroupedEventDBScheme, number]> {
+  private async getEventData(projectId: string, eventId: string): Promise<[GroupedEventDBScheme, number]> {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({
