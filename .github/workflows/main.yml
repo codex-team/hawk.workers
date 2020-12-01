@@ -32,13 +32,13 @@ jobs:
           push: ${{ endsWith(github.ref, '/prod') }}
 
       - name: Build and push stage image
-        if: endsWith(github.ref, '/stage')
+        if: endsWith(github.ref, '/build-migrate')
         uses: docker/build-push-action@v2
         with:
           context: .
           file: ./stage.Dockerfile
           tags: ${{ env.DOCKER_REPO }}:stage
-          push: ${{ endsWith(github.ref, '/stage') }}
+          push: ${{ endsWith(github.ref, '/build-migrate') }}
 
       - name: Deploy on stage
         if: endsWith(github.ref, '/stage')
