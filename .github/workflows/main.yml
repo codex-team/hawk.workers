@@ -28,7 +28,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ DOCKER_REPO }}:prod
+          tags: ${{ env.DOCKER_REPO }}:prod
           push: ${{ endsWith(github.ref, '/prod') }}
 
       - name: Build and push stage image
@@ -37,7 +37,7 @@ jobs:
         with:
           context: .
           file: ./stage.Dockerfile
-          tags: ${{ DOCKER_REPO }}:stage
+          tags: ${{ env.DOCKER_REPO }}:stage
           push: ${{ endsWith(github.ref, '/stage') }}
 
       - name: Deploy on stage
