@@ -10,7 +10,7 @@
 import * as http from 'http';
 import * as url from 'url';
 import templates, { Template } from '../src/templates';
-import type { EventsTemplateVariables, AssigneeTemplateVariables, AllTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { AllTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
 import { GroupedEventDBScheme, ProjectDBScheme, ReceiveTypes } from 'hawk.types';

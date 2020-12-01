@@ -78,3 +78,8 @@ export interface AssigneeNotification {
  * All possible notifications
  */
 export type AllNotifications = EventNotification | SeveralEventsNotification | AssigneeNotification;
+
+/**
+ * All template variables
+ */
+export type AllTemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables
