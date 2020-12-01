@@ -34,7 +34,7 @@ module.exports = {
 
       if (!hasIndexAlready) {
         await db.collection(collectionName).createIndex({
-          'payload.user.id': 1,
+          'payload.timeout': 1,
         }, {
           name: payloadTimeoutIndexName,
           sparse: true,
