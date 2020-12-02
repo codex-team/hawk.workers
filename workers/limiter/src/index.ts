@@ -91,19 +91,7 @@ export default class LimiterWorker extends Worker {
   public async handle(): Promise<void> {
     this.logger.info('Limiter worker started task');
 
-    const [projects, workspacesMap] = await Promise.all([
-      this.getAllProjects(),
-      this.getWorkspacesWithTariffPlans(),
-    ]);
-
-    /**
-     * Stores id and events count for each workspace
-     */
-    await this.calculateWorkspacesTotalEventsCount(projects, workspacesMap);
-
-    const bannedWorkspaces = await this.getWorkspacesToBan(workspacesMap);
-
-    const bannedProjectIds = this.getBannedProjectIds(projects, bannedWorkspaces);
+    const { bannedWorkspaces, bannedProjectIds } = await this.getWorkspacesAndProjectsIdsToBan();
 
     await this.saveToRedis(bannedProjectIds);
 
@@ -116,54 +104,78 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Returns array of banned workspaces
    *
-   * @param workspacesMap - workspaces to filter
    */
-  private async getWorkspacesToBan(workspacesMap: Record<string, WorkspaceWithTariffPlan>): Promise<WorkspaceDBScheme[]> {
-    const bannedWorkspaces = new Set<WorkspaceDBScheme>();
+  private async getWorkspacesAndProjectsIdsToBan(): Promise<ReportData> {
+    const bannedWorkspaces: WorkspaceWithTariffPlan[] = [];
+    const bannedProjectIds: string[] = [];
+    const [projects, workspacesWithTariffPlans] = await Promise.all([
+      this.getAllProjects(),
+      this.getWorkspacesWithTariffPlans(),
+    ]);
 
-    /**
-     * Iterate over all workspaces and collect banned projects
-     */
-    await asyncForEach(Object.values(workspacesMap), async (workspace) => {
-      await this.updateWorkspaceEventsCount(workspace);
+    await asyncForEach(workspacesWithTariffPlans, async workspace => {
+      const workspaceProjects = projects.filter(p => p.workspaceId === workspace._id);
 
+      /**
+       * If last charge date is not specified, then we skip checking it
+       * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
+       * and limiter will process it successfully
+       */
       if (!workspace.lastChargeDate) {
+        HawkCatcher.send(new Error('Workspace without lastChargeDate detected'), {
+          workspaceId: workspace._id,
+        });
+
         return;
       }
 
-      if (workspace.tariffPlan.eventsLimit <= workspace.billingPeriodEventsCount) {
-        bannedWorkspaces.add(workspace);
+      const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / 1000);
+
+      const workspaceEventsCount = await this.getEventsCountByProjects(workspaceProjects, since);
+
+      await this.updateWorkspaceEventsCount(workspace, workspaceEventsCount);
+
+      if (workspace.tariffPlan.eventsLimit < workspaceEventsCount) {
+        bannedProjectIds.push(...workspaceProjects.map(p => p._id.toString()));
+        bannedWorkspaces.push({
+          ...workspace,
+          billingPeriodEventsCount: workspaceEventsCount,
+        });
       }
     });
 
-    return Array.from(bannedWorkspaces);
+    return {
+      bannedWorkspaces,
+      bannedProjectIds,
+    };
   }
 
   /**
-   * Returns array of banned projects
+   * Calculates total events count for all provided projects since the specific date
    *
-   * @param projects - projects to filter
-   * @param bannedWorkspaces - workspaces these projects belongs to
+   * @param projects - projects to calculate for
+   * @param since - timestamp of the time from which we count the events
    */
-  private getBannedProjectIds(projects: ProjectDBScheme[], bannedWorkspaces: WorkspaceDBScheme[]): string[] {
-    const bannedWorkspacesIds = bannedWorkspaces.map(workspace => workspace._id.toString());
+  private async getEventsCountByProjects(projects: ProjectDBScheme[], since: number): Promise<number> {
+    const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
 
-    return projects
-      .filter(project => bannedWorkspacesIds.includes(project.workspaceId.toString()))
-      .map(project => project._id.toString());
+    return Promise.all(projects.map(
+      project => this.getEventsCountByProject(project, since)
+    ))
+      .then(sum);
   }
 
   /**
    * Updates events counter during billing period for workspace
    *
    * @param workspace — workspace id for updating
+   * @param workspaceEventsCount - workspaces events count to set
    */
-  private async updateWorkspaceEventsCount(workspace: WorkspaceDBScheme): Promise<void> {
+  private async updateWorkspaceEventsCount(workspace: WorkspaceDBScheme, workspaceEventsCount: number): Promise<void> {
     await this.workspacesCollection.updateOne(
       { _id: workspace._id },
-      { $set: { billingPeriodEventsCount: workspace.billingPeriodEventsCount } }
+      { $set: { billingPeriodEventsCount: workspaceEventsCount } }
     );
   }
 
@@ -207,30 +219,10 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Returns info about total events count for each workspace for the last billing period
-   *
-   * @param projects - projects to check
-   * @param workspacesMap - workspaces to check
+   * Returns array of workspaces with their tariff plans
    */
-  private async calculateWorkspacesTotalEventsCount(
-    projects: ProjectDBScheme[],
-    workspacesMap: Record<string, WorkspaceWithTariffPlan>
-  ): Promise<void> {
-    await asyncForEach(projects, async (project) => {
-      this.logger.info('Processing project with id ' + project._id);
-      const workspace = workspacesMap[project.workspaceId.toString()];
-
-      const totalEventsCount = await this.getProjectEventsCount(project, workspacesMap[project.workspaceId.toString()]);
-
-      workspace.billingPeriodEventsCount += totalEventsCount;
-    });
-  }
-
-  /**
-   * Returns workspaces with their tariff plans
-   */
-  private async getWorkspacesWithTariffPlans(): Promise<Record<string, WorkspaceWithTariffPlan>> {
-    const workspaces = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
+  private async getWorkspacesWithTariffPlans(): Promise<WorkspaceWithTariffPlan[]> {
+    return this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
       {
         $lookup: {
           from: 'plans',
@@ -250,43 +242,24 @@ export default class LimiterWorker extends Worker {
         },
       },
     ]).toArray();
-
-    return workspaces.reduce((acc, workspace) => {
-      acc[workspace._id.toString()] = workspace;
-
-      return acc;
-    }, {} as Record<string, WorkspaceWithTariffPlan>);
   }
 
   /**
    * Returns total event counts for last billing period
    *
    * @param project - project to check
-   * @param workspace - workspace that project belongs to
+   * @param since - timestamp of the time from which we count the events
    */
-  private async getProjectEventsCount(
+  private async getEventsCountByProject(
     project: ProjectDBScheme,
-    workspace: WorkspaceWithTariffPlan
+    since: number
   ): Promise<number> {
-    /**
-     * If last charge date is not specified, then we skip checking it
-     * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
-     * and limiter will process it successfully
-     */
-    if (!workspace.lastChargeDate) {
-      HawkCatcher.send(new Error('Workspace without lastChargeDate detected'), {
-        workspaceId: workspace._id,
-      });
-
-      return;
-    }
-
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
 
     const query = {
       'payload.timestamp': {
-        $gt: Math.floor(new Date(workspace.lastChargeDate).getTime() / 1000),
+        $gt: since,
       },
     };
 
@@ -322,7 +295,6 @@ export default class LimiterWorker extends Worker {
       reportData.bannedWorkspaces.forEach((workspace) => {
         const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
 
-        console.log(workspace.lastChargeDate, new Date(workspace.lastChargeDate), timeFromLastChargeDate);
         const millisecondsInDay = 24 * 60 * 60 * 1000;
         const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
 
