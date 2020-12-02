@@ -154,13 +154,6 @@ export default class PaymasterWorker extends Worker {
     );
 
     /**
-     * If workspace use free tariff plan then do nothing
-     */
-    if (currentPlan.monthlyCharge === 0) {
-      return [workspace, 0]; // no charging
-    }
-
-    /**
      * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
      * If lastChargeDate is undefined then charge tariff plan and set it
      */
@@ -183,22 +176,30 @@ export default class PaymasterWorker extends Worker {
    */
   private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number): Promise<void> {
     const date = new Date();
-    const purchaseResponse = await this.accounting.purchase({
-      accountId: workspace.accountId,
-      amount: planCost,
-    });
-    const transactionId = purchaseResponse.recordId;
 
-    await this.businessOperations.insertOne({
-      transactionId: transactionId,
-      payload: {
-        workspaceId: workspace._id,
-        amount: planCost * PENNY_MULTIPLIER,
-      },
-      status: BusinessOperationStatus.Confirmed,
-      type: BusinessOperationType.WorkspacePlanPurchase,
-      dtCreated: date,
-    });
+    /**
+     * Create a business operation and transaction
+     * only if the plan is not free
+     */
+    if (planCost > 0) {
+      const purchaseResponse = await this.accounting.purchase({
+        accountId: workspace.accountId,
+        amount: planCost,
+      });
+
+      const transactionId = purchaseResponse.recordId;
+
+      await this.businessOperations.insertOne({
+        transactionId: transactionId,
+        payload: {
+          workspaceId: workspace._id,
+          amount: planCost * PENNY_MULTIPLIER,
+        },
+        status: BusinessOperationStatus.Confirmed,
+        type: BusinessOperationType.WorkspacePlanPurchase,
+        dtCreated: date,
+      });
+    }
 
     await this.workspaces.updateOne({
       _id: workspace._id,
