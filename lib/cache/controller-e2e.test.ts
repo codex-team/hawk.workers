@@ -4,7 +4,6 @@ import CacheController from './controller';
  * Test for the Database Controller module
  */
 describe('Cache Controller Test', () => {
-
   describe('Try to get value by non-existing key', () => {
     const KEY = 'Hello';
     const cacheManagerInstance = new CacheController();
