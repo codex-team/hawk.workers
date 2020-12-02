@@ -115,7 +115,7 @@ export default class LimiterWorker extends Worker {
     ]);
 
     await asyncForEach(workspacesWithTariffPlans, async workspace => {
-      const workspaceProjects = projects.filter(p => p.workspaceId === workspace._id);
+      const workspaceProjects = projects.filter(p => p.workspaceId.toString() === workspace._id.toString());
 
       /**
        * If last charge date is not specified, then we skip checking it
@@ -254,6 +254,7 @@ export default class LimiterWorker extends Worker {
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
+    this.logger.info(`Processing project with id ${project._id}`);
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
 
