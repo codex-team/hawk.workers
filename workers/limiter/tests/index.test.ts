@@ -12,12 +12,12 @@ import LimiterWorker from '../src';
 Date.prototype.getTime = (): number => 1588334400 * 1000;
 
 const mockedWorkspace: WorkspaceDBScheme = {
-  _id: new ObjectId('5e4ff518628a6c714515f4de'),
+  _id: new ObjectId('5e4ff518628a6c714615f4de'),
   accountId: '',
   balance: 0,
   lastChargeDate: new Date(1584989425 * 1000),
   name: 'Test workspace',
-  tariffPlanId: new ObjectId('5e4ff518628a6c714515f4dc'),
+  tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
   billingPeriodEventsCount: 0,
 };
 
@@ -25,13 +25,13 @@ const mockedProject: ProjectDBScheme = {
   notifications: [],
   token: '5342',
   uidAdded: new ObjectId('5e4ff518628a6c714515f4db'),
-  workspaceId: new ObjectId('5e4ff518628a6c714515f4de'),
-  _id: new ObjectId('5e4ff518628a6c714515f4da'),
+  workspaceId: new ObjectId('5e4ff518628a6c714615f4de'),
+  _id: new ObjectId('5e4ff518618a6c714515f4da'),
   name: 'Test project',
 };
 
 const mockedPlan: PlanDBScheme = {
-  _id: new ObjectId('5e4ff518628a6c714515f4dc'),
+  _id: new ObjectId('5e4ff528628a6c714515f4dc'),
   name: 'Test plan',
   monthlyCharge: 10,
   eventsLimit: 10,
