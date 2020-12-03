@@ -179,7 +179,7 @@ export default class PaymasterWorker extends Worker {
    *
    * @param workspace - workspace for plan purchasing
    * @param planCost - amount of money needed to by plan
-   * @param date - date for syncing updated fields
+   * @param date - date of debiting money
    */
   private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number, date: Date): Promise<void> {
     const purchaseResponse = await this.accounting.purchase({
@@ -205,7 +205,7 @@ export default class PaymasterWorker extends Worker {
    * Update lastChargeDate in workspace
    *
    * @param workspace - workspace for plan purchasing
-   * @param date - date for syncing updated fields
+   * @param date - date of debiting money
    */
   private async updateLastChargeDate(workspace: WorkspaceDBScheme, date: Date): Promise<void> {
     await this.workspaces.updateOne({
