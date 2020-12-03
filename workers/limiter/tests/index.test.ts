@@ -17,7 +17,7 @@ const mockedWorkspace: WorkspaceDBScheme = {
   balance: 0,
   lastChargeDate: new Date(1584989425 * 1000),
   name: 'Test workspace',
-  tariffPlanId: new ObjectId('5e4ff518628a6c714515f4dh'),
+  tariffPlanId: new ObjectId('5e4ff518628a6c714515f4dc'),
   billingPeriodEventsCount: 0,
 };
 
@@ -31,7 +31,7 @@ const mockedProject: ProjectDBScheme = {
 };
 
 const mockedPlan: PlanDBScheme = {
-  _id: new ObjectId('5e4ff518628a6c714515f4dh'),
+  _id: new ObjectId('5e4ff518628a6c714515f4dc'),
   name: 'Test plan',
   monthlyCharge: 10,
   eventsLimit: 10,
