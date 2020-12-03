@@ -15,7 +15,7 @@ const mockedWorkspace: WorkspaceDBScheme = {
   _id: new ObjectId('5e4ff518628a6c714615f4de'),
   accountId: '',
   balance: 0,
-  lastChargeDate: new Date(1584989425 * 1000),
+  lastChargeDate: new Date(1584989421 * 1000),
   name: 'Test workspace',
   tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
   billingPeriodEventsCount: 0,
