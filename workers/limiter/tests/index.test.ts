@@ -4,18 +4,13 @@ import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import { mockedEvents } from './events.mock';
 import { mockedRepetitions } from './repetitions.mock';
 import LimiterWorker from '../src';
-
-/**
- * Set test date at 01.05.2020 12:00 so that tests pass always at the same time
- */
-// eslint-disable-next-line no-extend-native
-Date.prototype.getTime = (): number => 1588334400 * 1000;
+import redis from 'redis';
 
 const mockedWorkspace: WorkspaceDBScheme = {
   _id: new ObjectId('5e4ff518628a6c714615f4de'),
   accountId: '',
   balance: 0,
-  lastChargeDate: new Date(1584989421 * 1000),
+  lastChargeDate: new Date(1585742400 * 1000),
   name: 'Test workspace',
   tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
   billingPeriodEventsCount: 0,
@@ -46,6 +41,7 @@ describe('Limiter worker', () => {
   let projectCollection;
   let workspaceCollection;
   let planCollection;
+  let redisClient;
 
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
@@ -64,6 +60,7 @@ describe('Limiter worker', () => {
     await planCollection.insertOne(mockedPlan);
     await repetitionsCollection.insertMany(mockedRepetitions);
     await eventsCollection.insertMany(mockedEvents);
+    redisClient = redis.createClient({ url: process.env.REDIS_URL });
   });
 
   test('Should correctly count billing period events', async () => {
@@ -83,16 +80,29 @@ describe('Limiter worker', () => {
       _id: mockedWorkspace._id,
     });
 
-    console.log(workspace);
-    expect(workspace).toBeDefined();
+    expect(workspace.billingPeriodEventsCount).toEqual(18);
   });
 
-  test('Should put banned projects to redis', () => {
-    // Do something
+  test('Should put banned projects to redis', async (done) => {
+    /**
+     * Worker initialization
+     */
+    const worker = new LimiterWorker();
+
+    await worker.start();
+    await worker.handle();
+    await worker.finish();
+
+    redisClient.smembers('DisabledProjectsSet', (err, result) => {
+      expect(err).toBeNull();
+      expect(result).toContain(mockedProject._id.toString());
+      done();
+    });
   });
 
   afterAll(async () => {
     await connection.close();
     await db.close();
+    redisClient.end();
   });
 });
