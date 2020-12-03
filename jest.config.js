@@ -25,5 +25,7 @@ module.exports = {
     '^.+\\.tsx?$': 'ts-jest',
   },
 
-  setupFiles: ['./jest.setup.js']
+  setupFiles: [ './jest.setup.js' ],
+
+  setupFilesAfterEnv: [ './jest.setup.redis-mock.js' ],
 };
