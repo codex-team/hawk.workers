@@ -27,6 +27,7 @@
         "run-slack": "yarn worker hawk-worker-slack",
         "run-nodejs": "yarn worker hawk-worker-nodejs",
         "run-python": "yarn worker hawk-worker-python",
+        "run-go": "yarn worker hawk-worker-go",
         "run-grouper": "yarn worker hawk-worker-grouper",
         "run-archiver": "yarn worker hawk-worker-archiver",
         "run-accountant": "yarn worker hawk-worker-accountant",

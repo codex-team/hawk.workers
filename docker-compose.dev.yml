@@ -50,6 +50,17 @@ services:
     volumes:
       - ./:/usr/src/app
 
+  hawk-worker-go:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-go
+    volumes:
+      - ./:/usr/src/app
+
   #
   # Processing workers: grouper
   #
