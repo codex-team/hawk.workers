@@ -104,7 +104,8 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   *
+   * Checks which workspaces reached the limit and return them along with their projects ids.
+   * Also, updates workspace current event count in db.
    */
   private async getWorkspacesAndProjectsIdsToBan(): Promise<ReportData> {
     const bannedWorkspaces: WorkspaceWithTariffPlan[] = [];
