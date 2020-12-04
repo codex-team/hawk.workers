@@ -196,6 +196,10 @@ export default class JavascriptEventWorker extends EventWorker {
      */
     let lines = [];
 
+    /**
+     * Get source code lines above and below event line
+     * If source file path is missing then skip source lines reading
+     */
     if (originalLocation.source) {
       /**
        * Get 5 lines above and 5 below
