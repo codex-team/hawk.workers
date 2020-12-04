@@ -39,6 +39,7 @@ const workspace: WorkspaceDBScheme = {
   tariffPlanId: plan._id,
   lastChargeDate: new Date('2005-11-22'),
   accountId: '34562453',
+  billingPeriodEventsCount: 0
 };
 
 describe('PaymasterWorker', () => {
