@@ -1,4 +1,4 @@
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { EventsTemplateVariables, AllNotifications, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import templates from './templates';
 import { TelegramTemplate } from '../types/template';
@@ -14,16 +14,19 @@ export default class TelegramProvider extends NotificationsProvider {
    * @param to - recipient endpoint
    * @param variables - variables for template
    */
-  public async send(to: string, variables: EventsTemplateVariables): Promise<void> {
+  public async send(to: string, variables: AllNotifications): Promise<void> {
     let template: TelegramTemplate;
 
-    if (variables.events.length === 1) {
+    if (variables.type === NotificationTypes.EVENT) {
       template = templates.NewEventTpl;
-    } else {
+    } else if (variables.type === NotificationTypes.SEVERAL_EVENTS){
       template = templates.SeveralEventsTpl;
+    } else {
+      // todo: add assignee notification
+      return;
     }
 
-    const message = await this.render(template, variables);
+    const message = await this.render(template, variables.payload as EventsTemplateVariables);
 
     await this.deliver(to, message);
   }

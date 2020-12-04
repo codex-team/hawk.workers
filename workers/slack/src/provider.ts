@@ -1,5 +1,5 @@
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { AllNotifications, EventsTemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
 import templates from './templates';
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { SlackTemplate } from '../types/template';
@@ -25,21 +25,24 @@ export default class SlackProvider extends NotificationsProvider {
   }
 
   /**
-   * Send telegram message to recipient
+   * Send slack message to recipient
    *
    * @param to - recipient endpoint
    * @param variables - variables for template
    */
-  public async send(to: string, variables: EventsTemplateVariables): Promise<void> {
+  public async send(to: string, variables: AllNotifications): Promise<void> {
     let template: SlackTemplate;
 
-    if (variables.events.length === 1) {
+    if (variables.type === NotificationTypes.EVENT) {
       template = templates.NewEventTpl;
-    } else {
+    } else if (variables.type === NotificationTypes.SEVERAL_EVENTS){
       template = templates.SeveralEventsTpl;
+    } else {
+      // todo: add assignee notification
+      return;
     }
 
-    const webhookArgs = await this.render(template, variables);
+    const webhookArgs = await this.render(template, variables.payload as EventsTemplateVariables);
 
     await this.deliverer.deliver(to, webhookArgs);
   }
