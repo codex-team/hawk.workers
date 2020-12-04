@@ -4,11 +4,12 @@ import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
 import axios from 'axios';
-import { ReportDataByProject, ReportData, ReleaseRecord, ReleaseFileData } from './types';
+import { ReleaseFileData, ReleaseRecord, ReportData, ReportDataByProject } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
 import { ProjectDBScheme } from 'hawk.types';
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -120,8 +121,9 @@ export default class ArchiverWorker extends Worker {
    * @param project - project data to remove events
    */
   private async archiveProjectEvents(project: ProjectDBScheme): Promise<number> {
-    const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * 24 * 60 * 60;
-    const maxOldTimestamp = (new Date().getTime()) / 1000 - maxDaysInSeconds;
+    const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+
+    const maxOldTimestamp = (new Date().getTime()) / MS_IN_SEC - maxDaysInSeconds;
 
     await this.removeOldDailyEvents(project, maxOldTimestamp);
     const deleteRepetitionsResult = await this.removeOldRepetitions(project, maxOldTimestamp);
@@ -139,6 +141,7 @@ export default class ArchiverWorker extends Worker {
    * Updates counter for archived events
    *
    * @param project - project to handle
+   * @param project._id - project
    * @param deletedCount - events deleted count for incrementation
    */
   private async updateArchivedEventsCounter(project: { _id: ObjectId }, deletedCount: number): Promise<void> {
@@ -156,6 +159,7 @@ export default class ArchiverWorker extends Worker {
    * Removes old repetitions
    *
    * @param project - project to handle
+   * @param project._id - project
    * @param maxOldTimestamp - max timestamp to do not delete events
    */
   private async removeOldRepetitions(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<number> {
@@ -177,6 +181,7 @@ export default class ArchiverWorker extends Worker {
    * Removes old daily events
    *
    * @param project - project to handle
+   * @param project._id - project
    * @param maxOldTimestamp - max timestamp to do not delete events
    */
   private async removeOldDailyEvents(project: { _id: ObjectId }, maxOldTimestamp: number): Promise<void> {
@@ -196,6 +201,7 @@ export default class ArchiverWorker extends Worker {
    * Removes old original events for project
    *
    * @param project - project for handling
+   * @param project._id - project
    */
   private async removeOriginalEvents(project: { _id: ObjectId }): Promise<number> {
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
@@ -206,7 +212,7 @@ export default class ArchiverWorker extends Worker {
     type AggregationResult = {
       groupHash: string;
       dailyEvent: { groupHash: string }[];
-    }
+    };
 
     /**
      * Search for all events and their daily events
@@ -309,7 +315,7 @@ export default class ArchiverWorker extends Worker {
 
     let releasesReport = '\n\n<b>Releases</b>';
 
-    const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (1000 * 60);
+    const archivingTimeInMinutes = (reportData.finishDate.getTime() - reportData.startDate.getTime()) / (MS_IN_SEC * SECONDS_IN_MINUTE);
 
     let totalRemovedReleasesCount = 0;
 
@@ -324,7 +330,9 @@ export default class ArchiverWorker extends Worker {
       report += releasesReport;
     }
 
-    report += `\n\n<b>${totalArchivedEventsCount}</b> events and <b>${totalRemovedReleasesCount}</b> releases archived in ${archivingTimeInMinutes.toFixed(3)} min`;
+    const DIGITS_AFTER_POINT = 3;
+
+    report += `\n\n<b>${totalArchivedEventsCount}</b> events and <b>${totalRemovedReleasesCount}</b> releases archived in ${archivingTimeInMinutes.toFixed(DIGITS_AFTER_POINT)} min`;
     report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
     await axios({
@@ -340,12 +348,13 @@ export default class ArchiverWorker extends Worker {
    * @param project - project to handle
    */
   private async removeOldReleases(project: ProjectDBScheme): Promise<number> {
+    const RELEASES_COUNT_TO_REMOVE = 3;
     const releasesToRemove = await this.releasesCollection
       .find({
         projectId: project._id.toString(),
       })
       .sort({ _id: -1 })
-      .skip(3)
+      .skip(RELEASES_COUNT_TO_REMOVE)
       .toArray();
 
     const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(

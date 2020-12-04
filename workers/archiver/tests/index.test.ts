@@ -5,7 +5,6 @@ import ArchiverWorker from '../src';
 import { mockedEvents } from './events.mock';
 import '../../../env-test';
 import { mockedReleases } from './releases.mock';
-import './rabbit.mock';
 import { ProjectDBScheme } from 'hawk.types';
 jest.mock('axios');
 jest.mock('amqplib');

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import NotificationsProvider from '../src/provider';
 import { AllNotifications } from '../types/template-variables';
 
