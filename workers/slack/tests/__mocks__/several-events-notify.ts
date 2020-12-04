@@ -7,7 +7,7 @@ import { ObjectId } from 'mongodb';
  */
 export default {
   type: NotificationTypes.SEVERAL_EVENTS,
-  payload:  {
+  payload: {
     events: [
       {
         event: {
@@ -59,5 +59,5 @@ export default {
       uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
       notifications: [],
     },
-  }
+  },
 } as SeveralEventsNotification;

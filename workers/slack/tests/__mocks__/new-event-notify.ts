@@ -40,5 +40,5 @@ export default {
       uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
       notifications: [],
     },
-  }
+  },
 } as EventNotification;

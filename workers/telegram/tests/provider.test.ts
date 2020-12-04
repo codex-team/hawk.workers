@@ -49,7 +49,7 @@ describe('TelegramProvider', () => {
             uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
             notifications: [],
           } as ProjectDBScheme,
-        }
+        },
       };
 
       const provider = new TelegramProvider();
@@ -101,7 +101,7 @@ describe('TelegramProvider', () => {
             notifications: [],
           } as ProjectDBScheme,
           period: 60,
-        }
+        },
       };
 
       const provider = new TelegramProvider();

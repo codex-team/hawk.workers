@@ -35,7 +35,7 @@ export default class SlackProvider extends NotificationsProvider {
 
     if (variables.type === NotificationTypes.EVENT) {
       template = templates.NewEventTpl;
-    } else if (variables.type === NotificationTypes.SEVERAL_EVENTS){
+    } else if (variables.type === NotificationTypes.SEVERAL_EVENTS) {
       template = templates.SeveralEventsTpl;
     } else {
       // todo: add assignee notification
