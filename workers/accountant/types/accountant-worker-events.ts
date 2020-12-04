@@ -25,28 +25,6 @@ export enum EventType {
 }
 
 /**
- * Accountant worker task interface
- */
-export interface AccountantEvent {
-  /**
-   * Type of the event
-   */
-  type: EventType;
-  /**
-   * Event payload
-   */
-  payload: AccountantEventPayload;
-}
-
-/**
- * Transaction event interface
- */
-export interface TransactionEvent extends AccountantEvent {
-  type: EventType.Transaction;
-  payload: IncomeTransactionPayload | ChargeTransactionPayload;
-}
-
-/**
  * Common transaction payload properties
  */
 export interface TransactionPayload {
@@ -93,3 +71,25 @@ export interface ChargeTransactionPayload extends TransactionPayload {
  * General type for Accountant worker task payload
  */
 export type AccountantEventPayload = IncomeTransactionPayload | ChargeTransactionPayload;
+
+/**
+ * Accountant worker task interface
+ */
+export interface AccountantEvent {
+  /**
+   * Type of the event
+   */
+  type: EventType;
+  /**
+   * Event payload
+   */
+  payload: AccountantEventPayload;
+}
+
+/**
+ * Transaction event interface
+ */
+export interface TransactionEvent extends AccountantEvent {
+  type: EventType.Transaction;
+  payload: IncomeTransactionPayload | ChargeTransactionPayload;
+}

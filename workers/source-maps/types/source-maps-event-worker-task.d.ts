@@ -1,3 +1,15 @@
+export interface SourcemapCollectedData {
+  /**
+   * Bundle or chunk name
+   */
+  name: string;
+
+  /**
+   * Source map body
+   */
+  payload: string;
+}
+
 export interface SourceMapsEventWorkerTask {
   /**
    * Project that sends the source map
@@ -13,16 +25,4 @@ export interface SourceMapsEventWorkerTask {
    * List of source maps for all chunks
    */
   files: SourcemapCollectedData[];
-}
-
-export interface SourcemapCollectedData {
-  /**
-   * Bundle or chunk name
-   */
-  name: string;
-
-  /**
-   * Source map body
-   */
-  payload: string;
 }

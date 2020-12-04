@@ -224,12 +224,10 @@ export default class Buffer {
   /**
    * Get channel buffer
    *
-   * @param {object} params - method rest params
-   * @param {string} params.projectId - id of project event is related to
-   * @param {string} params.ruleId - id of rule channel is related to
-   * @param {string} params.channelName - telegram, slack, or email
+   * @param channelKey - key for getting channel
    */
-  private getChannel([projectId, ruleId, channelName]: ChannelKey): ChannelSchema {
+  private getChannel(channelKey: ChannelKey): ChannelSchema {
+    const [projectId, ruleId, channelName] = channelKey;
     const project = this.getField<ProjectSchema>(
       this.projects,
       projectId,

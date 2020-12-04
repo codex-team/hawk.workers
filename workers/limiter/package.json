@@ -1,0 +1,16 @@
+{
+    "name": "hawk-worker-limiter",
+    "version": "0.0.1",
+    "description": "Worker for checking current total events count in workspaces and limits events receiving if workspace exceed the limit",
+    "main": "src/index.ts",
+    "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/limiter",
+    "author": "CodeX <codex.so>",
+    "license": "UNLICENSED",
+    "private": true,
+    "workerType": "cron-tasks/limiter",
+    "dependencies": {
+        "@types/redis": "^2.8.28",
+        "axios": "^0.21.0",
+        "redis": "^3.0.2"
+    }
+}

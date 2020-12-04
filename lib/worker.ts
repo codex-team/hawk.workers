@@ -107,7 +107,7 @@ export abstract class Worker {
   /**
    * {Map<Object, Promise>} tasksMap - current worker's tasks
    */
-  private tasksMap: Map<object, Promise<void>> = new Map();
+  private tasksMap: Map<amqp.ConsumeMessage, Promise<void>> = new Map();
 
   /**
    * Worker type
@@ -174,9 +174,10 @@ export abstract class Worker {
   /**
    * Adds task to other worker
    *
-   * @param {string} worker - worker's name
+   * @param {string} worker - worker's name'
    * @param {object} payload - payload object
    */
+  // eslint-disable-next-line @typescript-eslint/ban-types
   public async addTask(worker: string, payload: object): Promise<boolean> {
     return this.channelWithRegistry.sendToQueue(
       worker,

@@ -1,3 +1,4 @@
+/* eslint-disable  */
 import { Collection, ObjectID, UpdateQuery } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';

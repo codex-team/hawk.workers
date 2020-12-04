@@ -8,7 +8,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import { WorkspacePlanChargeEvent, EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
+import { EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -116,7 +116,7 @@ export default class PaymasterWorker extends Worker {
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
       case EventType.WorkspacePlanCharge:
-        await this.handleWorkspacePlanChargeEvent(event as WorkspacePlanChargeEvent);
+        await this.handleWorkspacePlanChargeEvent();
 
         return;
 
@@ -129,10 +129,8 @@ export default class PaymasterWorker extends Worker {
    * WorkspacePlanChargeEvent event handler
    *
    * Called periodically, enumerate through workspaces and check if today is a payday for workspace plan
-   *
-   * @param {WorkspacePlanChargeEvent} event - event to handle
    */
-  private async handleWorkspacePlanChargeEvent(event: WorkspacePlanChargeEvent): Promise<void> {
+  private async handleWorkspacePlanChargeEvent(): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
     const result = await Promise.all(workspaces.map(

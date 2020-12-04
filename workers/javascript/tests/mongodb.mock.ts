@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ObjectId } from 'mongodb';
-import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
 import { GroupedEventDBScheme } from 'hawk.types';
 
 export const releasesJsQueryMock = jest.fn(() => ({
@@ -68,14 +68,13 @@ export const dbCloseMock = jest.fn();
 /**
  * Mock
  */
-// eslint-disable-next-line @typescript-eslint/class-name-casing
-export class mockDBController {
+export class MockDBController {
   /**
    * Mock
    *
    * @param args - connection args
    */
-  public connect(...args): any {
+  public connect(...args: unknown[]): any {
     return dbConnectMock(...args);
   }
 
