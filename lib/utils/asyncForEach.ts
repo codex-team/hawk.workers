@@ -10,7 +10,6 @@ type AsyncForEachCallback<T> = (item: T, index: number, array: T[]) => Promise<v
  * @param callback - callback for processing array items
  */
 export default async function asyncForEach<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   array: T[], callback: AsyncForEachCallback<T>
 ): Promise<void> {
   for (let index = 0; index < array.length; index++) {
