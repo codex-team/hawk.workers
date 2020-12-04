@@ -199,6 +199,8 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Get source code lines above and below event line
      * If source file path is missing then skip source lines reading
+     *
+     * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121 
      */
     if (originalLocation.source) {
       /**
