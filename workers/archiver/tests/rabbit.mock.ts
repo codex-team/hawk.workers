@@ -15,7 +15,7 @@ const mockedAmqpChannel = {
  * Connection object mock for testing work with RabbitMQ
  */
 const mockedAmqpConnection = {
-  createChannel: (): object => mockedAmqpChannel,
+  createChannel: (): typeof mockedAmqpChannel => mockedAmqpChannel,
   close: jest.fn(),
 };
 

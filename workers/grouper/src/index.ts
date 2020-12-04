@@ -10,6 +10,7 @@ import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Error code of MongoDB key duplication error
@@ -256,16 +257,18 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      const updateQuery = incrementAffected ? {
-        $inc: {
-          totalCount: 1,
-          usersAffected: 1,
-        },
-      } : {
-        $inc: {
-          totalCount: 1,
-        },
-      };
+      const updateQuery = incrementAffected
+        ? {
+          $inc: {
+            totalCount: 1,
+            usersAffected: 1,
+          },
+        }
+        : {
+          $inc: {
+            totalCount: 1,
+          },
+        };
 
       return (await this.db.getConnection()
         .collection(`events:${projectId}`)
@@ -301,10 +304,10 @@ export default class GrouperWorker extends Worker {
        * Problem was issued due to the numerous events that could be occurred in the past
        * but the date always was current
        */
-      const eventDate = new Date(eventTimestamp * 1000);
+      const eventDate = new Date(eventTimestamp * MS_IN_SEC);
 
       eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
-      const midnight = eventDate.getTime() / 1000;
+      const midnight = eventDate.getTime() / MS_IN_SEC;
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)

@@ -9,11 +9,11 @@ export default function render(tplData: EventsTemplateVariables): string {
   const projectUrl = tplData.host + '/project/' + tplData.project._id;
   let message = tplData.events.length + ' new events\n\n';
 
-  tplData.events.forEach(({ event, newCount, daysRepeated, usersAffected }) => {
+  tplData.events.forEach(({ event, newCount }) => {
     message += `(${newCount}) ${event.payload.title} \n`;
   });
 
   message += `\n[View all events](${projectUrl}) | *${tplData.project.name}*`;
 
   return message;
-};
+}

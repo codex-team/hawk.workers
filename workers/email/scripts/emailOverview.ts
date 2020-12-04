@@ -17,6 +17,7 @@ import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { HttpStatusCode } from '../../../lib/utils/consts';
 
 /**
  * Merge email worker .env and root workers .env
@@ -151,7 +152,6 @@ class EmailTestServer {
           this.sendHTML(subject, response);
           break;
         default:
-        case 'html':
           this.sendHTML(html, response);
           break;
       }
@@ -171,8 +171,8 @@ class EmailTestServer {
     const renderForm = (): Promise<string> => new Promise((resolve, reject): void => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
         {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-        // @ts-ignore because @types/twig doesn't match the docs
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore because @types/twig doesn't match the docs
           templates: Object.keys(templates),
           projects,
         },
@@ -197,7 +197,7 @@ class EmailTestServer {
    * @param response - node http response stream
    */
   private sendHTML(html: string, response: http.ServerResponse): void {
-    response.writeHead(200, {
+    response.writeHead(HttpStatusCode.Ok, {
       'Content-Type': 'text/html',
     });
     response.write(html);
@@ -210,8 +210,8 @@ class EmailTestServer {
    * @param json - what to send
    * @param response - node http response stream
    */
-  private sendJSON(json: object, response: http.ServerResponse): void {
-    response.writeHead(200, {
+  private sendJSON(json: Record<string, unknown> | unknown[], response: http.ServerResponse): void {
+    response.writeHead(HttpStatusCode.Ok, {
       'Content-Type': 'application/json',
     });
     response.write(JSON.stringify(json));
@@ -223,8 +223,6 @@ class EmailTestServer {
    *
    * @param templateName - template to render
    * @param variables - variables for template
-   *
-   * @returns {Promise<Template>}
    */
   private async render(templateName: string, variables: EventsTemplateVariables): Promise<Template> {
     const template: Template = templates[templateName];
@@ -238,7 +236,7 @@ class EmailTestServer {
       return new Promise(
         (resolve, reject) => Twig.renderFile(
           template[key as keyof Template],
-          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore because @types/twig doesn't match the docs
           variables,
           (err: Error, res: string): void => {
@@ -272,10 +270,8 @@ class EmailTestServer {
   /**
    * Get event data for email
    *
-   * @param {string} projectId - project events are related to
-   * @param {string} eventId - id of event
-   *
-   * @returns {Promise<[GroupedEvent, number]>}
+   * @param projectId - project events are related to
+   * @param eventId - id of event
    */
   private async getEventData(
     projectId: string,
@@ -296,8 +292,7 @@ class EmailTestServer {
   /**
    * Get project info
    *
-   * @param {string} projectId - project id
-   * @returns {Promise<Project>}
+   * @param projectId - project id
    */
   private async getProject(projectId: string): Promise<ProjectDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
@@ -307,8 +302,6 @@ class EmailTestServer {
 
   /**
    * Get all projects
-   *
-   * @returns {Promise<Project>}
    */
   private async getAllProjects(): Promise<ProjectDBScheme[]> {
     const connection = await this.accountsDb.getConnection();
@@ -320,8 +313,7 @@ class EmailTestServer {
   /**
    * Get all projects
    *
-   * @param {string} projectId - project id
-   * @returns {Promise<GroupedEvent[]>}
+   * @param projectId - project id
    */
   private async getEventsByProjectId(projectId: string): Promise<GroupedEventDBScheme[]> {
     const connection = await this.eventsDb.getConnection();
@@ -333,6 +325,8 @@ class EmailTestServer {
   }
 }
 
-const server = new EmailTestServer(4444);
+const EMAIL_TEST_SERVER_PORT = 4444;
+
+const server = new EmailTestServer(EMAIL_TEST_SERVER_PORT);
 
 server.start();

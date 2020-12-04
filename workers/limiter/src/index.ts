@@ -12,6 +12,7 @@ import axios from 'axios';
 import shortNumber from 'short-number';
 import ReportData from '../types/reportData';
 import { CriticalError } from '../../../lib/workerErrors';
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 
 /**
  * Workspace with its tariff plan
@@ -131,7 +132,7 @@ export default class LimiterWorker extends Worker {
         return;
       }
 
-      const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / 1000);
+      const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
       const workspaceEventsCount = await this.getEventsCountByProjects(workspaceProjects, since);
 
@@ -297,7 +298,7 @@ export default class LimiterWorker extends Worker {
       reportData.bannedWorkspaces.forEach((workspace) => {
         const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
 
-        const millisecondsInDay = 24 * 60 * 60 * 1000;
+        const millisecondsInDay = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
         const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
 
         report += `\n${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code> | ${shortNumber(workspace.billingPeriodEventsCount)} in ${timeInDays} days`;

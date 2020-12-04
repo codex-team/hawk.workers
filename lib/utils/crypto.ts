@@ -7,14 +7,14 @@ export default class Crypto {
   /**
    * Get hash for target value
    *
-   * @param {any} value — data to be hashed
-   * @param {string} [algo='sha256'] — type of algorithm to be used for hashing
+   * @param value — data to be hashed
+   * @param algo — type of algorithm to be used for hashing
    */
-  public static hash(value, algo = 'sha256'): string {
-    value = JSON.stringify(value);
+  public static hash(value: unknown, algo = 'sha256'): string {
+    const stringifiedValue = JSON.stringify(value);
 
     return crypto.createHash(algo)
-      .update(value)
+      .update(stringifiedValue)
       .digest('hex');
   }
 }
