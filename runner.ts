@@ -111,7 +111,7 @@ class WorkerRunner {
 
     const PUSH_INTERVAL = 1000;
 
-    // Pushing metrics to the pushgateway every second
+    // Pushing metrics to the pushgateway every PUSH_INTERVAL
     setInterval(() => {
       this.workers.forEach((worker) => {
         if (!this.gateway || !instance) {
