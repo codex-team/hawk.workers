@@ -2596,9 +2596,10 @@ escodegen@^1.11.1:
   optionalDependencies:
     source-map "~0.6.1"
 
-"eslint-config-codex@github:codex-team/eslint-config#fix-ts":
+eslint-config-codex@^1.5.0:
   version "1.5.0"
-  resolved "https://codeload.github.com/codex-team/eslint-config/tar.gz/df3c49eb1d4205d2d7a0268e5b367192ff4a33ee"
+  resolved "https://registry.yarnpkg.com/eslint-config-codex/-/eslint-config-codex-1.5.0.tgz#3bb6c29e20bc0e1d477da98c2df8efb2296c0606"
+  integrity sha512-v+2Pk6FmwkmCldC2j2WSQqAWRl0pIYfG7MqRe3Kx0wBk4aZOcUcpI4nIbe1lfl8rGfm4rTKgmiWWToVIQ33fWw==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^4.6.1"
     "@typescript-eslint/parser" "^4.6.1"
