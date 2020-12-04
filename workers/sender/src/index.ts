@@ -193,7 +193,6 @@ export default abstract class SenderWorker extends Worker {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
         project,
-        period: channel.minPeriod,
         event,
         whoAssigned,
         daysRepeated,
@@ -258,7 +257,7 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
-   * Get user
+   * Get user data
    *
    * @param userId - user id
    */

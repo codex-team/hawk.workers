@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import { AllNotifications, TemplateVariables, AssigneeTemplateVariables, EventsTemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { AllNotifications, TemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -36,35 +36,34 @@ export default class EmailProvider extends NotificationsProvider {
    * Send email to recipient
    *
    * @param {string} to - recipient email
-   * @param {TemplateVariables} variables - variables for template
+   * @param {TemplateVariables} variables - variables wrapped in a payload with type
    */
   public async send(to: string, variables: AllNotifications): Promise<void> {
     let templateName: Templates;
 
     if (variables?.type == NotificationTypes.EVENT) {
       templateName = Templates.NewEvent;
-      this.sendEventNotification(to, variables.payload as EventsTemplateVariables, templateName);
     } else if (variables?.type == NotificationTypes.SEVERAL_EVENTS) {
       templateName = Templates.SeveralEvents;
-      this.sendEventNotification(to, variables.payload as EventsTemplateVariables, templateName);
     } else if (variables?.type == NotificationTypes.ASSIGNEE) {
       templateName = Templates.Assignee;
-      this.sendAssigneeNotification(to, variables.payload as AssigneeTemplateVariables, templateName);
     }
+
+    this.sendNotification(to, variables, templateName);
   }
 
   /**
-   * Send notification when someone was assigned
+   * Send notification to user email
    *
    * @param to - recipient email. Person who was assigned to solve the issue
    * @param variables - variables for template
    * @param templateName - name of the template to render
    */
-  public async sendAssigneeNotification(to: string, variables: AssigneeTemplateVariables, templateName: Templates): Promise<void> {
+  public async sendNotification(to: string, variables: AllNotifications, templateName: Templates): Promise<void> {
     let content: Template;
 
     try {
-      content = await this.render(templateName, variables);
+      content = await this.render(templateName, variables.payload);
     } catch (e) {
       this.logger.error(`Failed to render ${templateName} template `, e);
 
@@ -86,45 +85,6 @@ export default class EmailProvider extends NotificationsProvider {
     } catch (e) {
       this.logger.error(
         'Error sending letter. Try to check the environment settings (in .env file).', e
-      );
-
-      utils.sendReport('📮 Email worker\n\n' + (e.message || e.toString()));
-    }
-  }
-
-  /**
-   * Send event notification
-   *
-   * @param templateName - name of the template to render
-   * @param to - recipient's email address
-   * @param variables - variables for template
-   */
-  public async sendEventNotification(to: string, variables: EventsTemplateVariables, templateName: Templates): Promise<void> {
-    let content: Template;
-
-    try {
-      content = await this.render(templateName, variables);
-    } catch (e) {
-      this.logger.error(`Failed to render ${templateName} template `, e);
-
-      return;
-    }
-
-    const mailOptions = {
-      from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
-      to,
-      ...content,
-    };
-
-    if (process.env.NODE_ENV === 'development') {
-      this.logger.info(`Mail sent to ${to}: \n\n + ${content}`);
-    }
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-    } catch (e) {
-      this.logger.error(
-        'Error sending letter. Try to check the environment settings (in .env file).', e.message
       );
 
       utils.sendReport('📮 Email worker\n\n' + (e.message || e.toString()));

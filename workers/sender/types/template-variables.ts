@@ -1,40 +1,82 @@
 import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme, UserDBScheme } from 'hawk.types';
 
 /**
- * Common interface for template variables
+ * Common variables for notification templates
  */
-export interface TemplateVariables {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+export interface CommonTemplateVariables {
+  /**
+   * Api url
+   */
+  host: string;
+
+  /**
+   * Api url with path to static files
+   */
+  hostOfStatic: string;
 }
 
 /**
  * Types of sender notifications
  */
 export enum NotificationTypes {
-  ASSIGNEE='assignee',
-  EVENT='event',
-  SEVERAL_EVENTS='several-events'
+  /**
+   * Notification when someone assigned a user to resolve an event
+   */
+  ASSIGNEE = 'assignee',
+
+  /**
+   * Notification when the new event occured
+   */
+  EVENT = 'event',
+
+  /**
+   * Notification when several events occured
+   */
+  SEVERAL_EVENTS = 'several-events'
 }
 
 /**
  * Event data
  */
 export interface TemplateEventData {
+  /**
+   * Basic information about the event
+   */
   event: DecodedGroupedEvent;
+
+  /**
+   * Number of repetitions of the event in days
+   */
   daysRepeated: number;
+
+  /**
+   * How many new events have occurred
+   */
   newCount: number;
+
+  /**
+   * Number of affected users for this event
+   */
   usersAffected?: number;
 }
 
 /**
  * Payload for events template
  */
-export interface EventsTemplateVariables extends TemplateVariables {
+export interface EventsTemplateVariables extends CommonTemplateVariables {
+  /**
+   * Data of new events
+   */
   events: TemplateEventData[];
-  host: string;
-  hostOfStatic: string;
+
+  /**
+   * Project data
+   */
   project: ProjectDBScheme;
+
+  /**
+   * Minimal pause between second notification, in seconds
+   */
   period: number;
 }
 
@@ -42,7 +84,14 @@ export interface EventsTemplateVariables extends TemplateVariables {
  * Object with type and template variables
  */
 export interface EventNotification {
+  /**
+   * Notification type
+   */
   type: NotificationTypes.EVENT;
+
+  /**
+   * Notification payload
+   */
   payload: EventsTemplateVariables;
 }
 
@@ -50,19 +99,39 @@ export interface EventNotification {
  * Object with type and variables for template for several events
  */
 export interface SeveralEventsNotification {
+  /**
+   * Notification type
+   */
   type: NotificationTypes.SEVERAL_EVENTS;
+
+  /**
+   * Notification payload
+   */
   payload: EventsTemplateVariables;
 }
 
 /**
  * Variables for events template
  */
-export interface AssigneeTemplateVariables extends TemplateVariables {
-  host: string;
-  hostOfStatic: string;
+export interface AssigneeTemplateVariables extends CommonTemplateVariables {
+  /**
+   * Project data
+   */
   project: ProjectDBScheme;
+
+  /**
+   * Event data
+   */
   event: GroupedEventDBScheme;
+
+  /**
+   * User who assigned this person
+   */
   whoAssigned: UserDBScheme;
+
+  /**
+   * Number of event repetitions
+   */
   daysRepeated: number;
 }
 
@@ -70,16 +139,23 @@ export interface AssigneeTemplateVariables extends TemplateVariables {
  * Object with notification type and variables for the assignee event template
  */
 export interface AssigneeNotification {
+  /**
+   * Notification type
+   */
   type: NotificationTypes.ASSIGNEE;
+
+  /**
+   * Notification payload
+   */
   payload: AssigneeTemplateVariables;
 }
 
 /**
- * All possible notifications
+ * Variables for notify-senders wrapped in payload with type
  */
 export type AllNotifications = EventNotification | SeveralEventsNotification | AssigneeNotification;
 
 /**
- * All template variables
+ * Template variables for notify-senders
  */
-export type AllTemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables
+export type TemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables

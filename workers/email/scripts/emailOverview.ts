@@ -10,7 +10,7 @@
 import * as http from 'http';
 import * as url from 'url';
 import templates, { Template } from '../src/templates';
-import type { AllTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
 import { GroupedEventDBScheme, ProjectDBScheme, ReceiveTypes } from 'hawk.types';
@@ -227,7 +227,7 @@ class EmailTestServer {
    *
    * @returns {Promise<Template>}
    */
-  private async render(templateName: string, variables: AllTemplateVariables): Promise<Template> {
+  private async render(templateName: string, variables: TemplateVariables): Promise<Template> {
     const template: Template = templates[templateName];
     const renderedTemplate: Template = {
       subject: '',

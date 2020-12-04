@@ -1,5 +1,5 @@
 import { Logger } from 'winston';
-import { TemplateVariables } from '../types/template-variables';
+import { AllNotifications } from '../types/template-variables';
 
 /**
  * Abstract class that describes notification provider
@@ -27,5 +27,5 @@ export default abstract class NotificationsProvider {
    * @param endpoint - endpoint where to send notification
    * @param variables - notification variables
    */
-  public abstract async send(endpoint: string, variables: TemplateVariables): Promise<void>;
+  public abstract async send(endpoint: string, variables: AllNotifications): Promise<void>;
 }
