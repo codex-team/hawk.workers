@@ -17,9 +17,9 @@ export default class TelegramProvider extends NotificationsProvider {
   public async send(to: string, variables: AllNotifications): Promise<void> {
     let template: TelegramTemplate;
 
-    if (variables.type === NotificationTypes.EVENT) {
+    if (variables.type === NotificationTypes.Event) {
       template = templates.NewEventTpl;
-    } else if (variables.type === NotificationTypes.SEVERAL_EVENTS) {
+    } else if (variables.type === NotificationTypes.SeveralEvents) {
       template = templates.SeveralEventsTpl;
     } else {
       // todo: add assignee notification

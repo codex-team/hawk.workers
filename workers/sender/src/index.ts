@@ -138,10 +138,10 @@ export default abstract class SenderWorker extends Worker {
       )
     );
 
-    const notificationType = NotificationTypes.EVENT;
+    const notificationType = NotificationTypes.Event;
 
     this.provider.send(channel.endpoint, {
-      type: NotificationTypes.EVENT,
+      type: NotificationTypes.Event,
       payload: {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
@@ -191,7 +191,7 @@ export default abstract class SenderWorker extends Worker {
     }
 
     this.provider.send(channel.endpoint, {
-      type: NotificationTypes.ASSIGNEE,
+      type: NotificationTypes.Assignee,
       payload: {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,

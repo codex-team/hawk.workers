@@ -41,11 +41,11 @@ export default class EmailProvider extends NotificationsProvider {
   public async send(to: string, variables: AllNotifications): Promise<void> {
     let templateName: Templates;
 
-    if (variables?.type == NotificationTypes.EVENT) {
+    if (variables?.type == NotificationTypes.Event) {
       templateName = Templates.NewEvent;
-    } else if (variables?.type == NotificationTypes.SEVERAL_EVENTS) {
+    } else if (variables?.type == NotificationTypes.SeveralEvents) {
       templateName = Templates.SeveralEvents;
-    } else if (variables?.type == NotificationTypes.ASSIGNEE) {
+    } else if (variables?.type == NotificationTypes.Assignee) {
       templateName = Templates.Assignee;
     }
 

@@ -17,7 +17,7 @@ describe('TelegramProvider', () => {
      */
     it('should successfully render a new-event template', async () => {
       const vars: EventNotification = {
-        type: NotificationTypes.EVENT,
+        type: NotificationTypes.Event,
         payload: {
           events: [ {
             event: {
@@ -69,7 +69,7 @@ describe('TelegramProvider', () => {
      */
     it('should successfully render a several-events template', async () => {
       const vars: SeveralEventsNotification = {
-        type: NotificationTypes.SEVERAL_EVENTS,
+        type: NotificationTypes.SeveralEvents,
         payload: {
           events: [ {
             event: {

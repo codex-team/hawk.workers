@@ -22,17 +22,17 @@ export enum NotificationTypes {
   /**
    * Notification when someone assigned a user to resolve an event
    */
-  ASSIGNEE = 'assignee',
+  Assignee = 'assignee',
 
   /**
    * Notification when the new event occured
    */
-  EVENT = 'event',
+  Event = 'event',
 
   /**
    * Notification when several events occured
    */
-  SEVERAL_EVENTS = 'several-events'
+  SeveralEvents = 'several-events'
 }
 
 /**
@@ -87,7 +87,7 @@ export interface EventNotification {
   /**
    * Notification type
    */
-  type: NotificationTypes.EVENT;
+  type: NotificationTypes.Event;
 
   /**
    * Notification payload
@@ -102,7 +102,7 @@ export interface SeveralEventsNotification {
   /**
    * Notification type
    */
-  type: NotificationTypes.SEVERAL_EVENTS;
+  type: NotificationTypes.SeveralEvents;
 
   /**
    * Notification payload
@@ -142,7 +142,7 @@ export interface AssigneeNotification {
   /**
    * Notification type
    */
-  type: NotificationTypes.ASSIGNEE;
+  type: NotificationTypes.Assignee;
 
   /**
    * Notification payload
@@ -158,4 +158,4 @@ export type AllNotifications = EventNotification | SeveralEventsNotification | A
 /**
  * Template variables for notify-senders
  */
-export type TemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables
+export type TemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables;

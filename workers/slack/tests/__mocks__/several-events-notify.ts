@@ -6,7 +6,7 @@ import { ObjectId } from 'mongodb';
  * Example of several-events notify template variables
  */
 export default {
-  type: NotificationTypes.SEVERAL_EVENTS,
+  type: NotificationTypes.SeveralEvents,
   payload: {
     events: [
       {
