@@ -1,22 +1,5 @@
 import { ObjectID, Timestamp } from 'mongodb';
 
-export interface SourceMapsRecord {
-  /**
-   * Project that sends the source map
-   */
-  projectId: string;
-
-  /**
-   * Bundle version for this source map
-   */
-  release: string;
-
-  /**
-   * List of source maps for all chunks
-   */
-  files: SourceMapDataExtended[];
-}
-
 export interface SourceMapDataExtended {
   /**
    * Name of source-map file
@@ -42,6 +25,23 @@ export interface SourceMapDataExtended {
    * When file will be saved to GridFS, there will be its id instead of 'content'
    */
   _id?: ObjectID;
+}
+
+export interface SourceMapsRecord {
+  /**
+   * Project that sends the source map
+   */
+  projectId: string;
+
+  /**
+   * Bundle version for this source map
+   */
+  release: string;
+
+  /**
+   * List of source maps for all chunks
+   */
+  files: SourceMapDataExtended[];
 }
 
 /**

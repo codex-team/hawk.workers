@@ -18,13 +18,14 @@ if (process.env.HAWK_CATCHER_TOKEN) {
 
 type WorkerConstructor = new () => Worker;
 
+const BEGINNING_OF_ARGS = 2;
 /**
  * Get worker name(s) from command line arguments
  *
  * @example ts-node runner.ts hawk-worker-javascript
  * @example ts-node runner.ts hawk-worker-javascript hawk-worker-nodejs
  */
-const workerNames = process.argv.slice(2);
+const workerNames = process.argv.slice(BEGINNING_OF_ARGS);
 
 /**
  * Workers dispatcher.
@@ -40,10 +41,8 @@ class WorkerRunner {
 
   /**
    * Create runner instance
-   *
-   * @param {string[]} workers - workers package names
    */
-  constructor(workers: string[]) {
+  constructor() {
     /**
      * 1. Load workers packages
      * 2. Create instances (start)
@@ -90,7 +89,9 @@ class WorkerRunner {
     const startGcStats = gcStats(register);
 
     const hostname = os.hostname();
-    const id = nanoid(5);
+
+    const ID_SIZE = 5;
+    const id = nanoid(ID_SIZE);
 
     // eslint-disable-next-line node/no-deprecated-api
     const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY).host;
@@ -107,6 +108,8 @@ class WorkerRunner {
     this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY, null, register);
 
     console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY}`);
+
+    const PUSH_INTERVAL = 1000;
 
     // Pushing metrics to the pushgateway every second
     setInterval(() => {
@@ -128,7 +131,7 @@ class WorkerRunner {
           }
         });
       });
-    }, 1000);
+    }, PUSH_INTERVAL);
   }
 
   /**
@@ -282,4 +285,4 @@ class WorkerRunner {
 }
 
 // eslint-disable-next-line no-new
-new WorkerRunner(workerNames);
+new WorkerRunner();

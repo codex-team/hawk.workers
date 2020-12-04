@@ -115,5 +115,7 @@ export const mockedDailyEvents = [
   },
 ];
 
-export const newDailyEvents = mockedDailyEvents.slice(0, 10);
-export const oldDailyEvents = mockedDailyEvents.slice(10);
+const NEW_DAILY_EVENTS_COUNT = 10;
+
+export const newDailyEvents = mockedDailyEvents.slice(0, NEW_DAILY_EVENTS_COUNT);
+export const oldDailyEvents = mockedDailyEvents.slice(NEW_DAILY_EVENTS_COUNT);

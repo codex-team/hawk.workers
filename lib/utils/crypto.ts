@@ -10,11 +10,11 @@ export default class Crypto {
    * @param {any} value — data to be hashed
    * @param {string} [algo='sha256'] — type of algorithm to be used for hashing
    */
-  public static hash(value, algo = 'sha256'): string {
-    value = JSON.stringify(value);
+  public static hash(value: unknown, algo = 'sha256'): string {
+    const stringifiedValue = JSON.stringify(value);
 
     return crypto.createHash(algo)
-      .update(value)
+      .update(stringifiedValue)
       .digest('hex');
   }
 }

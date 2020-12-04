@@ -2,6 +2,11 @@ import { EventWorkerTask } from '../../../lib/types/event-worker-task';
 import { DecodedEventData } from 'hawk.types';
 
 /**
+ * Describe a context passed from NodeJS Catcher
+ */
+interface NodeJSEventPayload extends DecodedEventData {}
+
+/**
  * Format of task for NodeJS Event Worker
  */
 export interface NodeJSEventWorkerTask extends EventWorkerTask {
@@ -10,8 +15,3 @@ export interface NodeJSEventWorkerTask extends EventWorkerTask {
    */
   payload: NodeJSEventPayload;
 }
-
-/**
- * Describe a context passed from NodeJS Catcher
- */
-interface NodeJSEventPayload extends DecodedEventData {}

@@ -22,4 +22,4 @@ export default function render(tplData: EventsTemplateVariables): string {
     '\n',
     `[View details](${eventURL}) `, `| *${tplData.project.name}*`, ` | ${eventInfo.newCount} new (${eventInfo.event.totalCount} total)`
   );
-};
+}
