@@ -304,7 +304,7 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
-"@hawk.so/nodejs@^2.0.7":
+"@hawk.so/nodejs@^2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@hawk.so/nodejs/-/nodejs-2.1.0.tgz#e57c6042be0459a43c94a6277192e4995c993c49"
   integrity sha512-4Yhhj43lkyNZw3cgGGHp99Oip2dgCFzV7BBG2m/rgTcMzWc3YCick5oRmtMnlWMNfsQmDUYphj4ewa9P/KkmRQ==

@@ -38,7 +38,7 @@
         "run-limiter": "yarn worker hawk-worker-limiter"
     },
     "dependencies": {
-        "@hawk.so/nodejs": "^2.0.7",
+        "@hawk.so/nodejs": "^2.1.0",
         "@types/amqplib": "^0.5.13",
         "@types/jest": "^25.2.1",
         "@types/mongodb": "^3.5.15",
