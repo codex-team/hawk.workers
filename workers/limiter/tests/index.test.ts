@@ -63,7 +63,7 @@ describe('Limiter worker', () => {
     redisClient = redis.createClient({ url: process.env.REDIS_URL });
   });
 
-  test('Should correctly count billing period events', async () => {
+  test('Should count billing period events of workspace', async () => {
     /**
      * Worker initialization
      */
@@ -80,10 +80,13 @@ describe('Limiter worker', () => {
       _id: mockedWorkspace._id,
     });
 
+    /**
+     * Workspace has 11 events and 7 repetitions after last charge date
+     */
     expect(workspace.billingPeriodEventsCount).toEqual(18);
   });
 
-  test('Should put banned projects to redis', async (done) => {
+  test('Should ban projects that have exceeded the plan limit and add their ids to redis', async (done) => {
     /**
      * Worker initialization
      */

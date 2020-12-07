@@ -1,3 +1,8 @@
+/**
+ * Contains 32 mocked repetitions:
+ *  - 7 repetitions after 01.04.2020 (unix: 1585742400)
+ *  - 25 repetitions before 01.04.2020 (unix: 1585742400)
+ */
 export const mockedRepetitions = [
   /**
    * Newer than 30 days

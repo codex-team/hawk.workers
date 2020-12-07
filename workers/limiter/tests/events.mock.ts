@@ -1,6 +1,11 @@
+/**
+ * Contains 18 mocked events:
+ *  - 11 events after 01.04.2020 (unix: 1585742400)
+ *  - 7 events before 01.04.2020 (unix: 1585742400)
+ */
 export const mockedEvents = [
   /**
-   * Newer than 30 days
+   * Events after 01.04.2020
    */
   {
     groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
@@ -70,7 +75,7 @@ export const mockedEvents = [
   },
 
   /**
-   * Older than 30 days
+   * Events before 01.04.2020
    */
   {
     groupHash: 'bd167a679553ac5797708750548a45c28ad5895ba1c1865bb161716fb8514510',
