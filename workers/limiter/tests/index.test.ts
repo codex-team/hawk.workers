@@ -5,6 +5,7 @@ import { mockedEvents } from './events.mock';
 import { mockedRepetitions } from './repetitions.mock';
 import LimiterWorker from '../src';
 import redis from 'redis';
+import { mockedPlans } from './plans.mock';
 
 const mockedWorkspace: WorkspaceDBScheme = {
   _id: new ObjectId('5e4ff518628a6c714615f4de'),
@@ -23,14 +24,6 @@ const mockedProject: ProjectDBScheme = {
   workspaceId: new ObjectId('5e4ff518628a6c714615f4de'),
   _id: new ObjectId('5e4ff518618a6c714515f4da'),
   name: 'Test project',
-};
-
-const mockedPlan: PlanDBScheme = {
-  _id: new ObjectId('5e4ff528628a6c714515f4dc'),
-  name: 'Test plan',
-  monthlyCharge: 10,
-  eventsLimit: 10,
-  isDefault: true,
 };
 
 describe('Limiter worker', () => {
@@ -57,7 +50,7 @@ describe('Limiter worker', () => {
 
     await workspaceCollection.insertOne(mockedWorkspace);
     await projectCollection.insertOne(mockedProject);
-    await planCollection.insertOne(mockedPlan);
+    await planCollection.insertMany(mockedPlans);
     await repetitionsCollection.insertMany(mockedRepetitions);
     await eventsCollection.insertMany(mockedEvents);
     redisClient = redis.createClient({ url: process.env.REDIS_URL });
