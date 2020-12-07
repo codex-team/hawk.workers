@@ -31,7 +31,7 @@ export class DatabaseController {
    *
    * @param connectionUri - mongo URI for connection
    */
-  constructor(connectionUri) {
+  constructor(connectionUri: string) {
     if (!connectionUri) {
       throw new DatabaseConnectionError('Connection URI is not specified. Check .env');
     }
@@ -91,7 +91,7 @@ export class DatabaseController {
    *
    * @param {string} name - The bucket name. Defaults to 'fs'.
    */
-  public createGridFsBucket(name): GridFSBucket {
+  public createGridFsBucket(name: string): GridFSBucket {
     this.gridFsBucket = new GridFSBucket(this.db, {
       bucketName: name,
     });

@@ -1,9 +1,9 @@
-import { mockDBController, dbConnectMock, releasesJsQueryMock } from './mongodb.mock';
+import { MockDBController, releasesJsQueryMock } from './mongodb.mock';
 /**
  * Mock db controller
  */
 jest.mock('../../../lib/db/controller', () => ({
-  DatabaseController: mockDBController,
+  DatabaseController: MockDBController,
 }));
 
 import JavascriptEventWorker from '../src'; // eslint-disable-line

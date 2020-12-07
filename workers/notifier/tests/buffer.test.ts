@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-ts-ignore */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import Buffer from '../src/buffer';
 import '../../../env-test';
 
@@ -55,6 +55,7 @@ describe('Buffer', () => {
 
       // @ts-ignore
       expect(buffer.projects[projectId][ruleId][channelName].payload[key]).toBeDefined();
+
       // @ts-ignore
       expect(buffer.projects[projectId][ruleId][channelName].payload[key]).toEqual(1);
     });

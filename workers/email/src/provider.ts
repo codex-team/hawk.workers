@@ -98,7 +98,7 @@ export default class EmailProvider extends NotificationsProvider {
       return new Promise(
         (resolve, reject) => Twig.renderFile(
           template[key as keyof Template],
-          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore because @types/twig doesn't match the docs
           variables,
           (err: Error, res: string): void => {

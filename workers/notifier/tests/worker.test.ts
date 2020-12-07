@@ -54,8 +54,7 @@ const dbCloseMock = jest.fn();
 /**
  * DBController mock
  */
-// eslint-disable-next-line @typescript-eslint/class-name-casing
-class mockDBController {
+class MockDBController {
   /**
    * DBController.connect method mock
    *
@@ -82,9 +81,10 @@ class mockDBController {
 
 describe('NotifierWorker', () => {
   jest.mock('../../../lib/db/controller', () => ({
-    DatabaseController: mockDBController,
+    DatabaseController: MockDBController,
   }));
 
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
 
   it('should have correct worker type', () => {

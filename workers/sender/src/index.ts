@@ -73,6 +73,9 @@ export default abstract class SenderWorker extends Worker {
    * Task handling function
    *
    * @param task - task to handle
+   * @param task.projectId - project events related to
+   * @param task.ruleId - notification Rule id that should be used for sending
+   * @param task.events - array contains events' group hashes and number of repetition for the last minPeriod
    */
   public async handle({ projectId, ruleId, events }: SenderWorkerTask): Promise<void> {
     if (!this.channelType) {
@@ -133,8 +136,6 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param {string} projectId - project events are related to
    * @param {string} groupHash - event group hash
-   *
-   * @returns {Promise<[GroupedEventDBScheme, number]>}
    */
   private async getEventDataByGroupHash(
     projectId: string,
