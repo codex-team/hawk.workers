@@ -71,7 +71,7 @@ export default class EmailProvider extends NotificationsProvider {
     }
 
     const mailOptions = {
-      from: `'${process.env.SMTP_SENDER_NAME}' <${process.env.SMTP_SENDER_ADDRESS}>`,
+      from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
       to,
       ...content,
     };
