@@ -114,13 +114,36 @@ describe('Limiter worker', () => {
     });
   });
 
-  // test('Should unban previously banned projects if the limit allows', async (done) => {
-  //   /**
-  //    * Worker initialization
-  //    */
-  //   const worker = new LimiterWorker();
-  // });
-  //
+  test('Should unban previously banned projects if the limit allows', async (done) => {
+    /**
+     * Worker initialization
+     */
+    const worker = new LimiterWorker();
+
+    await worker.start();
+    await worker.handle();
+
+    redisClient.smembers('DisabledProjectsSet', (err, result) => {
+      expect(err).toBeNull();
+      expect(result).toContain(mockedProjects[2]._id.toString());
+    });
+
+    await workspaceCollection.findOneAndUpdate({ _id: mockedWorkspaces[2]._id }, {
+      $set: {
+        tariffPlanId: mockedPlans[1]._id,
+      },
+    });
+
+    await worker.handle();
+    await worker.finish();
+
+    redisClient.smembers('DisabledProjectsSet', (err, result) => {
+      expect(err).toBeNull();
+      expect(result).not.toContain(mockedProjects[2]._id.toString());
+      done();
+    });
+  });
+
   test('Should not ban project if it does not reach the limit', async (done) => {
     /**
      * Worker initialization
@@ -170,7 +193,6 @@ describe('Limiter worker', () => {
 
   afterAll(async () => {
     await connection.close();
-    // await db.close();
     redisClient.end();
   });
 });
