@@ -26,19 +26,14 @@ export interface SenderWorkerEventPayload extends WorkerTask {
  */
 export interface SenderWorkerAssigneePayload {
   /**
-   * Project event related to
-   */
-  projectId: string;
-
-  /**
-   * Notification Rule id that should be used for sending
-   */
-  ruleId: string;
-
-  /**
    * ID of the user assigned to this event
    */
   assigneeId: string;
+
+  /**
+   * Project event related to
+   */
+  projectId: string;
 
   /**
    * Event id
@@ -49,21 +44,6 @@ export interface SenderWorkerAssigneePayload {
    * Id of the user who assigned this person
    */
   whoAssignedId: string;
-
-  /**
-   * Total count of current event
-   */
-  totalCount: number;
-
-  /**
-   * Number of repetitions
-   */
-  daysRepeated: number;
-
-  /**
-   * How many users were affected
-   */
-  usersAffected: number;
 }
 
 export type SenderWorkerTask = SenderWorkerEventPayload | SenderWorkerAssigneePayload;

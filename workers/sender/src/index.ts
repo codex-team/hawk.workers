@@ -158,23 +158,11 @@ export default abstract class SenderWorker extends Worker {
    * @param task - task to handle
    */
   private async handleAssigneeTask(task: SenderWorkerAssigneePayload): Promise<void> {
-    const { projectId, ruleId, whoAssignedId, eventId } = task;
+    const { assigneeId, projectId, whoAssignedId, eventId } = task;
 
     const project = await this.getProject(projectId);
 
     if (!project || !project.notifications) {
-      return;
-    }
-
-    const rule = project.notifications.find((r) => r._id.toString() === ruleId);
-
-    if (!rule) {
-      return;
-    }
-
-    const channel = rule.channels[this.channelType];
-
-    if (!channel || !channel.endpoint) {
       return;
     }
 
@@ -190,17 +178,31 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    this.provider.send(channel.endpoint, {
-      type: NotificationTypes.Assignee,
-      payload: {
-        host: process.env.GARAGE_URL,
-        hostOfStatic: process.env.API_STATIC_URL,
-        project,
-        event,
-        whoAssigned,
-        daysRepeated,
-      },
-    });
+    const assignee = await this.getUser(assigneeId);
+
+    if (!assignee) {
+      return;
+    }
+
+    const channels = assignee.notifications.channels;
+
+    for (const channel in channels) {
+      if (!channels[channel].isEnabled) {
+        continue;
+      }
+
+      this.provider.send(channels[channel].endpoint, {
+        type: NotificationTypes.Assignee,
+        payload: {
+          host: process.env.GARAGE_URL,
+          hostOfStatic: process.env.API_STATIC_URL,
+          project,
+          event,
+          whoAssigned,
+          daysRepeated,
+        },
+      });
+    }
   }
 
   /**
