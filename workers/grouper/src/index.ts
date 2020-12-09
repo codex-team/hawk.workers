@@ -181,7 +181,7 @@ export default class GrouperWorker extends Worker {
       return false;
     } else {
       const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
-      const repetition = this.cache.get(repetitionCacheKey, () => {
+      const repetition = await this.cache.get(repetitionCacheKey, async () => {
         return this.db.getConnection().collection(`repetitions:${task.projectId}`)
           .findOne({
             groupHash: existedEvent.groupHash,
