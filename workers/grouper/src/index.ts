@@ -209,7 +209,7 @@ export default class GrouperWorker extends Worker {
 
     const eventCacheKey = `${projectId}:${query.toString()}`;
 
-    return this.cache.get(eventCacheKey, () => {
+    return this.cache.get(eventCacheKey, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
         .findOne(query)
