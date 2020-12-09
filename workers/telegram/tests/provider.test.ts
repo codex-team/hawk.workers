@@ -51,7 +51,7 @@ describe('TelegramProvider', () => {
 
       const provider = new TelegramProvider();
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const render = (): string => provider.render(templates.NewEventTpl, vars);
 
@@ -100,7 +100,7 @@ describe('TelegramProvider', () => {
 
       const provider = new TelegramProvider();
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const render = (): string => provider.render(templates.SeveralEventsTpl, vars);
 

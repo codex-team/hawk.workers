@@ -16,7 +16,7 @@ export default class ExampleSenderWorker extends SenderWorker {
   /**
    * Email channel type
    */
-  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   protected channelType = 'console';
 

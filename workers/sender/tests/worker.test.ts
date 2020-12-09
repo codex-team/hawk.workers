@@ -111,8 +111,7 @@ const dbCloseMock = jest.fn();
 /**
  * Mock
  */
-// eslint-disable-next-line @typescript-eslint/class-name-casing
-class mockDBController {
+class MockDBController {
   /**
    * Mock
    *
@@ -142,9 +141,10 @@ describe('Sender Worker', () => {
    * Mock db controller
    */
   jest.mock('../../../lib/db/controller', () => ({
-    DatabaseController: mockDBController,
+    DatabaseController: MockDBController,
   }));
 
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const ExampleSenderWorker = require('./sender-example').default;
 
   /**
@@ -179,7 +179,9 @@ describe('Sender Worker', () => {
 
       await worker.start();
 
-      expect(dbConnectMock).toHaveBeenCalledTimes(2);
+      const EXPECTED_CALLS_NUMBER = 2;
+
+      expect(dbConnectMock).toHaveBeenCalledTimes(EXPECTED_CALLS_NUMBER);
 
       await worker.finish();
     });

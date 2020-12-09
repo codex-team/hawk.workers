@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/valid-types */
 /**
  * Asynchronous forEach function
  *
@@ -15,6 +16,7 @@ async function asyncForEach(array, callback) {
  *
  * @param {import('mongodb').Db} db - database to check
  * @param {string} collectionName - collection name to check
+ * @returns {boolean}
  */
 async function isCollectionExists(db, collectionName) {
   return db.listCollections({ name: collectionName }).hasNext();

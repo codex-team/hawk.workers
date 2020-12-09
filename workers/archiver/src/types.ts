@@ -49,31 +49,6 @@ export interface ReportData {
 }
 
 /**
- * Release record in database
- */
-export interface ReleaseRecord {
-  /**
-   * Record id
-   */
-  _id: ObjectId;
-
-  /**
-   * Project that sends the source map
-   */
-  projectId: string;
-
-  /**
-   * Bundle version for this source map
-   */
-  release: string;
-
-  /**
-   * List of source maps for all chunks
-   */
-  files: ReleaseFileData[];
-}
-
-/**
  * Release file in database
  */
 export interface ReleaseFileData {
@@ -101,4 +76,29 @@ export interface ReleaseFileData {
    * When file will be saved to GridFS, there will be its id instead of 'content'
    */
   _id?: ObjectId;
+}
+
+/**
+ * Release record in database
+ */
+export interface ReleaseRecord {
+  /**
+   * Record id
+   */
+  _id: ObjectId;
+
+  /**
+   * Project that sends the source map
+   */
+  projectId: string;
+
+  /**
+   * Bundle version for this source map
+   */
+  release: string;
+
+  /**
+   * List of source maps for all chunks
+   */
+  files: ReleaseFileData[];
 }

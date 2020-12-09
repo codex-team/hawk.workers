@@ -17,37 +17,6 @@ export enum EventType {
 }
 
 /**
- * Paymaster worker task interface
- */
-export interface PaymasterEvent {
-  /**
-   * Event type
-   */
-  type: EventType;
-
-  /**
-   * Event payload
-   */
-  payload: PaymasterEventPayload;
-}
-
-/**
- * Daily check event interface
- */
-export interface WorkspacePlanChargeEvent extends PaymasterEvent {
-  type: EventType.WorkspacePlanCharge;
-  payload: DailyCheckEventPayload;
-}
-
-/**
- * Plan changed event interface
- */
-export interface PlanChangedEvent extends PaymasterEvent {
-  type: EventType.PlanChanged;
-  payload: PlanChangedEventPayload;
-}
-
-/**
  * Daily check event payload.
  *
  * This event do not have any payload
@@ -78,3 +47,34 @@ export interface PlanChangedEventPayload {
  * General paymaster task payload type
  */
 export type PaymasterEventPayload = DailyCheckEventPayload | PlanChangedEventPayload;
+
+/**
+ * Paymaster worker task interface
+ */
+export interface PaymasterEvent {
+  /**
+   * Event type
+   */
+  type: EventType;
+
+  /**
+   * Event payload
+   */
+  payload: PaymasterEventPayload;
+}
+
+/**
+ * Daily check event interface
+ */
+export interface WorkspacePlanChargeEvent extends PaymasterEvent {
+  type: EventType.WorkspacePlanCharge;
+  payload: DailyCheckEventPayload;
+}
+
+/**
+ * Plan changed event interface
+ */
+export interface PlanChangedEvent extends PaymasterEvent {
+  type: EventType.PlanChanged;
+  payload: PlanChangedEventPayload;
+}

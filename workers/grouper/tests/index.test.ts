@@ -2,7 +2,6 @@ import GrouperWorker from '../src/index';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
 import { Collection, MongoClient } from 'mongodb';
-import './rabbit.mock';
 jest.mock('amqplib');
 
 /**

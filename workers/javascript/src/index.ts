@@ -125,7 +125,9 @@ export default class JavascriptEventWorker extends EventWorker {
               /**
                * Send error to Hawk
                */
-              HawkCatcher.send(error);
+              HawkCatcher.send(error, {
+                payload: event.payload,
+              });
 
               return event.payload.backtrace[index];
             });
@@ -191,9 +193,21 @@ export default class JavascriptEventWorker extends EventWorker {
 
     /**
      * Source code lines
-     * 5 above and 5 below
      */
-    const lines = this.readSourceLines(consumer, originalLocation);
+    let lines = [];
+
+    /**
+     * Get source code lines above and below event line
+     * If source file path is missing then skip source lines reading
+     *
+     * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121 
+     */
+    if (originalLocation.source) {
+      /**
+       * Get 5 lines above and 5 below
+       */
+      lines = this.readSourceLines(consumer, originalLocation);
+    }
 
     consumer.destroy();
     consumer = null;

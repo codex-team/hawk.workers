@@ -29,7 +29,9 @@ function renderBacktrace(event: GroupedEventDBScheme): string {
       colDelimiter = ' ->';
     }
 
-    return `${line}${colDelimiter}  ${toMaxLen(content, 65)}`;
+    const MAX_SOURCE_CODE_LINE_LENGTH = 65;
+
+    return `${line}${colDelimiter}  ${toMaxLen(content, MAX_SOURCE_CODE_LINE_LENGTH)}`;
   }).join('\n');
 
   return code;
@@ -71,4 +73,4 @@ export default function render(tplData: EventsTemplateVariables): IncomingWebhoo
   return {
     blocks,
   };
-};
+}
