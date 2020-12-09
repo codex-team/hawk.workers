@@ -27,14 +27,14 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Database Controller
-   */
-  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
-
-  /**
    * Memoized Hashing computation
    */
   private static cachedHashValues: {[key: string]: string} = {};
+
+  /**
+   * Database Controller
+   */
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Get unique hash from event data
@@ -51,7 +51,6 @@ export default class GrouperWorker extends Worker {
     }
 
     return this.cachedHashValues[computedHashValueCacheKey];
-
   }
 
   /**
@@ -188,7 +187,7 @@ export default class GrouperWorker extends Worker {
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
           });
-      })
+      });
 
       /**
        * If there is no repetitions from this user — return true
@@ -208,14 +207,15 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    const eventCacheKey = `${projectId}:${query.toString()}`
+    const eventCacheKey = `${projectId}:${query.toString()}`;
+
     return this.cache.get(eventCacheKey, () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
         .findOne(query)
         .catch((err) => {
           throw new DatabaseReadWriteError(err);
-        })
+        });
     });
   }
 
@@ -297,7 +297,7 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * saves event at the special aggregation collection
+   * Saves event at the special aggregation collection
    *
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
