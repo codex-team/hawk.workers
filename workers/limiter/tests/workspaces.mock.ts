@@ -16,7 +16,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #1',
-    tariffPlanId: mockedPlans[0]._id,
+    tariffPlanId: mockedPlans.find(plan => plan.eventsLimit === 10)._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -25,7 +25,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #2',
-    tariffPlanId: mockedPlans[1]._id,
+    tariffPlanId: mockedPlans.find(plan => plan.eventsLimit === 10000)._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -34,7 +34,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #3',
-    tariffPlanId: mockedPlans[0]._id,
+    tariffPlanId: mockedPlans.find(plan => plan.eventsLimit === 10)._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -43,7 +43,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #4',
-    tariffPlanId: mockedPlans[0]._id,
+    tariffPlanId: mockedPlans.find(plan => plan.eventsLimit === 10)._id,
     billingPeriodEventsCount: 0,
   },
 ];
