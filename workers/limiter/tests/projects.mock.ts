@@ -29,4 +29,12 @@ export const mockedProjects: ProjectDBScheme[] = [
     _id: new ObjectId('5e4ff518618a6c736515f4da'),
     name: 'Test project #3',
   },
+  {
+    notifications: [],
+    token: '5342',
+    uidAdded: new ObjectId('5e4ff518628a6c725515f4db'),
+    workspaceId: new ObjectId('5e4ff529639a6b714615f4de'),
+    _id: new ObjectId('5e4ff438618a6c736515f4da'),
+    name: 'Test project #4',
+  },
 ];
