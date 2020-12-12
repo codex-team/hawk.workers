@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { mockedPlans } from './plans.mock';
 
 /**
  * Constant of last charge date in all workspaces for tests
@@ -15,7 +16,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #1',
-    tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
+    tariffPlanId: mockedPlans[0]._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -24,7 +25,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #2',
-    tariffPlanId: new ObjectId('5e4ff528738a6c714515f4dc'),
+    tariffPlanId: mockedPlans[1]._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -33,7 +34,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #3',
-    tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
+    tariffPlanId: mockedPlans[0]._id,
     billingPeriodEventsCount: 0,
   },
   {
@@ -42,7 +43,7 @@ export const mockedWorkspaces = [
     balance: 0,
     lastChargeDate: LAST_CHARGE_DATE,
     name: 'Test workspace #4',
-    tariffPlanId: new ObjectId('5e4ff528628a6c714515f4dc'),
+    tariffPlanId: mockedPlans[0]._id,
     billingPeriodEventsCount: 0,
   },
 ];

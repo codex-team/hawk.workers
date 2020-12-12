@@ -69,8 +69,6 @@ describe('Limiter worker', () => {
 
     /**
      * Assert
-     *
-     * Check count of events
      */
     const workspaceInDatabase = await workspaceCollection.findOne({
       _id: mockedWorkspaces[0]._id,
@@ -88,6 +86,9 @@ describe('Limiter worker', () => {
     const repetitionsCount = await repetitionsCollection.find(query).count();
     const eventsCount = await eventsCollection.find(query).count();
 
+    /**
+     * Check count of events
+     */
     expect(workspaceInDatabase.billingPeriodEventsCount).toEqual(repetitionsCount + eventsCount);
   });
 
