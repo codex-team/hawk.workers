@@ -71,7 +71,7 @@ describe('Limiter worker', () => {
      * Assert
      */
     const workspaceInDatabase = await workspaceCollection.findOne({
-      _id: mockedWorkspaces[0]._id,
+      _id: workspace._id,
     });
 
     /**
@@ -122,7 +122,7 @@ describe('Limiter worker', () => {
      */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
-      expect(result).toContain(mockedProjects[0]._id.toString());
+      expect(result).toContain(project._id.toString());
       done();
     });
   });
@@ -170,7 +170,7 @@ describe('Limiter worker', () => {
      */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
-      expect(result).not.toContain(mockedProjects[2]._id.toString());
+      expect(result).not.toContain(project._id.toString());
       done();
     });
   });
@@ -209,7 +209,7 @@ describe('Limiter worker', () => {
       /**
        * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
        */
-      expect(result).not.toContain(mockedProjects[1]._id.toString());
+      expect(result).not.toContain(project._id.toString());
       done();
     });
   });
