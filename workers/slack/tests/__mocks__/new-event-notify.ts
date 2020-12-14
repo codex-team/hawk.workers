@@ -1,11 +1,11 @@
-import { EventNotification, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { EventNotification } from 'hawk-worker-sender/types/template-variables';
 import { ObjectId } from 'mongodb';
 
 /**
  * Example of new-events notify template variables
  */
 export default {
-  type: NotificationTypes.Event,
+  type: 'event',
   payload: {
     events: [
       {

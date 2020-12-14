@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import { AllNotifications, TemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { AllNotifications, TemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -41,11 +41,11 @@ export default class EmailProvider extends NotificationsProvider {
   public async send(to: string, variables: AllNotifications): Promise<void> {
     let templateName: Templates;
 
-    if (variables?.type == NotificationTypes.Event) {
+    if (variables?.type == 'event') {
       templateName = Templates.NewEvent;
-    } else if (variables?.type == NotificationTypes.SeveralEvents) {
+    } else if (variables?.type == 'several-events') {
       templateName = Templates.SeveralEvents;
-    } else if (variables?.type == NotificationTypes.Assignee) {
+    } else if (variables?.type == 'assignee') {
       templateName = Templates.Assignee;
     }
 

@@ -15,24 +15,16 @@ export interface CommonTemplateVariables {
   hostOfStatic: string;
 }
 
-/**
- * Types of sender notifications
- */
-export enum NotificationTypes {
+export interface Notification<Payload> {
   /**
-   * Notification when someone assigned a user to resolve an event
+   * Notification type
    */
-  Assignee = 'assignee',
+  type: string;
 
   /**
-   * Notification when the new event occured
+   * Notification payload
    */
-  Event = 'event',
-
-  /**
-   * Notification when several events occured
-   */
-  SeveralEvents = 'several-events'
+  payload: Payload;
 }
 
 /**
@@ -83,11 +75,11 @@ export interface EventsTemplateVariables extends CommonTemplateVariables {
 /**
  * Object with type and template variables
  */
-export interface EventNotification {
+export interface EventNotification extends Notification<EventsTemplateVariables> {
   /**
-   * Notification type
+   * Notification when the new event occured
    */
-  type: NotificationTypes.Event;
+  type: 'event';
 
   /**
    * Notification payload
@@ -98,11 +90,11 @@ export interface EventNotification {
 /**
  * Object with type and variables for template for several events
  */
-export interface SeveralEventsNotification {
+export interface SeveralEventsNotification extends Notification<EventsTemplateVariables> {
   /**
-   * Notification type
+   * Notification when several events occured
    */
-  type: NotificationTypes.SeveralEvents;
+  type: 'several-events';
 
   /**
    * Notification payload
@@ -138,11 +130,11 @@ export interface AssigneeTemplateVariables extends CommonTemplateVariables {
 /**
  * Object with notification type and variables for the assignee event template
  */
-export interface AssigneeNotification {
+export interface AssigneeNotification extends Notification<AssigneeTemplateVariables> {
   /**
-   * Notification type
+   * Notification when someone assigned a user to resolve an event
    */
-  type: NotificationTypes.Assignee;
+  type: 'assignee';
 
   /**
    * Notification payload

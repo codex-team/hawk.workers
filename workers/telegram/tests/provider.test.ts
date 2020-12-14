@@ -1,4 +1,4 @@
-import { EventsTemplateVariables, EventNotification, SeveralEventsNotification, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { EventsTemplateVariables, EventNotification, SeveralEventsNotification } from 'hawk-worker-sender/types/template-variables';
 import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
@@ -17,7 +17,7 @@ describe('TelegramProvider', () => {
      */
     it('should successfully render a new-event template', async () => {
       const vars: EventNotification = {
-        type: NotificationTypes.Event,
+        type: 'event',
         payload: {
           events: [ {
             event: {
@@ -69,7 +69,7 @@ describe('TelegramProvider', () => {
      */
     it('should successfully render a several-events template', async () => {
       const vars: SeveralEventsNotification = {
-        type: NotificationTypes.SeveralEvents,
+        type: 'several-events',
         payload: {
           events: [ {
             event: {

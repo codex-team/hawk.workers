@@ -1,5 +1,5 @@
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
-import { AllNotifications, EventsTemplateVariables, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { AllNotifications, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates from './templates';
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { SlackTemplate } from '../types/template';
@@ -33,9 +33,9 @@ export default class SlackProvider extends NotificationsProvider {
   public async send(to: string, variables: AllNotifications): Promise<void> {
     let template: SlackTemplate;
 
-    if (variables.type === NotificationTypes.Event) {
+    if (variables.type === 'event') {
       template = templates.NewEventTpl;
-    } else if (variables.type === NotificationTypes.SeveralEvents) {
+    } else if (variables.type === 'several-events') {
       template = templates.SeveralEventsTpl;
     } else {
       // todo: add assignee notification

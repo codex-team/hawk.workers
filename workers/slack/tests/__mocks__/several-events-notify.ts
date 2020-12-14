@@ -1,4 +1,4 @@
-import { EventsTemplateVariables, SeveralEventsNotification, NotificationTypes } from 'hawk-worker-sender/types/template-variables';
+import { EventsTemplateVariables, SeveralEventsNotification } from 'hawk-worker-sender/types/template-variables';
 import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 
@@ -6,7 +6,7 @@ import { ObjectId } from 'mongodb';
  * Example of several-events notify template variables
  */
 export default {
-  type: NotificationTypes.SeveralEvents,
+  type: 'several-events',
   payload: {
     events: [
       {

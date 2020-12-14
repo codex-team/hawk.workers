@@ -5,7 +5,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { TemplateEventData, NotificationTypes } from '../types/template-variables';
+import { TemplateEventData } from '../types/template-variables';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
@@ -138,10 +138,8 @@ export default abstract class SenderWorker extends Worker {
       )
     );
 
-    const notificationType = NotificationTypes.Event;
-
     this.provider.send(channel.endpoint, {
-      type: NotificationTypes.Event,
+      type: 'event',
       payload: {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
@@ -192,7 +190,7 @@ export default abstract class SenderWorker extends Worker {
       }
 
       this.provider.send(channels[channel].endpoint, {
-        type: NotificationTypes.Assignee,
+        type: 'assignee',
         payload: {
           host: process.env.GARAGE_URL,
           hostOfStatic: process.env.API_STATIC_URL,
