@@ -32,6 +32,11 @@ export default class GrouperWorker extends Worker {
   private static cachedHashValues: { [key: string]: string } = {};
 
   /**
+   * Database Controller
+   */
+  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+
+  /**
    * Get unique hash from event data
    *
    * @param task - worker task to create hash
