@@ -164,6 +164,13 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Forced clears worker cache
+   */
+  public clearCache(): void {
+    this.cache.flushAll();
+  }
+
+  /**
    * Decides whether to increase the number of affected users.
    *
    * @param task - worker task to process
