@@ -42,7 +42,7 @@ describe('Limiter worker', () => {
     await planCollection.insertMany(mockedPlans);
   });
 
-  test('Should count billing period events of workspace', async () => {
+  test('Should count workspace events for a billing period and save it to the db', async () => {
     /**
      * Arrange
      */
