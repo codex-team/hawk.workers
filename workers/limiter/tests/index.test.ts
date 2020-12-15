@@ -8,9 +8,8 @@ import redis from 'redis';
 import { mockedPlans } from './plans.mock';
 import axios from 'axios';
 import { mocked } from 'ts-jest/utils';
-import { mockedProjects } from './projects.mock';
-import { mockedWorkspaces } from './workspaces.mock';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import { mockedData } from './data.mock';
 
 /**
  * Mock axios for testing report sends
@@ -39,15 +38,14 @@ describe('Limiter worker', () => {
     /**
      * Insert mocked plans for using in tests
      */
-    await planCollection.insertMany(mockedPlans);
+    await planCollection.insertMany(Object.values(mockedPlans));
   });
 
   test('Should count workspace events for a billing period and save it to the db', async () => {
     /**
      * Arrange
      */
-    const workspace = mockedWorkspaces[0];
-    const project = mockedProjects[0];
+    const { workspace, project } = mockedData.forCountingEvents;
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
@@ -96,8 +94,7 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const workspace = mockedWorkspaces[3];
-    const project = mockedProjects[3];
+    const { workspace, project } = mockedData.forBanAndAddingToRedis;
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
@@ -131,8 +128,7 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const workspace = mockedWorkspaces[2];
-    const project = mockedProjects[2];
+    const { workspace, project } = mockedData.forUnbanPreviouslyBanned;
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
@@ -158,7 +154,7 @@ describe('Limiter worker', () => {
 
     await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
       $set: {
-        tariffPlanId: mockedPlans[1]._id,
+        tariffPlanId: mockedPlans.withBigLimit._id,
       },
     });
 
@@ -179,8 +175,7 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const workspace = mockedWorkspaces[1];
-    const project = mockedProjects[1];
+    const { workspace, project } = mockedData.forNotBanned;
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
