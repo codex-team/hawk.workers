@@ -24,6 +24,22 @@ describe('Limiter worker', () => {
   let planCollection: Collection<PlanDBScheme>;
   let redisClient;
 
+  /**
+   * Fills database with workspace, project and events for this project
+   *
+   * @param workspace - mocked workspace for adding to database
+   * @param project - mocked project for adding to database
+   */
+  const fillDatabaseWithMockedData = async (workspace: WorkspaceDBScheme, project: ProjectDBScheme): Promise<void> => {
+    const eventsCollection = db.collection(`events:${project._id.toString()}`);
+    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
+
+    await workspaceCollection.insertOne(workspace);
+    await projectCollection.insertOne(project);
+    await eventsCollection.insertMany(mockedEvents);
+    await repetitionsCollection.insertMany(mockedRepetitions);
+  };
+
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
       useNewUrlParser: true,
@@ -49,10 +65,7 @@ describe('Limiter worker', () => {
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await workspaceCollection.insertOne(workspace);
-    await projectCollection.insertOne(project);
-    await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedRepetitions);
+    await fillDatabaseWithMockedData(workspace, project);
 
     /**
      * Act
@@ -95,13 +108,8 @@ describe('Limiter worker', () => {
      * Arrange
      */
     const { workspace, project } = mockedData.forBanAndAddingToRedis;
-    const eventsCollection = db.collection(`events:${project._id.toString()}`);
-    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await workspaceCollection.insertOne(workspace);
-    await projectCollection.insertOne(project);
-    await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedRepetitions);
+    await fillDatabaseWithMockedData(workspace, project);
 
     /**
      * Act
@@ -129,13 +137,8 @@ describe('Limiter worker', () => {
      * Arrange
      */
     const { workspace, project } = mockedData.forUnbanPreviouslyBanned;
-    const eventsCollection = db.collection(`events:${project._id.toString()}`);
-    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await workspaceCollection.insertOne(workspace);
-    await projectCollection.insertOne(project);
-    await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedRepetitions);
+    await fillDatabaseWithMockedData(workspace, project);
 
     /**
      * Act
@@ -176,13 +179,8 @@ describe('Limiter worker', () => {
      * Arrange
      */
     const { workspace, project } = mockedData.forNotBanned;
-    const eventsCollection = db.collection(`events:${project._id.toString()}`);
-    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await workspaceCollection.insertOne(workspace);
-    await projectCollection.insertOne(project);
-    await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedRepetitions);
+    await fillDatabaseWithMockedData(workspace, project);
 
     /**
      * Act
