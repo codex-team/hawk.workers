@@ -209,12 +209,12 @@ export default class GrouperWorker extends Worker {
    * @param projectId - project's identifier
    * @param query - mongo query string
    */
-  private async getEvent(projectId: string, query): Promise<GroupedEventDBScheme> {
+  private async getEvent(projectId: string, query: Record<string, unknown>): Promise<GroupedEventDBScheme> {
     if (!mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    const eventCacheKey = `${projectId}:${query.toString()}`;
+    const eventCacheKey = `${projectId}:${JSON.stringify(query)}`;
 
     return this.cache.get(eventCacheKey, async () => {
       return this.db.getConnection()
