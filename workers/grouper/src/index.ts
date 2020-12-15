@@ -27,9 +27,14 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Memoized Hashing computation
+   * Contains hashed events by his catcher type and event title as keys
+   *
+   * @example
+   * {
+   *   'grouper:Hawk client catcher test': '7e2b961c35b915dcbe2704e144e8d2c3517e2c5281a5de4403c0c58978b435a0'
+   * }
    */
-  private static cachedHashValues: {[key: string]: string} = {};
+  private static cachedHashValues: Record<string, string> = {};
 
   /**
    * Database Controller
