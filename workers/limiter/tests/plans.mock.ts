@@ -7,7 +7,7 @@ export const mockedPlans = {
   /**
    * Plan #1 with small limit
    */
-  withSmallLimit: {
+  eventsLimit10: {
     _id: new ObjectId('5e4ff528628a6c714515f4dc'),
     name: 'Test plan #1',
     monthlyCharge: 10,
@@ -18,7 +18,7 @@ export const mockedPlans = {
   /**
    * Plan #2 with big limit
    */
-  withBigLimit: {
+  eventsLimit10000: {
     _id: new ObjectId('5e4ff528738a6c714515f4dc'),
     name: 'Test plan #2',
     monthlyCharge: 10,

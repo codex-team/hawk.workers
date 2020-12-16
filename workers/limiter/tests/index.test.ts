@@ -1,4 +1,4 @@
-import { Collection, Db, MongoClient } from 'mongodb';
+import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
 import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import { mockedEvents } from './events.mock';
@@ -9,12 +9,16 @@ import { mockedPlans } from './plans.mock';
 import axios from 'axios';
 import { mocked } from 'ts-jest/utils';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
-import { mockedData } from './data.mock';
 
 /**
  * Mock axios for testing report sends
  */
 jest.mock('axios');
+
+/**
+ * Constant of last charge date in all workspaces for tests
+ */
+const LAST_CHARGE_DATE = new Date(1585742400 * 1000);
 
 describe('Limiter worker', () => {
   let connection: MongoClient;
@@ -23,6 +27,49 @@ describe('Limiter worker', () => {
   let workspaceCollection: Collection<WorkspaceDBScheme>;
   let planCollection: Collection<PlanDBScheme>;
   let redisClient;
+
+  /**
+   * Returns mocked workspace
+   *
+   * @param plan - workspace plan
+   * @param billingPeriodEventsCount - billing period events count
+   * @param lastChargeDate - workspace last charge date
+   */
+  const createWorkspaceMock = ({
+    plan,
+    billingPeriodEventsCount,
+    lastChargeDate,
+  }: {
+    plan: PlanDBScheme;
+    billingPeriodEventsCount: number;
+    lastChargeDate: Date;
+  }): WorkspaceDBScheme => {
+    return {
+      _id: new ObjectId(),
+      name: 'Mocked workspace',
+      tariffPlanId: plan._id,
+      billingPeriodEventsCount,
+      lastChargeDate,
+      accountId: '',
+      balance: 0,
+    };
+  };
+
+  /**
+   * Returns mocked project
+   *
+   * @param workspaceId - project workspace id
+   */
+  const createProjectMock = ({ workspaceId }: { workspaceId: ObjectId }): ProjectDBScheme => {
+    return {
+      _id: new ObjectId(),
+      name: 'Mocked project',
+      workspaceId,
+      notifications: [],
+      token: '',
+      uidAdded: undefined,
+    };
+  };
 
   /**
    * Fills database with workspace, project and events for this project
@@ -61,7 +108,12 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const { workspace, project } = mockedData.forCountingEvents;
+    const workspace = createWorkspaceMock({
+      plan: mockedPlans.eventsLimit10,
+      billingPeriodEventsCount: 0,
+      lastChargeDate: LAST_CHARGE_DATE,
+    });
+    const project = createProjectMock({ workspaceId: workspace._id });
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
@@ -107,7 +159,12 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const { workspace, project } = mockedData.forBanAndAddingToRedis;
+    const workspace = createWorkspaceMock({
+      plan: mockedPlans.eventsLimit10,
+      billingPeriodEventsCount: 0,
+      lastChargeDate: LAST_CHARGE_DATE,
+    });
+    const project = createProjectMock({ workspaceId: workspace._id });
 
     await fillDatabaseWithMockedData(workspace, project);
 
@@ -136,7 +193,12 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const { workspace, project } = mockedData.forUnbanPreviouslyBanned;
+    const workspace = createWorkspaceMock({
+      plan: mockedPlans.eventsLimit10,
+      billingPeriodEventsCount: 0,
+      lastChargeDate: LAST_CHARGE_DATE,
+    });
+    const project = createProjectMock({ workspaceId: workspace._id });
 
     await fillDatabaseWithMockedData(workspace, project);
 
@@ -157,7 +219,7 @@ describe('Limiter worker', () => {
 
     await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
       $set: {
-        tariffPlanId: mockedPlans.withBigLimit._id,
+        tariffPlanId: mockedPlans.eventsLimit10000._id,
       },
     });
 
@@ -178,7 +240,12 @@ describe('Limiter worker', () => {
     /**
      * Arrange
      */
-    const { workspace, project } = mockedData.forNotBanned;
+    const workspace = createWorkspaceMock({
+      plan: mockedPlans.eventsLimit10000,
+      billingPeriodEventsCount: 0,
+      lastChargeDate: LAST_CHARGE_DATE,
+    });
+    const project = createProjectMock({ workspaceId: workspace._id });
 
     await fillDatabaseWithMockedData(workspace, project);
 
