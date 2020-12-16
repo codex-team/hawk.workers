@@ -31,15 +31,12 @@ describe('Limiter worker', () => {
   /**
    * Returns mocked workspace
    *
-   * @param plan - workspace plan
-   * @param billingPeriodEventsCount - billing period events count
-   * @param lastChargeDate - workspace last charge date
+   * @param parameters - parameters for creating workspace
+   * @param parameters.plan - workspace plan
+   * @param parameters.billingPeriodEventsCount - billing period events count
+   * @param parameters.lastChargeDate - workspace last charge date
    */
-  const createWorkspaceMock = ({
-    plan,
-    billingPeriodEventsCount,
-    lastChargeDate,
-  }: {
+  const createWorkspaceMock = (parameters: {
     plan: PlanDBScheme;
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
@@ -47,9 +44,9 @@ describe('Limiter worker', () => {
     return {
       _id: new ObjectId(),
       name: 'Mocked workspace',
-      tariffPlanId: plan._id,
-      billingPeriodEventsCount,
-      lastChargeDate,
+      tariffPlanId: parameters.plan._id,
+      billingPeriodEventsCount: parameters.billingPeriodEventsCount,
+      lastChargeDate: parameters.lastChargeDate,
       accountId: '',
       balance: 0,
     };
@@ -58,13 +55,14 @@ describe('Limiter worker', () => {
   /**
    * Returns mocked project
    *
-   * @param workspaceId - project workspace id
+   * @param parameters - parameters for creating project
+   * @param parameters.workspaceId - project workspace id
    */
-  const createProjectMock = ({ workspaceId }: { workspaceId: ObjectId }): ProjectDBScheme => {
+  const createProjectMock = (parameters: { workspaceId: ObjectId }): ProjectDBScheme => {
     return {
       _id: new ObjectId(),
       name: 'Mocked project',
-      workspaceId,
+      workspaceId: parameters.workspaceId,
       notifications: [],
       token: '',
       uidAdded: undefined,
