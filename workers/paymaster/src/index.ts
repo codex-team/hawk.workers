@@ -147,16 +147,11 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace to check
    */
   private async processWorkspacePlanCharge(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, number]> {
+    const date = new Date();
+
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
-
-    /**
-     * If workspace use free tariff plan then do nothing
-     */
-    if (currentPlan.monthlyCharge === 0) {
-      return [workspace, 0]; // no charging
-    }
 
     /**
      * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
@@ -168,7 +163,11 @@ export default class PaymasterWorker extends Worker {
 
     // todo: Check that workspace did not exceed the limit
 
-    await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge);
+    if (currentPlan.monthlyCharge > 0) {
+      await this.makeTransactionForPurchasing(workspace, currentPlan.monthlyCharge, date);
+    }
+
+    await this.updateLastChargeDate(workspace, date);
 
     return [workspace, currentPlan.monthlyCharge];
   }
@@ -178,13 +177,14 @@ export default class PaymasterWorker extends Worker {
    *
    * @param workspace - workspace for plan purchasing
    * @param planCost - amount of money needed to by plan
+   * @param date - date of debiting money
    */
-  private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number): Promise<void> {
-    const date = new Date();
+  private async makeTransactionForPurchasing(workspace: WorkspaceDBScheme, planCost: number, date: Date): Promise<void> {
     const purchaseResponse = await this.accounting.purchase({
       accountId: workspace.accountId,
       amount: planCost,
     });
+
     const transactionId = purchaseResponse.recordId;
 
     await this.businessOperations.insertOne({
@@ -197,7 +197,15 @@ export default class PaymasterWorker extends Worker {
       type: BusinessOperationType.WorkspacePlanPurchase,
       dtCreated: date,
     });
+  }
 
+  /**
+   * Update lastChargeDate in workspace
+   *
+   * @param workspace - workspace for plan purchasing
+   * @param date - date of debiting money
+   */
+  private async updateLastChargeDate(workspace: WorkspaceDBScheme, date: Date): Promise<void> {
     await this.workspaces.updateOne({
       _id: workspace._id,
     }, {
