@@ -158,8 +158,6 @@ export default abstract class SenderWorker extends Worker {
   private async handleAssigneeTask(task: SenderWorkerAssigneePayload): Promise<void> {
     const { assigneeId, projectId, whoAssignedId, eventId } = task;
 
-    console.log('Handle assignee task');
-
     const project = await this.getProject(projectId);
 
     if (!project) {
@@ -187,13 +185,9 @@ export default abstract class SenderWorker extends Worker {
     const channels = assignee.notifications.channels;
 
     for (const channel in channels) {
-      console.log('channels', channels);
-
       if (!channels[channel].isEnabled) {
         continue;
       }
-
-      console.log('Try to send to provider');
 
       this.provider.send(channels[channel].endpoint, {
         type: 'assignee',

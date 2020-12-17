@@ -39,8 +39,6 @@ export default class EmailProvider extends NotificationsProvider {
    * @param {TemplateVariables} variables - variables wrapped in a payload with type
    */
   public async send(to: string, variables: AllNotifications): Promise<void> {
-    console.log('Email provider vars: ', variables);
-
     let templateName: Templates;
 
     if (variables?.type == 'event') {
@@ -64,8 +62,6 @@ export default class EmailProvider extends NotificationsProvider {
   public async sendNotification(to: string, variables: AllNotifications, templateName: Templates): Promise<void> {
     let content: Template;
 
-    console.log('Try to send notification', templateName, 'to', to);
-
     try {
       content = await this.render(templateName, variables.payload);
     } catch (e) {
@@ -86,8 +82,6 @@ export default class EmailProvider extends NotificationsProvider {
 
     try {
       await this.transporter.sendMail(mailOptions);
-
-      console.log('Mail sent :3');
     } catch (e) {
       this.logger.error(
         'Error sending letter. Try to check the environment settings (in .env file).', e
