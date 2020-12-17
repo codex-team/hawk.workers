@@ -162,7 +162,7 @@ export default abstract class SenderWorker extends Worker {
 
     const project = await this.getProject(projectId);
 
-    if (!project || !project.notifications) {
+    if (!project) {
       return;
     }
 
