@@ -13,7 +13,7 @@ import templates, { Template } from '../src/templates';
 import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
-import { GroupedEventDBScheme, ProjectDBScheme, ReceiveTypes } from 'hawk.types';
+import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
