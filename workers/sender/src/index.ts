@@ -5,11 +5,11 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { TemplateEventData } from '../types/template-variables';
+import { TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventPayload, SenderWorkerAssigneePayload, SenderWorkerTask } from 'hawk-worker-notifier/types/sender-task';
+import { SenderWorkerEventPayload, SenderWorkerAssigneePayload, SenderWorkerTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**

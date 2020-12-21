@@ -36,7 +36,7 @@ export default class NewSenderWorker extends SenderWorker {
 2. Implement a provider that will render and send messages
 
 ```ts
-import { TemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { TemplateVariables } from 'hawk-worker-sender/types/template-variables/';
 import templates, { Template } from './templates';
 import Templates from './templates/names';
 

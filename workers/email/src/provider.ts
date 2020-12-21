@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import { AllNotifications, TemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { Notification, TemplateVariables } from 'hawk-worker-sender/types/template-variables/';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -36,34 +36,32 @@ export default class EmailProvider extends NotificationsProvider {
    * Send email to recipient
    *
    * @param {string} to - recipient email
-   * @param {TemplateVariables} variables - variables wrapped in a payload with type
+   * @param {TemplateVariables} notification - notification with type and template variables
    */
-  public async send(to: string, variables: AllNotifications): Promise<void> {
+  public async send(to: string, notification: Notification): Promise<void> {
     let templateName: Templates;
 
-    if (variables?.type == 'event') {
-      templateName = Templates.NewEvent;
-    } else if (variables?.type == 'several-events') {
-      templateName = Templates.SeveralEvents;
-    } else if (variables?.type == 'assignee') {
-      templateName = Templates.Assignee;
+    switch (notification.type) {
+      case 'event': templateName = Templates.NewEvent; break;
+      case 'several-events': templateName = Templates.SeveralEvents; break;
+      case 'assignee': templateName = Templates.Assignee; break;
     }
 
-    this.sendNotification(to, variables, templateName);
+    this.sendNotification(to, notification, templateName);
   }
 
   /**
    * Send notification to user email
    *
    * @param to - recipient email. Person who was assigned to solve the issue
-   * @param variables - variables for template
+   * @param notification - notification variables wrapped in a payload with type
    * @param templateName - name of the template to render
    */
-  public async sendNotification(to: string, variables: AllNotifications, templateName: Templates): Promise<void> {
+  public async sendNotification(to: string, notification: Notification, templateName: Templates): Promise<void> {
     let content: Template;
 
     try {
-      content = await this.render(templateName, variables.payload);
+      content = await this.render(templateName, notification.payload);
     } catch (e) {
       this.logger.error(`Failed to render ${templateName} template `, e);
 

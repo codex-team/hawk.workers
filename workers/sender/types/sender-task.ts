@@ -1,5 +1,5 @@
 import { WorkerTask } from '../../../lib/types/worker-task';
-import { BufferData } from '../src/buffer';
+import { BufferData } from 'hawk-worker-notifier/src/buffer';
 
 /**
  * Interface describes task for notifications` senders workers
@@ -22,7 +22,7 @@ export interface SenderWorkerEventPayload extends WorkerTask {
 }
 
 /**
- * Interface describes personal notifications
+ * Payload of an event assigning someone to resolve the issue (event)
  */
 export interface SenderWorkerAssigneePayload {
   /**

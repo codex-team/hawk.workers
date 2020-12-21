@@ -1,0 +1,10 @@
+<tr>
+  <td style="display: block; padding-top: 20px; padding-right: 20px; padding-bottom: 20px; padding-left: 20px; margin-bottom: 60px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px;">
+    <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
+      <span style="display: block; padding-bottom: 15px;">
+        {{ event.payload.title }}
+      </span>
+    </font>
+    {% include './event-info.twig' with {event: { daysRepeated: daysRepeated, event: {totalCount: event.totalCount}, usersAffected: event.usersAffected}} %}
+  </td>
+</tr>

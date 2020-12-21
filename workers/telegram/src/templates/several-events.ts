@@ -1,4 +1,4 @@
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables/';
 
 /**
  * Return tpl with data substitutions

@@ -7,7 +7,7 @@ import * as pkg from '../package.json';
 import { Channel } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
 import { Rule } from '../types/rule';
-import { SenderWorkerTask } from '../types/sender-task';
+import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
