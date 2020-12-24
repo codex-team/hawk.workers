@@ -1,8 +1,6 @@
 import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
-import { mockedEvents } from './events.mock';
-import { mockedRepetitions } from './repetitions.mock';
+import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import LimiterWorker from '../src';
 import redis from 'redis';
 import { mockedPlans } from './plans.mock';
@@ -70,19 +68,45 @@ describe('Limiter worker', () => {
   };
 
   /**
+   * Returns mocked event for tests
+   */
+  const createEventMock = (): GroupedEventDBScheme => {
+    return {
+      catcherType: '',
+      totalCount: 0,
+      usersAffected: 0,
+      visitedBy: [],
+      groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+      payload: {
+        title: 'Mocked event',
+        timestamp: 1586892935,
+      },
+    };
+  };
+
+  /**
    * Fills database with workspace, project and events for this project
    *
-   * @param workspace - mocked workspace for adding to database
-   * @param project - mocked project for adding to database
+   * @param parameters - parameters for filling database
+   * @param parameters.workspace - mocked workspace for adding to database
+   * @param parameters.project - mocked project for adding to database
+   * @param parameters.eventsToMock - count of mocked events for project
    */
-  const fillDatabaseWithMockedData = async (workspace: WorkspaceDBScheme, project: ProjectDBScheme): Promise<void> => {
-    const eventsCollection = db.collection(`events:${project._id.toString()}`);
-    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
+  const fillDatabaseWithMockedData = async (parameters: {
+    workspace: WorkspaceDBScheme,
+    project: ProjectDBScheme,
+    eventsToMock: number
+  }): Promise<void> => {
+    const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);
 
-    await workspaceCollection.insertOne(workspace);
-    await projectCollection.insertOne(project);
+    await workspaceCollection.insertOne(parameters.workspace);
+    await projectCollection.insertOne(parameters.project);
+    const mockedEvents: GroupedEventDBScheme[] = [];
+
+    for (let i = 0; i < parameters.eventsToMock; i++) {
+      mockedEvents.push(createEventMock());
+    }
     await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedRepetitions);
   };
 
   beforeAll(async () => {
@@ -115,7 +139,11 @@ describe('Limiter worker', () => {
     const eventsCollection = db.collection(`events:${project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await fillDatabaseWithMockedData(workspace, project);
+    await fillDatabaseWithMockedData({
+      workspace,
+      project,
+      eventsToMock: 5,
+    });
 
     /**
      * Act
@@ -164,7 +192,11 @@ describe('Limiter worker', () => {
     });
     const project = createProjectMock({ workspaceId: workspace._id });
 
-    await fillDatabaseWithMockedData(workspace, project);
+    await fillDatabaseWithMockedData({
+      workspace,
+      project,
+      eventsToMock: 15,
+    });
 
     /**
      * Act
@@ -179,6 +211,8 @@ describe('Limiter worker', () => {
 
     /**
      * Assert
+     *
+     * Gets all members of set with key 'DisabledProjectsSet' from Redis
      */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
@@ -198,7 +232,11 @@ describe('Limiter worker', () => {
     });
     const project = createProjectMock({ workspaceId: workspace._id });
 
-    await fillDatabaseWithMockedData(workspace, project);
+    await fillDatabaseWithMockedData({
+      workspace,
+      project,
+      eventsToMock: 15,
+    });
 
     /**
      * Act
@@ -210,11 +248,18 @@ describe('Limiter worker', () => {
     await worker.start();
     await worker.handle();
 
+    /**
+     * Gets all members of set with key 'DisabledProjectsSet' from Redis
+     * Project should be banned
+     */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
       expect(result).toContain(project._id.toString());
     });
 
+    /**
+     * Change workspace plan to plan with big events limit
+     */
     await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
       $set: {
         tariffPlanId: mockedPlans.eventsLimit10000._id,
@@ -226,6 +271,8 @@ describe('Limiter worker', () => {
 
     /**
      * Assert
+     *
+     * Gets all members of set with key 'DisabledProjectsSet' from Redis
      */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
@@ -245,7 +292,11 @@ describe('Limiter worker', () => {
     });
     const project = createProjectMock({ workspaceId: workspace._id });
 
-    await fillDatabaseWithMockedData(workspace, project);
+    await fillDatabaseWithMockedData({
+      workspace,
+      project,
+      eventsToMock: 100,
+    });
 
     /**
      * Act
@@ -260,6 +311,8 @@ describe('Limiter worker', () => {
 
     /**
      * Assert
+     *
+     * Gets all members of set with key 'DisabledProjectsSet' from Redis
      */
     redisClient.smembers('DisabledProjectsSet', (err, result) => {
       expect(err).toBeNull();
