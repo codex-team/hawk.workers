@@ -20,7 +20,7 @@
 			</font>
 		</td>
 	</tr>
-	{% include '../../components/issue.twig' with daysRepeated, event %}
+	{% include '../../components/event.twig' with daysRepeated, event %}
 	<tr>
 		<td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
 			{% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}

@@ -9,7 +9,7 @@ import { TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventPayload, SenderWorkerAssigneePayload, SenderWorkerTask } from '../types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -74,9 +74,6 @@ export default abstract class SenderWorker extends Worker {
    * Task handling function
    *
    * @param task - task to handle
-   * @param task.projectId - project events related to
-   * @param task.ruleId - notification Rule id that should be used for sending
-   * @param task.events - array contains events' group hashes and number of repetition for the last minPeriod
    */
   public async handle<T extends SenderWorkerTask>(task: T): Promise<void> {
     if (!this.channelType) {
@@ -91,11 +88,10 @@ export default abstract class SenderWorker extends Worker {
       this.provider.setLogger(this.logger);
     }
 
-    if ('whoAssignedId' in task) {
-      return this.handleAssigneeTask(task as SenderWorkerAssigneePayload);
+    switch (task.type) {
+      case 'event': return this.handleEventTask(task as SenderWorkerEventTask); break;
+      case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask); break;
     }
-
-    return this.handleEventTask(task as SenderWorkerEventPayload);
   }
 
   /**
@@ -103,8 +99,8 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handke
    */
-  private async handleEventTask(task: SenderWorkerEventPayload): Promise<void> {
-    const { projectId, ruleId, events } = task;
+  private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
+    const { projectId, ruleId, events } = task.payload;
 
     const project = await this.getProject(projectId);
 
@@ -155,8 +151,8 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
-  private async handleAssigneeTask(task: SenderWorkerAssigneePayload): Promise<void> {
-    const { assigneeId, projectId, whoAssignedId, eventId } = task;
+  private async handleAssigneeTask(task: SenderWorkerAssigneeTask): Promise<void> {
+    const { assigneeId, projectId, whoAssignedId, eventId, endpoint } = task.payload;
 
     const project = await this.getProject(projectId);
 
@@ -182,25 +178,17 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const channels = assignee.notifications.channels;
-
-    for (const channel in channels) {
-      if (!channels[channel].isEnabled) {
-        continue;
-      }
-
-      this.provider.send(channels[channel].endpoint, {
-        type: 'assignee',
-        payload: {
-          host: process.env.GARAGE_URL,
-          hostOfStatic: process.env.API_STATIC_URL,
-          project,
-          event,
-          whoAssigned,
-          daysRepeated,
-        },
-      });
-    }
+    this.provider.send(endpoint, {
+      type: 'assignee',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        project,
+        event,
+        whoAssigned,
+        daysRepeated,
+      },
+    });
   }
 
   /**

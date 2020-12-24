@@ -13,7 +13,6 @@ export default class ExampleProvider extends NotificationsProvider {
    * @param notification - notification to send
    */
   public async send(to: string, notification: Notification): Promise<void> {
-    // console.log(`ExampleProvider: sending to ${to} ... `);
-    // console.log('With variables', variables);
+    console.log(`ExampleProvider: sending to ${to} ... `);
   }
 }

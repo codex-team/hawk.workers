@@ -193,12 +193,15 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
       expect(projectQueryMock).toBeCalledWith({ _id: new ObjectId('5e3eef0679fa3700a0198a49') });
@@ -211,12 +214,15 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
       expect(eventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
@@ -229,12 +235,15 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
       expect(dailyEventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });

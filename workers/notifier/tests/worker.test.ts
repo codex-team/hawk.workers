@@ -300,12 +300,15 @@ describe('NotifierWorker', () => {
         1,
         `sender/telegram`,
         {
-          projectId: message.projectId,
-          ruleId: rule._id,
-          events: [ {
-            key: message.event.groupHash,
-            count: 1,
-          } ],
+          type: 'event',
+          payload: {
+            projectId: message.projectId,
+            ruleId: rule._id,
+            events: [ {
+              key: message.event.groupHash,
+              count: 1,
+            } ],
+          },
         }
       );
     }, 2000);
@@ -315,12 +318,15 @@ describe('NotifierWorker', () => {
         2,
         `sender/slack`,
         {
-          projectId: message.projectId,
-          ruleId: rule._id,
-          events: [ {
-            key: message.event.groupHash,
-            count: 1,
-          } ],
+          type: 'event',
+          payload: {
+            projectId: message.projectId,
+            ruleId: rule._id,
+            events: [ {
+              key: message.event.groupHash,
+              count: 1,
+            } ],
+          },
         }
       );
     }, 2000);

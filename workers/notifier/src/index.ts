@@ -125,7 +125,7 @@ export default class NotifierWorker extends Worker {
    * @param {NotifierEvent} event - received event
    */
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
-    const channels: Array<[string, Channel]> = Object.entries(rule.channels as {[name: string]: Channel});
+    const channels: Array<[string, Channel]> = Object.entries(rule.channels as { [name: string]: Channel });
 
     channels.forEach(async ([name, options]) => {
       /**
@@ -185,9 +185,12 @@ export default class NotifierWorker extends Worker {
     const [projectId, ruleId, channelName] = key;
 
     await this.addTask(`sender/${channelName}`, {
-      projectId,
-      ruleId,
-      events,
+      type: 'event',
+      payload: {
+        projectId,
+        ruleId,
+        events,
+      },
     } as SenderWorkerTask);
   }
 
