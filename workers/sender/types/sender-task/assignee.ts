@@ -1,11 +1,3 @@
-/**
- * Payload of an event assigning someone to resolve the issue (event)
- */
-export interface SenderWorkerAssigneeTask {
-  type: 'assignee',
-  payload: SenderWorkerAssigneePayload
-}
-
 export interface SenderWorkerAssigneePayload {
   /**
    * ID of the user assigned to this event
@@ -31,4 +23,12 @@ export interface SenderWorkerAssigneePayload {
    * Notification endpoint
    */
   endpoint: string;
+}
+
+/**
+ * Payload of an event assigning someone to resolve the issue (event)
+ */
+export interface SenderWorkerAssigneeTask {
+  type: 'assignee',
+  payload: SenderWorkerAssigneePayload
 }
