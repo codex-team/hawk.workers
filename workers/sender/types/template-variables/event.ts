@@ -1,4 +1,4 @@
-import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme, UserDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 import { CommonTemplateVariables } from './common-template';
 import { Notification } from './notification';
 
