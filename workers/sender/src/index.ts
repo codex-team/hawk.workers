@@ -11,6 +11,7 @@ import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
+import { Notification } from './../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -89,8 +90,8 @@ export default abstract class SenderWorker extends Worker {
     }
 
     switch (task.type) {
-      case 'event': return this.handleEventTask(task as SenderWorkerEventTask); break;
-      case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask); break;
+      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
+      case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
     }
   }
 
@@ -134,8 +135,14 @@ export default abstract class SenderWorker extends Worker {
       )
     );
 
+    let notificationType: Notification['type'] = 'event';
+
+    if (eventsData.length > 1) {
+      notificationType = 'several-events';
+    }
+
     this.provider.send(channel.endpoint, {
-      type: 'event',
+      type: notificationType,
       payload: {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
@@ -157,24 +164,32 @@ export default abstract class SenderWorker extends Worker {
     const project = await this.getProject(projectId);
 
     if (!project) {
+      console.log('Project not found');
+
       return;
     }
 
     const [event, daysRepeated] = await this.getEventData(projectId, eventId);
 
     if (!event) {
+      console.log('Event not found');
+
       return;
     }
 
     const whoAssigned = await this.getUser(whoAssignedId);
 
     if (!whoAssigned) {
+      console.log('User who assigned the person was not found');
+
       return;
     }
 
     const assignee = await this.getUser(assigneeId);
 
     if (!assignee) {
+      console.log('Assignee not found');
+
       return;
     }
 
