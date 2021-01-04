@@ -11,7 +11,7 @@ import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification } from './../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from './../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -106,18 +106,24 @@ export default abstract class SenderWorker extends Worker {
     const project = await this.getProject(projectId);
 
     if (!project) {
+      this.logger.error(`Cannot send assignee notification: project not found. Payload: ${task}`);
+
       return;
     }
 
     const rule = project.notifications.find((r) => r._id.toString() === ruleId);
 
     if (!rule) {
+      this.logger.error(`Cannot send assignee notification: notification rule not found. Payload: ${task}`);
+
       return;
     }
 
     const channel = rule.channels[this.channelType];
 
     if (!channel || !channel.endpoint) {
+      this.logger.error(`Cannot send assignee notification: channel not found. Payload: ${task}`);
+
       return;
     }
 
@@ -150,7 +156,7 @@ export default abstract class SenderWorker extends Worker {
         events: eventsData,
         period: channel.minPeriod,
       },
-    });
+    } as EventNotification | SeveralEventsNotification);
   }
 
   /**
@@ -164,7 +170,7 @@ export default abstract class SenderWorker extends Worker {
     const project = await this.getProject(projectId);
 
     if (!project) {
-      console.log('Project not found');
+      this.logger.error(`Cannot send assignee notification: project not found. Payload: ${task}`);
 
       return;
     }
@@ -172,7 +178,7 @@ export default abstract class SenderWorker extends Worker {
     const [event, daysRepeated] = await this.getEventData(projectId, eventId);
 
     if (!event) {
-      console.log('Event not found');
+      this.logger.error(`Cannot send assignee notification: event not found. Payload: ${task}`);
 
       return;
     }
@@ -180,7 +186,7 @@ export default abstract class SenderWorker extends Worker {
     const whoAssigned = await this.getUser(whoAssignedId);
 
     if (!whoAssigned) {
-      console.log('User who assigned the person was not found');
+      this.logger.error(`Cannot send assignee notification: user who assigned the person was not found. Payload: ${task}`);
 
       return;
     }
@@ -188,7 +194,7 @@ export default abstract class SenderWorker extends Worker {
     const assignee = await this.getUser(assigneeId);
 
     if (!assignee) {
-      console.log('Assignee not found');
+      this.logger.error(`Cannot send assignee notification: assignee not found. Payload: ${task}`);
 
       return;
     }
@@ -203,7 +209,7 @@ export default abstract class SenderWorker extends Worker {
         whoAssigned,
         daysRepeated,
       },
-    });
+    } as AssigneeNotification);
   }
 
   /**

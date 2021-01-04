@@ -105,18 +105,13 @@ export default class EmailProvider extends NotificationsProvider {
       html: '',
     };
 
-    const variablesWithTemplateName = {
-      templateName: templateName,
-      ...variables,
-    };
-
     await Promise.all(Object.keys(template).map((key) => {
       return new Promise(
         (resolve, reject) => Twig.renderFile(
           template[key as keyof Template],
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore because @types/twig doesn't match the docs
-          variablesWithTemplateName,
+          variables,
           (err: Error, res: string): void => {
             if (err) {
               reject(err);

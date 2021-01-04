@@ -3,7 +3,7 @@
 {% block content %}
 	<tr>
 		<td>
-			<img src="{{ hostOfStatic }}/email/user-assigned-icon.svg" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
+			<img src="{{ hostOfStatic }}/email/user-assigned-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
 		</td>
 	</tr>
 	<tr>
@@ -28,4 +28,14 @@
 		</td>
 	</tr>
 
+{% endblock %}
+
+{% block unsubscribeLink %}
+	{{ host ~ '/account/notifications' }}
+{% endblock %}
+
+{% block unsubscribeText %}
+	You received this email because you are currently opted in to receive such alerts via your
+	personal notifications settings. You may adjust your preferences at any time by clicking
+	the link above.
 {% endblock %}
