@@ -13,7 +13,7 @@ module.exports = {
     NodeJS: true,
   },
   overrides: [ {
-    files: [ '*.test.ts' ],
+    files: ['*.test.ts', '*.mock.ts'],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
     },
