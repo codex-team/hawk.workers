@@ -27,11 +27,6 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Memoized Hashing computation
-   */
-  private static cachedHashValues: { [key: string]: string } = {};
-
-  /**
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
