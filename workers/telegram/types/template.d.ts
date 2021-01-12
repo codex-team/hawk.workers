@@ -1,4 +1,4 @@
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables/';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 
 /**
  * All Telegram templates should implement this interface

@@ -1,5 +1,5 @@
 import { Logger } from 'winston';
-import { Notification } from 'hawk-worker-sender/types/template-variables/';
+import { Notification } from 'hawk-worker-sender/types/template-variables';
 
 /**
  * Abstract class that describes notification provider

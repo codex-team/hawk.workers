@@ -1,4 +1,4 @@
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables/';
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { block, element, object, TEXT_FORMAT_MRKDWN, TEXT_FORMAT_PLAIN } from 'slack-block-kit';
 import { getEventLocation } from './utils';

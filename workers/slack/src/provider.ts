@@ -1,5 +1,5 @@
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
-import { Notification, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables/';
+import { Notification, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates from './templates';
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { SlackTemplate } from '../types/template';

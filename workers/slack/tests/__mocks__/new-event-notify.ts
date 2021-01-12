@@ -1,4 +1,4 @@
-import { EventNotification } from 'hawk-worker-sender/types/template-variables/';
+import { EventNotification } from 'hawk-worker-sender/types/template-variables';
 import { ObjectId } from 'mongodb';
 
 /**
