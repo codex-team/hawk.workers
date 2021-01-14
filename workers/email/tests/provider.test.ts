@@ -1,5 +1,5 @@
 /* eslint-disable */
-import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables, AssigneeTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 
 const nodemailerMock = jest.genMockFromModule('nodemailer') as any;
 const sendMailMock = jest.fn();
@@ -10,7 +10,7 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import {DecodedGroupedEvent, ProjectDBScheme} from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';
@@ -36,7 +36,7 @@ describe('EmailProvider', () => {
         text: '',
       }));
 
-      await provider.send(to, {events: [{event: {}}], project: {}} as any);
+      await provider.send(to, { events: [{ event: {} }], project: {} } as any);
 
       const options = {
         from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
@@ -104,25 +104,25 @@ describe('EmailProvider', () => {
 
     it('should successfully render a several-events template', async () => {
       const vars: EventsTemplateVariables = {
-        events: [ {
+        events: [{
           event: {
             totalCount: 10,
             payload: {
               title: 'New event',
               timestamp: Date.now(),
-              backtrace: [ {
+              backtrace: [{
                 file: 'file',
                 line: 1,
-                sourceCode: [ {
+                sourceCode: [{
                   line: 1,
                   content: 'code',
-                } ],
-              } ],
+                }],
+              }],
             },
           } as DecodedGroupedEvent,
           daysRepeated: 1,
           newCount: 1,
-        } ],
+        }],
         host: process.env.GARAGE_URL!,
         hostOfStatic: process.env.API_STATIC_URL!,
         project: {
@@ -141,6 +141,59 @@ describe('EmailProvider', () => {
 
       // @ts-ignore
       const render = () => provider.render(Templates.SeveralEvents, vars);
+
+      expect(render).not.toThrowError();
+
+      template = await render();
+
+      expect(template).toEqual({
+        subject: expect.any(String),
+        html: expect.any(String),
+        text: expect.any(String),
+      });
+    });
+
+    it('should successfully render an assignee template', async () => {
+      const vars: AssigneeTemplateVariables = {
+        event: {
+          totalCount: 10,
+          payload: {
+            title: 'New event',
+            timestamp: Date.now(),
+            backtrace: [{
+              file: 'file',
+              line: 1,
+              sourceCode: [{
+                line: 1,
+                content: 'code',
+              }],
+            }],
+          },
+        } as DecodedGroupedEvent,
+        daysRepeated: 1,
+        host: process.env.GARAGE_URL!,
+        hostOfStatic: process.env.API_STATIC_URL!,
+        whoAssigned: {
+          _id: new ObjectId('5ec3ffe769c0030022f88f24'),
+          email: 'user@email.ru',
+          password: '$argon2i$v=19$m=4096,t=3,p=1$QOo3u8uEor0t+nqCLpEW3g$aTCDEaHht9ro9VZDD1yZGpaTi+g1OWsfHbYd5TQBRPs',
+          name: 'Hahahawk',
+        },
+        project: {
+          _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          token: 'project-token',
+          name: 'Project',
+          workspaceId: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          uidAdded: new ObjectId('5d206f7f9aaf7c0071d64596'),
+          notifications: [],
+        } as ProjectDBScheme,
+      };
+
+      const provider = new EmailProvider();
+      let template;
+
+      // @ts-ignore
+      const render = () => provider.render(Templates.Assignee, vars);
 
       expect(render).not.toThrowError();
 

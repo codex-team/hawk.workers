@@ -1,0 +1,18 @@
+{% if whoAssigned.name %}{{ whoAssigned.name }}{% else %}{{ whoAssigned.email }}{% endif %} assigned you to resolve the event
+
+{{ event.payload.title }}
+
+{{ event.totalCount }} total
+{{ daysRepeated }} {% if daysRepeated == 1 %}day{% else %}days{% endif %} repeating
+{{ event.usersAffected }} {% if event.usersAffected  == 1 %}user{% else %}users{% endif %} affected
+
+View event: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview
+
+***
+
+You received this email because you are currently opted in to receive such alerts via your personal notifications settings. You may adjust your preferences at any time by clicking the link: {{ host }}/account/notifications
+
+Hawk
+Errors tracking system
+
+Made by CodeX
