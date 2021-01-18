@@ -1,0 +1,37 @@
+{% extends '../../components/layout.twig' %}
+
+{% block content %}
+	<tr>
+		<td>
+			<img src="{{ hostOfStatic }}/email/user-assigned-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
+		</td>
+	</tr>
+	<tr>
+		<td align="center" style="padding-top: 15px; padding-right: 0; padding-left: 0; padding-bottom: 15px;">
+			<font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
+				<span style="vertical-align: middle; display: inline-block;">
+					Your balance is small in the {{ workspace.name }} workspace. 
+          The current balance is {{ workspace.balance }}. 
+          In order for the workspace to continue accepting errors, top up your balance for ${{ plan.monthlyCharge - worksapce.balance }}
+				</span>
+			</font>
+		</td>
+	</tr>
+	<tr>
+		<td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+			{% set url = host ~ '/workspace/' ~ workspace._id ~ '/biliing' %}
+			{% include '../../components/button.twig' with {href: url, label: 'Workspace billing'} %}
+		</td>
+	</tr>
+
+{% endblock %}
+
+{% block unsubscribeLink %}
+	{{ host ~ '/account/notifications' }}
+{% endblock %}
+
+{% block unsubscribeText %}
+	You received this email because you are currently opted in to receive such alerts via your
+	personal notifications settings. You may adjust your preferences at any time by clicking
+	the link above.
+{% endblock %}

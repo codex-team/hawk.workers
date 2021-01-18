@@ -3,6 +3,7 @@
  */
 enum Templates {
   Assignee = 'assignee',
+  LowBalance = 'low-balance',
   NewEvent = 'new-event',
   SeveralEvents = 'several-events',
 }
