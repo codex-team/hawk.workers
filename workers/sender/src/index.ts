@@ -218,7 +218,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task data
    */
-  private async handleLowBalanceEvent(task: SenderWorkerLowBalanceTask) {
+  private async handleLowBalanceEvent(task: SenderWorkerLowBalanceTask): Promise<void> {
     const { workspaceId, planId, endpoint } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);

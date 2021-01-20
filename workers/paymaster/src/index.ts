@@ -307,10 +307,11 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace data
    */
   private isTimeToPayComingSoon(workspace: WorkspaceDBScheme): boolean {
-    const day = 24 * 60 * 60 * 1000;
+    const day = 86400000; // 24 * 60 * 60 * 1000
+    const minDaysAfterLastChargeToNotify = 26;
     const lastChargeDate = new Date(workspace.lastChargeDate);
 
-    if (lastChargeDate >= new Date(Date.now() - 4 * day) && lastChargeDate < new Date(Date.now() - 4 * day)) {
+    if (lastChargeDate >= new Date(Date.now() - minDaysAfterLastChargeToNotify * day) && lastChargeDate < new Date(Date.now() - (minDaysAfterLastChargeToNotify + 1) * day)) {
       return true;
     }
 
@@ -366,10 +367,12 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * @param workspace
-   * @param currentPlan
+   * Send low balance notification
+   *
+   * @param workspace - workspace data
+   * @param currentPlan - plan of current workspace
    */
-  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme) {
+  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme): Promise<void> {
     const connection = await this.db.connect();
     const teamCollection = await connection.collection('team:' + workspace._id.toString()).find()
       .toArray();
