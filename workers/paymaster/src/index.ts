@@ -9,7 +9,7 @@ import { Worker } from '../../../lib/worker';
 import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
-import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType, ConfirmedMemberDBScheme, UserDBScheme } from 'hawk.types';
 import dotenv from 'dotenv';
 import path from 'path';
 import Accounting, { PENNY_MULTIPLIER } from 'codex-accounting-sdk';
@@ -42,6 +42,11 @@ export default class PaymasterWorker extends Worker {
    * Collection with businessOperations
    */
   private businessOperations: Collection<BusinessOperationDBScheme>;
+
+  /**
+   * Collection with all users
+   */
+  private users: Collection<UserDBScheme>;
 
   /**
    * List of tariff plans
@@ -154,10 +159,15 @@ export default class PaymasterWorker extends Worker {
     );
 
     /**
-     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
+     * If today is not pay day or lastChargeDate is today (plan already paid) do nothing or
+     * Notify users if balance is low and payment day is coming soon
      * If lastChargeDate is undefined then charge tariff plan and set it
      */
     if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
+      if (this.isTimeToPayComingSoon(workspace)) {
+        this.sendLowBalanceNotification(workspace, currentPlan);
+      }
+
       return [workspace, 0]; // no charging
     }
 
@@ -292,6 +302,22 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
+   * If time to pay is coming
+   *
+   * @param workspace - workspace data
+   */
+  private isTimeToPayComingSoon(workspace: WorkspaceDBScheme): boolean {
+    const day = 24 * 60 * 60 * 1000;
+    const lastChargeDate = new Date(workspace.lastChargeDate);
+
+    if (lastChargeDate >= new Date(Date.now() - 4 * day) && lastChargeDate < new Date(Date.now() - 4 * day)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Check if passed timestamp is today
    *
    * @param date - date to check
@@ -336,6 +362,37 @@ export default class PaymasterWorker extends Worker {
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + report + '&parse_mode=HTML',
+    });
+  }
+
+  /**
+   * @param workspace
+   * @param currentPlan
+   */
+  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme) {
+    const connection = await this.db.connect();
+    const teamCollection = await connection.collection('team:' + workspace._id.toString()).find()
+      .toArray();
+    const teamAdminCollection: ConfirmedMemberDBScheme[] = teamCollection.filter(user => user?.isAdmin);
+
+    teamAdminCollection.forEach(async (member) => {
+      const user = await this.users.findOne({ _id: member.userId });
+
+      if (!user.notifications) {
+        return;
+      }
+
+      const channels = user.notifications.channels;
+
+      if (channels?.email?.isEnabled) {
+        this.addTask(workerNames.EMAIL, {
+          type: 'low-balance',
+          payload: {
+            workspaceId: workspace._id,
+            planId: currentPlan._id,
+          },
+        });
+      }
     });
   }
 }

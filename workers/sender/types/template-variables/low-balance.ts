@@ -1,8 +1,8 @@
 import { Notification } from './notification';
-import { CommonTemplateVariables } from './common-template'
-import { WorkspaceDBScheme, PlanDBScheme } from 'hawk.types'
+import { CommonTemplateVariables } from './common-template';
+import { WorkspaceDBScheme, PlanDBScheme } from 'hawk.types';
 
-export interface LowBalancePayload extends CommonTemplateVariables {
+export interface LowBalanceTemplateVariables extends CommonTemplateVariables {
   /**
    * Workspace that has a low balance
    */
@@ -17,7 +17,7 @@ export interface LowBalancePayload extends CommonTemplateVariables {
 /**
  * Object with type and variables for template for low balance notification
  */
-export interface LowBalanceNotification extends Notification<LowBalancePayload> {
+export interface LowBalanceNotification extends Notification<LowBalanceTemplateVariables> {
   /**
    * Notification when the user has low balance on the workspace
    */
@@ -26,5 +26,5 @@ export interface LowBalanceNotification extends Notification<LowBalancePayload> 
   /**
    * Notification payload
    */
-  payload: LowBalancePayload;
+  payload: LowBalanceTemplateVariables;
 }
