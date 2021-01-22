@@ -1,4 +1,4 @@
-import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme, WorkspaceDBScheme, PlanDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
@@ -233,6 +233,7 @@ export default abstract class SenderWorker extends Worker {
       type: 'low-balance',
       payload: {
         workspace,
+        endpoint,
       },
     } as LowBalanceNotification);
   }
