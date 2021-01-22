@@ -165,7 +165,7 @@ export default class PaymasterWorker extends Worker {
      */
     if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
       if (this.isTimeToPayComingSoon(workspace)) {
-        this.sendLowBalanceNotification(workspace, currentPlan);
+        this.sendLowBalanceNotification(workspace);
       }
 
       return [workspace, 0]; // no charging
@@ -308,7 +308,7 @@ export default class PaymasterWorker extends Worker {
    */
   private isTimeToPayComingSoon(workspace: WorkspaceDBScheme): boolean {
     const day = 86400000; // 24 * 60 * 60 * 1000
-    const minDaysAfterLastChargeToNotify = 26;
+    const minDaysAfterLastChargeToNotify = 25;
     const lastChargeDate = new Date(workspace.lastChargeDate);
 
     if (lastChargeDate >= new Date(Date.now() - minDaysAfterLastChargeToNotify * day) && lastChargeDate < new Date(Date.now() - (minDaysAfterLastChargeToNotify + 1) * day)) {
@@ -370,9 +370,8 @@ export default class PaymasterWorker extends Worker {
    * Send low balance notification
    *
    * @param workspace - workspace data
-   * @param currentPlan - plan of current workspace
    */
-  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme): Promise<void> {
+  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme): Promise<void> {
     const connection = await this.db.connect();
     const teamCollection = await connection.collection('team:' + workspace._id.toString()).find()
       .toArray();
@@ -392,7 +391,7 @@ export default class PaymasterWorker extends Worker {
           type: 'low-balance',
           payload: {
             workspaceId: workspace._id,
-            planId: currentPlan._id,
+            endpoint: channels.email.endpoint,
           },
         });
       }

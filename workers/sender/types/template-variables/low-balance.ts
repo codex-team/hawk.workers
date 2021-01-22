@@ -1,17 +1,12 @@
 import { Notification } from './notification';
 import { CommonTemplateVariables } from './common-template';
-import { WorkspaceDBScheme, PlanDBScheme } from 'hawk.types';
+import { WorkspaceDBScheme } from 'hawk.types';
 
 export interface LowBalanceTemplateVariables extends CommonTemplateVariables {
   /**
    * Workspace that has a low balance
    */
   workspace: WorkspaceDBScheme;
-
-  /**
-   * Workspace plan
-   */
-  plan: PlanDBScheme
 }
 
 /**

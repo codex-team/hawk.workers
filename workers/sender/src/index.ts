@@ -219,7 +219,7 @@ export default abstract class SenderWorker extends Worker {
    * @param task - task data
    */
   private async handleLowBalanceEvent(task: SenderWorkerLowBalanceTask): Promise<void> {
-    const { workspaceId, planId, endpoint } = task.payload;
+    const { workspaceId, endpoint } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);
 
@@ -229,19 +229,10 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const plan = await this.getPlan(planId);
-
-    if (!plan) {
-      this.logger.error(`Cannot send low-balance notification: plan was not found. Payload: ${task}`);
-
-      return;
-    }
-
     this.provider.send(endpoint, {
       type: 'low-balance',
       payload: {
         workspace,
-        plan,
       },
     } as LowBalanceNotification);
   }
@@ -310,18 +301,6 @@ export default abstract class SenderWorker extends Worker {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
-  }
-
-  /**
-   * Get plan data
-   *
-   * @param {string} planId - plan id
-   * @returns {Promise<ProjectDBScheme>}
-   */
-  private async getPlan(planId: string): Promise<PlanDBScheme | null> {
-    const connection = await this.accountsDb.getConnection();
-
-    return connection.collection('plans').findOne({ _id: new ObjectId(planId) });
   }
 
   /**

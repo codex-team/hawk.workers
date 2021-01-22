@@ -5,11 +5,6 @@ export interface SenderWorkerLowBalancePayload {
   workspaceId: string;
 
   /**
-   * Workspace planId
-   */
-  planId: string;
-
-  /**
    * Notification endpoint
    */
   endpoint: string;
