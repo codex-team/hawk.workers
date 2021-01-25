@@ -8,6 +8,11 @@ export interface SenderWorkerLowBalancePayload {
    * Notification endpoint
    */
   endpoint: string;
+
+  /**
+   * Workspace balance
+   */
+  balance: number;
 }
 
 /**

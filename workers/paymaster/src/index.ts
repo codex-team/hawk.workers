@@ -10,6 +10,7 @@ import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { EventType, PaymasterEvent, PlanChangedEvent } from '../types/paymaster-worker-events';
 import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType, ConfirmedMemberDBScheme, UserDBScheme } from 'hawk.types';
+import { SenderWorkerLowBalanceTask } from '../../sender/types/sender-task';
 import dotenv from 'dotenv';
 import path from 'path';
 import Accounting, { PENNY_MULTIPLIER } from 'codex-accounting-sdk';
@@ -66,6 +67,7 @@ export default class PaymasterWorker extends Worker {
 
     this.workspaces = connection.collection('workspaces');
     this.businessOperations = connection.collection('businessOperations');
+    this.users = connection.collection('users');
     const plansCollection = connection.collection<PlanDBScheme>('plans');
 
     this.plans = await plansCollection.find({}).toArray();
@@ -165,7 +167,7 @@ export default class PaymasterWorker extends Worker {
      */
     if (workspace.lastChargeDate && !this.isTimeToPay(workspace.lastChargeDate)) {
       if (this.isTimeToPayComingSoon(workspace)) {
-        this.sendLowBalanceNotification(workspace);
+        this.sendLowBalanceNotification(workspace, currentPlan);
       }
 
       return [workspace, 0]; // no charging
@@ -311,7 +313,7 @@ export default class PaymasterWorker extends Worker {
     const minDaysAfterLastChargeToNotify = 25;
     const lastChargeDate = new Date(workspace.lastChargeDate);
 
-    if (lastChargeDate >= new Date(Date.now() - minDaysAfterLastChargeToNotify * day) && lastChargeDate < new Date(Date.now() - (minDaysAfterLastChargeToNotify + 1) * day)) {
+    if (lastChargeDate >= new Date(Date.now() - minDaysAfterLastChargeToNotify * day) && lastChargeDate < new Date(Date.now() - (minDaysAfterLastChargeToNotify - 1) * day)) {
       return true;
     }
 
@@ -370,9 +372,17 @@ export default class PaymasterWorker extends Worker {
    * Send low balance notification
    *
    * @param workspace - workspace data
+   * @param currentPlan - workspace plan
    */
-  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme): Promise<void> {
-    const connection = await this.db.connect();
+  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme): Promise<void> {
+    const connection = this.db.getConnection();
+    const workspaceAccount = await this.accounting.getAccount(workspace.accountId);
+    const balance = workspaceAccount.balance.amount;
+
+    if (balance >= currentPlan.monthlyCharge) {
+      return;
+    }
+
     const teamCollection = await connection.collection('team:' + workspace._id.toString()).find()
       .toArray();
     const teamAdminCollection: ConfirmedMemberDBScheme[] = teamCollection.filter(user => user?.isAdmin);
@@ -390,10 +400,11 @@ export default class PaymasterWorker extends Worker {
         this.addTask(workerNames.EMAIL, {
           type: 'low-balance',
           payload: {
-            workspaceId: workspace._id,
+            workspaceId: String(workspace._id),
             endpoint: channels.email.endpoint,
+            balance: workspaceAccount.balance.amount,
           },
-        });
+        } as SenderWorkerLowBalanceTask);
       }
     });
   }

@@ -219,7 +219,7 @@ export default abstract class SenderWorker extends Worker {
    * @param task - task data
    */
   private async handleLowBalanceEvent(task: SenderWorkerLowBalanceTask): Promise<void> {
-    const { workspaceId, endpoint } = task.payload;
+    const { workspaceId, endpoint, balance } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);
 
@@ -232,7 +232,10 @@ export default abstract class SenderWorker extends Worker {
     this.provider.send(endpoint, {
       type: 'low-balance',
       payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
         workspace,
+        balance,
       },
     } as LowBalanceNotification);
   }

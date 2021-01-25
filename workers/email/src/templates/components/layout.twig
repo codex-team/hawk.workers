@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>
-        {{ project.name }}
+      {{ project.name }}
     </title>
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <meta name="language" content="en-us">
@@ -10,145 +10,162 @@
     <meta name="color-scheme" content="dark only">
     <meta charset="utf-8">
     <style type="text/css">
-        #outlook a {padding: 0;}
-        .ReadMsgBody {width: 100%;}
-        .ExternalClass {width: 100%;}
-        .ExternalClass * {line-height: 100%;}
-        body {margin: 0; padding: 0; -webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;}
-        table, td {border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
-        img {border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none; -ms-interpolation-mode: bicubic;}
-        p {display: block; margin: 13px 0;}
+      #outlook a {
+        padding: 0;
+      }
+      .ReadMsgBody {
+        width: 100%;
+      }
+      .ExternalClass {
+        width: 100%;
+      }
+      .ExternalClass * {
+        line-height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table,
+      td {
+        border-collapse: collapse;
+        mso-table-lspace: 0;
+        mso-table-rspace: 0;
+      }
+      img {
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+        -ms-interpolation-mode: bicubic;
+      }
+      p {
+        display: block;
+        margin: 13px 0;
+      }
     </style>
     <style type="text/css">
-        html {
-            font-family: Roboto, system-ui, sans-serif;
+      html {
+        font-family: Roboto, system-ui, sans-serif;
+      }
+
+      td {
+        font-family: inherit;
+      }
+
+      @media(max-width: 630px) {
+        .layout-top-margin {
+          height: 20px !important
         }
 
-        td {
-            font-family: inherit;
+        .backtrace-wrap {
+          padding: 0 !important;
         }
 
-        @media (max-width: 630px) {
-            .layout-top-margin {
-                height: 20px !important
-            }
-
-            .backtrace-wrap {
-                padding: 0 !important;
-            }
-
-            .event-title-block {
-                padding: 15px !important;
-            }
-
-            .event-title-block__font {
-                font-size: 13px !important;
-            }
-
-            .several-items-heading {
-                padding-top: 15px !important;
-                padding-left: 0 !important;
-            }
-
-            .several-items-heading__font {
-                font-size: 13px !important;
-            }
-
-            .several-items-event {
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-            }
-
-            .several-items-button-wrap {
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-            }
-
-            .several-items-listspace {
-                height: 15px !important
-            }
-
-            .several-items-head-space {
-                height: 0 !important;
-            }
+        .event-title-block {
+          padding: 15px !important;
         }
+
+        .event-title-block__font {
+          font-size: 13px !important;
+        }
+
+        .several-items-heading {
+          padding-top: 15px !important;
+          padding-left: 0 !important;
+        }
+
+        .several-items-heading__font {
+          font-size: 13px !important;
+        }
+
+        .several-items-event {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+
+        .several-items-button-wrap {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+
+        .several-items-listspace {
+          height: 15px !important
+        }
+
+        .several-items-head-space {
+          height: 0 !important;
+        }
+      }
     </style>
-</head>
-<body class="body" bgcolor="#2f3341" style="background-color: #2f3341; margin-top: 0;margin-right: 0;margin-left: 0;margin-bottom: 0;" leftmargin="0" rightmargin="0" topmargin="0" bottommargin="0">
-<table cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#2f3341">
-    <tr>
+  </head>
+  <body class="body" bgcolor="#2f3341" style="background-color: #2f3341; margin-top: 0;margin-right: 0;margin-left: 0;margin-bottom: 0;" leftmargin="0" rightmargin="0" topmargin="0" bottommargin="0">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#2f3341">
+      <tr>
         <td width="20"></td>
         <td height="50" class="layout-top-margin"></td>
         <td width="20"></td>
-    </tr>
-    <tr>
+      </tr>
+      <tr>
         <td width="20"></td>
         <td>
-            <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;">
-                {% include './project.twig' with {project: project} %}
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;"> {% block header %}{% endblock %}{% block content %}{% endblock %}
 
-                {% block content %}{% endblock %}
-
-                {% if unsubscribeLink %}
-                    <tr>
-                        <td style="text-align: center">
-                            <a href="{% block unsubscribeLink %}{% endblock %}"
-                            style="text-decoration: none; border-bottom: 1px solid #494F5E;">
-                                <font color="#969FB3"
-                                    style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                                    Unsubscribe
-                                </font>
-                            </a>
-                        </td>
-                    </tr>
-                {% endif %}
-                {% if unsubscribeText %}
-                    <tr>
-                        <td style="padding-top: 40px;padding-right: 20px;padding-left: 20px;padding-bottom: 30px;text-align: center;">
-                            <font color="#969FB3"
-                                style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                                {% block unsubscribeText %}{% endblock %}
-                            </font>
-                        </td>
-                    </tr>
-                {% endif %}
-                <tr>
-                    <td style="text-align: center;">
-                        <a href="{{ host }}" style="text-decoration: none;">
-                            <font color="#969FB3"
-                                  style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                                Hawk
-                            </font>
-                        </a>
-                    </td>
+            {% if unsubscribeLink %}
+              <tr>
+                <td style="text-align: center">
+                  <a href="{% block unsubscribeLink %}{% endblock %}" style="text-decoration: none; border-bottom: 1px solid #494F5E;">
+                    <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                      Unsubscribe
+                    </font>
+                  </a>
+                </td>
+              </tr>
+            {% endif %}
+            {% if unsubscribeText %}
+              <tr>
+                <td style="padding-top: 40px;padding-right: 20px;padding-left: 20px;padding-bottom: 30px;text-align: center;">
+                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;"> {% block unsubscribeText %}{% endblock %}
+                    </font>
+                  </td>
                 </tr>
-                <tr>
-                    <td style="text-align: center">
-                        <font color="#969FB3"
-                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                            Errors tracking system
-                        </font>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding-top: 30px; text-align: center">
-                        <font color="#969FB3"
-                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                            Made by
-                            <a href="https://codex.so"
-                               style="color: inherit !important; text-decoration: none;">CodeX</a>
-                        </font>
-                    </td>
-                </tr>
+              {% endif %}
+              <tr>
+                <td style="text-align: center;">
+                  <a href="{{ host }}" style="text-decoration: none;">
+                    <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                      Hawk
+                    </font>
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: center">
+                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                    Errors tracking system
+                  </font>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top: 30px; text-align: center">
+                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                    Made by
+                    <a href="https://codex.so" style="color: inherit !important; text-decoration: none;">CodeX</a>
+                  </font>
+                </td>
+              </tr>
             </table>
-        </td>
-        <td width="20"></td>
-    </tr>
-    <tr>
-        <td width="20"></td>
-        <td height="100"></td>
-        <td width="20"></td>
-    </tr>
-</table>
-</body>
-</html>
+          </td>
+          <td width="20"></td>
+        </tr>
+        <tr>
+          <td width="20"></td>
+          <td height="100"></td>
+          <td width="20"></td>
+        </tr>
+      </table>
+    </body>
+  </html>

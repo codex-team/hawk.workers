@@ -7,6 +7,11 @@ export interface LowBalanceTemplateVariables extends CommonTemplateVariables {
    * Workspace that has a low balance
    */
   workspace: WorkspaceDBScheme;
+
+  /**
+   * Workspace balance
+   */
+  balance: number;
 }
 
 /**
