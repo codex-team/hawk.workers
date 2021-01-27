@@ -1,15 +1,15 @@
-import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { TemplateEventData } from '../types/template-variables/';
+import { SuccessPaymentNotification, TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask, SenderWorkerSuccessPaymentTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from './../types/template-variables';
 
@@ -92,6 +92,7 @@ export default abstract class SenderWorker extends Worker {
     switch (task.type) {
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
+      case 'success-payment': return this.handleSuccessPaymentEvent(task as SenderWorkerSuccessPaymentTask);
     }
   }
 
@@ -213,6 +214,33 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Handle success payment event
+   *
+   * @param task - task data
+   */
+  private async handleSuccessPaymentEvent(task: SenderWorkerSuccessPaymentTask): Promise<void> {
+    const { workspaceId, endpoint, balance } = task.payload;
+    
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send low-balance notification: workspace was not found. Payload: ${task}`);
+
+      return;
+    }
+
+    this.provider.send(endpoint, {
+      type: 'success-payment',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        workspace,
+        balance,
+      },
+    } as SuccessPaymentNotification);
+  }
+
+  /**
    * Get event data for email
    *
    * @param {string} projectId - project events are related to
@@ -264,6 +292,18 @@ export default abstract class SenderWorker extends Worker {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('projects').findOne({ _id: new ObjectId(projectId) });
+  }
+
+  /**
+   * Get workspace data
+   *
+   * @param {string} workspaceId - workspace id
+   * @returns {Promise<ProjectDBScheme>}
+   */
+  private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
   }
 
   /**

@@ -5,6 +5,7 @@ enum Templates {
   Assignee = 'assignee',
   NewEvent = 'new-event',
   SeveralEvents = 'several-events',
+  SuccessPayment = 'success-payment',
 }
 
 export default Templates;
