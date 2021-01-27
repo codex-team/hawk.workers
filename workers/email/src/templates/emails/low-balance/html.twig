@@ -7,12 +7,12 @@
 {% block content %}
   <tr>
     <td>
-      <img src="{{ hostOfStatic }}/email/success-payment-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
+      <img src="{{ hostOfStatic }}/email/low-balance-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
     </td>
   </tr>
   <tr>
     <td align="center" style="padding-top: 15px; color: #dbe6ff">
-      Payment successful
+      Workspace balance is low
     </td>
   </tr>
   <tr>
@@ -20,7 +20,9 @@
       <div style="padding: 20px; border-width: 1px; border-style: solid; border-color: #494F5E; border-radius: 10px;">
         <font color="#dbe6ff" style="font-size: 15px; color: #dbe6ff; letter-spacing: 0.4px;">
           <span style="vertical-align: middle; display: inline-block;">
-            The balance of the &laquo;{{ workspace.name }}&raquo; workspace is <b>{{ balance }} USD</b> for now.
+            You have only <b>{{ balance }} USD</b> left on the &laquo;{{ workspace.name }}&raquo; workspace. 
+            It is not enough to prolongate the current tarif plan for the next billing period that will starts in <b>5 days</b>. 
+            Please replenish the balance.
           </span>
         </font>
       </div>

@@ -5,13 +5,13 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { SuccessPaymentNotification, TemplateEventData } from '../types/template-variables/';
+import { LowBalanceNotification, TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask, SenderWorkerSuccessPaymentTask } from '../types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask, SenderWorkerLowBalanceTask, SenderWorkerSuccessPaymentTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from './../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification, SuccessPaymentNotification } from './../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -92,6 +92,7 @@ export default abstract class SenderWorker extends Worker {
     switch (task.type) {
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
+      case 'low-balance': return this.handleLowBalanceEvent(task as SenderWorkerLowBalanceTask);
       case 'success-payment': return this.handleSuccessPaymentEvent(task as SenderWorkerSuccessPaymentTask);
     }
   }
@@ -211,6 +212,33 @@ export default abstract class SenderWorker extends Worker {
         daysRepeated,
       },
     } as AssigneeNotification);
+  }
+
+  /**
+   * Handle low balance event
+   *
+   * @param task - task data
+   */
+  private async handleLowBalanceEvent(task: SenderWorkerLowBalanceTask): Promise<void> {
+    const { workspaceId, endpoint, balance } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send low-balance notification: workspace was not found. Payload: ${task}`);
+
+      return;
+    }
+
+    this.provider.send(endpoint, {
+      type: 'low-balance',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        workspace,
+        balance,
+      },
+    } as LowBalanceNotification);
   }
 
   /**
