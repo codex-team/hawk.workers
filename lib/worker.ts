@@ -5,7 +5,7 @@ import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
 import CacheController from '../lib/cache/controller';
-import createLogger from "./logger";
+import createLogger from './logger';
 
 /**
  * Base worker class for processing tasks
