@@ -10,4 +10,22 @@ If so, the Limiter puts information to Redis about the workspace's projects for 
 3. `yarn install`
 4. `yarn run-limiter`
 
+## Event types
 
+### Regular check
+Serves to check current total events count in workspaces and blocks events receiving if workspace exceed the limit.
+Event shape:
+```json
+{
+  "type":"regular-workspaces-check"
+}
+```
+
+### Single workspace check
+Serves to check single workspace by id. Blocks workspace if the event limit is exceeded and unblocks if not.
+```json
+{
+  "type": "check-single-workspace",
+  "workspaceId":"5e4ff30a628a6c73a415f4d5"
+}
+```

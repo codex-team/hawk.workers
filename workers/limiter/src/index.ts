@@ -128,7 +128,7 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Handles event for for checking current total events count in workspaces
+   * Handles event for checking current total events count in workspaces
    * and limits events receiving if workspace exceed the limit
    */
   private async handleRegularWorkspacesCheck(): Promise<void> {
