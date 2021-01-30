@@ -101,6 +101,13 @@ export default class LimiterWorker extends Worker {
     this.logger.info('Limiter worker started checking workspace with id ' + event.workspaceId);
 
     const workspace = await this.getWorkspaceWithTariffPlan(event.workspaceId);
+
+    if (!workspace) {
+      this.logger.info(`No workspace with id ${event.workspaceId}. Finishing task`);
+
+      return;
+    }
+
     const workspaceProjects = await this.getProjects(event.workspaceId);
     const workspaceProjectsIds = workspaceProjects.map(p => p._id.toString());
 
@@ -116,8 +123,7 @@ export default class LimiterWorker extends Worker {
 
     await this.sendSingleWorkspacesCheckReport(report);
     this.logger.info(
-      `Limiter worker finished workspace checking.
-       Workspace with id ${event.workspaceId} was ${report.isBanned ? 'banned' : 'unbanned'}`
+      `Limiter worker finished workspace checking. Workspace with id ${event.workspaceId} was ${report.isBanned ? 'banned' : 'unbanned'}`
     );
   }
 
@@ -379,17 +385,15 @@ export default class LimiterWorker extends Worker {
    */
   private async sendSingleWorkspacesCheckReport(reportData: SingleWorkspaceAnalyzeReport): Promise<void> {
     const workspace = reportData.updatedWorkspace;
-    const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
-
-    const millisecondsInDay = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
-    const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
 
     const reportString = `
 Hawk Limiter ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''} 🚧
 
-Check workspace ${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code>
-Workspace has ${shortNumber(workspace.billingPeriodEventsCount)} events in ${timeInDays} days. Limit is ${workspace.tariffPlan.eventsLimit}
-Workspace was ${reportData.isBanned ? 'blocked' : 'unblocked'}
+${encodeURIComponent(workspace.name)} wants to be unblocked
+
+It has ${shortNumber(workspace.billingPeriodEventsCount)} events of ${workspace.tariffPlan.eventsLimit}. Last charge date: ${workspace.lastChargeDate.toISOString()}
+
+${reportData.isBanned ? 'Blocked ❌' : 'Unblocked ✅'}
 `;
 
     await this.sendReport(reportString);
