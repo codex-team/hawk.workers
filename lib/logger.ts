@@ -1,7 +1,7 @@
 import { createLogger as createWinstonLogger, format, transports, Logger } from 'winston';
 
 /**
- *
+ * Creates new logger instance
  */
 export default function createLogger(): Logger {
   return createWinstonLogger({

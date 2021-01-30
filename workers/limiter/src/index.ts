@@ -160,13 +160,17 @@ export default class LimiterWorker extends Worker {
     await asyncForEach(workspacesWithTariffPlans, async workspace => {
       const workspaceProjects = projects.filter(p => p.workspaceId.toString() === workspace._id.toString());
 
-      const { isBanned, updatedWorkspace } = await this.analyzeWorkspaceData(workspace, workspaceProjects);
+      try {
+        const { isBanned, updatedWorkspace } = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
-      if (isBanned) {
-        bannedProjectIds.push(...workspaceProjects.map(p => p._id.toString()));
-        bannedWorkspaces.push(updatedWorkspace);
+        if (isBanned) {
+          bannedProjectIds.push(...workspaceProjects.map(p => p._id.toString()));
+          bannedWorkspaces.push(updatedWorkspace);
+        }
+        updatedWorkspaces.push(updatedWorkspace);
+      } catch (e) {
+        this.logger.error(e);
       }
-      updatedWorkspaces.push(updatedWorkspace);
     });
 
     return {
@@ -338,11 +342,13 @@ export default class LimiterWorker extends Worker {
      * and limiter will process it successfully
      */
     if (!workspace.lastChargeDate) {
-      HawkCatcher.send(new Error('Workspace without lastChargeDate detected'), {
+      const error = new Error('Workspace without lastChargeDate detected');
+
+      HawkCatcher.send(error, {
         workspaceId: workspace._id,
       });
 
-      return;
+      throw error;
     }
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
