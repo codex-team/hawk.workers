@@ -4,7 +4,14 @@ import { WorkspaceWithTariffPlan } from './index';
  * Data for sending notification after task handling
  */
 export interface SingleWorkspaceAnalyzeReport {
+  /**
+   * Is workspace get banned
+   */
   isBanned: boolean;
+
+  /**
+   * Workspace with updated data (current events count)
+   */
   updatedWorkspace: WorkspaceWithTariffPlan
 }
 
@@ -22,5 +29,8 @@ export interface MultiplyWorkspacesAnalyzeReport {
    */
   bannedProjectIds: string[];
 
+  /**
+   * Array of workspaces with updated fields
+   */
   updatedWorkspaces: WorkspaceWithTariffPlan[]
 }
