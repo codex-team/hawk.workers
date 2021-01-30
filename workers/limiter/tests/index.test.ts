@@ -7,11 +7,16 @@ import { mockedPlans } from './plans.mock';
 import axios from 'axios';
 import { mocked } from 'ts-jest/utils';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import { RegularWorkspacesCheckEvent } from '../types/eventTypes';
 
 /**
  * Mock axios for testing report sends
  */
 jest.mock('axios');
+
+const REGULAR_WORKSPACES_CHECK_EVENT: RegularWorkspacesCheckEvent = {
+  type: 'regular-workspaces-check',
+};
 
 /**
  * Constant of last charge date in all workspaces for tests
@@ -126,236 +131,366 @@ describe('Limiter worker', () => {
     await planCollection.insertMany(Object.values(mockedPlans));
   });
 
-  test('Should count workspace events for a billing period and save it to the db', async () => {
-    /**
-     * Arrange
-     */
-    const workspace = createWorkspaceMock({
-      plan: mockedPlans.eventsLimit10,
-      billingPeriodEventsCount: 0,
-      lastChargeDate: LAST_CHARGE_DATE,
-    });
-    const project = createProjectMock({ workspaceId: workspace._id });
-    const eventsCollection = db.collection(`events:${project._id.toString()}`);
-    const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
+  describe('regular-workspaces-check', () => {
+    test('Should count workspace events for a billing period and save it to the db', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+      const eventsCollection = db.collection(`events:${project._id.toString()}`);
+      const repetitionsCollection = db.collection(`repetitions:${project._id.toString()}`);
 
-    await fillDatabaseWithMockedData({
-      workspace,
-      project,
-      eventsToMock: 5,
-    });
-
-    /**
-     * Act
-     *
-     * Worker initialization
-     */
-    const worker = new LimiterWorker();
-
-    await worker.start();
-    await worker.handle();
-    await worker.finish();
-
-    /**
-     * Assert
-     */
-    const workspaceInDatabase = await workspaceCollection.findOne({
-      _id: workspace._id,
-    });
-
-    /**
-     * Count events and repetitions since last charge date
-     */
-    const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
-    const query = {
-      'payload.timestamp': {
-        $gt: since,
-      },
-    };
-    const repetitionsCount = await repetitionsCollection.find(query).count();
-    const eventsCount = await eventsCollection.find(query).count();
-
-    /**
-     * Check count of events
-     */
-    expect(workspaceInDatabase.billingPeriodEventsCount).toEqual(repetitionsCount + eventsCount);
-  });
-
-  test('Should ban projects that have exceeded the plan limit and add their ids to redis', async (done) => {
-    /**
-     * Arrange
-     */
-    const workspace = createWorkspaceMock({
-      plan: mockedPlans.eventsLimit10,
-      billingPeriodEventsCount: 0,
-      lastChargeDate: LAST_CHARGE_DATE,
-    });
-    const project = createProjectMock({ workspaceId: workspace._id });
-
-    await fillDatabaseWithMockedData({
-      workspace,
-      project,
-      eventsToMock: 15,
-    });
-
-    /**
-     * Act
-     *
-     * Worker initialization
-     */
-    const worker = new LimiterWorker();
-
-    await worker.start();
-    await worker.handle();
-    await worker.finish();
-
-    /**
-     * Assert
-     *
-     * Gets all members of set with key 'DisabledProjectsSet' from Redis
-     */
-    redisClient.smembers('DisabledProjectsSet', (err, result) => {
-      expect(err).toBeNull();
-      expect(result).toContain(project._id.toString());
-      done();
-    });
-  });
-
-  test('Should unban previously banned projects if the limit allows', async (done) => {
-    /**
-     * Arrange
-     */
-    const workspace = createWorkspaceMock({
-      plan: mockedPlans.eventsLimit10,
-      billingPeriodEventsCount: 0,
-      lastChargeDate: LAST_CHARGE_DATE,
-    });
-    const project = createProjectMock({ workspaceId: workspace._id });
-
-    await fillDatabaseWithMockedData({
-      workspace,
-      project,
-      eventsToMock: 15,
-    });
-
-    /**
-     * Act
-     *
-     * Worker initialization
-     */
-    const worker = new LimiterWorker();
-
-    await worker.start();
-    await worker.handle();
-
-    /**
-     * Gets all members of set with key 'DisabledProjectsSet' from Redis
-     * Project should be banned
-     */
-    redisClient.smembers('DisabledProjectsSet', (err, result) => {
-      expect(err).toBeNull();
-      expect(result).toContain(project._id.toString());
-    });
-
-    /**
-     * Change workspace plan to plan with big events limit
-     */
-    await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
-      $set: {
-        tariffPlanId: mockedPlans.eventsLimit10000._id,
-      },
-    });
-
-    await worker.handle();
-    await worker.finish();
-
-    /**
-     * Assert
-     *
-     * Gets all members of set with key 'DisabledProjectsSet' from Redis
-     */
-    redisClient.smembers('DisabledProjectsSet', (err, result) => {
-      expect(err).toBeNull();
-      expect(result).not.toContain(project._id.toString());
-      done();
-    });
-  });
-
-  test('Should not ban project if it does not reach the limit', async (done) => {
-    /**
-     * Arrange
-     */
-    const workspace = createWorkspaceMock({
-      plan: mockedPlans.eventsLimit10000,
-      billingPeriodEventsCount: 0,
-      lastChargeDate: LAST_CHARGE_DATE,
-    });
-    const project = createProjectMock({ workspaceId: workspace._id });
-
-    await fillDatabaseWithMockedData({
-      workspace,
-      project,
-      eventsToMock: 100,
-    });
-
-    /**
-     * Act
-     *
-     * Worker initialization
-     */
-    const worker = new LimiterWorker();
-
-    await worker.start();
-    await worker.handle();
-    await worker.finish();
-
-    /**
-     * Assert
-     *
-     * Gets all members of set with key 'DisabledProjectsSet' from Redis
-     */
-    redisClient.smembers('DisabledProjectsSet', (err, result) => {
-      expect(err).toBeNull();
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 5,
+      });
 
       /**
-       * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+       * Act
+       *
+       * Worker initialization
        */
-      expect(result).not.toContain(project._id.toString());
-      done();
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      const workspaceInDatabase = await workspaceCollection.findOne({
+        _id: workspace._id,
+      });
+
+      /**
+       * Count events and repetitions since last charge date
+       */
+      const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
+      const query = {
+        'payload.timestamp': {
+          $gt: since,
+        },
+      };
+      const repetitionsCount = await repetitionsCollection.find(query).count();
+      const eventsCount = await eventsCollection.find(query).count();
+
+      /**
+       * Check count of events
+       */
+      expect(workspaceInDatabase.billingPeriodEventsCount).toEqual(repetitionsCount + eventsCount);
+    });
+
+    test('Should ban projects that have exceeded the plan limit and add their ids to redis', async (done) => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 15,
+      });
+
+      /**
+       * Act
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       *
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+        expect(result).toContain(project._id.toString());
+        done();
+      });
+    });
+
+    test('Should unban previously banned projects if the limit allows', async (done) => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 15,
+      });
+
+      /**
+       * Act
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+
+      /**
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       * Project should be banned
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+        expect(result).toContain(project._id.toString());
+      });
+
+      /**
+       * Change workspace plan to plan with big events limit
+       */
+      await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
+        $set: {
+          tariffPlanId: mockedPlans.eventsLimit10000._id,
+        },
+      });
+
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       *
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+        expect(result).not.toContain(project._id.toString());
+        done();
+      });
+    });
+
+    test('Should not ban project if it does not reach the limit', async (done) => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 100,
+      });
+
+      /**
+       * Act
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       *
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+
+        /**
+         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+         */
+        expect(result).not.toContain(project._id.toString());
+        done();
+      });
+    });
+
+    test('Should send a report with collected data', async () => {
+      /**
+       * Arrange
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
+
+      mocked(axios).mockResolvedValue({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        config: {},
+        headers: {},
+      });
+
+      /**
+       * Act
+       */
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(axios).toHaveBeenCalled();
+      expect(axios).toHaveBeenCalledWith({
+        method: 'post',
+        url: process.env.REPORT_NOTIFY_URL,
+        data: expect.any(String),
+      });
     });
   });
 
-  test('Should send a report with collected data', async () => {
-    /**
-     * Arrange
-     *
-     * Worker initialization
-     */
-    const worker = new LimiterWorker();
+  describe('check-single-workspace', () => {
+    test('Should unblock workspace if the number of events does not exceed the limit', async (done) => {
+      /**
+       * Arrange
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
 
-    mocked(axios).mockResolvedValue({
-      data: {},
-      status: 200,
-      statusText: 'OK',
-      config: {},
-      headers: {},
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 100,
+      });
+
+      mocked(axios).mockResolvedValue({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        config: {},
+        headers: {},
+      });
+
+      /**
+       * Act
+       */
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(axios).toHaveBeenCalled();
+      expect(axios).toHaveBeenCalledWith({
+        method: 'post',
+        url: process.env.REPORT_NOTIFY_URL,
+        data: expect.any(String),
+      });
+
+      /**
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+
+        /**
+         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+         */
+        expect(result).not.toContain(project._id.toString());
+        done();
+      });
     });
 
-    /**
-     * Act
-     */
-    await worker.start();
-    await worker.handle();
-    await worker.finish();
+    test('Should block workspace if the number of events exceed the limit', async (done) => {
+      /**
+       * Arrange
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
 
-    /**
-     * Assert
-     */
-    expect(axios).toHaveBeenCalled();
-    expect(axios).toHaveBeenCalledWith({
-      method: 'post',
-      url: process.env.REPORT_NOTIFY_URL,
-      data: expect.any(String),
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 100,
+      });
+
+      mocked(axios).mockResolvedValue({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        config: {},
+        headers: {},
+      });
+
+      /**
+       * Act
+       */
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(axios).toHaveBeenCalled();
+      expect(axios).toHaveBeenCalledWith({
+        method: 'post',
+        url: process.env.REPORT_NOTIFY_URL,
+        data: expect.any(String),
+      });
+
+      /**
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+
+        /**
+         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+         */
+        expect(result).toContain(project._id.toString());
+        done();
+      });
     });
   });
 
