@@ -13,8 +13,11 @@ If so, the Limiter puts information to Redis about the workspace's projects for 
 ## Event types
 
 ### Regular check
+
 Serves to check current total events count in workspaces and blocks events receiving if workspace exceed the limit.
+
 Event shape:
+
 ```json
 {
   "type":"regular-workspaces-check"
@@ -22,8 +25,11 @@ Event shape:
 ```
 
 ### Single workspace check
+
 Serves to check single workspace by id. Blocks workspace if the event limit is exceeded and unblocks if not.
+
 Event shape:
+
 ```json
 {
   "type": "check-single-workspace",
