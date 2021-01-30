@@ -5,20 +5,16 @@ import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
-import redis from 'redis';
+import { ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
-import ReportData from '../types/reportData';
 import { CriticalError } from '../../../lib/workerErrors';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
-
-/**
- * Workspace with its tariff plan
- */
-type WorkspaceWithTariffPlan = WorkspaceDBScheme & {tariffPlan: PlanDBScheme};
+import RedisHelper from './redisHelper';
+import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';
+import { WorkspaceWithTariffPlan } from '../types';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -57,14 +53,9 @@ export default class LimiterWorker extends Worker {
   private workspacesCollection!: Collection<WorkspaceDBScheme>;
 
   /**
-   * Redis client for making queries
+   * Redis helper instance for modifying data through redis
    */
-  private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
-
-  /**
-   * Redis key for storing banned projects
-   */
-  private readonly redisDisabledProjectsKey = 'DisabledProjectsSet';
+  private redis = new RedisHelper();
 
   /**
    * Start consuming messages
@@ -93,16 +84,12 @@ export default class LimiterWorker extends Worker {
    * @param event - worker event to handle
    */
   public async handle(event: LimiterEvent): Promise<void> {
-    this.logger.info('Limiter worker started task');
-
     switch (event.type) {
       case 'check-single-workspace':
         return this.handleCheckSingleWorkspaceEvent(event);
       case 'regular-workspaces-check':
         return this.handleRegularWorkspacesCheck();
     }
-
-    this.logger.info('Limiter worker finished task');
   }
 
   /**
@@ -111,21 +98,27 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleCheckSingleWorkspaceEvent(event: CheckSingleWorkspaceEvent): Promise<void> {
+    this.logger.info('Limiter worker started checking workspace with id ' + event.workspaceId);
+
     const workspace = await this.getWorkspaceWithTariffPlan(event.workspaceId);
     const workspaceProjects = await this.getProjects(event.workspaceId);
     const workspaceProjectsIds = workspaceProjects.map(p => p._id.toString());
 
     const report = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
-    // await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
-    //
-    // if (report.isBanned) {
-    //   await this.appendBannedProjectsToRedis(workspaceProjectsIds);
-    // } else {
-    //   await this.removeBannedProjectsFromRedis(workspaceProjectsIds);
-    // }
-    //
-    // await this.sendSingleWorkspacesCheckReport(report);
+    await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
+
+    if (report.isBanned) {
+      await this.redis.appendBannedProjects(workspaceProjectsIds);
+    } else {
+      await this.redis.removeBannedProjects(workspaceProjectsIds);
+    }
+
+    await this.sendSingleWorkspacesCheckReport(report);
+    this.logger.info(
+      `Limiter worker finished workspace checking.
+       Workspace with id ${event.workspaceId} was ${report.isBanned ? 'banned' : 'unbanned'}`
+    );
   }
 
   /**
@@ -133,19 +126,23 @@ export default class LimiterWorker extends Worker {
    * and limits events receiving if workspace exceed the limit
    */
   private async handleRegularWorkspacesCheck(): Promise<void> {
+    this.logger.info('Limiter worker started regular check');
+
     const report = await this.analyzeWorkspacesLimits();
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
-    await this.saveToRedis(report.bannedProjectIds);
+    await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
 
     await this.sendRegularWorkspacesCheckReport(report);
+
+    this.logger.info('Limiter worker finished task');
   }
 
   /**
    * Checks which workspaces reached the limit and return them along with their projects ids.
    * Also, updates workspace current event count in db.
    */
-  private async analyzeWorkspacesLimits(): Promise<ReportData & {updatedWorkspaces: WorkspaceWithTariffPlan[]}> {
+  private async analyzeWorkspacesLimits(): Promise<MultiplyWorkspacesAnalyzeReport> {
     const bannedWorkspaces: WorkspaceWithTariffPlan[] = [];
     const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
     const bannedProjectIds: string[] = [];
@@ -186,38 +183,6 @@ export default class LimiterWorker extends Worker {
       project => this.getEventsCountByProject(project, since)
     ))
       .then(sum);
-  }
-
-  /**
-   * Saves banned project ids to redis
-   * If there is no projects, then previous data in Redis will be erased
-   *
-   * @param projectIdsToBan - ids to ban
-   */
-  private saveToRedis(projectIdsToBan: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const callback = (execError: Error|null): void => {
-        if (execError) {
-          this.logger.error(execError);
-          HawkCatcher.send(execError);
-
-          reject(execError);
-
-          return;
-        }
-        this.logger.info('Successfully saved to Redis');
-        resolve();
-      };
-
-      if (projectIdsToBan.length) {
-        this.redisClient.multi()
-          .del(this.redisDisabledProjectsKey)
-          .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
-          .exec(callback);
-      } else {
-        this.redisClient.del(this.redisDisabledProjectsKey, callback);
-      }
-    });
   }
 
   /**
@@ -332,13 +297,7 @@ export default class LimiterWorker extends Worker {
    *
    * @param reportData - data for sending notification after task handling
    */
-  private async sendRegularWorkspacesCheckReport(reportData: ReportData): Promise<void> {
-    if (!process.env.REPORT_NOTIFY_URL) {
-      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
-
-      return;
-    }
-
+  private async sendRegularWorkspacesCheckReport(reportData: MultiplyWorkspacesAnalyzeReport): Promise<void> {
     let report = process.env.SERVER_NAME ? ` Hawk Limiter (${process.env.SERVER_NAME}) 🚧\n` : ' Hawk Limiter 🚧\n';
 
     if (reportData.bannedWorkspaces.length) {
@@ -355,21 +314,18 @@ export default class LimiterWorker extends Worker {
 
     report += `\n\n${reportData.bannedWorkspaces.length} workspaces with ${reportData.bannedProjectIds.length} projects totally banned`;
 
-    await axios({
-      method: 'post',
-      url: process.env.REPORT_NOTIFY_URL,
-      data: 'message=' + report + '&parse_mode=HTML',
-    });
+    await this.sendReport(report);
   }
 
   /**
-   * @param workspace
-   * @param projects
+   * Analyses workspace data and gives a report about events limit
+   *
+   * @param workspace - workspace data to check
+   * @param projects - workspaces projects
    */
-  private async analyzeWorkspaceData(workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]): Promise<{
-    isBanned: boolean;
-    updatedWorkspace: WorkspaceWithTariffPlan
-  }> {
+  private async analyzeWorkspaceData(
+    workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]
+  ): Promise<SingleWorkspaceAnalyzeReport> {
     /**
      * If last charge date is not specified, then we skip checking it
      * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
@@ -414,5 +370,47 @@ export default class LimiterWorker extends Worker {
     });
 
     await this.workspacesCollection.bulkWrite(operations);
+  }
+
+  /**
+   * Sends notification to the chat about result of the workspace checking
+   *
+   * @param reportData - report data for generating notification
+   */
+  private async sendSingleWorkspacesCheckReport(reportData: SingleWorkspaceAnalyzeReport): Promise<void> {
+    const workspace = reportData.updatedWorkspace;
+    const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
+
+    const millisecondsInDay = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
+    const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
+
+    const reportString = `
+Hawk Limiter ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''} 🚧
+
+Check workspace ${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code>
+Workspace has ${shortNumber(workspace.billingPeriodEventsCount)} events in ${timeInDays} days. Limit is ${workspace.tariffPlan.eventsLimit}
+Workspace was ${reportData.isBanned ? 'blocked' : 'unblocked'}
+`;
+
+    await this.sendReport(reportString);
+  }
+
+  /**
+   * Sends notify to the chat
+   *
+   * @param reportData - report notify in HTML markup to send
+   */
+  private async sendReport(reportData: string): Promise<void> {
+    if (!process.env.REPORT_NOTIFY_URL) {
+      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
+
+      return;
+    }
+
+    await axios({
+      method: 'post',
+      url: process.env.REPORT_NOTIFY_URL,
+      data: 'message=' + reportData + '&parse_mode=HTML',
+    });
   }
 }
