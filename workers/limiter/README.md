@@ -23,6 +23,7 @@ Event shape:
 
 ### Single workspace check
 Serves to check single workspace by id. Blocks workspace if the event limit is exceeded and unblocks if not.
+Event shape:
 ```json
 {
   "type": "check-single-workspace",

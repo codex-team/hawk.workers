@@ -486,7 +486,7 @@ describe('Limiter worker', () => {
         expect(err).toBeNull();
 
         /**
-         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+         * Redis shouldn't contain id of the mocked project
          */
         expect(result).toContain(project._id.toString());
         done();
