@@ -1,11 +1,11 @@
 import * as amqp from 'amqplib';
 import * as client from 'prom-client';
-import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
 import CacheController from '../lib/cache/controller';
+import createLogger from './logger';
 
 /**
  * Base worker class for processing tasks
@@ -46,19 +46,7 @@ export abstract class Worker {
    * Logger module
    * (default level='info')
    */
-  protected logger: Logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: format.combine(
-          format.timestamp(),
-          format.colorize(),
-          format.simple(),
-          format.printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
-        ),
-      }),
-    ],
-  });
+  protected logger = createLogger();
 
   /**
    * Cache module.
