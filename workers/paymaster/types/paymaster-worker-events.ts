@@ -7,13 +7,9 @@
  */
 export enum EventType {
   /**
-   * Workspace plan charge event to purchase plan if today is payday
+   * Workspace subscription check event to ban workspaces without actual subscription
    */
-  WorkspacePlanCharge = 'workspace-plan-charge',
-  /**
-   * Plan changed event
-   */
-  PlanChanged = 'plan-changed',
+  WorkspaceSubscriptionCheck = 'workspace-subscription-check',
 }
 
 /**
@@ -24,29 +20,9 @@ export enum EventType {
 export type DailyCheckEventPayload = undefined;
 
 /**
- * Plan changed event payload
- */
-export interface PlanChangedEventPayload {
-  /**
-   * Id of workspace for which plan is changed
-   */
-  workspaceId: string;
-
-  /**
-   * Old plan name
-   */
-  oldPlan: string;
-
-  /**
-   * New plan name
-   */
-  newPlan: string;
-}
-
-/**
  * General paymaster task payload type
  */
-export type PaymasterEventPayload = DailyCheckEventPayload | PlanChangedEventPayload;
+export type PaymasterEventPayload = DailyCheckEventPayload;
 
 /**
  * Paymaster worker task interface
@@ -66,15 +42,7 @@ export interface PaymasterEvent {
 /**
  * Daily check event interface
  */
-export interface WorkspacePlanChargeEvent extends PaymasterEvent {
-  type: EventType.WorkspacePlanCharge;
+export interface WorkspaceSubscriptionCheckEvent extends PaymasterEvent {
+  type: EventType.WorkspaceSubscriptionCheck;
   payload: DailyCheckEventPayload;
-}
-
-/**
- * Plan changed event interface
- */
-export interface PlanChangedEvent extends PaymasterEvent {
-  type: EventType.PlanChanged;
-  payload: PlanChangedEventPayload;
 }
