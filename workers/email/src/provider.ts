@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as Twig from 'twig';
-import type { TemplateVariables, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { Notification, TemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates, { Template } from './templates';
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import * as utils from '../../../lib/utils';
@@ -30,27 +30,38 @@ export default class EmailProvider extends NotificationsProvider {
    * 'as any' used because @types/nodemailer doesn't match the docs
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private transporter = nodemailer.createTransport(this.smtpConfig as {[key: string]: any});
+  private transporter = nodemailer.createTransport(this.smtpConfig as { [key: string]: any });
 
   /**
    * Send email to recipient
    *
    * @param {string} to - recipient email
-   * @param {TemplateVariables} variables - variables for template
+   * @param {TemplateVariables} notification - notification with type and template variables
    */
-  public async send(to: string, variables: EventsTemplateVariables): Promise<void> {
+  public async send(to: string, notification: Notification): Promise<void> {
     let templateName: Templates;
 
-    if (variables.events.length === 1) {
-      templateName = Templates.NewEvent;
-    } else {
-      templateName = Templates.SeveralEvents;
+    switch (notification.type) {
+      case 'event': templateName = Templates.NewEvent; break;
+      case 'several-events': templateName = Templates.SeveralEvents; break;
+      case 'assignee': templateName = Templates.Assignee; break;
     }
 
+    this.sendNotification(to, notification, templateName);
+  }
+
+  /**
+   * Send notification to user email
+   *
+   * @param to - recipient email. Person who was assigned to solve the issue
+   * @param notification - notification variables wrapped in a payload with type
+   * @param templateName - name of the template to render
+   */
+  public async sendNotification(to: string, notification: Notification, templateName: Templates): Promise<void> {
     let content: Template;
 
     try {
-      content = await this.render(templateName, variables);
+      content = await this.render(templateName, notification.payload);
     } catch (e) {
       this.logger.error(`Failed to render ${templateName} template `, e);
 
@@ -71,7 +82,7 @@ export default class EmailProvider extends NotificationsProvider {
       await this.transporter.sendMail(mailOptions);
     } catch (e) {
       this.logger.error(
-        'Error sending letter. Try to check the environment settings (in .env file).', e.message
+        'Error sending letter. Try to check the environment settings (in .env file).', e
       );
 
       utils.sendReport('📮 Email worker\n\n' + (e.message || e.toString()));

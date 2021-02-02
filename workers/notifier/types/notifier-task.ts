@@ -4,7 +4,7 @@ import { WorkerTask } from '../../../lib/types/worker-task';
 /**
  * Data needed for NotificationWorker from GrouperWorker
  */
-type NotifierEvent = Pick<EventData, 'title'> & {
+export type NotifierEvent = Pick<EventData, 'title'> & {
   /**
    * Event group hash
    */

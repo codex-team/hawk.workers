@@ -10,10 +10,11 @@
 import * as http from 'http';
 import * as url from 'url';
 import templates, { Template } from '../src/templates';
-import type { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
 import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
@@ -224,7 +225,7 @@ class EmailTestServer {
    * @param templateName - template to render
    * @param variables - variables for template
    */
-  private async render(templateName: string, variables: EventsTemplateVariables): Promise<Template> {
+  private async render(templateName: string, variables: TemplateVariables): Promise<Template> {
     const template: Template = templates[templateName];
     const renderedTemplate: Template = {
       subject: '',
