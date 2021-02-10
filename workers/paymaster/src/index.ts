@@ -1,12 +1,13 @@
-import dotenv from "dotenv";
-import path from "path";
-import {Worker} from "../../../lib/worker";
-import * as pkg from "../package.json";
-import {DatabaseController} from "../../../lib/db/controller";
-import {Collection} from "mongodb";
-import {PlanDBScheme, WorkspaceDBScheme} from "hawk.types";
-import {EventType, PaymasterEvent} from "../types/paymaster-worker-events";
-import axios from "axios";
+import dotenv from 'dotenv';
+import path from 'path';
+import { Worker } from '../../../lib/worker';
+import * as pkg from '../package.json';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Collection } from 'mongodb';
+import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
+import axios from 'axios';
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -15,7 +16,12 @@ dotenv.config({
 /**
  * Milliseconds in day. Needs for calculating difference between dates in days.
  */
-const MILLISECONDS_IN_DAY = 24 * 3600 * 1000;
+const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
+
+/**
+ * Days after payday for paying in actual subscription
+ */
+const DAYS_AFTER_PAYDAY = 3;
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -40,6 +46,42 @@ export default class PaymasterWorker extends Worker {
    * List of tariff plans
    */
   private plans: PlanDBScheme[];
+
+  /**
+   * Check if today is a payday for passed timestamp
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static isTimeToPay(date: Date): boolean {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
+
+    const now = new Date().getTime();
+
+    return now >= expectedPayDay.getTime();
+  }
+
+  /**
+   * Returns difference between payday and now in days
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static daysAfterPayday(date: Date): number {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
+
+    const now = new Date().getTime();
+
+    return Math.floor(now - expectedPayDay.getTime() / MILLISECONDS_IN_DAY);
+  }
 
   /**
    * Start consuming messages
@@ -129,7 +171,7 @@ export default class PaymasterWorker extends Worker {
      * Block workspace if it has subscription,
      * but after payday 3 days have passed
      */
-    if (workspace.subscriptionId && PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) > 3) {
+    if (workspace.subscriptionId && PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) > DAYS_AFTER_PAYDAY) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
@@ -147,41 +189,6 @@ export default class PaymasterWorker extends Worker {
     return [workspace, false];
   }
 
-  /**
-   * Check if today is a payday for passed timestamp
-   *
-   * Pay day is calculated by formula: last charge date + 30 days
-   *
-   * @param date - last charge date
-   */
-  private static isTimeToPay(date: Date): boolean {
-    const numberOfDays = 30;
-    const expectedPayDay = new Date(date);
-
-    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
-
-    const now = new Date().getTime();
-
-    return now >= expectedPayDay.getTime();
-  }
-
-  /**
-   * Returns difference between payday and now in days
-   *
-   * Pay day is calculated by formula: last charge date + 30 days
-   *
-   * @param date - last charge date
-   */
-  private static daysAfterPayday(date: Date): number {
-    const numberOfDays = 30;
-    const expectedPayDay = new Date(date);
-
-    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
-
-    const now = new Date().getTime();
-
-    return Math.floor(now - expectedPayDay.getTime() / MILLISECONDS_IN_DAY);
-  }
 
   /**
    * Update lastChargeDate in workspace
@@ -247,7 +254,7 @@ export default class PaymasterWorker extends Worker {
     let report = process.env.SERVER_NAME ? ` Hawk Paymaster (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster 💰\n';
     let totalBlockedWorkspaces = 0;
 
-    reportData.forEach(([workspace,]) => {
+    reportData.forEach(([ workspace ]) => {
       report += `\nBlocked ⛔ | <b>${encodeURIComponent(workspace.name)}</b> | <code>${workspace._id}</code>`;
       totalBlockedWorkspaces++;
     });
