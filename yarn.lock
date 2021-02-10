@@ -718,7 +718,7 @@
     "@types/bson" "*"
     "@types/node" "*"
 
-"@types/node@*", "@types/node@>=8.9.0", "@types/node@^14.6.4":
+"@types/node@*", "@types/node@>=8.9.0":
   version "14.14.10"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.10.tgz#5958a82e41863cfc71f2307b3748e3491ba03785"
   integrity sha512-J32dgx2hw8vXrSbu4ZlVhn1Nm3GbeCFNw2FWL8S5QKucHGY0cyNwjdQdO+KMBZ4wpmC7KhLCiNsdk1RFRIYUQQ==
@@ -2601,10 +2601,10 @@ escodegen@^1.11.1:
   optionalDependencies:
     source-map "~0.6.1"
 
-eslint-config-codex@^1.5.2:
-  version "1.5.2"
-  resolved "https://registry.yarnpkg.com/eslint-config-codex/-/eslint-config-codex-1.5.2.tgz#2e28920c876f26837a202b33d1b1f83c521d9b97"
-  integrity sha512-/qFx4MkT4WGoutPAFWlyHLY6JW4B1UvSefk4lGfkIZExGjoiwyiNRMPiTBLzTn1JEf37foDAMAT59BBn1Oz+eg==
+eslint-config-codex@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/eslint-config-codex/-/eslint-config-codex-1.6.1.tgz#bd26d46d77967e1eb7f8b8a0c317c5c2bc913b53"
+  integrity sha512-gtXhjaQEtdi1VBvGNP9mOaArIB2021FM7C/q+bJFcKjUBtSVX4OnLmgg6ieKBdELquzhnpNzXqtIdE/oMEaCdQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^4.6.1"
     "@typescript-eslint/parser" "^4.6.1"
