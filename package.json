@@ -67,7 +67,7 @@
     "devDependencies": {
         "@shelf/jest-mongodb": "^1.2.3",
         "eslint": "^7.14.0",
-        "eslint-config-codex": "^1.5.2",
+        "eslint-config-codex": "^1.6.1",
         "jest": "25.5.4",
         "nodemon": "^2.0.3",
         "random-words": "^1.1.1",
