@@ -58,7 +58,7 @@ export default class PaymasterWorker extends Worker {
     const numberOfDays = 30;
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
 
     const now = new Date().getTime();
 
@@ -76,11 +76,11 @@ export default class PaymasterWorker extends Worker {
     const numberOfDays = 30;
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays - 1);
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
 
     const now = new Date().getTime();
 
-    return Math.floor(now - expectedPayDay.getTime() / MILLISECONDS_IN_DAY);
+    return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
   }
 
   /**

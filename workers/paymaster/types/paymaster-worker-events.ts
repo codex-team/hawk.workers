@@ -20,11 +20,6 @@ export enum EventType {
 export type DailyCheckEventPayload = undefined;
 
 /**
- * General paymaster task payload type
- */
-export type PaymasterEventPayload = DailyCheckEventPayload;
-
-/**
  * Paymaster worker task interface
  */
 export interface PaymasterEvent {
@@ -32,17 +27,4 @@ export interface PaymasterEvent {
    * Event type
    */
   type: EventType;
-
-  /**
-   * Event payload
-   */
-  payload: PaymasterEventPayload;
-}
-
-/**
- * Daily check event interface
- */
-export interface WorkspaceSubscriptionCheckEvent extends PaymasterEvent {
-  type: EventType.WorkspaceSubscriptionCheck;
-  payload: DailyCheckEventPayload;
 }
