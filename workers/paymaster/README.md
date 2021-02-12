@@ -1,7 +1,6 @@
 # Worker / Paymaster
 
-Periodically checks if we need to charge money for the workspace tariff plan.
-Also handles tariff plan changes.
+Periodically checks actual subscription of workspaces and block them if they haven't.
 
 ## How to run
 
@@ -16,27 +15,15 @@ Format:
 
 ```json
 {
-  "type": "workspace-plan-charge|plan-changed",
-  "payload": {}
+  "type": "workspace-subscription-check"
 }
 ```
 
-### WorkspacePlanChargeEvent
+### WorkspaceSubscriptionCheck
 
-When receives WorkspacePlanChargeEvent worker goes through workspaces and check if today is a payday.
-If so, purchase workspace plan. 
-
-WorkspacePlanChargeEvent doesn't have any payload.
-
-### PlanChangedEvent
-
-When receives this event, change plan for workspace in the database and calculates different between plans tariffs.
-
-Payload:
-```json
-{
-  "workspaceId": "Id of workspace for which plan is changed",
-  "oldPlan": "Name of the old tariff plan",
-  "newPlan": "Name of the new tariff plan"
-}
-```
+When receives WorkspaceSubscriptionCheck worker goes through workspaces and check if today is a payday.
+If so, worker checks subscription and tariff charge:
+- If workspace has free tariff plan, worker updates `lastChargeDate` and `billingPeriodEventsCount` of workspace;
+- If workspace has tariff plan with monthly charge, but hasn't subscription, worker will block this workspace;
+- If workspace has actual subscription, we wait 3 days for payment by subscription;
+- If it passed more than 3 days after a payday, worker will block workspace until we get payment. 

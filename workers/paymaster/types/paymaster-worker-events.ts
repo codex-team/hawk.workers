@@ -13,13 +13,6 @@ export enum EventType {
 }
 
 /**
- * Daily check event payload.
- *
- * This event do not have any payload
- */
-export type DailyCheckEventPayload = undefined;
-
-/**
  * Paymaster worker task interface
  */
 export interface PaymasterEvent {
