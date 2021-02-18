@@ -1,53 +1,81 @@
 import PaymasterWorker from '../src';
 import { Collection, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import { EventType } from '../types/paymaster-worker-events';
-import { PlanDBScheme, WorkspaceDBScheme, BusinessOperationDBScheme, BusinessOperationStatus, BusinessOperationType } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import MockDate from 'mockdate';
-import Accounting from 'codex-accounting-sdk';
-import { v4 as uuid } from 'uuid';
+import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
+import { mocked } from 'ts-jest/utils';
+import axios from 'axios';
 
-jest.mock('codex-accounting-sdk');
+/**
+ * Mock axios for testing report sends
+ */
 jest.mock('axios');
 
-(Accounting.prototype.purchase as jest.Mock).mockImplementation(() => Promise.resolve({
-  recordId: uuid(),
-}));
-
-const mockedDate = new Date('2005-12-22');
-
-const plan: PlanDBScheme = {
-  eventsLimit: 10000,
-  _id: new ObjectId('5eec1fcde748a04c16632ae2'),
-  monthlyCharge: 1000,
-  name: 'Mocked plan',
-  isDefault: false,
+const WORKSPACE_SUBSCRIPTION_CHECK: PaymasterEvent = {
+  type: EventType.WorkspaceSubscriptionCheck,
 };
 
-const freePlan = {
-  eventsLimit: 1000,
-  _id: new ObjectId('5eec1fcde748a04c16632ae3'),
-  monthlyCharge: 0,
-  name: 'Mocked free plan',
-  isDefault: true,
+/**
+ * Creates mocked plan with monthly charge
+ *
+ * @param parameters - parameters for creating plan
+ */
+const createPlanMock = (parameters: {
+  monthlyCharge: number;
+  isDefault: boolean
+}): PlanDBScheme => {
+  return {
+    _id: new ObjectId(),
+    name: 'Mocked plan',
+    monthlyCharge: parameters.monthlyCharge,
+    eventsLimit: 10,
+    isDefault: parameters.isDefault,
+  };
 };
 
-const workspace: WorkspaceDBScheme = {
-  balance: 10000,
-  name: 'My workspace',
-  _id: new ObjectId('5e5fb6303e3a9d0a1933739a'),
-  tariffPlanId: plan._id,
-  lastChargeDate: new Date('2005-11-22'),
-  accountId: '34562453',
-  billingPeriodEventsCount: 0,
+/**
+ * Returns mocked workspace
+ *
+ * @param parameters - parameters for creating workspace
+ */
+const createWorkspaceMock = (parameters: {
+  plan: PlanDBScheme;
+  billingPeriodEventsCount: number;
+  lastChargeDate: Date;
+  subscriptionId: string;
+  isBlocked: boolean;
+}): WorkspaceDBScheme => {
+  return {
+    _id: new ObjectId(),
+    name: 'Mocked workspace',
+    tariffPlanId: parameters.plan._id,
+    billingPeriodEventsCount: parameters.billingPeriodEventsCount,
+    lastChargeDate: parameters.lastChargeDate,
+    accountId: '',
+    balance: 0,
+    subscriptionId: parameters.subscriptionId,
+    isBlocked: parameters.isBlocked,
+  };
 };
 
 describe('PaymasterWorker', () => {
-  const worker = new PaymasterWorker();
   let connection: MongoClient;
   let workspacesCollection: Collection<WorkspaceDBScheme>;
   let tariffCollection: Collection<PlanDBScheme>;
-  let businessOperationsCollection: Collection<BusinessOperationDBScheme>;
+
+  /**
+   * Fills database with workspace and plan
+   *
+   * @param parameters - parameters for filling database
+   */
+  const fillDatabaseWithMockedData = async (parameters: {
+    workspace: WorkspaceDBScheme,
+    plan: PlanDBScheme,
+  }): Promise<void> => {
+    await workspacesCollection.insertOne(parameters.workspace);
+    await tariffCollection.insertOne(parameters.plan);
+  };
 
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
@@ -57,183 +85,279 @@ describe('PaymasterWorker', () => {
 
     workspacesCollection = connection.db().collection<WorkspaceDBScheme>('workspaces');
     tariffCollection = connection.db().collection<PlanDBScheme>('plans');
-    businessOperationsCollection = connection.db().collection<BusinessOperationDBScheme>('businessOperations');
-
-    await tariffCollection.insertMany([plan, freePlan]);
-
-    await worker.start();
   });
 
   beforeEach(async () => {
     await workspacesCollection.deleteMany({});
-    await businessOperationsCollection.deleteMany({});
-
-    await workspacesCollection.insertOne(workspace);
+    await tariffCollection.deleteMany({});
   });
 
-  test('Should change lastChargeDate for workspace', async () => {
-    MockDate.set(mockedDate);
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
+  test('Should block workspace if it hasn\'t subscription and it\'s time to pay', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-22');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
     });
 
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
     const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
-    expect(updatedWorkspace.lastChargeDate).toEqual(mockedDate);
+    expect(updatedWorkspace.isBlocked).toEqual(true);
     MockDate.reset();
   });
 
-  test(`Shouldn't trigger purchasing of the workspace plan if today is not payday`, async () => {
-    MockDate.set(new Date('2005-12-20'));
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
+  test('Shouldn\'t block workspace if it has subscription and after payday passed less than 3 days', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-24');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: 'some-subscription-id',
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
     });
 
-    const businessOperation = await businessOperationsCollection.findOne({});
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
 
-    expect(businessOperation).toEqual(null);
-
-    MockDate.reset();
-  });
-
-  test(`Shouldn't trigger purchasing of the workspace plan if plan is free`, async () => {
-    MockDate.set(mockedDate);
+    MockDate.set(currentDate);
 
     /**
-     * Change tariff plan for mocked workspace for this test
+     * Act
      */
-    await workspacesCollection.updateOne({ _id: workspace._id }, {
-      $set: {
-        tariffPlanId: freePlan._id,
-      },
-    });
+    const worker = new PaymasterWorker();
 
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
-    });
-
-    const businessOperation = await businessOperationsCollection.findOne({});
-
-    expect(businessOperation).toEqual(null);
-
-    MockDate.reset();
-  });
-
-  test('Should trigger purchasing of the workspace plan if today is payday', async () => {
-    MockDate.set(mockedDate);
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
-    });
-
-    const businessOperation = await businessOperationsCollection.findOne({});
-
-    expect(businessOperation).toEqual(expect.objectContaining({
-      _id: expect.any(ObjectId),
-      type: BusinessOperationType.WorkspacePlanPurchase,
-      transactionId: expect.any(String),
-      payload: {
-        amount: 100000,
-        workspaceId: workspace._id,
-      },
-      status: BusinessOperationStatus.Confirmed,
-      dtCreated: mockedDate,
-    } as BusinessOperationDBScheme));
-
-    MockDate.reset();
-  });
-
-  test('Should trigger purchasing of the workspace plan if last charge date is not defined', async () => {
-    MockDate.set(mockedDate);
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
 
     /**
-     * Remove lastChargeDate for mocked workspace for this test
+     * Assert
      */
-    await workspacesCollection.updateOne({ _id: workspace._id }, {
-      $set: {
-        lastChargeDate: undefined,
-      },
-    });
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
-    });
-
-    const businessOperation = await businessOperationsCollection.findOne({});
-
-    expect(businessOperation).toEqual(expect.objectContaining({
-      _id: expect.any(ObjectId),
-      type: BusinessOperationType.WorkspacePlanPurchase,
-      transactionId: expect.any(String),
-      payload: {
-        amount: 100000,
-        workspaceId: workspace._id,
-      },
-      status: BusinessOperationStatus.Confirmed,
-      dtCreated: mockedDate,
-    } as BusinessOperationDBScheme));
-
-    MockDate.reset();
-  });
-
-  test('Should trigger purchasing of the workspace plan if payday has come recently', async () => {
-    MockDate.set(new Date('2005-12-25'));
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
-    });
-
-    const businessOperation = await businessOperationsCollection.findOne({});
-
-    expect(businessOperation).toEqual(expect.objectContaining({
-      _id: expect.any(ObjectId),
-      type: BusinessOperationType.WorkspacePlanPurchase,
-      transactionId: expect.any(String),
-      payload: {
-        amount: 100000,
-        workspaceId: workspace._id,
-      },
-      status: BusinessOperationStatus.Confirmed,
-      dtCreated: new Date('2005-12-25'),
-    } as BusinessOperationDBScheme));
-
-    MockDate.reset();
-  });
-
-  test('Should update lastChargeDate if workspace plan is free', async () => {
-    MockDate.set(mockedDate);
-
-    /**
-     * Change tariff plan for mocked workspace for this test
-     */
-    await workspacesCollection.updateOne({ _id: workspace._id }, {
-      $set: {
-        tariffPlanId: freePlan._id,
-      },
-    });
-
-    await worker.handle({
-      type: EventType.WorkspacePlanCharge,
-      payload: undefined,
-    });
-
     const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
-    expect(updatedWorkspace.lastChargeDate).toEqual(mockedDate);
-
+    expect(updatedWorkspace.isBlocked).toEqual(false);
     MockDate.reset();
+  });
+
+  test('Should block workspace if it has subscription and after payday passed 3 days', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-26');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: 'some-subscription-id',
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    expect(updatedWorkspace.isBlocked).toEqual(true);
+    MockDate.reset();
+  });
+
+  test('Should update lastChargeDate and billingPeriodEventsCount if workspace has free tariff plan and it\'s time to pay', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-22');
+    const plan = createPlanMock({
+      monthlyCharge: 0,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    expect(updatedWorkspace.isBlocked).toEqual(false);
+    expect(updatedWorkspace.lastChargeDate).toEqual(currentDate);
+    expect(updatedWorkspace.billingPeriodEventsCount).toEqual(0);
+    MockDate.reset();
+  });
+
+  test('Shouldn\'t change workspace if it isn\'t time to pay', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-21');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    expect(updatedWorkspace).toEqual(workspace);
+    MockDate.reset();
+  });
+
+  test('Should send a report with collected data', async () => {
+    /**
+     * Arrange
+     *
+     * Worker initialization
+     */
+    const currentDate = new Date('2005-12-22');
+    const plan = createPlanMock({
+      monthlyCharge: 0,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+    const worker = new PaymasterWorker();
+
+    mocked(axios).mockResolvedValue({
+      data: {},
+      status: 200,
+      statusText: 'OK',
+      config: {},
+      headers: {},
+    });
+
+    /**
+     * Act
+     */
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    expect(axios).toHaveBeenCalled();
+    expect(axios).toHaveBeenCalledWith({
+      method: 'post',
+      url: process.env.REPORT_NOTIFY_URL,
+      data: expect.any(String),
+    });
   });
 
   afterAll(async () => {
-    await worker.finish();
     await connection.close();
     MockDate.reset();
   });
