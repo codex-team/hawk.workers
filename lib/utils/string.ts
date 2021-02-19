@@ -14,5 +14,5 @@ export function rightTrim(content: string, maxLen = 140): string {
     return content;
   }
 
-  return content.substr(0, maxLen)  + '…';
+  return content.substr(0, maxLen) + '…';
 }
