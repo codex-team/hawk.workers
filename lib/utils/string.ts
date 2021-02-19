@@ -3,7 +3,7 @@
  */
 
 /**
- * Trims source code line content to max length
+ * Trims string to max length
  * Adds «...» in case of trimming
  *
  * @param content - content to trim
