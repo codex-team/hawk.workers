@@ -31,6 +31,15 @@ jobs:
           tags: ${{ env.DOCKER_REPO }}:prod
           push: ${{ endsWith(github.ref, '/prod') }}
 
+      - name: Build and push experimental image
+        if: endsWith(github.ref, '/experimental')
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ env.DOCKER_REPO }}:experimental
+          push: ${{ endsWith(github.ref, '/experimental') }}
+
       - name: Build and push stage image
         if: endsWith(github.ref, '/stage')
         uses: docker/build-push-action@v2
