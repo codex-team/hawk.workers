@@ -4,7 +4,8 @@ import {
   UserDBScheme,
   GroupedEventDBScheme,
   WorkspaceDBScheme,
-  ConfirmedMemberDBScheme
+  ConfirmedMemberDBScheme,
+  PendingMemberDBScheme
 } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
@@ -24,7 +25,6 @@ import {
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from '../types/template-variables';
-import { MemberDBScheme } from '../../../../types';
 
 /**
  * Worker to send email notifications
@@ -338,7 +338,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param workspaceId - workspace id for search
    */
-  private async getWorkspaceTeam(workspaceId: string): Promise<MemberDBScheme[] | null> {
+  private async getWorkspaceTeam(workspaceId: string): Promise<(ConfirmedMemberDBScheme | PendingMemberDBScheme)[] | null> {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection(`team:${workspaceId}`).find({})
