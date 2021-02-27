@@ -248,7 +248,7 @@ class EmailTestServer {
 
             renderedTemplate[key as keyof Template] = res;
 
-            resolve();
+            resolve(null);
           })
       );
     }));

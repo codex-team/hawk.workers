@@ -4,6 +4,7 @@
 enum Templates {
   Assignee = 'assignee',
   NewEvent = 'new-event',
+  PaymentFailed = 'payment-failed',
   SeveralEvents = 'several-events',
 }
 
