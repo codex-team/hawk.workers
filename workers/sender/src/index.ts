@@ -11,7 +11,7 @@ import NotificationsProvider from './provider';
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
 import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from './../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from '../types/template-variables';
 
 /**
  * Worker to send email notifications
