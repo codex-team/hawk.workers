@@ -4,8 +4,7 @@ import {
   UserDBScheme,
   GroupedEventDBScheme,
   WorkspaceDBScheme,
-  ConfirmedMemberDBScheme,
-  PendingMemberDBScheme
+  ConfirmedMemberDBScheme
 } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
@@ -242,30 +241,31 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const workspaceTeam = await this.getWorkspaceTeam(workspaceId);
+    const confirmedMembers = await this.getWorkspaceConfirmedMembers(workspaceId);
 
-    if (!workspaceTeam) {
+    if (!confirmedMembers) {
       this.logger.error(`Cannot send block workspace notification: workspace team not found. Payload: ${task}`);
 
       return;
     }
 
-    const confirmedMembers = workspaceTeam.filter(member => (member as ConfirmedMemberDBScheme).userId) as ConfirmedMemberDBScheme[];
-    const workspaceMemberIds = confirmedMembers.map(confirmedMember => confirmedMember.userId.toString());
-    const users = await this.getUsers(workspaceMemberIds);
+    const confirmedMemberIds = confirmedMembers.map(confirmedMember => confirmedMember.userId.toString());
+    const users = await this.getUsers(confirmedMemberIds);
 
-    users.map(user => {
+    await Promise.all(users.map(async user => {
       const channel = user.notifications.channels[this.channelType];
 
-      this.provider.send(channel.endpoint, {
-        type: 'block-workspace',
-        payload: {
-          host: process.env.GARAGE_URL,
-          hostOfStatic: process.env.API_STATIC_URL,
-          workspace,
-        },
-      });
-    });
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'block-workspace',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+          },
+        });
+      }
+    }));
   }
 
   /**
@@ -334,14 +334,16 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
-   * Gets workspace team by workspace id
+   * Gets confirmed members by workspace id
    *
    * @param workspaceId - workspace id for search
    */
-  private async getWorkspaceTeam(workspaceId: string): Promise<(ConfirmedMemberDBScheme | PendingMemberDBScheme)[] | null> {
+  private async getWorkspaceConfirmedMembers(workspaceId: string): Promise<ConfirmedMemberDBScheme[] | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection(`team:${workspaceId}`).find({})
+    return connection.collection(`team:${workspaceId}`).find({
+      userId: { $exists: true },
+    })
       .toArray();
   }
 
