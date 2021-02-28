@@ -241,16 +241,16 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    const confirmedMembers = await this.getWorkspaceConfirmedMembers(workspaceId);
+    const admins = await this.getWorkspaceAdmins(workspaceId);
 
-    if (!confirmedMembers) {
+    if (!admins) {
       this.logger.error(`Cannot send block workspace notification: workspace team not found. Payload: ${task}`);
 
       return;
     }
 
-    const confirmedMemberIds = confirmedMembers.map(confirmedMember => confirmedMember.userId.toString());
-    const users = await this.getUsers(confirmedMemberIds);
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
 
     await Promise.all(users.map(async user => {
       const channel = user.notifications.channels[this.channelType];
@@ -334,15 +334,16 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
-   * Gets confirmed members by workspace id
+   * Gets confirmed admins by workspace id
    *
    * @param workspaceId - workspace id for search
    */
-  private async getWorkspaceConfirmedMembers(workspaceId: string): Promise<ConfirmedMemberDBScheme[] | null> {
+  private async getWorkspaceAdmins(workspaceId: string): Promise<ConfirmedMemberDBScheme[] | null> {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection(`team:${workspaceId}`).find({
       userId: { $exists: true },
+      isAdmin: true,
     })
       .toArray();
   }
