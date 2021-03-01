@@ -39,7 +39,9 @@ class WorkerRunner {
 
   private gateway?: promClient.Pushgateway;
 
-  // number returned by setInterval() of metrics push function
+  /**
+   * number returned by setInterval() of metrics push function
+   */
   private pushIntervalNumber?: ReturnType<typeof setInterval>;
 
   /**
