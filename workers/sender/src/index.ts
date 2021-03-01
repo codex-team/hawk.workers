@@ -1,4 +1,11 @@
-import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme, GroupedEventDBScheme } from 'hawk.types';
+import {
+  DecodedGroupedEvent,
+  ProjectDBScheme,
+  UserDBScheme,
+  GroupedEventDBScheme,
+  WorkspaceDBScheme,
+  ConfirmedMemberDBScheme
+} from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
@@ -9,9 +16,14 @@ import { TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask } from '../types/sender-task';
+import {
+  SenderWorkerEventTask,
+  SenderWorkerAssigneeTask,
+  SenderWorkerTask,
+  SenderWorkerBlockWorkspaceTask
+} from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from './../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from '../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -92,13 +104,14 @@ export default abstract class SenderWorker extends Worker {
     switch (task.type) {
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
+      case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
     }
   }
 
   /**
    * Handle event task
    *
-   * @param task - task to handke
+   * @param task - task to handle
    */
   private async handleEventTask(task: SenderWorkerEventTask): Promise<void> {
     const { projectId, ruleId, events } = task.payload;
@@ -213,6 +226,49 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Handle task when workspace blocked
+   *
+   * @param task - task to handle
+   */
+  private async handleBlockWorkspaceTask(task: SenderWorkerBlockWorkspaceTask): Promise<void> {
+    const { workspaceId } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send block workspace notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send block workspace notification: workspace team not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'block-workspace',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+          },
+        });
+      }
+    }));
+  }
+
+  /**
    * Get event data for email
    *
    * @param {string} projectId - project events are related to
@@ -267,6 +323,32 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Gets workspace info from database
+   *
+   * @param workspaceId - workspace id for search
+   */
+  private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+  }
+
+  /**
+   * Gets confirmed admins by workspace id
+   *
+   * @param workspaceId - workspace id for search
+   */
+  private async getWorkspaceAdmins(workspaceId: string): Promise<ConfirmedMemberDBScheme[] | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection(`team:${workspaceId}`).find({
+      userId: { $exists: true },
+      isAdmin: true,
+    })
+      .toArray();
+  }
+
+  /**
    * Get user data
    *
    * @param userId - user id
@@ -275,5 +357,17 @@ export default abstract class SenderWorker extends Worker {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('users').findOne({ _id: new ObjectId(userId) });
+  }
+
+  /**
+   * Gets array of users from database
+   *
+   * @param userIds - user ids for search
+   */
+  private async getUsers(userIds: string[]): Promise<UserDBScheme[] | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').find({ _id: userIds.map(userId => new ObjectId(userId)) })
+      .toArray();
   }
 }
