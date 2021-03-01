@@ -40,6 +40,11 @@ class WorkerRunner {
   private gateway?: promClient.Pushgateway;
 
   /**
+   * number returned by setInterval() of metrics push function
+   */
+  private pushIntervalNumber?: ReturnType<typeof setInterval>;
+
+  /**
    * Create runner instance
    */
   constructor() {
@@ -78,8 +83,13 @@ class WorkerRunner {
    * Run metrics exporter
    */
   private startMetrics(): void {
-    if (!process.env.PROMETHEUS_PUSHGATEWAY) {
+    if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
       return;
+    }
+
+    const PUSH_INTERVAL = parseInt(process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL);
+    if (isNaN(PUSH_INTERVAL)) {
+      throw new Error("PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set")
     }
 
     const collectDefaultMetrics = promClient.collectDefaultMetrics;
@@ -94,7 +104,7 @@ class WorkerRunner {
     const id = nanoid(ID_SIZE);
 
     // eslint-disable-next-line node/no-deprecated-api
-    const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY).host;
+    const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY_URL).host;
 
     // Initialize metrics for workers
     this.workers.forEach((worker) => {
@@ -105,19 +115,18 @@ class WorkerRunner {
     collectDefaultMetrics({ register });
     startGcStats();
 
-    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY, null, register);
+    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY_URL, null, register);
 
-    console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY}`);
-
-    const PUSH_INTERVAL = 1000;
+    console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY_URL}`);
 
     // Pushing metrics to the pushgateway every PUSH_INTERVAL
-    setInterval(() => {
+    this.pushIntervalNumber = setInterval(() => {
       this.workers.forEach((worker) => {
         if (!this.gateway || !instance) {
           return;
         }
-        this.gateway.push({
+        // Use pushAdd not to overwrite previous metrics
+        this.gateway.pushAdd({
           jobName: 'workers',
           groupings: {
             worker: worker.type.replace('/', '_'),
@@ -260,6 +269,8 @@ class WorkerRunner {
    */
   private async stopWorker(worker: Worker): Promise<void> {
     try {
+      // stop pushing metrics
+      clearInterval(this.pushIntervalNumber);
       await worker.finish();
 
       console.log(
