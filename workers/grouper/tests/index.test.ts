@@ -91,7 +91,11 @@ describe('GrouperWorker', () => {
     repetitionsCollection = connection.db().collection('repetitions:' + testGroupingTask.projectId);
   });
 
+  /**
+   * Clears worker cache and mongodb before each test
+   */
   beforeEach(async () => {
+    worker.clearCache();
     await eventsCollection.deleteMany({});
     await dailyEventsCollection.deleteMany({});
     await repetitionsCollection.deleteMany({});

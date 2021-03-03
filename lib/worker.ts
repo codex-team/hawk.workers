@@ -174,6 +174,13 @@ export abstract class Worker {
   }
 
   /**
+   * Forced clears worker cache
+   */
+  public clearCache(): void {
+    this.cache.flushAll();
+  }
+
+  /**
    * Create cache controller instance
    */
   protected prepareCache(): void {

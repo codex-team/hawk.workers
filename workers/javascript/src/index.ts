@@ -11,6 +11,7 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
+import { rightTrim } from '../../../lib/utils/string';
 
 /**
  * Worker for handling Javascript events
@@ -273,7 +274,7 @@ export default class JavascriptEventWorker extends EventWorker {
     return focusedLines.map((line, idx) => {
       return {
         line: Math.max(original.line - margin + idx, 1),
-        content: line,
+        content: rightTrim(line),
       } as SourceCodeLine;
     });
   }

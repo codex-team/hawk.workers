@@ -27,6 +27,16 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
+   * Contains event grouphashes by its catcher type and event title as keys
+   *
+   * @example
+   * {
+   *   'grouper:Hawk client catcher test': '7e2b961c35b915dcbe2704e144e8d2c3517e2c5281a5de4403c0c58978b435a0'
+   * }
+   */
+  private static cachedHashValues: Record<string, string> = {};
+
+  /**
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -37,9 +47,15 @@ export default class GrouperWorker extends Worker {
    * @param task - worker task to create hash
    */
   private static getUniqueEventHash(task: GroupWorkerTask): string {
-    return crypto.createHmac('sha256', process.env.EVENT_SECRET)
-      .update(task.catcherType + task.event.title)
-      .digest('hex');
+    const computedHashValueCacheKey = `${task.catcherType}:${task.event.title}`;
+
+    if (!this.cachedHashValues[computedHashValueCacheKey]) {
+      this.cachedHashValues[computedHashValueCacheKey] = crypto.createHmac('sha256', process.env.EVENT_SECRET)
+        .update(task.catcherType + task.event.title)
+        .digest('hex');
+    }
+
+    return this.cachedHashValues[computedHashValueCacheKey];
   }
 
   /**
@@ -47,6 +63,7 @@ export default class GrouperWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.db.connect();
+    this.prepareCache();
     await super.start();
   }
 
@@ -168,11 +185,14 @@ export default class GrouperWorker extends Worker {
     if (isUserFromOriginalEvent) {
       return false;
     } else {
-      const repetition = await this.db.getConnection().collection(`repetitions:${task.projectId}`)
-        .findOne({
-          groupHash: existedEvent.groupHash,
-          'payload.user.id': eventUser.id,
-        });
+      const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
+      const repetition = await this.cache.get(repetitionCacheKey, async () => {
+        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+          .findOne({
+            groupHash: existedEvent.groupHash,
+            'payload.user.id': eventUser.id,
+          });
+      });
 
       /**
        * If there is no repetitions from this user — return true
@@ -187,18 +207,21 @@ export default class GrouperWorker extends Worker {
    * @param projectId - project's identifier
    * @param query - mongo query string
    */
-  private async getEvent(projectId: string, query): Promise<GroupedEventDBScheme> {
+  private async getEvent(projectId: string, query: Record<string, unknown>): Promise<GroupedEventDBScheme> {
     if (!mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    try {
+    const eventCacheKey = `${projectId}:${JSON.stringify(query)}`;
+
+    return this.cache.get(eventCacheKey, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
-        .findOne(query);
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
-    }
+        .findOne(query)
+        .catch((err) => {
+          throw new DatabaseReadWriteError(err);
+        });
+    });
   }
 
   /**
@@ -279,7 +302,7 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * saves event at the special aggregation collection
+   * Saves event at the special aggregation collection
    *
    * @param {string} projectId - project's identifier
    * @param {string} eventHash - event hash
