@@ -9,7 +9,7 @@ import { TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
-import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask, SenderWorkerPaymentFailedTask, SenderWorkerPaymentFailedPayload } from '../types/sender-task';
+import { SenderWorkerEventTask, SenderWorkerAssigneeTask, SenderWorkerTask, SenderWorkerPaymentFailedTask } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification, PaymentFailedNotification } from './../types/template-variables';
 
@@ -219,8 +219,8 @@ export default abstract class SenderWorker extends Worker {
    * @param task - task to handle
    */
   private async handlePaymentFailedTask(task: SenderWorkerPaymentFailedTask): Promise<void> {
-    const { workspaceId, endpoint } = task.payload; 
-    
+    const { workspaceId, reason, endpoint } = task.payload;
+
     const workspace = await this.getWorkspace(workspaceId);
 
     if (!workspace) {
@@ -234,7 +234,8 @@ export default abstract class SenderWorker extends Worker {
       payload: {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
-        workspace
+        workspace,
+        reason,
       },
     } as PaymentFailedNotification);
   }
@@ -286,10 +287,10 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param workspaceId - project id
    */
-  private async getWorkspace(projectId: string): Promise<WorkspaceDBScheme | null> {
+  private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('workspaces').findOne({ _id: new ObjectId(projectId) });
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
   }
 
   /**

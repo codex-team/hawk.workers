@@ -10,6 +10,11 @@ export interface PaymentFailedTemplateVariables extends CommonTemplateVariables 
    * Workspace data
    */
   workspace: WorkspaceDBScheme;
+
+  /**
+   * Rejection reason
+   */
+  reason: string;
 }
 
 /**

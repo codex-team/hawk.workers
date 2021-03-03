@@ -13,7 +13,7 @@ import templates, { Template } from '../src/templates';
 import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
-import { GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme, ProjectDBScheme, UserDBScheme, WorkspaceDBScheme } from 'hawk.types';
 
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
@@ -106,6 +106,8 @@ class EmailTestServer {
 
     const email = queryParams.get('email');
     const projectId = queryParams.get('projectId');
+    const workspaceId = queryParams.get('workspaceId');
+    const userId = queryParams.get('users');
     const eventIds = queryParams.getAll('eventIds');
     const type = queryParams.get('type');
 
@@ -121,7 +123,9 @@ class EmailTestServer {
       return;
     }
 
-    const project = await this.getProject(projectId as string);
+    const project = await this.getProject(projectId);
+    const workspace = await this.getWorkspace(workspaceId);
+    const user = await this.getUser(userId);
     const ids = typeof eventIds === 'string' ? [ eventIds ] : eventIds;
     const events = await Promise.all(ids.map(async (eventId: string) => {
       const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
@@ -139,6 +143,8 @@ class EmailTestServer {
       host: process.env.GARAGE_URL,
       hostOfStatic: process.env.API_STATIC_URL,
       project,
+      workspace,
+      user,
       period: 10,
     };
 
@@ -168,6 +174,8 @@ class EmailTestServer {
    */
   private async showForm(response: http.ServerResponse): Promise<void> {
     const projects = await this.getAllProjects();
+    const workspaces = await this.getAllWorkspaces();
+    const users = await this.getAllUsers();
 
     const renderForm = (): Promise<string> => new Promise((resolve, reject): void => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
@@ -176,6 +184,8 @@ class EmailTestServer {
           // @ts-ignore because @types/twig doesn't match the docs
           templates: Object.keys(templates),
           projects,
+          workspaces,
+          users,
         },
         (err: Error, result: string) => {
           if (err) {
@@ -302,12 +312,54 @@ class EmailTestServer {
   }
 
   /**
+   * Get workspace info
+   *
+   * @param workspaceId - workspace id
+   */
+  private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+  }
+
+  /**
+   * Get user info
+   *
+   * @param userId - user id
+   */
+  private async getUser(userId: string): Promise<UserDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').findOne({ _id: new ObjectId(userId) });
+  }
+
+  /**
    * Get all projects
    */
   private async getAllProjects(): Promise<ProjectDBScheme[]> {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('projects').find(null, { limit: 10 })
+      .toArray();
+  }
+
+  /**
+   * Get all workspaces
+   */
+  private async getAllWorkspaces(): Promise<WorkspaceDBScheme[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').find(null, { limit: 10 })
+      .toArray();
+  }
+
+  /**
+   * Get all users
+   */
+  private async getAllUsers(): Promise<UserDBScheme[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').find(null, { limit: 10 })
       .toArray();
   }
 

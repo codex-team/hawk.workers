@@ -5,13 +5,18 @@ export interface SenderWorkerPaymentFailedPayload {
   workspaceId: string;
 
   /**
+   * Rejection reason
+   */
+  reason: string;
+
+  /**
    * Notification endpoint
    */
   endpoint: string;
 }
 
 /**
- * Payload of event when user payment failed 
+ * Payload of event when user payment failed
  */
 export interface SenderWorkerPaymentFailedTask {
   type: 'payment-failed';
