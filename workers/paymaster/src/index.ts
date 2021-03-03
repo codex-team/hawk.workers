@@ -189,7 +189,6 @@ export default class PaymasterWorker extends Worker {
     return [workspace, false];
   }
 
-
   /**
    * Update lastChargeDate in workspace
    *
