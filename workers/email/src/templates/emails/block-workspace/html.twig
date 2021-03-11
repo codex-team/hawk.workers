@@ -1,0 +1,36 @@
+{% extends '../../components/layout.twig' %}
+
+{% block content %}
+    <tr>
+        <td>
+            <img src="{{ hostOfStatic }}/email/low-balance-icon.png" width="32" height="32" hspace="3"
+                 style="display: block; vertical-align: middle; margin: 23px auto 0;">
+        </td>
+    </tr>
+    <tr>
+        <td align="center" style="padding: 15px 0;">
+            <font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
+				<span style="vertical-align: middle; display: inline-block;">
+					Workspace "{{ workspace.name }}" was block!
+				</span>
+            </font>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
+            Your workspace was block because there isn't actual subscription.
+            {% include '../../components/button.twig' with {href: {{ host }} + '/workspace/' + {{ workspace._id }} + '/billing', label: 'Check payment settings'} %}
+        </td>
+    </tr>
+
+{% endblock %}
+
+{% block unsubscribeLink %}
+    {{ host ~ '/account/notifications' }}
+{% endblock %}
+
+{% block unsubscribeText %}
+    You received this email because you are currently opted in to receive such alerts via your
+    personal notifications settings. You may adjust your preferences at any time by clicking
+    the link above.
+{% endblock %}
