@@ -3,6 +3,7 @@
  */
 enum Templates {
   Assignee = 'assignee',
+  BlockWorkspace = 'block-workspace',
   NewEvent = 'new-event',
   SeveralEvents = 'several-events',
 }
