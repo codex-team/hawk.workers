@@ -146,6 +146,7 @@ class EmailTestServer {
       workspace,
       user,
       period: 10,
+      reason: 'error on the payment server side',
     };
 
     try {
