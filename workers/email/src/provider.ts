@@ -46,6 +46,7 @@ export default class EmailProvider extends NotificationsProvider {
       case 'several-events': templateName = Templates.SeveralEvents; break;
       case 'assignee': templateName = Templates.Assignee; break;
       case 'block-workspace': templateName = Templates.BlockWorkspace; break;
+      case 'payment-failed': templateName = Templates.PaymentFailed; break;
     }
 
     this.sendNotification(to, notification, templateName);
@@ -120,7 +121,7 @@ export default class EmailProvider extends NotificationsProvider {
 
             renderedTemplate[key as keyof Template] = res;
 
-            resolve();
+            resolve(null);
           })
       );
     }));

@@ -1,7 +1,10 @@
 {% extends '../../components/layout.twig' %}
 
-{% block content %}
+{% block header %}
+	{% include '../../components/project.twig' with {project: project} %}
+{% endblock %}
 
+{% block content %}
     <tr>
         <td class="several-items-heading" style="padding-top: 35px;padding-right: 0;padding-left: 20px;padding-bottom: 10px;">
             <font class="several-items-heading__font"  color="#dbe6ff"

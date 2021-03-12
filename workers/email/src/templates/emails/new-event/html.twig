@@ -1,5 +1,9 @@
 {% extends '../../components/layout.twig' %}
 
+{% block header %}
+	{% include '../../components/project.twig' with {project: project} %}
+{% endblock %}
+
 {% block content %}
 
     {% set event = events[0].event %}
