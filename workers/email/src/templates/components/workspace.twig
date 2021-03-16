@@ -9,12 +9,12 @@
                                 <div style="width: 26px; height: 26px; border-radius: 10px; vertical-align: middle; text-align: center; line-height: 26px; background-color: {{ workspace._id | colorById }};">
                                     <font color="#dbe6ff"
                                           style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                        {{ workspace.name | capitalize | first }}
+                                        {{ workspace.name | escape | capitalize | first }}
                                     </font>
                                 </div>
                             {% else %}
                                 <img src="{{ workspace.image }}"
-                                     alt="{{ workspace.name }}"
+                                     alt="{{ workspace.name | escape }}"
                                      style="width: 26px; height: 26px; border-radius: 8px; vertical-align: middle"
                                 />
                             {% endif %}
@@ -22,7 +22,7 @@
                         <td>
                             <font color="#dbe6ff"
                                   style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                {{ workspace.name }}
+                                {{ workspace.name | escape }}
                             </font>
                         </td>
                     </tr>
