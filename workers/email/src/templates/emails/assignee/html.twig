@@ -14,7 +14,7 @@
 		<td align="center" style="padding-top: 15px; padding-right: 0; padding-left: 0; padding-bottom: 15px;">
 			<font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
 				<span style="vertical-align: middle; display: inline-block;">
-					{% if whoAssigned.name | escape %}
+					{% if whoAssigned.name %}
 						{{ whoAssigned.name | escape }}
 					{% else %}
 						{{ whoAssigned.email }}

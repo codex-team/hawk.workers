@@ -14,7 +14,7 @@
                                 </div>
                             {% else %}
                                 <img src="{{ workspace.image }}"
-                                     alt="{{ workspace.name | escape }}"
+                                     alt="{{ workspace.name | escape('html_attr') }}"
                                      style="width: 26px; height: 26px; border-radius: 8px; vertical-align: middle"
                                 />
                             {% endif %}

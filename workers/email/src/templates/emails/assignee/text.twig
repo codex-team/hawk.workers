@@ -1,4 +1,4 @@
-{% if whoAssigned.name | escape %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} assigned you to resolve the event
+{% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} assigned you to resolve the event
 
 {{ event.payload.title }}
 
