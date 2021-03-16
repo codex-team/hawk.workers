@@ -1,1 +1,1 @@
-{{ project.name }} — ({{ events[0].newCount }}) {{ events[0].event.payload.title }}
+{{ project.name | escape }} — ({{ events[0].newCount }}) {{ events[0].event.payload.title }}

@@ -88,8 +88,9 @@ class WorkerRunner {
     }
 
     const PUSH_INTERVAL = parseInt(process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL);
+
     if (isNaN(PUSH_INTERVAL)) {
-      throw new Error("PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set")
+      throw new Error('PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set');
     }
 
     const collectDefaultMetrics = promClient.collectDefaultMetrics;

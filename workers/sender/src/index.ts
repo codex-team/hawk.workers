@@ -20,10 +20,11 @@ import {
   SenderWorkerEventTask,
   SenderWorkerAssigneeTask,
   SenderWorkerTask,
-  SenderWorkerBlockWorkspaceTask
+  SenderWorkerBlockWorkspaceTask,
+  SenderWorkerPaymentFailedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification, EventNotification, SeveralEventsNotification, AssigneeNotification } from '../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -105,6 +106,7 @@ export default abstract class SenderWorker extends Worker {
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
     }
   }
 
@@ -269,6 +271,33 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Handle task when user payment failed
+   *
+   * @param task - task to handle
+   */
+  private async handlePaymentFailedTask(task: SenderWorkerPaymentFailedTask): Promise<void> {
+    const { workspaceId, reason, endpoint } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send payment failed notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    this.provider.send(endpoint, {
+      type: 'payment-failed',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        workspace,
+        reason,
+      },
+    } as PaymentFailedNotification);
+  }
+
+  /**
    * Get event data for email
    *
    * @param {string} projectId - project events are related to
@@ -313,8 +342,7 @@ export default abstract class SenderWorker extends Worker {
   /**
    * Get project info
    *
-   * @param {string} projectId - project id
-   * @returns {Promise<ProjectDBScheme>}
+   * @param projectId - project id
    */
   private async getProject(projectId: string): Promise<ProjectDBScheme | null> {
     const connection = await this.accountsDb.getConnection();

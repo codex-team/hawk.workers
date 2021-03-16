@@ -1,7 +1,10 @@
 {% extends '../../components/layout.twig' %}
 
-{% block content %}
+{% block header %}
+	{% include '../../components/project.twig' with {project: project} %}
+{% endblock %}
 
+{% block content %}
     <tr>
         <td class="several-items-heading" style="padding-top: 35px;padding-right: 0;padding-left: 20px;padding-bottom: 10px;">
             <font class="several-items-heading__font"  color="#dbe6ff"
@@ -30,7 +33,7 @@
                 <div style="padding-top: 10px;padding-right: 0;padding-left: 0;padding-bottom: 10px;">
                     <font color="#dbe6ff"
                           style="font-size: 13px; line-height: 1.54; letter-spacing: 0.35px; color: #dbe6ff">
-                        {{ eventData.event.payload.title }}
+                        {{ eventData.event.payload.title | escape }}
                     </font>
                 </div>
                 {% include '../../components/event-info.twig' with { event: eventData } %}

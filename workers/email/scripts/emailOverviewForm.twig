@@ -97,7 +97,8 @@
                 padding: 10px 15px;
                 font-size: 15px;
                 color:inherit;
-                width: 360px;
+                min-width: 360px;
+                width: 100%;
             }
 
             @keyframes placeHolderShimmer {
@@ -144,6 +145,17 @@
                     <br><br>
 
                     <label>
+                        Workspace
+                    </label>
+                    <select name="workspaceId" id="workspace">
+                        {% for workspace in workspaces %}
+                            <option value="{{ workspace._id }}"> {{ workspace.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <br><br>
+                    
+                    <label>
                         Project
                     </label>
                     <select name="projectId" id="project">
@@ -157,7 +169,18 @@
                     <label>
                         Event ids
                     </label>
-                    <select name="eventIds" required id="events" multiple style="height: 200px"></select>
+                    <select name="eventIds" id="events" multiple style="height: 200px"></select>
+
+                    <br><br>
+
+                    <label>
+                        User
+                    </label>
+                    <select name="userId" id="user">
+                        {% for user in users %}
+                            <option value="{{ user._id }}"> {{ user.name }}</option>
+                        {% endfor %}
+                    </select>
 
                     <br><br>
 
