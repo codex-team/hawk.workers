@@ -23,7 +23,7 @@
     <tr>
         <td style="display: block; padding: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
             <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-                Your workspace "{{ workspace.name }}" was blocked because the plan was not renewed. Please, check
+                Your workspace "{{ workspace.name | escape }}" was blocked because the plan was not renewed. Please, check
                 payment settings and renew the plan.
             </font>
         </td>
