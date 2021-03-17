@@ -1,22 +1,24 @@
 import { EventsTemplateVariables, EventNotification } from './event';
 import { SeveralEventsNotification } from './several-events';
 import { AssigneeTemplateVariables, AssigneeNotification } from './assignee';
-import { LowBalanceNotification, LowBalanceTemplateVariables } from './low-balance';
+import { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './blockWorkspace';
+import { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 import { SuccessPaymentNotification, SuccessPaymentTemplateVariables } from './success-payment';
 
 export { CommonTemplateVariables } from './common-template';
 export { TemplateEventData, EventsTemplateVariables, EventNotification } from './event';
 export { SeveralEventsNotification } from './several-events';
 export { AssigneeTemplateVariables, AssigneeNotification } from './assignee';
-export { LowBalanceNotification } from './low-balance';
+export { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './blockWorkspace';
+export { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 export { SuccessPaymentNotification } from './success-payment';
 
 /**
  * Variables for notify-senders wrapped in payload with type
  */
-export type Notification = EventNotification | SeveralEventsNotification | AssigneeNotification | LowBalanceNotification | SuccessPaymentNotification;
+export type Notification = EventNotification | SeveralEventsNotification | AssigneeNotification | BlockWorkspaceNotification | PaymentFailedNotification | SuccessPaymentNotification;
 
 /**
  * Template variables for notify-senders
  */
-export type TemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables | LowBalanceTemplateVariables | SuccessPaymentTemplateVariables;
+export type TemplateVariables = EventsTemplateVariables | AssigneeTemplateVariables | BlockWorkspaceTemplateVariables | PaymentFailedTemplateVariables | SuccessPaymentTemplateVariables;

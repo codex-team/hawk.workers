@@ -112,60 +112,69 @@
       <tr>
         <td width="20"></td>
         <td>
-          <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;"> {% block header %}{% endblock %}{% block content %}{% endblock %}
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;">
+                {% block header %}{% endblock %}
+                {% block content %}{% endblock %}
 
-            {% if unsubscribeLink %}
-              <tr>
-                <td style="text-align: center">
-                  <a href="{% block unsubscribeLink %}{% endblock %}" style="text-decoration: none; border-bottom: 1px solid #494F5E;">
-                    <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                      Unsubscribe
-                    </font>
-                  </a>
-                </td>
-              </tr>
-            {% endif %}
-            {% if unsubscribeText %}
-              <tr>
-                <td style="padding-top: 40px;padding-right: 20px;padding-left: 20px;padding-bottom: 30px;text-align: center;">
-                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;"> {% block unsubscribeText %}{% endblock %}
-                    </font>
-                  </td>
+                {% if unsubscribeLink %}
+                <tr>
+                    <td style="text-align: center">
+                        <a href="{% block unsubscribeLink %}{% endblock %}"
+                           style="text-decoration: none; border-bottom: 1px solid #494F5E;">
+                            <font color="#969FB3"
+                                  style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                                Unsubscribe
+                            </font>
+                        </a>
+                    </td>
                 </tr>
-              {% endif %}
-              <tr>
-                <td style="text-align: center;">
-                  <a href="{{ host }}" style="text-decoration: none;">
-                    <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                      Hawk
-                    </font>
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td style="text-align: center">
-                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                    Errors tracking system
-                  </font>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-top: 30px; text-align: center">
-                  <font color="#969FB3" style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
-                    Made by
-                    <a href="https://codex.so" style="color: inherit !important; text-decoration: none;">CodeX</a>
-                  </font>
-                </td>
-              </tr>
+                <tr>
+                    <td style="padding-top: 40px;padding-right: 20px;padding-left: 20px;padding-bottom: 30px;text-align: center;">
+                        <font color="#969FB3"
+                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                            {% block unsubscribeText %}{% endblock %}
+                        </font>
+                    </td>
+                </tr>
+                {% endif %}
+
+                <tr>
+                    <td style="text-align: center;">
+                        <a href="{{ host }}" style="text-decoration: none;">
+                            <font color="#969FB3"
+                                  style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                                Hawk
+                            </font>
+                        </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: center">
+                        <font color="#969FB3"
+                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                            Errors tracking system
+                        </font>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-top: 30px; text-align: center">
+                        <font color="#969FB3"
+                              style="font-size: 13px; line-height: 1.46; letter-spacing: 0.16px; color: #969FB3;">
+                            Made by
+                            <a href="https://codex.so"
+                               style="color: inherit !important; text-decoration: none;">CodeX</a>
+                        </font>
+                    </td>
+                </tr>
             </table>
-          </td>
-          <td width="20"></td>
-        </tr>
-        <tr>
-          <td width="20"></td>
-          <td height="100"></td>
-          <td width="20"></td>
-        </tr>
-      </table>
-    </body>
-  </html>
+        </td>
+        <td width="20"></td>
+    </tr>
+    <tr>
+        <td width="20"></td>
+        <td height="100"></td>
+        <td width="20"></td>
+    </tr>
+</table>
+</body>
+</html>

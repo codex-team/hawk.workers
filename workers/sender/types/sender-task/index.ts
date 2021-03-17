@@ -1,11 +1,13 @@
 import { SenderWorkerAssigneeTask } from './assignee';
 import { SenderWorkerEventTask } from './event';
-import { SenderWorkerLowBalanceTask } from './low-balance';
+import { SenderWorkerBlockWorkspaceTask } from './blockWorkspace';
+import { SenderWorkerPaymentFailedTask } from './payment-failed';
 import { SenderWorkerSuccessPaymentTask } from './success-payments';
 
 export { SenderWorkerEventTask, SenderWorkerEventPayload } from './event';
 export { SenderWorkerAssigneeTask, SenderWorkerAssigneePayload } from './assignee';
-export { SenderWorkerLowBalanceTask, SenderWorkerLowBalancePayload } from './low-balance';
+export { SenderWorkerBlockWorkspaceTask, SenderWorkerBlockWorkspacePayload } from './blockWorkspace';
+export { SenderWorkerPaymentFailedTask, SenderWorkerPaymentFailedPayload } from './payment-failed';
 export { SenderWorkerSuccessPaymentTask, SenderWorkerSuccessPaymentPayload } from './success-payments';
 
-export type SenderWorkerTask = SenderWorkerEventTask | SenderWorkerAssigneeTask | SenderWorkerLowBalanceTask | SenderWorkerSuccessPaymentTask;
+export type SenderWorkerTask = SenderWorkerEventTask | SenderWorkerAssigneeTask | SenderWorkerBlockWorkspaceTask | SenderWorkerPaymentFailedTask | SenderWorkerSuccessPaymentTask;

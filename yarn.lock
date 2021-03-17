@@ -2601,10 +2601,10 @@ escodegen@^1.11.1:
   optionalDependencies:
     source-map "~0.6.1"
 
-eslint-config-codex@^1.5.2:
-  version "1.5.2"
-  resolved "https://registry.yarnpkg.com/eslint-config-codex/-/eslint-config-codex-1.5.2.tgz#2e28920c876f26837a202b33d1b1f83c521d9b97"
-  integrity sha512-/qFx4MkT4WGoutPAFWlyHLY6JW4B1UvSefk4lGfkIZExGjoiwyiNRMPiTBLzTn1JEf37foDAMAT59BBn1Oz+eg==
+eslint-config-codex@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/eslint-config-codex/-/eslint-config-codex-1.6.1.tgz#bd26d46d77967e1eb7f8b8a0c317c5c2bc913b53"
+  integrity sha512-gtXhjaQEtdi1VBvGNP9mOaArIB2021FM7C/q+bJFcKjUBtSVX4OnLmgg6ieKBdELquzhnpNzXqtIdE/oMEaCdQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^4.6.1"
     "@typescript-eslint/parser" "^4.6.1"
@@ -3509,7 +3509,7 @@ hash.js@^1.0.0, hash.js@^1.0.3:
 
 "hawk.types@https://github.com/codex-team/hawk.types":
   version "0.0.1"
-  resolved "https://github.com/codex-team/hawk.types#c8e60f7fbda78c771952d5504143a0a7f32b5466"
+  resolved "https://github.com/codex-team/hawk.types#77dbfd4dd17a00fff1c37190788b3ec59622d47a"
   dependencies:
     "@types/mongodb" "^3.5.34"
 

@@ -13,7 +13,7 @@ import templates, { Template } from '../src/templates';
 import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
-import { GroupedEventDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme, ProjectDBScheme, UserDBScheme, WorkspaceDBScheme } from 'hawk.types';
 
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
@@ -107,6 +107,7 @@ class EmailTestServer {
     const email = queryParams.get('email');
     const projectId = queryParams.get('projectId');
     const workspaceId = queryParams.get('workspaceId');
+    const userId = queryParams.get('users');
     const eventIds = queryParams.getAll('eventIds');
     const type = queryParams.get('type');
 
@@ -122,8 +123,9 @@ class EmailTestServer {
       return;
     }
 
-    const project = await this.getProject(projectId as string);
-    const workspace = await this.getWorkspace(workspaceId as string);
+    const project = await this.getProject(projectId);
+    const workspace = await this.getWorkspace(workspaceId);
+    const user = await this.getUser(userId);
     const ids = typeof eventIds === 'string' ? [ eventIds ] : eventIds;
     const events = await Promise.all(ids.map(async (eventId: string) => {
       const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
@@ -142,8 +144,9 @@ class EmailTestServer {
       hostOfStatic: process.env.API_STATIC_URL || 'http://localhost:4000/static',
       project,
       workspace,
-      balance: 67,
+      user,
       period: 10,
+      reason: 'error on the payment server side',
     };
 
     try {
@@ -173,6 +176,7 @@ class EmailTestServer {
   private async showForm(response: http.ServerResponse): Promise<void> {
     const projects = await this.getAllProjects();
     const workspaces = await this.getAllWorkspaces();
+    const users = await this.getAllUsers();
 
     const renderForm = (): Promise<string> => new Promise((resolve, reject): void => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
@@ -182,6 +186,7 @@ class EmailTestServer {
           templates: Object.keys(templates),
           projects,
           workspaces,
+          users,
         },
         (err: Error, result: string) => {
           if (err) {
@@ -254,7 +259,7 @@ class EmailTestServer {
 
             renderedTemplate[key as keyof Template] = res;
 
-            resolve();
+            resolve(null);
           })
       );
     }));
@@ -308,7 +313,7 @@ class EmailTestServer {
   }
 
   /**
-   * Get workspace
+   * Get workspace info
    *
    * @param workspaceId - workspace id
    */
@@ -316,6 +321,17 @@ class EmailTestServer {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+  }
+
+  /**
+   * Get user info
+   *
+   * @param userId - user id
+   */
+  private async getUser(userId: string): Promise<UserDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').findOne({ _id: new ObjectId(userId) });
   }
 
   /**
@@ -335,6 +351,16 @@ class EmailTestServer {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('workspaces').find(null, { limit: 10 })
+      .toArray();
+  }
+
+  /**
+   * Get all users
+   */
+  private async getAllUsers(): Promise<UserDBScheme[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').find(null, { limit: 10 })
       .toArray();
   }
 
