@@ -266,45 +266,4 @@ export default class PaymasterWorker extends Worker {
       data: 'message=' + report + '&parse_mode=HTML',
     });
   }
-
-  /**
-   * Send low balance notification
-   *
-   * @param workspace - workspace data
-   * @param currentPlan - workspace plan
-   */
-  private async sendLowBalanceNotification(workspace: WorkspaceDBScheme, currentPlan: PlanDBScheme): Promise<void> {
-    const connection = this.db.getConnection();
-    const workspaceAccount = await this.accounting.getAccount(workspace.accountId);
-    const balance = workspaceAccount.balance.amount;
-
-    if (balance >= currentPlan.monthlyCharge) {
-      return;
-    }
-
-    const teamCollection = await connection.collection('team:' + workspace._id.toString()).find()
-      .toArray();
-    const teamAdminCollection: ConfirmedMemberDBScheme[] = teamCollection.filter(user => user?.isAdmin);
-
-    teamAdminCollection.forEach(async (member) => {
-      const user = await this.users.findOne({ _id: member.userId });
-
-      if (!user.notifications) {
-        return;
-      }
-
-      const channels = user.notifications.channels;
-
-      if (channels?.email?.isEnabled) {
-        this.addTask(workerNames.EMAIL, {
-          type: 'low-balance',
-          payload: {
-            workspaceId: String(workspace._id),
-            endpoint: channels.email.endpoint,
-            balance: workspaceAccount.balance.amount,
-          },
-        } as SenderWorkerLowBalanceTask);
-      }
-    });
-  }
 }

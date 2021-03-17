@@ -4,7 +4,7 @@ import { WorkspaceDBScheme } from 'hawk.types';
 
 export interface SuccessPaymentTemplateVariables extends CommonTemplateVariables {
   /**
-   * Workspace whose balance has been replenished 
+   * Workspace whose balance has been replenished
    */
   workspace: WorkspaceDBScheme;
 
@@ -19,7 +19,7 @@ export interface SuccessPaymentTemplateVariables extends CommonTemplateVariables
  */
 export interface SuccessPaymentNotification extends Notification<SuccessPaymentTemplateVariables> {
   /**
-   * Notification when the balance is credited successfully 
+   * Notification when the balance is credited successfully
    */
   type: 'success-payment';
 

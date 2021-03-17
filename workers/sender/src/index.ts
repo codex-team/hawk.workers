@@ -12,7 +12,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { LowBalanceNotification, TemplateEventData } from '../types/template-variables/';
+import { TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
