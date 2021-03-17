@@ -26,7 +26,7 @@
         <td>
             <div class="event-title-block" style="padding: 20px; border-width: 1px; border-style: solid; border-color: #494F5E; border-radius: 10px;">
                 <font class="event-title-block__font" color="#dbe6ff" style="font-size: 15px; line-height: 1.47; letter-spacing: 0.4px; color: #dbe6ff">
-                    {{ event.payload.title }}
+                    {{ event.payload.title | escape }}
                 </font>
             </div>
         </td>

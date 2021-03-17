@@ -15,7 +15,7 @@
 			<font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
 				<span style="vertical-align: middle; display: inline-block;">
 					{% if whoAssigned.name %}
-						{{ whoAssigned.name }}
+						{{ whoAssigned.name | escape }}
 					{% else %}
 						{{ whoAssigned.email }}
 					{% endif %}

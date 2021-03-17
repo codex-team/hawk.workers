@@ -1,8 +1,8 @@
-Payment failed for {{ workspace.name }} workspace
+Payment failed for {{ workspace.name | escape }} workspace
 
 Your payment has been failed
 
-The payment attempt for «{{ workspace.name }}» monthly plan was rejected
+The payment attempt for «{{ workspace.name | escape }}» monthly plan was rejected
 because of {{ reason }}
 Contact support@hawk.so for more details.
 

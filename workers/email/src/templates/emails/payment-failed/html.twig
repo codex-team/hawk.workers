@@ -22,7 +22,7 @@
 <tr>
   <td style="display: block; padding-top: 20px; padding-right: 20px; padding-bottom: 20px; padding-left: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
     <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-      The payment attempt for &laquo;{{ workspace.name }}&raquo; monthly plan was rejected
+      The payment attempt for &laquo;{{ workspace.name | escape }}&raquo; monthly plan was rejected
       because of {{ reason }}.<br>
       Contact <b>support@hawk.so</b> for more details.
     </font>

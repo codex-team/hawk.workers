@@ -10,7 +10,7 @@
 You have {{ newLabel }} on «{{ project.name }}» project.
 
 ------------------------
-{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}: {{ event.payload.title }}
+{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}: {{ event.payload.title | escape }}
 ------------------------
 {% if event.payload.backtrace is not empty %}
     {% if event.payload.backtrace[0] is not empty %}
