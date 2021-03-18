@@ -8,6 +8,7 @@ import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
 import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import axios from 'axios';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import * as WorkerNames from '../../../lib/workerNames';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -216,6 +217,16 @@ export default class PaymasterWorker extends Worker {
     }, {
       $set: {
         isBlocked: true,
+      },
+    });
+
+    /**
+     * Add task for Sender worker
+     */
+    await this.addTask(WorkerNames.EMAIL, {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id,
       },
     });
   }
