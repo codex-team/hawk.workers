@@ -9,6 +9,7 @@ import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import axios from 'axios';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 import * as WorkerNames from '../../../lib/workerNames';
+import HawkCatcher from '@hawk.so/nodejs';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -131,7 +132,22 @@ export default class PaymasterWorker extends Worker {
     const workspaces = await this.workspaces.find({}).toArray();
 
     const result = await Promise.all(workspaces.map(
-      (workspace) => this.processWorkspaceSubscriptionCheck(workspace)
+      (workspace) => {
+        /**
+         * Skip workspace without lastChargeDate
+         */
+        if (!workspace.lastChargeDate) {
+          const error = new Error('Workspace without lastChargeDate detected');
+
+          HawkCatcher.send(error, {
+            workspaceId: workspace._id,
+          });
+
+          throw error;
+        }
+
+        return this.processWorkspaceSubscriptionCheck(workspace);
+      }
     ));
 
     await this.sendReport(result);
