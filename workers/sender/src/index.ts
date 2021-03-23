@@ -4,7 +4,8 @@ import {
   UserDBScheme,
   GroupedEventDBScheme,
   WorkspaceDBScheme,
-  ConfirmedMemberDBScheme
+  ConfirmedMemberDBScheme,
+  PlanDBScheme
 } from 'hawk.types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
@@ -12,7 +13,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
 
-import { TemplateEventData } from '../types/template-variables/';
+import { PaymentSuccessNotification, TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
@@ -21,7 +22,8 @@ import {
   SenderWorkerAssigneeTask,
   SenderWorkerTask,
   SenderWorkerBlockWorkspaceTask,
-  SenderWorkerPaymentFailedTask
+  SenderWorkerPaymentFailedTask,
+  SenderWorkerPaymentSuccessTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -107,6 +109,7 @@ export default abstract class SenderWorker extends Worker {
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
+      case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
     }
   }
 
@@ -298,6 +301,41 @@ export default abstract class SenderWorker extends Worker {
   }
 
   /**
+   * Handle task when user has successfully paid
+   *
+   * @param task - task to handle
+   */
+  private async handlePaymentSuccessTask(task: SenderWorkerPaymentSuccessTask): Promise<void> {
+    const { workspaceId, tariffPlanId, endpoint } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send payment success notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const plan = await this.getPlan(tariffPlanId);
+
+    if (!plan) {
+      this.logger.error(`Cannot send payment success notification: plan not found. Payload: ${task}`);
+
+      return;
+    }
+
+    this.provider.send(endpoint, {
+      type: 'payment-success',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        workspace,
+        plan,
+      },
+    } as PaymentSuccessNotification);
+  }
+
+  /**
    * Get event data for email
    *
    * @param {string} projectId - project events are related to
@@ -397,5 +435,16 @@ export default abstract class SenderWorker extends Worker {
 
     return connection.collection('users').find({ _id: userIds.map(userId => new ObjectId(userId)) })
       .toArray();
+  }
+
+  /**
+   * Get tariff plan
+   *
+   * @param planId - workspace plan id
+   */
+  private async getPlan(planId: string): Promise<PlanDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('plans').findOne({ _id: planId });
   }
 }

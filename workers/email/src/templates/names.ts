@@ -7,8 +7,8 @@ enum Templates {
   LowBalance = 'low-balance',
   NewEvent = 'new-event',
   PaymentFailed = 'payment-failed',
+  PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
-  SuccessPayment = 'success-payment',
 }
 
 export default Templates;
