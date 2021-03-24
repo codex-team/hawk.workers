@@ -445,6 +445,6 @@ export default abstract class SenderWorker extends Worker {
   private async getPlan(planId: string): Promise<PlanDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('plans').findOne({ _id: planId });
+    return connection.collection('plans').findOne({ _id: new ObjectId(planId) });
   }
 }
