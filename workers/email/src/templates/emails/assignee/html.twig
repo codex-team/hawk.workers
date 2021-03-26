@@ -1,36 +1,36 @@
 {% extends '../../components/layout.twig' %}
 
 {% block header %}
-	{% include '../../components/project.twig' with {project: project} %}
+  {% include '../../components/project.twig' with {project: project} %}
 {% endblock %}
 
 {% block content %}
-	<tr>
-		<td>
-			<img src="{{ hostOfStatic }}/email/user-assigned-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
-		</td>
-	</tr>
-	<tr>
-		<td align="center" style="padding-top: 15px; padding-right: 0; padding-left: 0; padding-bottom: 15px;">
-			<font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
-				<span style="vertical-align: middle; display: inline-block;">
-					{% if whoAssigned.name %}
-						{{ whoAssigned.name | escape }}
-					{% else %}
-						{{ whoAssigned.email }}
-					{% endif %}
-					assigned you to resolve the event
-				</span>
-			</font>
-		</td>
-	</tr>
-	{% include '../../components/event.twig' with daysRepeated, event %}
-	<tr>
-		<td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-			{% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}
-			{% include '../../components/button.twig' with {href: url, label: 'View event'} %}
-		</td>
-	</tr>
+  <tr>
+    <td>
+      <img src="{{ hostOfStatic }}/email/user-assigned-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding-top: 15px; padding-right: 0; padding-left: 0; padding-bottom: 15px;">
+      <font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
+        <span style="vertical-align: middle; display: inline-block;">
+          {% if whoAssigned.name %}
+            {{ whoAssigned.name | escape }}
+          {% else %}
+            {{ whoAssigned.email }}
+          {% endif %}
+          assigned you to resolve the event
+        </span>
+      </font>
+    </td>
+  </tr>
+  {% include '../../components/event.twig' with daysRepeated, event %}
+  <tr>
+    <td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
+      {% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}
+      {% include '../../components/button.twig' with {href: url, label: 'View event'} %}
+    </td>
+  </tr>
 
 {% endblock %}
 

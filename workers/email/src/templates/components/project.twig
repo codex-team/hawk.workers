@@ -1,33 +1,28 @@
 <tr>
-    <td style="background-color: #242732; border-top-right-radius: 10px;border-top-left-radius: 10px;border-bottom-right-radius: 10px;border-bottom-left-radius: 10px;">
-        <a href="{{ host }}/project/{{ project._id }}" style="text-decoration: none;">
-            <div style="padding-top: 12px;padding-right: 20px;padding-left: 20px;padding-bottom: 12px;">
-                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                    <tr>
-                        <td style="width: 36px;">
-                            {% if not project.image %}
-                                <div style="width: 26px; height: 26px; border-radius: 10px; vertical-align: middle; text-align: center; line-height: 26px; background-color: {{ project._id | colorById }};">
-                                    <font color="#dbe6ff"
-                                          style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                        {{ project.name | escape | capitalize | first }}
-                                    </font>
-                                </div>
-                            {% else %}
-                                <img src="{{ project.image }}"
-                                     alt="{{ project.name | escape('html_attr') }}"
-                                     style="width: 26px; height: 26px; border-radius: 8px; vertical-align: middle"
-                                />
-                            {% endif %}
-                        </td>
-                        <td>
-                            <font color="#dbe6ff"
-                                  style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
-                                {{ project.name | escape }}
-                            </font>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </a>
-    </td>
+  <td style="background-color: #242732; border-top-right-radius: 10px;border-top-left-radius: 10px;border-bottom-right-radius: 10px;border-bottom-left-radius: 10px;">
+    <a href="{{ host }}/project/{{ project._id }}" style="text-decoration: none;">
+      <div style="padding-top: 12px;padding-right: 20px;padding-left: 20px;padding-bottom: 12px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td style="width: 36px;">
+              {% if not project.image %}
+                <div style="width: 26px; height: 26px; border-radius: 10px; vertical-align: middle; text-align: center; line-height: 26px; background-color: {{ project._id | colorById }};">
+                  <font color="#dbe6ff" style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
+                    {{ project.name | escape | capitalize | first }}
+                  </font>
+                </div>
+              {% else %}
+                <img src="{{ project.image }}" alt="{{ project.name | escape('html_attr') }}" style="width: 26px; height: 26px; border-radius: 8px; vertical-align: middle"/>
+              {% endif %}
+            </td>
+            <td>
+              <font color="#dbe6ff" style="font-size: 15px; font-weight: 600; letter-spacing: 0.19px;">
+                {{ project.name | escape }}
+              </font>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </a>
+  </td>
 </tr>
