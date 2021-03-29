@@ -324,8 +324,8 @@ export default class JavascriptEventWorker extends EventWorker {
 
   /**
    * Converts userAgent to strict format: browser browserVersion / OS OsVersion
-   * 
-   * @param {string} userAgent
+   *
+   * @param {string} userAgent - user agent
    * @returns {{[key: string]: string}}
    */
   private beautifyUserAgent(userAgent: string): {[key: string]: string} {
@@ -336,7 +336,7 @@ export default class JavascriptEventWorker extends EventWorker {
       osVersion: '',
       browser: '',
       browserVersion: '',
-    }
+    };
 
     try {
       beautifiedAgent = {
@@ -345,7 +345,7 @@ export default class JavascriptEventWorker extends EventWorker {
         osVersion: agent.os.toVersion(),
         browser: agent.family,
         browserVersion: agent.toVersion(),
-      }
+      };
     } catch {
       this.logger.error('Cannot parse user-agent ' + userAgent);
     }

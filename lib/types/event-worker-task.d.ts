@@ -22,6 +22,82 @@ export interface EventWorkerTask extends WorkerTask {
 }
 
 /**
+ * Representation of source code line,
+ * Used in event.payload.backtrace[].sourceCode
+ */
+export interface SourceCodeLine {
+  /**
+   * Line number
+   */
+  line: number;
+
+  /**
+   * Line content
+   */
+  content: string;
+}
+
+/**
+ * Single item of backtrace
+ */
+export interface BacktraceFrame {
+  /**
+   * File
+   */
+  file: string;
+
+  /**
+   * Line number
+   */
+  line: number;
+
+  /**
+   * Column number
+   */
+  column: number;
+
+  /**
+   * Sibling source code lines: some above and some below
+   */
+  sourceCode?: SourceCodeLine[];
+
+  /**
+   * Function name extracted from current stack frame
+   */
+  function?: string;
+
+  /**
+   * Function arguments extracted from current stack frame
+   */
+  arguments?: string[];
+}
+
+/**
+ * Represents User object
+ */
+export interface User {
+  /**
+   * Internal user's identifier inside an app
+   */
+  id: string;
+
+  /**
+   * User public name
+   */
+  name?: string;
+
+  /**
+   * URL for user's details page
+   */
+  url?: string;
+
+  /**
+   * User's public picture
+   */
+  image?: string;
+}
+
+/**
  * Information about event
  * That object will be send as 'payload' to the Collector
  */
@@ -79,80 +155,4 @@ export interface EventData {
    * Any other information collected and passed by user
    */
   context?: object;
-}
-
-/**
- * Single item of backtrace
- */
-export interface BacktraceFrame {
-  /**
-   * File
-   */
-  file: string;
-
-  /**
-   * Line number
-   */
-  line: number;
-
-  /**
-   * Column number
-   */
-  column: number;
-
-  /**
-   * Sibling source code lines: some above and some below
-   */
-  sourceCode?: SourceCodeLine[];
-
-  /**
-   * Function name extracted from current stack frame
-   */
-  function?: string;
-
-  /**
-   * Function arguments extracted from current stack frame
-   */
-  arguments?: string[];
-}
-
-/**
- * Representation of source code line,
- * Used in event.payload.backtrace[].sourceCode
- */
-export interface SourceCodeLine {
-  /**
-   * Line number
-   */
-  line: number;
-
-  /**
-   * Line content
-   */
-  content: string;
-}
-
-/**
- * Represents User object
- */
-export interface User {
-  /**
-   * Internal user's identifier inside an app
-   */
-  id: string;
-
-  /**
-   * User public name
-   */
-  name?: string;
-
-  /**
-   * URL for user's details page
-   */
-  url?: string;
-
-  /**
-   * User's public picture
-   */
-  image?: string;
 }
