@@ -7,9 +7,10 @@ import * as pkg from '../package.json';
 import { Channel } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
 import { Rule } from '../types/rule';
-import { SenderWorkerTask } from '../types/sender-task';
+import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Worker to buffer events before sending notifications about them
@@ -33,7 +34,7 @@ export default class NotifierWorker extends Worker {
   /**
    * Default period between messages in seconds
    */
-  private DEFAULT_MIN_PERIOD = 60
+  private readonly DEFAULT_MIN_PERIOD = 60;
 
   /**
    * Start consuming messages
@@ -124,7 +125,7 @@ export default class NotifierWorker extends Worker {
    * @param {NotifierEvent} event - received event
    */
   private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
-    const channels: Array<[string, Channel]> = Object.entries(rule.channels as {[name: string]: Channel});
+    const channels: Array<[string, Channel]> = Object.entries(rule.channels as { [name: string]: Channel });
 
     channels.forEach(async ([name, options]) => {
       /**
@@ -143,7 +144,7 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * 1000;
+      const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * MS_IN_SEC;
 
       /**
        * Set timer to send events after min period of time is passed
@@ -172,7 +173,7 @@ export default class NotifierWorker extends Worker {
     }
 
     await this.sendToSenderWorker(channelKey, events);
-  }
+  };
 
   /**
    * Send task to sender workers
@@ -184,9 +185,12 @@ export default class NotifierWorker extends Worker {
     const [projectId, ruleId, channelName] = key;
 
     await this.addTask(`sender/${channelName}`, {
-      projectId,
-      ruleId,
-      events,
+      type: 'event',
+      payload: {
+        projectId,
+        ruleId,
+        events,
+      },
     } as SenderWorkerTask);
   }
 

@@ -1,10 +1,11 @@
 import * as amqp from 'amqplib';
 import * as client from 'prom-client';
-import { createLogger, format, transports, Logger } from 'winston';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
+import CacheController from '../lib/cache/controller';
+import createLogger from './logger';
 
 /**
  * Base worker class for processing tasks
@@ -45,19 +46,13 @@ export abstract class Worker {
    * Logger module
    * (default level='info')
    */
-  protected logger: Logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    transports: [
-      new transports.Console({
-        format: format.combine(
-          format.timestamp(),
-          format.colorize(),
-          format.simple(),
-          format.printf((msg) => `${msg.timestamp} - ${msg.level}: ${msg.message}`)
-        ),
-      }),
-    ],
-  });
+  protected logger = createLogger();
+
+  /**
+   * Cache module.
+   * To use it in workers, call this.prepareCache()
+   */
+  protected cache: CacheController;
 
   /**
    * Prometheus metrics
@@ -100,7 +95,7 @@ export abstract class Worker {
   /**
    * {Map<Object, Promise>} tasksMap - current worker's tasks
    */
-  private tasksMap: Map<object, Promise<void>> = new Map();
+  private tasksMap: Map<amqp.ConsumeMessage, Promise<void>> = new Map();
 
   /**
    * Worker type
@@ -167,14 +162,31 @@ export abstract class Worker {
   /**
    * Adds task to other worker
    *
-   * @param {string} worker - worker's name
+   * @param {string} worker - worker's name'
    * @param {object} payload - payload object
    */
+  // eslint-disable-next-line @typescript-eslint/ban-types
   public async addTask(worker: string, payload: object): Promise<boolean> {
     return this.channelWithRegistry.sendToQueue(
       worker,
       Buffer.from(JSON.stringify(payload))
     );
+  }
+
+  /**
+   * Forced clears worker cache
+   */
+  public clearCache(): void {
+    this.cache.flushAll();
+  }
+
+  /**
+   * Create cache controller instance
+   */
+  protected prepareCache(): void {
+    this.cache = new CacheController({
+      prefix: this.type,
+    });
   }
 
   /**

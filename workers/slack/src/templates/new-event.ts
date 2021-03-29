@@ -1,7 +1,7 @@
-import { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import { IncomingWebhookSendArguments } from '@slack/webhook';
 import { block, element, object, TEXT_FORMAT_MRKDWN, TEXT_FORMAT_PLAIN } from 'slack-block-kit';
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { GroupedEventDBScheme } from 'hawk.types';
 import { getEventLocation, getEventUrl, toMaxLen } from './utils';
 
 const { text } = object;
@@ -13,7 +13,7 @@ const { section, actions, divider, context } = block;
  *
  * @param event - event to render
  */
-function renderBacktrace(event: GroupedEvent): string {
+function renderBacktrace(event: GroupedEventDBScheme): string {
   let code = '';
 
   const firstNotEmptyFrame = event.payload.backtrace.find(frame => !!frame.sourceCode);
@@ -29,7 +29,9 @@ function renderBacktrace(event: GroupedEvent): string {
       colDelimiter = ' ->';
     }
 
-    return `${line}${colDelimiter}  ${toMaxLen(content, 65)}`;
+    const MAX_SOURCE_CODE_LINE_LENGTH = 65;
+
+    return `${line}${colDelimiter}  ${toMaxLen(content, MAX_SOURCE_CODE_LINE_LENGTH)}`;
   }).join('\n');
 
   return code;
@@ -71,4 +73,4 @@ export default function render(tplData: EventsTemplateVariables): IncomingWebhoo
   return {
     blocks,
   };
-};
+}

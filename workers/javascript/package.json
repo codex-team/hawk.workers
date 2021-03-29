@@ -3,9 +3,7 @@
   "version": "0.0.1",
   "description": "Handles messages from JavaScript Catcher",
   "main": "src/index.ts",
-  "author": "CodeX",
   "license": "UNLICENSED",
-  "private": true,
   "workerType": "errors/javascript",
   "devDependencies": {
     "@types/node": "^12.7.2",

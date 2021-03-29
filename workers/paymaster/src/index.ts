@@ -1,25 +1,34 @@
-import {
-  EventType as AccountantEventType,
-  TransactionEvent,
-  TransactionType
-} from 'hawk-worker-accountant/types/accountant-worker-events';
-import { Collection, ObjectID } from 'mongodb';
-import { DatabaseController } from '../../../lib/db/controller';
+import dotenv from 'dotenv';
+import path from 'path';
 import { Worker } from '../../../lib/worker';
-import * as workerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import {
-  DailyCheckEvent,
-  EventType,
-  PaymasterEvent,
-  PlanChangedEvent,
-  TariffPlan, WorkspacePlan
-} from '../types/paymaster-worker-events';
+import { DatabaseController } from '../../../lib/db/controller';
+import { Collection } from 'mongodb';
+import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
+import axios from 'axios';
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import * as WorkerNames from '../../../lib/workerNames';
+import HawkCatcher from '@hawk.so/nodejs';
+
+dotenv.config({
+  path: path.resolve(__dirname, '../.env'),
+});
 
 /**
- * Worker to check workspaces balance and handle tariff plan changes
+ * Milliseconds in day. Needs for calculating difference between dates in days.
  */
-export default class Paymaster extends Worker {
+const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
+
+/**
+ * Days after payday for paying in actual subscription
+ */
+const DAYS_AFTER_PAYDAY = 3;
+
+/**
+ * Worker to check workspaces subscription status and ban workspaces without actual subscription
+ */
+export default class PaymasterWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -30,19 +39,66 @@ export default class Paymaster extends Worker {
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
-  private workspaces: Collection;
-  private plans: Collection;
+  /**
+   * Collection with workspaces
+   */
+  private workspaces: Collection<WorkspaceDBScheme>;
+
+  /**
+   * List of tariff plans
+   */
+  private plans: PlanDBScheme[];
+
+  /**
+   * Check if today is a payday for passed timestamp
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static isTimeToPay(date: Date): boolean {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
+
+    const now = new Date().getTime();
+
+    return now >= expectedPayDay.getTime();
+  }
+
+  /**
+   * Returns difference between payday and now in days
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static daysAfterPayday(date: Date): number {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
+
+    const now = new Date().getTime();
+
+    return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
+  }
 
   /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
-
-    const connection = this.db.getConnection();
+    const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    this.plans = connection.collection('plans');
+    const plansCollection = connection.collection<PlanDBScheme>('plans');
+
+    this.plans = await plansCollection.find({}).toArray();
+
+    if (this.plans.length === 0) {
+      throw new Error('Please add tariff plans to the database');
+    }
 
     await super.start();
   }
@@ -62,137 +118,179 @@ export default class Paymaster extends Worker {
    */
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
-      case EventType.DailyCheck:
-        await this.handleDailyCheckEvent(event as DailyCheckEvent);
-
-        return;
-
-      case EventType.PlanChanged:
-        await this.handlePlanChangedEvent(event as PlanChangedEvent);
+      case EventType.WorkspaceSubscriptionCheck:
+        await this.handleWorkspaceSubscriptionCheckEvent();
     }
   }
 
   /**
-   * DailyCheck event handler
+   * WorkspaceSubscriptionCheckEvent event handler
    *
-   * Called every day, enumerate through workspaces and check if today is a payday for workspace plan
-   *
-   * @param {DailyCheckEvent} event - event to handle
+   * Called periodically, enumerate through workspaces and check if today is a payday for workspace subscription
    */
-  private async handleDailyCheckEvent(event: DailyCheckEvent): Promise<void> {
+  private async handleWorkspaceSubscriptionCheckEvent(): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
-    const plans = await this.plans.find({}).toArray();
 
-    workspaces.forEach(({ _id, plan }) => {
-      const currentPlan: TariffPlan = plans.find((p) => p.name === plan.name);
+    const result = await Promise.all(workspaces.map(
+      (workspace) => {
+        /**
+         * Skip workspace without lastChargeDate
+         */
+        if (!workspace.lastChargeDate) {
+          const error = new Error('Workspace without lastChargeDate detected');
 
-      /**
-       * If today is not pay day or lastChargeDate is today (plan already paid) do nothing
-       */
-      if (!this.isTodayIsPayDay(plan.lastChargeDate) || this.isToday(plan.lastChargeDate)) {
-        return;
+          HawkCatcher.send(error, {
+            workspaceId: workspace._id,
+          });
+
+          throw error;
+        }
+
+        return this.processWorkspaceSubscriptionCheck(workspace);
       }
+    ));
 
-      this.sendTransaction(TransactionType.Charge, _id.toString(), currentPlan.monthlyCharge);
+    await this.sendReport(result);
+  }
+
+  /**
+   * Checks workspace subscription and block workspaces without actual subscription
+   *
+   * @param workspace - workspace for checking
+   * @private
+   */
+  private async processWorkspaceSubscriptionCheck(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, boolean]> {
+    const date = new Date();
+
+    const currentPlan = this.plans.find(
+      (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
+    );
+
+    /**
+     * If today is not payday for workspace do nothing
+     */
+    if (!PaymasterWorker.isTimeToPay(workspace.lastChargeDate)) {
+      return [workspace, false];
+    }
+
+    /**
+     * If workspace has free plan,
+     * Then update last charge date and clear count of events for billing period
+     */
+    if (currentPlan.monthlyCharge === 0) {
+      await this.updateLastChargeDate(workspace, date);
+      await this.clearBillingPeriodEventsCount(workspace);
+
+      return [workspace, false];
+    }
+
+    /**
+     * Block workspace if it has subscription,
+     * but after payday 3 days have passed
+     */
+    if (workspace.subscriptionId && PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) > DAYS_AFTER_PAYDAY) {
+      await this.blockWorkspace(workspace);
+
+      return [workspace, true];
+    }
+
+    /**
+     * Block workspace if it hasn't subscription
+     */
+    if (!workspace.subscriptionId) {
+      await this.blockWorkspace(workspace);
+
+      return [workspace, true];
+    }
+
+    return [workspace, false];
+  }
+
+  /**
+   * Update lastChargeDate in workspace
+   *
+   * @param workspace - workspace for plan purchasing
+   * @param date - date of debiting money
+   */
+  private async updateLastChargeDate(workspace: WorkspaceDBScheme, date: Date): Promise<void> {
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        lastChargeDate: date,
+      },
     });
   }
 
   /**
-   * PlanChanged event handler
+   * Update isBlocked in workspace
    *
-   * Called when user changes tariff plan for workspace:
-   *
-   * If new plan charge is more than old one, withdraw the difference.
-   *
-   * If today is payday and payment has not been proceed or if new plan charge less then old one, do nothing
-   *
-   * @param {PlanChangedEvent} event - event to handle
+   * @param workspace - workspace for block
    */
-  private async handlePlanChangedEvent(event: PlanChangedEvent): Promise<void> {
-    const { payload } = event;
-
-    const plans: TariffPlan[] = await this.plans.find({}).toArray();
-    const workspace = await this.workspaces.findOne({ _id: new ObjectID(payload.workspaceId) });
-    const oldPlan: TariffPlan = plans.find((p) => p.name === payload.oldPlan);
-    const newPlan: TariffPlan = plans.find((p) => p.name === payload.newPlan);
-
-    const { lastChargeDate } = workspace.plan as WorkspacePlan;
+  private async blockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        isBlocked: true,
+      },
+    });
 
     /**
-     * If today is payday and payment has not been proceed, do nothing because daily check event will handle this
+     * Add task for Sender worker
      */
-    if (this.isTodayIsPayDay(lastChargeDate) && !this.isToday(lastChargeDate)) {
+    await this.addTask(WorkerNames.EMAIL, {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id,
+      },
+    });
+  }
+
+  /**
+   * Sets BillingPeriodEventsCount to 0 in workspace
+   *
+   * @param workspace - workspace for clear counter
+   */
+  private async clearBillingPeriodEventsCount(workspace: WorkspaceDBScheme): Promise<void> {
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        billingPeriodEventsCount: 0,
+      },
+    });
+  }
+
+  /**
+   * Send report with blocked workspaces to Telegram
+   *
+   * @param reportData - data for sending report
+   */
+  private async sendReport(reportData: [WorkspaceDBScheme, boolean][]): Promise<void> {
+    if (!process.env.REPORT_NOTIFY_URL) {
+      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
+
       return;
     }
 
-    /**
-     * If new plan charge is more than old one, withdraw the difference.
-     */
-    if (newPlan.monthlyCharge > oldPlan.monthlyCharge) {
-      this.sendTransaction(
-        TransactionType.Charge,
-        workspace._id.toString(),
-        newPlan.monthlyCharge - oldPlan.monthlyCharge
-      );
-    }
-  }
+    reportData = reportData
+      .filter(([, isBlocked]) => isBlocked);
 
-  /**
-   * Sends transactions to Accountant worker
-   *
-   * @param {TransactionType} type - type of transaction ('income' or 'charge')
-   * @param {string} workspaceId - id of workspace for which transaction has been made
-   * @param {number} amount - transaction amount
-   */
-  private sendTransaction(type: TransactionType, workspaceId: string, amount: number): void {
-    this.addTask(workerNames.ACCOUNTANT, {
-      type: AccountantEventType.Transaction,
-      payload: {
-        type,
-        date: (new Date()).getTime(),
-        workspaceId,
-        amount,
-      },
-    } as TransactionEvent);
-  }
+    let report = process.env.SERVER_NAME ? ` Hawk Paymaster (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster 💰\n';
+    let totalBlockedWorkspaces = 0;
 
-  /**
-   * Check if today is a pay day for passed timestamp
-   *
-   * Pay day is calculated by formula: last charge date + number of days in last charged month
-   *
-   * @param {number} tmstp - last charge date timestamp
-   * @returns {boolean}
-   */
-  private isTodayIsPayDay(tmstp: number): boolean {
-    tmstp *= 1000;
+    reportData.forEach(([ workspace ]) => {
+      report += `\nBlocked ⛔ | <b>${encodeURIComponent(workspace.name)}</b> | <code>${workspace._id}</code>`;
+      totalBlockedWorkspaces++;
+    });
 
-    const date = new Date(tmstp);
+    report += `\n\n<b>${totalBlockedWorkspaces}</b> totally banned ⛔`;
 
-    const numberOfDays = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
-    const expectedPayDay = new Date(tmstp);
-
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
-
-    return this.isToday(expectedPayDay.getTime());
-  }
-
-  /**
-   * Check if passed timestamp is today
-   *
-   * @param {number} tmstp - timestamp to check
-   * @returns {boolean}
-   */
-  private isToday(tmstp: number): boolean {
-    tmstp *= 1000;
-
-    const now = new Date();
-    const date = new Date(tmstp);
-
-    return (
-      now.getFullYear() === date.getFullYear() &&
-      now.getMonth() === date.getMonth() &&
-      now.getDate() === date.getDate()
-    );
+    await axios({
+      method: 'post',
+      url: process.env.REPORT_NOTIFY_URL,
+      data: 'message=' + report + '&parse_mode=HTML',
+    });
   }
 }

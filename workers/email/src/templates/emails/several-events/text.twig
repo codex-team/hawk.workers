@@ -1,4 +1,4 @@
-You have {{ events.length }} new events on «{{ project.name }}» project for the last {{ period | prettyTime }}
+You have {{ events.length }} new events on «{{ project.name|escape }}» project for the last {{ period | prettyTime }}
 
 {% set eventsToShow = 5 %}
 

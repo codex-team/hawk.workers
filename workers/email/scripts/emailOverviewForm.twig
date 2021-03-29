@@ -97,7 +97,8 @@
                 padding: 10px 15px;
                 font-size: 15px;
                 color:inherit;
-                width: 360px;
+                min-width: 360px;
+                width: 100%;
             }
 
             @keyframes placeHolderShimmer {
@@ -142,7 +143,18 @@
                     </select>
 
                     <br><br>
+                    
+                    <label>
+                        Workspace
+                    </label>
+                    <select name="workspaceId" id="workspace">
+                        {% for workspace in workspaces %}
+                            <option value="{{ workspace._id }}"> {{ workspace.name }}</option>
+                        {% endfor %}
+                    </select>
 
+                    <br><br>
+                    
                     <label>
                         Project
                     </label>
@@ -151,13 +163,35 @@
                             <option value="{{ project._id }}"> {{ project.name }}</option>
                         {% endfor %}
                     </select>
+                    
+                    <br></br>
+
+                    <label>
+                        Workspace
+                    </label>
+                    <select name="workspaceId" id="workspace">
+                        {% for workspace in workspaces %}
+                            <option value="{{ workspace._id }}"> {{ workspace.name }}</option>
+                        {% endfor %}
+                    </select>
 
                     <br><br>
 
                     <label>
                         Event ids
                     </label>
-                    <select name="eventIds" required id="events" multiple style="height: 200px"></select>
+                    <select name="eventIds" id="events" multiple style="height: 200px"></select>
+
+                    <br><br>
+
+                    <label>
+                        User
+                    </label>
+                    <select name="userId" id="user">
+                        {% for user in users %}
+                            <option value="{{ user._id }}"> {{ user.name }}</option>
+                        {% endfor %}
+                    </select>
 
                     <br><br>
 
@@ -180,6 +214,7 @@
         <script>
           const eventsSelect = document.getElementById('events');
           const projectSelect = document.getElementById('project');
+          const workspaceSelect = document.getElementById('workspace');
           const loaderClass = 'loading';
 
           projectSelect.addEventListener('change', (event) => {
@@ -208,9 +243,9 @@
                   eventsSelect.appendChild(option);
                 })
 
-                console.log('response', response);
+                console.log('Projects response', response);
               })
-          })
+          });
 
           /**
            * Force filling on page load

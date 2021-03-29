@@ -5,84 +5,130 @@ services:
   #
 
   hawk-worker-javascript:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-javascript
+    entrypoint: yarn run-js
+    volumes:
+      - ./:/usr/src/app
 
   hawk-worker-sourcemaps:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     environment:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-sourcemaps
+    entrypoint: yarn run-maps
+    volumes:
+      - ./:/usr/src/app
 
   hawk-worker-nodejs:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-nodejs
+    entrypoint: yarn run-nodejs
+    volumes:
+      - ./:/usr/src/app
 
   hawk-worker-python:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-python
+    entrypoint: yarn run-python
+    volumes:
+      - ./:/usr/src/app
+
+  hawk-worker-go:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-go
+    volumes:
+      - ./:/usr/src/app
 
   #
   # Processing workers: grouper
   #
 
   hawk-worker-grouper:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-grouper
+    entrypoint: yarn run-grouper
+    volumes:
+      - ./:/usr/src/app
 
   #
   # System workers: archiver
   #
 
   hawk-worker-archiver:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
       - workers/archiver/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-archiver
+    entrypoint: yarn run-archiver
+    volumes:
+      - ./:/usr/src/app
 
   #
   # Notification workers: notifier, email, telegram
   #
 
   hawk-worker-notifier:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-notifier
+    entrypoint: yarn run-notifier
+    volumes:
+      - ./:/usr/src/app
 
   hawk-worker-email:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
       - workers/email/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-email
+    entrypoint: yarn run-email
+    volumes:
+      - ./:/usr/src/app
 
   hawk-worker-telegram:
-    image: "codexteamuser/hawk-workers:prod"
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
     env_file:
       - .env
-      - workers/telegram/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
+    entrypoint: yarn run-telegram
+    volumes:
+      - ./:/usr/src/app
 
 networks:
   default:

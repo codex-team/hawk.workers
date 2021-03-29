@@ -1,11 +1,9 @@
 import { WorkerTask } from './worker-task';
+import { DecodedEventData } from 'hawk.types';
 
 /**
  * Format of task that handled by Event Workers
- *
- * @copyright CodeX
  */
-
 export interface EventWorkerTask extends WorkerTask {
   /**
    * User project's id extracted from Integration Token
@@ -20,7 +18,7 @@ export interface EventWorkerTask extends WorkerTask {
   /**
    * All information about the event
    */
-  payload: EventData;
+  payload: DecodedEventData;
 }
 
 /**

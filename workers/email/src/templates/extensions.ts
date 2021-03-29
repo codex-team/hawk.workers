@@ -1,7 +1,7 @@
 import * as shortNumber from 'short-number';
 import * as Twig from 'twig';
-import { BacktraceFrame } from '../../../../lib/types/event-worker-task';
-import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import { BacktraceFrame } from 'hawk.types';
 
 /**
  * Function to use in template to find backtrace frame with source code
@@ -9,7 +9,7 @@ import { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
  * @param {BacktraceFrame[]} backtrace - event backtrace
  * @returns {BacktraceFrame}
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame | undefined => {
   if (!backtrace || backtrace.length === 0) {
@@ -57,10 +57,14 @@ Twig.extendFilter('leftTrim', (value: string, maxLen: number): string => {
  * @returns {string}
  */
 Twig.extendFilter('prettyTime', (seconds: number): string => {
-  const sec = seconds % 60;
-  const minutes = Math.floor(seconds / 60) % 60;
-  const hours = Math.floor(seconds / 60 / 60) % 24;
-  const days = Math.floor(seconds / 60 / 60 / 24);
+  const SECONDS_IN_MINUTE = 60;
+  const HOURS_IN_DAY = 24;
+  const MINUTES_IN_HOUR = 60;
+
+  const sec = seconds % SECONDS_IN_MINUTE;
+  const minutes = Math.floor(seconds / SECONDS_IN_MINUTE) % SECONDS_IN_MINUTE;
+  const hours = Math.floor(seconds / SECONDS_IN_MINUTE / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+  const days = Math.floor(seconds / SECONDS_IN_MINUTE / MINUTES_IN_HOUR / HOURS_IN_DAY);
 
   let result = '';
 
@@ -86,7 +90,7 @@ Twig.extendFilter('prettyTime', (seconds: number): string => {
 /**
  * Get color by unique id
  *
- * @param {string} id - project/user/stc id to calcula  te color
+ * @param {string} id - project/user/stc id to the color
  * @returns {string}
  */
 Twig.extendFilter('colorById', (id: string): string => {
@@ -105,9 +109,11 @@ Twig.extendFilter('colorById', (id: string): string => {
     return colors[Math.floor(Math.random() * colors.length)];
   }
 
-  const decimalId = parseInt(id.toString().substr(-1), 16); // take last id char and convert to decimal number system
+  const NEW_BASE = 16;
 
-  return colors[Math.floor(decimalId / 2)];
+  const decimalId = parseInt(id.toString().substr(-1), NEW_BASE); // take last id char and convert to decimal number system
+
+  return colors[Math.floor(decimalId / (NEW_BASE / colors.length))];
 });
 
 /**
@@ -118,7 +124,9 @@ Twig.extendFilter('colorById', (id: string): string => {
  * @returns {string}
  */
 Twig.extendFilter('abbrNumber', (value: number): string => {
-  if (value < 1000) {
+  const MAX_VALUE_SIZE = 1000;
+
+  if (value < MAX_VALUE_SIZE) {
     return value.toString();
   }
 
@@ -130,7 +138,7 @@ Twig.extendFilter('abbrNumber', (value: number): string => {
  *
  * @param {TemplateEventData[]} events - events to sort
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 Twig.extendFilter('sortEvents', (events: TemplateEventData[]): TemplateEventData[] => {
   return events.sort((a, b) => a.newCount - b.newCount);

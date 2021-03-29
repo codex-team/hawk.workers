@@ -1,18 +1,27 @@
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
+import { GroupedEventDBScheme } from 'hawk.types';
 import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
-import { ObjectID } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import '../../../env-test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+/**
+ * Load local environment configuration
+ */
+const testEnv = dotenv.config({ path: path.resolve(__dirname, '../.env.test') }).parsed;
+
+Object.assign(process.env, testEnv);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const projectQueryMock = jest.fn(() => ({
-  _id: new ObjectID('5e3eef0679fa3700a0198a49'),
+  _id: new ObjectId('5e3eef0679fa3700a0198a49'),
   name: 'Project',
   notifications: [
     {
-      _id: new ObjectID('5e3eef0679fa3700a0198a49'),
+      _id: new ObjectId('5e3eef0679fa3700a0198a49'),
       isEnabled: true,
-      uidAdded: new ObjectID('5e3eef0679fa3700a0198a49'),
+      uidAdded: new ObjectId('5e3eef0679fa3700a0198a49'),
       whatToReceive: WhatToReceive.All,
       including: [],
       excluding: [],
@@ -63,7 +72,7 @@ const eventsQueryMock = jest.fn(() => ({
       } ],
     } ],
   },
-} as GroupedEvent));
+} as GroupedEventDBScheme));
 const dailyEventsQueryMock = jest.fn(() => 1);
 
 const dbCollectionMock = jest.fn((collection: string) => {
@@ -102,8 +111,7 @@ const dbCloseMock = jest.fn();
 /**
  * Mock
  */
-// eslint-disable-next-line @typescript-eslint/class-name-casing
-class mockDBController {
+class MockDBController {
   /**
    * Mock
    *
@@ -133,9 +141,10 @@ describe('Sender Worker', () => {
    * Mock db controller
    */
   jest.mock('../../../lib/db/controller', () => ({
-    DatabaseController: mockDBController,
+    DatabaseController: MockDBController,
   }));
 
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const ExampleSenderWorker = require('./sender-example').default;
 
   /**
@@ -170,7 +179,9 @@ describe('Sender Worker', () => {
 
       await worker.start();
 
-      expect(dbConnectMock).toHaveBeenCalledTimes(2);
+      const EXPECTED_CALLS_NUMBER = 2;
+
+      expect(dbConnectMock).toHaveBeenCalledTimes(EXPECTED_CALLS_NUMBER);
 
       await worker.finish();
     });
@@ -182,15 +193,18 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
-      expect(projectQueryMock).toBeCalledWith({ _id: new ObjectID('5e3eef0679fa3700a0198a49') });
+      expect(projectQueryMock).toBeCalledWith({ _id: new ObjectId('5e3eef0679fa3700a0198a49') });
     });
 
     /**
@@ -200,12 +214,15 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
       expect(eventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
@@ -218,12 +235,15 @@ describe('Sender Worker', () => {
       const worker = new ExampleSenderWorker();
 
       await worker.handle({
-        projectId: '5e3eef0679fa3700a0198a49',
-        ruleId: '5e3eef0679fa3700a0198a49',
-        events: [ {
-          key: 'groupHash',
-          count: 1,
-        } ],
+        type: 'event',
+        payload: {
+          projectId: '5e3eef0679fa3700a0198a49',
+          ruleId: '5e3eef0679fa3700a0198a49',
+          events: [ {
+            key: 'groupHash',
+            count: 1,
+          } ],
+        },
       });
 
       expect(dailyEventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });

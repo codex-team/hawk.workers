@@ -10,14 +10,15 @@
 import * as http from 'http';
 import * as url from 'url';
 import templates, { Template } from '../src/templates';
-import { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import type { TemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import * as Twig from 'twig';
 import { DatabaseController } from '../../../lib/db/controller';
-import { GroupedEvent } from 'hawk-worker-grouper/types/grouped-event';
-import { ObjectID, ObjectId } from 'mongodb';
+import { GroupedEventDBScheme, ProjectDBScheme, UserDBScheme, WorkspaceDBScheme } from 'hawk.types';
+
+import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { Project } from 'hawk-worker-sender/types/project';
+import { HttpStatusCode } from '../../../lib/utils/consts';
 
 /**
  * Merge email worker .env and root workers .env
@@ -105,6 +106,8 @@ class EmailTestServer {
 
     const email = queryParams.get('email');
     const projectId = queryParams.get('projectId');
+    const workspaceId = queryParams.get('workspaceId');
+    const userId = queryParams.get('users');
     const eventIds = queryParams.getAll('eventIds');
     const type = queryParams.get('type');
 
@@ -120,7 +123,9 @@ class EmailTestServer {
       return;
     }
 
-    const project = await this.getProject(projectId as string);
+    const project = await this.getProject(projectId);
+    const workspace = await this.getWorkspace(workspaceId);
+    const user = await this.getUser(userId);
     const ids = typeof eventIds === 'string' ? [ eventIds ] : eventIds;
     const events = await Promise.all(ids.map(async (eventId: string) => {
       const [event, daysRepeated] = await this.getEventData(projectId as string, eventId.trim());
@@ -135,10 +140,13 @@ class EmailTestServer {
 
     const templateData = {
       events,
-      host: process.env.GARAGE_URL,
-      hostOfStatic: process.env.API_STATIC_URL,
+      host: process.env.GARAGE_URL || 'http://localhost:8080',
+      hostOfStatic: process.env.API_STATIC_URL || 'http://localhost:4000/static',
       project,
+      workspace,
+      user,
       period: 10,
+      reason: 'error on the payment server side',
     };
 
     try {
@@ -152,7 +160,6 @@ class EmailTestServer {
           this.sendHTML(subject, response);
           break;
         default:
-        case 'html':
           this.sendHTML(html, response);
           break;
       }
@@ -168,14 +175,18 @@ class EmailTestServer {
    */
   private async showForm(response: http.ServerResponse): Promise<void> {
     const projects = await this.getAllProjects();
+    const workspaces = await this.getAllWorkspaces();
+    const users = await this.getAllUsers();
 
     const renderForm = (): Promise<string> => new Promise((resolve, reject): void => {
       Twig.renderFile(path.resolve(__dirname, 'emailOverviewForm.twig'),
         {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-        // @ts-ignore because @types/twig doesn't match the docs
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore because @types/twig doesn't match the docs
           templates: Object.keys(templates),
           projects,
+          workspaces,
+          users,
         },
         (err: Error, result: string) => {
           if (err) {
@@ -198,7 +209,7 @@ class EmailTestServer {
    * @param response - node http response stream
    */
   private sendHTML(html: string, response: http.ServerResponse): void {
-    response.writeHead(200, {
+    response.writeHead(HttpStatusCode.Ok, {
       'Content-Type': 'text/html',
     });
     response.write(html);
@@ -211,8 +222,8 @@ class EmailTestServer {
    * @param json - what to send
    * @param response - node http response stream
    */
-  private sendJSON(json: object, response: http.ServerResponse): void {
-    response.writeHead(200, {
+  private sendJSON(json: Record<string, unknown> | unknown[], response: http.ServerResponse): void {
+    response.writeHead(HttpStatusCode.Ok, {
       'Content-Type': 'application/json',
     });
     response.write(JSON.stringify(json));
@@ -224,10 +235,8 @@ class EmailTestServer {
    *
    * @param templateName - template to render
    * @param variables - variables for template
-   *
-   * @returns {Promise<Template>}
    */
-  private async render(templateName: string, variables: EventsTemplateVariables): Promise<Template> {
+  private async render(templateName: string, variables: TemplateVariables): Promise<Template> {
     const template: Template = templates[templateName];
     const renderedTemplate: Template = {
       subject: '',
@@ -239,7 +248,7 @@ class EmailTestServer {
       return new Promise(
         (resolve, reject) => Twig.renderFile(
           template[key as keyof Template],
-          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore because @types/twig doesn't match the docs
           variables,
           (err: Error, res: string): void => {
@@ -250,7 +259,7 @@ class EmailTestServer {
 
             renderedTemplate[key as keyof Template] = res;
 
-            resolve();
+            resolve(null);
           })
       );
     }));
@@ -273,15 +282,13 @@ class EmailTestServer {
   /**
    * Get event data for email
    *
-   * @param {string} projectId - project events are related to
-   * @param {string} eventId - id of event
-   *
-   * @returns {Promise<[GroupedEvent, number]>}
+   * @param projectId - project events are related to
+   * @param eventId - id of event
    */
   private async getEventData(
     projectId: string,
     eventId: string
-  ): Promise<[GroupedEvent, number]> {
+  ): Promise<[GroupedEventDBScheme, number]> {
     const connection = await this.eventsDb.getConnection();
 
     const event = await connection.collection(`events:${projectId}`).findOne({
@@ -297,21 +304,40 @@ class EmailTestServer {
   /**
    * Get project info
    *
-   * @param {string} projectId - project id
-   * @returns {Promise<Project>}
+   * @param projectId - project id
    */
-  private async getProject(projectId: string): Promise<Project | null> {
+  private async getProject(projectId: string): Promise<ProjectDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('projects').findOne({ _id: new ObjectID(projectId) });
+    return connection.collection('projects').findOne({ _id: new ObjectId(projectId) });
+  }
+
+  /**
+   * Get workspace info
+   *
+   * @param workspaceId - workspace id
+   */
+  private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+  }
+
+  /**
+   * Get user info
+   *
+   * @param userId - user id
+   */
+  private async getUser(userId: string): Promise<UserDBScheme | null> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').findOne({ _id: new ObjectId(userId) });
   }
 
   /**
    * Get all projects
-   *
-   * @returns {Promise<Project>}
    */
-  private async getAllProjects(): Promise<Project[]> {
+  private async getAllProjects(): Promise<ProjectDBScheme[]> {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('projects').find(null, { limit: 10 })
@@ -319,12 +345,31 @@ class EmailTestServer {
   }
 
   /**
+   * Get all workspaces
+   */
+  private async getAllWorkspaces(): Promise<WorkspaceDBScheme[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').find(null, { limit: 10 })
+      .toArray();
+  }
+
+  /**
+   * Get all users
+   */
+  private async getAllUsers(): Promise<UserDBScheme[]> {
+    const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('users').find(null, { limit: 10 })
+      .toArray();
+  }
+
+  /**
    * Get all projects
    *
-   * @param {string} projectId - project id
-   * @returns {Promise<GroupedEvent[]>}
+   * @param projectId - project id
    */
-  private async getEventsByProjectId(projectId: string): Promise<GroupedEvent[]> {
+  private async getEventsByProjectId(projectId: string): Promise<GroupedEventDBScheme[]> {
     const connection = await this.eventsDb.getConnection();
 
     return connection.collection(`events:${projectId}`).find(null, {
@@ -334,6 +379,8 @@ class EmailTestServer {
   }
 }
 
-const server = new EmailTestServer(4444);
+const EMAIL_TEST_SERVER_PORT = 4444;
+
+const server = new EmailTestServer(EMAIL_TEST_SERVER_PORT);
 
 server.start();
