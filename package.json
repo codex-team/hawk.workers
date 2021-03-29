@@ -26,6 +26,7 @@
         "run-js": "yarn worker hawk-worker-javascript",
         "run-slack": "yarn worker hawk-worker-slack",
         "run-nodejs": "yarn worker hawk-worker-nodejs",
+        "run-php": "yarn worker hawk-worker-php",
         "run-python": "yarn worker hawk-worker-python",
         "run-go": "yarn worker hawk-worker-go",
         "run-grouper": "yarn worker hawk-worker-grouper",
