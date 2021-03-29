@@ -143,7 +143,7 @@
                     </select>
 
                     <br><br>
-
+                    
                     <label>
                         Workspace
                     </label>
@@ -161,6 +161,17 @@
                     <select name="projectId" id="project">
                         {% for project in projects %}
                             <option value="{{ project._id }}"> {{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <br></br>
+
+                    <label>
+                        Workspace
+                    </label>
+                    <select name="workspaceId" id="workspace">
+                        {% for workspace in workspaces %}
+                            <option value="{{ workspace._id }}"> {{ workspace.name }}</option>
                         {% endfor %}
                     </select>
 
@@ -203,6 +214,7 @@
         <script>
           const eventsSelect = document.getElementById('events');
           const projectSelect = document.getElementById('project');
+          const workspaceSelect = document.getElementById('workspace');
           const loaderClass = 'loading';
 
           projectSelect.addEventListener('change', (event) => {
@@ -231,9 +243,9 @@
                   eventsSelect.appendChild(option);
                 })
 
-                console.log('response', response);
+                console.log('Projects response', response);
               })
-          })
+          });
 
           /**
            * Force filling on page load

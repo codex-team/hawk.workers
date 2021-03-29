@@ -6,6 +6,7 @@ enum Templates {
   BlockWorkspace = 'block-workspace',
   NewEvent = 'new-event',
   PaymentFailed = 'payment-failed',
+  PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
 }
 

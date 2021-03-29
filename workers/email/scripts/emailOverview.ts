@@ -140,8 +140,8 @@ class EmailTestServer {
 
     const templateData = {
       events,
-      host: process.env.GARAGE_URL,
-      hostOfStatic: process.env.API_STATIC_URL,
+      host: process.env.GARAGE_URL || 'http://localhost:8080',
+      hostOfStatic: process.env.API_STATIC_URL || 'http://localhost:4000/static',
       project,
       workspace,
       user,
