@@ -156,13 +156,3 @@ export interface User {
    */
   image?: string;
 }
-
-/**
- * Parsed user agent
- */
-export interface UserAgent {
-  os: string;
-  osVersion: string;
-  browser: string;
-  browserVersion: string;
-}

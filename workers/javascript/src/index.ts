@@ -2,7 +2,7 @@ import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
-import { BacktraceFrame, SourceCodeLine, UserAgent } from '../../../lib/types/event-worker-task';
+import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
@@ -326,15 +326,28 @@ export default class JavascriptEventWorker extends EventWorker {
    * Converts userAgent to strict format: browser browserVersion / OS OsVersion
    * 
    * @param {string} userAgent
-   * @returns {string}
+   * @returns {{[key: string]: string}}
    */
-  private beautifyUserAgent(userAgent: string): UserAgent {
+  private beautifyUserAgent(userAgent: string): {[key: string]: string} {
     const agent = useragent.parse(userAgent);
-    const beautifiedAgent: UserAgent = {
-      os: agent.os.family,
-      osVersion: agent.os.toVersion(),
-      browser: agent.family,
-      browserVersion: agent.toVersion(),
+    let beautifiedAgent = {
+      original: userAgent,
+      os: '',
+      osVersion: '',
+      browser: '',
+      browserVersion: '',
+    }
+
+    try {
+      beautifiedAgent = {
+        original: userAgent,
+        os: agent.os.family,
+        osVersion: agent.os.toVersion(),
+        browser: agent.family,
+        browserVersion: agent.toVersion(),
+      }
+    } catch {
+      this.logger.error('Cannot parse user-agent ' + userAgent);
     }
 
     return beautifiedAgent;
