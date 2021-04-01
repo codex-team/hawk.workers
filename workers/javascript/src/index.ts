@@ -2,7 +2,6 @@ import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
-import { BacktraceFrame, SourceCodeLine } from '../../../lib/types/event-worker-task';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
@@ -13,7 +12,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
 import useragent from 'useragent';
-import { JavaScriptAddons } from 'hawk.types';
+import { JavaScriptAddons, BacktraceFrame, SourceCodeLine } from 'hawk.types';
 
 /**
  * Worker for handling Javascript events

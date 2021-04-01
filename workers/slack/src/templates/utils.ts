@@ -1,7 +1,7 @@
 /**
  * Some helpers used in templates
  */
-import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme, JavaScriptAddons } from 'hawk.types';
 
 /**
  * Returns event location based on the first backtrace frame or URL
@@ -19,8 +19,10 @@ export function getEventLocation(event: DecodedGroupedEvent): string {
     return backtrace[0].file;
   }
 
-  if (addons.url) {
-    return addons.url as string;
+  const jsAddons = addons as JavaScriptAddons;
+
+  if (jsAddons?.url) {
+    return jsAddons.url as string;
   }
 
   return 'Unknown location';

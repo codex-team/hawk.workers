@@ -10,6 +10,15 @@ import JavascriptEventWorker from '../src'; // eslint-disable-line
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task'; // eslint-disable-line
 import '../../../env-test'; // eslint-disable-line
 
+const addons = {
+  window: {
+    innerHeight: 1337,
+    innerWidth: 960,
+  },
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
+  url: 'https://error.hawk.so',
+};
+
 /**
  * Testing Event
  */
@@ -22,14 +31,7 @@ const testEventData = {
     timestamp: 1564948772936,
     backtrace: null,
     get: null,
-    addons: {
-      window: {
-        innerHeight: 1337,
-        innerWidth: 960,
-      },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
-      url: 'https://error.hawk.so',
-    },
+    addons,
     user: null,
     context: null,
   },
@@ -49,6 +51,7 @@ const testEventDataWithRelease = {
         column: 13,
       },
     ],
+    addons,
     get: null,
     user: null,
     context: null,
