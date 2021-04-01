@@ -8,11 +8,12 @@ import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
-import { JavaScriptEventWorkerTask, ExtendedJavaScriptAddons } from '../types/javascript-event-worker-task';
+import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
 import useragent from 'useragent';
+import { JavaScriptAddons } from 'hawk.types';
 
 /**
  * Worker for handling Javascript events
@@ -323,12 +324,12 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Converts userAgent to strict format: browser browserVersion / OS OsVersion
    *
-   * @param {string} userAgent - user agent
-   * @returns {{[key: string]: string}}
+   * @param userAgent - user agent
+   * @returns parsed user agent
    */
-  private beautifyUserAgent(userAgent: string): ExtendedJavaScriptAddons['beautifiedUserAgent'] {
+  private beautifyUserAgent(userAgent: string): JavaScriptAddons['beautifiedUserAgent'] {
     const agent = useragent.parse(userAgent);
-    let beautifiedAgent: ExtendedJavaScriptAddons['beautifiedUserAgent'] = {
+    let beautifiedAgent: JavaScriptAddons['beautifiedUserAgent'] = {
       os: '',
       osVersion: '',
       browser: '',
