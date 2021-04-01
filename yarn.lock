@@ -3513,8 +3513,8 @@ hash.js@^1.0.0, hash.js@^1.0.3:
     minimalistic-assert "^1.0.1"
 
 "hawk.types@https://github.com/codex-team/hawk.types":
-  version "0.0.1"
-  resolved "https://github.com/codex-team/hawk.types#77dbfd4dd17a00fff1c37190788b3ec59622d47a"
+  version "0.1.2"
+  resolved "https://github.com/codex-team/hawk.types#4bcb2d0a10b6bc80e70cd743d951def0bf163ef7"
   dependencies:
     "@types/mongodb" "^3.5.34"
 

@@ -23,7 +23,12 @@ const testEventData = {
     backtrace: null,
     get: null,
     addons: {
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'
+      window: {
+        innerHeight: 1337,
+        innerWidth: 960,
+      },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
+      url: 'https://error.hawk.so',
     },
     user: null,
     context: null,

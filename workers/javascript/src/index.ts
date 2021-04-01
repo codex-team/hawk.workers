@@ -8,7 +8,7 @@ import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
 import * as pkg from '../package.json';
-import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import { JavaScriptEventWorkerTask, ExtendedJavaScriptAddons } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
@@ -81,9 +81,7 @@ export default class JavascriptEventWorker extends EventWorker {
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
 
-    if (event.payload.addons?.userAgent) {
-      event.payload.addons.userAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
-    }
+    event.payload.addons.beautifiedUserAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
@@ -328,10 +326,9 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {string} userAgent - user agent
    * @returns {{[key: string]: string}}
    */
-  private beautifyUserAgent(userAgent: string): {[key: string]: string} {
+  private beautifyUserAgent(userAgent: string): ExtendedJavaScriptAddons['beautifiedUserAgent'] {
     const agent = useragent.parse(userAgent);
-    let beautifiedAgent = {
-      original: userAgent,
+    let beautifiedAgent: ExtendedJavaScriptAddons['beautifiedUserAgent'] = {
       os: '',
       osVersion: '',
       browser: '',
@@ -340,7 +337,6 @@ export default class JavascriptEventWorker extends EventWorker {
 
     try {
       beautifiedAgent = {
-        original: userAgent,
         os: agent.os.family,
         osVersion: agent.os.toVersion(),
         browser: agent.family,
