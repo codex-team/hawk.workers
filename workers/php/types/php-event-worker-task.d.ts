@@ -1,10 +1,10 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData } from 'hawk.types';
+import { DecodedEventData, EventAddons } from 'hawk.types';
 
 /**
  * Describe a context passed from Php Catcher
  */
-interface PhpEventPayload extends DecodedEventData {}
+interface PhpEventPayload extends DecodedEventData<EventAddons> {}
 
 /**
  * Format of task for Php Event Worker

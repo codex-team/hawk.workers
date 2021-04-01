@@ -1,5 +1,5 @@
 import { WorkerTask } from './worker-task';
-import { DecodedEventData } from 'hawk.types';
+import { DecodedEventData, EventAddons } from 'hawk.types';
 
 /**
  * Format of task that handled by Event Workers
@@ -18,5 +18,5 @@ export interface EventWorkerTask extends WorkerTask {
   /**
    * All information about the event
    */
-  payload: DecodedEventData;
+  payload: DecodedEventData<EventAddons>;
 }

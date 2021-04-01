@@ -1940,9 +1940,9 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-"codex-accounting-sdk@https://github.com/codex-team/codex-accounting-sdk":
+codex-accounting-sdk@codex-team/codex-accounting-sdk:
   version "1.2.4"
-  resolved "https://github.com/codex-team/codex-accounting-sdk#e68563b29f0fb11f5a9ff7e151e5919a5801278e"
+  resolved "https://codeload.github.com/codex-team/codex-accounting-sdk/tar.gz/e68563b29f0fb11f5a9ff7e151e5919a5801278e"
   dependencies:
     "@types/node" "^14.6.4"
     axios "^0.20.0"
@@ -3508,8 +3508,8 @@ hash.js@^1.0.0, hash.js@^1.0.3:
     minimalistic-assert "^1.0.1"
 
 "hawk.types@https://github.com/codex-team/hawk.types":
-  version "0.0.1"
-  resolved "https://github.com/codex-team/hawk.types#77dbfd4dd17a00fff1c37190788b3ec59622d47a"
+  version "0.1.0"
+  resolved "https://github.com/codex-team/hawk.types#b428db6006e45a140099b337b2ca0b92ead06d5e"
   dependencies:
     "@types/mongodb" "^3.5.34"
 
