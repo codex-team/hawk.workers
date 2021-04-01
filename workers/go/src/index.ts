@@ -11,7 +11,6 @@ export default class GoEventWorker extends EventWorker {
    */
   public readonly type: string = pkg.workerType;
 
-
   /**
    * Message handle function
    *

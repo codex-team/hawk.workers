@@ -5,7 +5,7 @@ import { EventWorkerTask } from './types/event-worker-task';
 
 /**
  * Defines a Worker that handles events from Catcher.
- * Used for the common language-workers that require no specific logic (source maps consuming etc). Other workers can override `handle()` method 
+ * Used for the common language-workers that require no specific logic (source maps consuming etc). Other workers can override `handle()` method
  */
 export abstract class EventWorker extends Worker {
   /**
