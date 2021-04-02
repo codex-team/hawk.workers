@@ -1,7 +1,7 @@
 /**
  * Some helpers used in templates
  */
-import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme, JavaScriptAddons } from 'hawk.types';
+import { DecodedGroupedEvent, GroupedEventDBScheme, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Returns event location based on the first backtrace frame or URL
