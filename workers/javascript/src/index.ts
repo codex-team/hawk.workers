@@ -81,7 +81,9 @@ export default class JavascriptEventWorker extends EventWorker {
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
 
-    event.payload.addons.beautifiedUserAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
+    if (event.payload.addons?.userAgent) {
+      event.payload.addons.beautifiedUserAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
+    }
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
@@ -324,10 +326,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * Converts userAgent to strict format: browser browserVersion / OS OsVersion
    *
    * @param userAgent - user agent
-   * @returns parsed user agent
    */
   private beautifyUserAgent(userAgent: string): JavaScriptAddons['beautifiedUserAgent'] {
-    const agent = useragent.parse(userAgent);
     let beautifiedAgent: JavaScriptAddons['beautifiedUserAgent'] = {
       os: '',
       osVersion: '',
@@ -336,6 +336,8 @@ export default class JavascriptEventWorker extends EventWorker {
     };
 
     try {
+      const agent = useragent.parse(userAgent);
+
       beautifiedAgent = {
         os: agent.os.family,
         osVersion: agent.os.toVersion(),

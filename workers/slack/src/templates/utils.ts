@@ -19,10 +19,8 @@ export function getEventLocation(event: DecodedGroupedEvent): string {
     return backtrace[0].file;
   }
 
-  const jsAddons = addons as JavaScriptAddons;
-
-  if (jsAddons?.url) {
-    return jsAddons.url as string;
+  if ('url' in addons) {
+    return addons.url as string;
   }
 
   return 'Unknown location';
