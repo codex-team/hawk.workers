@@ -19,7 +19,7 @@ export function getEventLocation(event: DecodedGroupedEvent): string {
     return backtrace[0].file;
   }
 
-  if (addons.url) {
+  if ('url' in addons) {
     return addons.url as string;
   }
 
