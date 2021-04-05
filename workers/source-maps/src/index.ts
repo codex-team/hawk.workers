@@ -8,8 +8,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import { SourcemapCollectedData, SourceMapsEventWorkerTask } from '../types/source-maps-event-worker-task';
-import { SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../types/source-maps-record';
+import { SourcemapCollectedData, SourceMapsEventWorkerTask, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../types/source-map-task';
 import { ObjectId } from 'mongodb';
 
 /**

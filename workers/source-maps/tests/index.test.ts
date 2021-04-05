@@ -3,8 +3,8 @@
  * Tests for Source Maps Worker
  */
 import SourceMapsWorker from '../src/index';
-import { SourcemapCollectedData } from '../types/source-maps-event-worker-task';
-import { SourceMapDataExtended } from '../types/source-maps-record';
+import { SourcemapCollectedData } from '../types/source-map-task';
+import { SourceMapDataExtended } from '../types/source-map-task/source-maps-record';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
