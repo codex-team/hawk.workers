@@ -1,10 +1,10 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData } from 'hawk.types';
+import { DecodedEventData, GoAddons } from 'hawk.types';
 
 /**
  * Describe a context passed from Go Catcher
  */
-interface GoEventPayload extends DecodedEventData {}
+interface GoEventPayload extends DecodedEventData<GoAddons> {}
 
 /**
  * Format of task for Go Event Worker

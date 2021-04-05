@@ -13,7 +13,8 @@ services:
     restart: unless-stopped
     entrypoint: yarn run-js
     volumes:
-      - ./:/usr/src/app
+      - .:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-sourcemaps:
     build:
@@ -27,6 +28,7 @@ services:
     entrypoint: yarn run-maps
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-nodejs:
     build:
@@ -38,6 +40,19 @@ services:
     entrypoint: yarn run-nodejs
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+  hawk-worker-php:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-php
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-python:
     build:
@@ -49,6 +64,7 @@ services:
     entrypoint: yarn run-python
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-go:
     build:
@@ -60,6 +76,7 @@ services:
     entrypoint: yarn run-go
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   #
   # Processing workers: grouper
@@ -75,6 +92,7 @@ services:
     entrypoint: yarn run-grouper
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   #
   # System workers: archiver
@@ -91,6 +109,7 @@ services:
     entrypoint: yarn run-archiver
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   #
   # Notification workers: notifier, email, telegram
@@ -106,6 +125,7 @@ services:
     entrypoint: yarn run-notifier
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-email:
     build:
@@ -118,6 +138,7 @@ services:
     entrypoint: yarn run-email
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-telegram:
     build:
@@ -129,6 +150,10 @@ services:
     entrypoint: yarn run-telegram
     volumes:
       - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+volumes:
+  workers-deps:
 
 networks:
   default:
