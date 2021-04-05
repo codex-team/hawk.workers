@@ -1,11 +1,11 @@
 import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
-import { NodeJSEventWorkerTask } from '../types/nodejs-event-worker-task';
+import { PhpEventWorkerTask } from '../types/php-event-worker-task';
 
 /**
- * Worker for handling NodeJS events
+ * Worker for handling Php events
  */
-export default class NodeJSEventWorker extends EventWorker {
+export default class PhpEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -16,7 +16,7 @@ export default class NodeJSEventWorker extends EventWorker {
    *
    * @param event - event to handle
    */
-  public async handle(event: NodeJSEventWorkerTask): Promise<void> {
+  public async handle(event: PhpEventWorkerTask): Promise<void> {
     return super.handle(event);
   }
 }
