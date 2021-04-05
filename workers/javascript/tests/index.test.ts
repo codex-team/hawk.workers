@@ -1,4 +1,5 @@
 import { MockDBController, releasesJsQueryMock } from './mongodb.mock';
+import { beautifyUserAgent } from '../src/utils';
 /**
  * Mock db controller
  */
@@ -82,6 +83,17 @@ describe('JavascriptEventWorker', () => {
 
     /** Only one data loading from DB should be occured */
     expect(releasesJsQueryMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('should correctly parse user-agent', async () => {
+    const beautifiedUserAgent = beautifyUserAgent(testEventData.payload.addons.userAgent);
+
+    expect(beautifiedUserAgent).toEqual({
+      os: 'Windows',
+      osVersion: '10.0.0',
+      browser: 'Firefox',
+      browserVersion: '80.0.0',
+    });
   });
 
   test('should finish correctly', async () => {

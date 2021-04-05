@@ -11,8 +11,8 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
-import useragent from 'useragent';
-import { JavaScriptAddons, BacktraceFrame, SourceCodeLine } from 'hawk.types';
+import { BacktraceFrame, SourceCodeLine } from 'hawk.types';
+import { beautifyUserAgent } from './utils';
 
 /**
  * Worker for handling Javascript events
@@ -82,7 +82,7 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     if (event.payload.addons?.userAgent) {
-      event.payload.addons.beautifiedUserAgent = this.beautifyUserAgent(event.payload.addons.userAgent.toString());
+      event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
 
     await this.addTask(WorkerNames.GROUPER, {
@@ -320,34 +320,5 @@ export default class JavascriptEventWorker extends EventWorker {
         resolve(consumer);
       });
     });
-  }
-
-  /**
-   * Converts userAgent to strict format: browser browserVersion / OS OsVersion
-   *
-   * @param userAgent - user agent
-   */
-  private beautifyUserAgent(userAgent: string): JavaScriptAddons['beautifiedUserAgent'] {
-    let beautifiedAgent: JavaScriptAddons['beautifiedUserAgent'] = {
-      os: '',
-      osVersion: '',
-      browser: '',
-      browserVersion: '',
-    };
-
-    try {
-      const agent = useragent.parse(userAgent);
-
-      beautifiedAgent = {
-        os: agent.os.family,
-        osVersion: agent.os.toVersion(),
-        browser: agent.family,
-        browserVersion: agent.toVersion(),
-      };
-    } catch {
-      this.logger.error('Cannot parse user-agent ' + userAgent);
-    }
-
-    return beautifiedAgent;
   }
 }
