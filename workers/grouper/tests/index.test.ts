@@ -49,7 +49,6 @@ function generateTask(userId: string | false = generateRandomId()): GroupWorkerT
     catcherType: 'grouper',
     event: {
       title: 'Hawk client catcher test',
-      timestamp: (new Date()).getTime(),
       backtrace: [],
       ...(userId && {
         user: {
