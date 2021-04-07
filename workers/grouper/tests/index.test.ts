@@ -11,8 +11,7 @@ const testGroupingTask = {
   projectId: '5d206f7f9aaf7c0071d64596',
   catcherType: 'grouper',
   event: {
-    title: 'Hawk client catcher test',
-    timestamp: (new Date()).getTime(),
+    title: 'Test event',
     backtrace: [],
     context: {
       testField: 87,
