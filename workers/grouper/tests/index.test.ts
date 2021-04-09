@@ -5,31 +5,6 @@ import { Collection, MongoClient } from 'mongodb';
 jest.mock('amqplib');
 
 /**
- * Test Grouping task
- */
-const testGroupingTask = {
-  projectId: '5d206f7f9aaf7c0071d64596',
-  catcherType: 'grouper',
-  event: {
-    title: 'Hawk client catcher test',
-    timestamp: (new Date()).getTime(),
-    backtrace: [],
-    context: {
-      testField: 87,
-      'ima$ge.jpg': 'img',
-    },
-    addons: {
-      vue: {
-        data: {
-          'test-test': false,
-          'ima$ge.jpg': 'img',
-        },
-      },
-    },
-  },
-} as GroupWorkerTask;
-
-/**
  * Returns random string
  */
 function generateRandomId(): string {
@@ -40,13 +15,18 @@ function generateRandomId(): string {
 }
 
 /**
+ * Mocked Project id used for tests
+ */
+const projectIdMock = '5d206f7f9aaf7c0071d64596';
+
+/**
  * Generates task for testing
  *
  * @param userId - user id in event, if false provided, user field will be missed
  */
 function generateTask(userId: string | false = generateRandomId()): GroupWorkerTask {
   return {
-    projectId: '5d206f7f9aaf7c0071d64596',
+    projectId: projectIdMock,
     catcherType: 'grouper',
     event: {
       title: 'Hawk client catcher test',
@@ -86,9 +66,9 @@ describe('GrouperWorker', () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    eventsCollection = connection.db().collection('events:' + testGroupingTask.projectId);
-    dailyEventsCollection = connection.db().collection('dailyEvents:' + testGroupingTask.projectId);
-    repetitionsCollection = connection.db().collection('repetitions:' + testGroupingTask.projectId);
+    eventsCollection = connection.db().collection('events:' + projectIdMock);
+    dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
+    repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
   });
 
   /**
@@ -103,16 +83,18 @@ describe('GrouperWorker', () => {
 
   describe('Saving events', () => {
     test('Should save event to database', async () => {
+      const testGroupingTask = generateTask();
+
       await worker.handle(testGroupingTask);
 
       expect(await eventsCollection.find().count()).toBe(1);
     });
 
     test('Should increment total events count on each processing', async () => {
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
 
       expect((await eventsCollection.findOne({})).totalCount).toBe(4);
     });
@@ -172,23 +154,25 @@ describe('GrouperWorker', () => {
 
   describe('Saving daily events', () => {
     test('Should save daily events record', async () => {
+      const testGroupingTask = generateTask();
+
       await worker.handle(testGroupingTask);
 
       expect(await dailyEventsCollection.find().count()).toBe(1);
     });
 
     test('Should update events count per day', async () => {
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
 
       expect((await dailyEventsCollection.findOne({})).count).toBe(4);
     });
 
     test('Should update last repetition id', async () => {
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
 
       const repetition = await repetitionsCollection.findOne({});
 
@@ -198,9 +182,9 @@ describe('GrouperWorker', () => {
 
   describe('Saving repetitions', () => {
     test('Should save event repetitions on processing', async () => {
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
-      await worker.handle(testGroupingTask);
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
 
       const originalEvent = await eventsCollection.findOne({});
 

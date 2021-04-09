@@ -18,6 +18,7 @@
         "test:php": "jest workers/php",
         "test:slack": "jest workers/slack",
         "test:limiter": "jest workers/limiter",
+        "test:grouper": "jest workers/grouper",
         "test:clear": "jest --clearCache",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "migration-add": "migrate-mongo create",
