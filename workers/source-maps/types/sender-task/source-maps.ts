@@ -10,7 +10,7 @@ export interface SourcemapCollectedData {
   payload: string;
 }
 
-export interface SourceMapsEventWorkerTask {
+export interface ReleaseWorkerSourceMapsPayload {
   /**
    * Project that sends the source map
    */
@@ -25,4 +25,12 @@ export interface SourceMapsEventWorkerTask {
    * List of source maps for all chunks
    */
   files: SourcemapCollectedData[];
+}
+
+/**
+ * Payload of an event assigning someone to resolve the issue (event)
+ */
+export interface ReleaseWorkerSourceMapsTask {
+  type: 'source-maps',
+  payload: ReleaseWorkerSourceMapsPayload
 }

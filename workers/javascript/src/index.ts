@@ -6,7 +6,7 @@ import { BacktraceFrame, SourceCodeLine } from 'hawk.types';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
-import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-map-task';
+import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/sender-task';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';

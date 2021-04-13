@@ -3,12 +3,11 @@
  * Tests for Source Maps Worker
  */
 import SourceMapsWorker from '../src/index';
-import { SourcemapCollectedData } from '../types/source-map-task';
-import { SourceMapDataExtended } from '../types/source-map-task/source-maps-record';
+import { SourcemapCollectedData, SourceMapDataExtended } from '../types/sender-task';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
-describe('SourceMaps Worker', () => {
+describe('Release Worker', () => {
   /**
    * Testing bundle of a mock application from './mock/src/'
    */

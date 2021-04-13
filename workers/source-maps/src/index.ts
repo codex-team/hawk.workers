@@ -2,13 +2,13 @@
  * This worker gets source map from the Registry and puts it to Mongo
  * to provide access for it for JS Worker
  */
-import { RawSourceMap } from 'hawk-worker-javascript/node_modules/source-map';
+import { RawSourceMap } from 'source-map';
 import { Readable } from 'stream';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import { SourcemapCollectedData, SourceMapsEventWorkerTask, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord } from '../types/source-map-task';
+import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerSourceMapsPayload, ReleaseWorkerAddReleasePayload } from '../types/sender-task';
 import { ObjectId } from 'mongodb';
 
 /**
@@ -29,7 +29,7 @@ export default class SourceMapsWorker extends Worker {
    * Source maps will stored in this collection
    * One for all projects
    */
-  private readonly dbCollectionName: string = 'releases-js';
+  private readonly dbCollectionName: string = 'releases';
 
   /**
    * Start consuming messages
@@ -51,22 +51,31 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Message handle function
    *
-   * @param {SourceMapsEventWorkerTask} task - Message object from consume method
+   * @param task - Message object from consume method
    */
-  public async handle(task: SourceMapsEventWorkerTask): Promise<void> {
-    /**
-     * Extract original file name from source-map's "file" property
-     * and extend data-to-save with it
-     */
+  public async handle(task: ReleaseWorkerTask): Promise<void> {
+    switch (task.type) {
+      case 'source-maps': this.saveSourceMap(task.payload as ReleaseWorkerSourceMapsPayload); break;
+      case 'add-release': this.saveRelease(task.payload as ReleaseWorkerAddReleasePayload); break;
+    }
+  }
+
+  /**
+   * Extract original file name from source-map's "file" property
+   * and extend data-to-save with it
+   *
+   * @param payload - source map data
+   */
+  private async saveSourceMap(payload: ReleaseWorkerSourceMapsPayload): Promise<void> {
     try {
-      const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(task.files);
+      const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
 
       /**
        * Save source map
        */
       await this.save({
-        projectId: task.projectId,
-        release: task.release,
+        projectId: payload.projectId,
+        release: payload.release,
         files: sourceMapsFilesExtended,
       } as SourceMapsRecord);
     } catch (error) {
@@ -76,6 +85,16 @@ export default class SourceMapsWorker extends Worker {
 
       throw new NonCriticalError('Can\'t parse source-map file');
     }
+  }
+
+  /**
+   * Save user's release
+   *
+   * @param payload - release payload
+   */
+  private async saveRelease(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+    // todo: save release
+
   }
 
   /**
@@ -107,7 +126,7 @@ export default class SourceMapsWorker extends Worker {
   /**
    * Save map file to database
    *
-   * @param {SourceMapsRecord} releaseData - info with source map
+   * @param releaseData - info with source map
    */
   private async save(releaseData: SourceMapsRecord): Promise<ObjectId | null> {
     try {
