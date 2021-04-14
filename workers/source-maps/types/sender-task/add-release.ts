@@ -12,17 +12,17 @@ export interface CommitData {
   /**
    * Title of the commit
    */
-  title: string;
+  title?: string;
 
   /**
    * Author
    */
-  author: string;
+  author?: string;
 
   /**
    * Commit date
    */
-  date: string;
+  date?: string;
 }
 
 /**
@@ -30,9 +30,14 @@ export interface CommitData {
  */
 export interface ReleaseWorkerAddReleasePayload {
   /**
-   * ID of the release
+   * Project id
    */
-  releaseId: string;
+  projectId: string;
+
+  /**
+   * Release id: 
+   */
+  release: string;
 
   /**
    * Commits data
@@ -42,7 +47,7 @@ export interface ReleaseWorkerAddReleasePayload {
   /**
    * List of source maps for all chunks
    */
-  sourceMaps: SourcemapCollectedData[];
+  files: SourcemapCollectedData[];
 }
 
 /**
