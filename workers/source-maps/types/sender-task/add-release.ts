@@ -15,7 +15,7 @@ export interface CommitData {
   title?: string;
 
   /**
-   * Author
+   * Commit author
    */
   author?: string;
 
@@ -35,7 +35,7 @@ export interface ReleaseWorkerAddReleasePayload {
   projectId: string;
 
   /**
-   * Release id: 
+   * Release id: custom release name
    */
   release: string;
 
@@ -51,7 +51,7 @@ export interface ReleaseWorkerAddReleasePayload {
 }
 
 /**
- * Payload of an event assigning someone to resolve the issue (event)
+ * Worker task for adding a new release
  */
 export interface ReleaseWorkerAddReleaseTask {
   type: 'add-release',
