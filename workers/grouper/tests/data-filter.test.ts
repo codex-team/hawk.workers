@@ -10,8 +10,9 @@ jest.mock('amqplib');
 /**
  * Generates task for testing
  *
- * @param [context] - generated event context
- * @param [addons] - generated event addons
+ * @param {{context, addons}} options - factory options
+ * @param [options.context] - generated event context
+ * @param [options.addons] - generated event addons
  */
 function generateEvent({ context, addons }: {context?: Json, addons?: EventAddons}): EventDataAccepted<EventAddons> {
   return {
@@ -31,14 +32,15 @@ function generateEvent({ context, addons }: {context?: Json, addons?: EventAddon
  * Example of object with sensitive information
  */
 const sensitiveDataMock = {
-  pan: 'SENSITIVE_DATA',
-  secret: 'SENSITIVE_DATA',
-  credentials: 'SENSITIVE_DATA',
-  'card[number]': 'SENSITIVE_DATA',
-  password: 'SENSITIVE_DATA',
-  auth: 'SENSITIVE_DATA',
+  pan: '5500 0000 0000 0004',
+  secret: 'D6A03F5C2E0E356F262D56F44370E1CD813583B2',
+  credentials: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
+  'card[number]': '5500 0000 0000 0004',
+  password: 'bFb7PBm6nZ7RJRq9',
+  auth: 'C4CA4238A0B923820DCC509A6F75849B',
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  access_token: 'SENSITIVE_DATA',
+  access_token: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
+  accessToken: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
 };
 
 describe('GrouperWorker', () => {

@@ -1,4 +1,4 @@
-import { EventAddons, EventDataAccepted } from 'hawk.types';
+import { EventAddons, EventDataAccepted, Json } from 'hawk.types';
 import iterator from 'object-recursive-iterator';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
@@ -67,12 +67,12 @@ export default class DataFilter {
   }
 
   /**
-   * Filter values which are keys in list of possible sensitive keys
+   * Filter values which keys are in list of possible sensitive keys
    *
    * @param key - object key to check
    * @param value - object value to filter
    */
-  private filterSensitiveData(key: string, value: string | number | boolean): string | number | boolean {
+  private filterSensitiveData(key: string, value: string | number | boolean | Json): string | number | boolean | Json {
     /**
      * Values can be an object — leave them as is
      */
@@ -88,8 +88,15 @@ export default class DataFilter {
       'password',
       'auth',
       'access_token',
+      'accessToken',
     ];
-    const keyRegex = new RegExp(possibleSensitiveDataKeys.join('|').replace('[', '\\['), 'gi');
+    const keyRegex = new RegExp(
+      possibleSensitiveDataKeys
+        .join('|')
+        .replace('[', '\\[')
+        .replace(']', '\\]'),
+      'gi'
+    );
 
     if (keyRegex.test(key)) {
       return this.filteredValuePlaceholder;
