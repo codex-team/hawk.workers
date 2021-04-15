@@ -11,6 +11,7 @@ import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErro
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import DataFilter from './data-filter';
 
 /**
  * Error code of MongoDB key duplication error
@@ -40,6 +41,11 @@ export default class GrouperWorker extends Worker {
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+
+  /**
+   * This class will filter sensitive information
+   */
+  private dataFilter = new DataFilter();
 
   /**
    * Get unique hash from event data
@@ -96,6 +102,11 @@ export default class GrouperWorker extends Worker {
     const isFirstOccurrence = existedEvent === null;
 
     let repetitionId = null;
+
+    /**
+     * Filter sensitive information
+     */
+    this.dataFilter.processEvent(task.event);
 
     if (isFirstOccurrence) {
       try {
