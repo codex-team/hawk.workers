@@ -496,6 +496,6 @@ describe('Limiter worker', () => {
 
   afterAll(async () => {
     await connection.close();
-    redisClient.end();
+    redisClient.end(true);
   });
 });
