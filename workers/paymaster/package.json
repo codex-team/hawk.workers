@@ -8,6 +8,6 @@
   "private": true,
   "workerType": "cron-tasks/paymaster",
   "dependencies": {
-    "axios": "^0.21.0"
+    "axios": "^0.21.1"
   }
 }
