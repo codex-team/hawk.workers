@@ -33,7 +33,6 @@ export default class RedisHelper {
     return new Promise((resolve, reject) => {
       const callback = this.createCallback(resolve, reject);
 
-
       this.redisClient.set(`${groupHash}:${userId}`, '1', 'EX', RedisHelper.LOCK_TTL, 'NX', callback);
     });
   }

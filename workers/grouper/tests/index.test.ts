@@ -1,8 +1,8 @@
-import GrouperWorker from '../src/index';
-import { GroupWorkerTask } from '../types/group-worker-task';
 import '../../../env-test';
+import GrouperWorker from '../src';
+import { GroupWorkerTask } from '../types/group-worker-task';
+import redis from 'redis';
 import { Collection, MongoClient } from 'mongodb';
-import redis, { RedisClient } from 'redis';
 
 jest.mock('amqplib');
 
@@ -61,7 +61,7 @@ describe('GrouperWorker', () => {
   let eventsCollection: Collection;
   let dailyEventsCollection: Collection;
   let repetitionsCollection: Collection;
-  let redisClient: RedisClient;
+  let redisClient;
 
   beforeAll(async () => {
     await worker.start();
@@ -259,6 +259,5 @@ describe('GrouperWorker', () => {
   afterAll(async () => {
     await worker.finish();
     await connection.close();
-    redisClient.end(true);
   });
 });
