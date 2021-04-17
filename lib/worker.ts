@@ -285,21 +285,34 @@ export abstract class Worker {
       this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
       this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
 
+      switch (e.constructor) {
+        case CriticalError:
+          this.logger.error('CriticalError: ', e);
+          /**
+           * Send message to queue again since we failed to handle it
+           */
+          this.logger.info('Resend message to queue...');
+          await this.requeue(msg);
+
+          return;
+        case MongoError:
+          this.logger.error('MongoError: ', e);
+
+          return;
+        case NonCriticalError:
+          this.logger.error('NonCriticalError: ', e);
+
+          return;
+        default:
+          this.logger.error('Unknown error: ', e);
+      }
+
       /**
-       * Send back message to registry since we failed to handle it
+       * Send message to stash if it isn't a CriticalError
        */
-      if (e instanceof CriticalError) {
-        this.logger.info('Requeueing msg');
-        await this.requeue(msg);
-      } else if (e instanceof NonCriticalError) {
+      if (!(e instanceof CriticalError)) {
         this.logger.info('Sending msg to stash');
         await this.sendToStash(msg);
-      } else if (e instanceof MongoError) {
-        this.logger.error('MongoError: ', e);
-
-        throw e;
-      } else {
-        this.logger.error('Unknown error:\n', e);
       }
     }
   }
