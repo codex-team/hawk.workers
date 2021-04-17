@@ -238,6 +238,8 @@ export abstract class Worker {
    * @param {Buffer} msg.content - Message content
    */
   private async sendToStash(msg: amqp.Message): Promise<void> {
+    this.logger.info('Sending message to stash');
+
     return this.channelWithRegistry.reject(msg, false);
   }
 
@@ -290,25 +292,26 @@ export abstract class Worker {
           this.logger.info('Resend message to queue...');
           await this.requeue(msg);
 
-          return;
+          /**
+           * Throw error to exit the process
+           */
+          throw e;
         case MongoError:
           this.logger.error('MongoError: ', e);
+          await this.sendToStash(msg);
 
-          return;
+          /**
+           * Throw error to exit the process
+           */
+          throw e;
         case NonCriticalError:
           this.logger.error('NonCriticalError: ', e);
+          await this.sendToStash(msg);
 
           return;
         default:
           this.logger.error('Unknown error: ', e);
-      }
-
-      /**
-       * Send message to stash if it isn't a CriticalError
-       */
-      if (!(e instanceof CriticalError)) {
-        this.logger.info('Sending msg to stash');
-        await this.sendToStash(msg);
+          await this.sendToStash(msg);
       }
     }
   }
