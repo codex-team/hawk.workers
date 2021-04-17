@@ -280,10 +280,6 @@ export abstract class Worker {
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       HawkCatcher.send(e);
-      this.logger.error('Worker::processMessage: An error occurred:\n', e);
-
-      this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
-      this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
 
       switch (e.constructor) {
         case CriticalError:
