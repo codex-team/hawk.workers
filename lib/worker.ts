@@ -238,6 +238,8 @@ export abstract class Worker {
    * @param {Buffer} msg.content - Message content
    */
   private async sendToStash(msg: amqp.Message): Promise<void> {
+    this.logger.info('Sending message to stash');
+
     return this.channelWithRegistry.reject(msg, false);
   }
 
@@ -280,26 +282,36 @@ export abstract class Worker {
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       HawkCatcher.send(e);
-      this.logger.error('Worker::processMessage: An error occurred:\n', e);
 
-      this.logger.debug('instanceof CriticalError? ' + (e instanceof CriticalError));
-      this.logger.debug('instanceof NonCriticalError? ' + (e instanceof NonCriticalError));
+      switch (e.constructor) {
+        case CriticalError:
+          this.logger.error('CriticalError: ', e);
+          /**
+           * Send message to queue again since we failed to handle it
+           */
+          this.logger.info('Resend message to queue...');
+          await this.requeue(msg);
 
-      /**
-       * Send back message to registry since we failed to handle it
-       */
-      if (e instanceof CriticalError) {
-        this.logger.info('Requeueing msg');
-        await this.requeue(msg);
-      } else if (e instanceof NonCriticalError) {
-        this.logger.info('Sending msg to stash');
-        await this.sendToStash(msg);
-      } else if (e instanceof MongoError) {
-        this.logger.error('MongoError: ', e);
+          /**
+           * Throw error to exit the process
+           */
+          throw e;
+        case MongoError:
+          this.logger.error('MongoError: ', e);
+          await this.sendToStash(msg);
 
-        throw e;
-      } else {
-        this.logger.error('Unknown error:\n', e);
+          /**
+           * Throw error to exit the process
+           */
+          throw e;
+        case NonCriticalError:
+          this.logger.error('NonCriticalError: ', e);
+          await this.sendToStash(msg);
+
+          return;
+        default:
+          this.logger.error('Unknown error: ', e);
+          await this.sendToStash(msg);
       }
     }
   }
