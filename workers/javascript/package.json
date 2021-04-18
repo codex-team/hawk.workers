@@ -6,6 +6,13 @@
   "license": "UNLICENSED",
   "workerType": "errors/javascript",
   "devDependencies": {
-    "source-map": "^0.7.3"
+    "@types/node": "^12.7.2",
+    "@types/useragent": "^2.1.1",
+    "source-map": "^0.7.3",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.3"
+  },
+  "dependencies": {
+    "useragent": "^2.3.0"
   }
 }
