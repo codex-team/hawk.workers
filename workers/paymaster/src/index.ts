@@ -131,24 +131,26 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspaceSubscriptionCheckEvent(): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    const result = await Promise.all(workspaces.map(
-      (workspace) => {
+    const result = await Promise.all(workspaces
+      .filter(workspace => {
         /**
          * Skip workspace without lastChargeDate
          */
         if (!workspace.lastChargeDate) {
-          const error = new Error('Workspace without lastChargeDate detected');
+          const error = new Error('[Paymaster] Workspace without lastChargeDate detected');
 
           HawkCatcher.send(error, {
             workspaceId: workspace._id,
           });
 
-          throw error;
+          return false;
         }
 
-        return this.processWorkspaceSubscriptionCheck(workspace);
-      }
-    ));
+        return true;
+      })
+      .map(
+        (workspace) => this.processWorkspaceSubscriptionCheck(workspace)
+      ));
 
     await this.sendReport(result);
   }
