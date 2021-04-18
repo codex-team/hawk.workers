@@ -12,6 +12,7 @@ import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsaf
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
+import RedisHelper from './redisHelper';
 
 /**
  * Error code of MongoDB key duplication error
@@ -46,6 +47,11 @@ export default class GrouperWorker extends Worker {
    * This class will filter sensitive information
    */
   private dataFilter = new DataFilter();
+
+  /**
+   * Redis helper instance for modifying data through redis
+   */
+  private redis = new RedisHelper();
 
   /**
    * Get unique hash from event data
@@ -205,10 +211,13 @@ export default class GrouperWorker extends Worker {
           });
       });
 
-      /**
-       * If there is no repetitions from this user — return true
-       */
-      return !repetition;
+      if (repetition) {
+        return false;
+      }
+
+      const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
+
+      return !isLocked;
     }
   }
 
