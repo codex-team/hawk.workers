@@ -53,7 +53,7 @@ export default class RedisHelper {
 
         return;
       }
-      this.logger.info('Successfully saved to Redis');
+      this.logger.debug('Successfully saved to Redis');
       resolve(resp !== 'OK');
     };
   }
