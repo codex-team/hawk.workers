@@ -42,7 +42,7 @@ const createPlanMock = (parameters: {
 const createWorkspaceMock = (parameters: {
   plan: PlanDBScheme;
   billingPeriodEventsCount: number;
-  lastChargeDate: Date;
+  lastChargeDate: Date | undefined;
   subscriptionId: string;
   isBlocked: boolean;
 }): WorkspaceDBScheme => {
@@ -302,6 +302,44 @@ describe('PaymasterWorker', () => {
 
     expect(updatedWorkspace).toEqual(workspace);
     MockDate.reset();
+  });
+
+  test('Shouldn\'t throw error if lastChargeDate of workspace is undefined', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-21');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: undefined,
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+
+    /**
+     * Assert
+     */
+    await expect(worker.handle(WORKSPACE_SUBSCRIPTION_CHECK)).resolves.not.toThrow();
+    await worker.finish();
   });
 
   test('Should send a report with collected data', async () => {
