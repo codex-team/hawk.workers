@@ -30,7 +30,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Collection where source maps stored
    */
-  private releasesDbCollectionName = 'releases-js';
+  private releasesDbCollectionName = 'releases';
 
   /**
    * Extract base filename from path

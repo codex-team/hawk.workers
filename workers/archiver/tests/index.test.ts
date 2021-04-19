@@ -108,7 +108,7 @@ describe('Archiver worker', () => {
   });
 
   test('Should remove old releases', async () => {
-    await db.collection('releases-js').insertMany(mockedReleases);
+    await db.collection('releases').insertMany(mockedReleases);
 
     const worker = new ArchiverWorker();
 
@@ -117,7 +117,7 @@ describe('Archiver worker', () => {
 
     await worker['removeOldReleases'](mockedProject);
 
-    const newReleasesCollection = await db.collection('releases-js')
+    const newReleasesCollection = await db.collection('releases')
       .find({})
       .toArray();
 
