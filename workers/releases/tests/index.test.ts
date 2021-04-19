@@ -80,7 +80,7 @@ describe('Release Worker', () => {
     });
 
     let releasesCollection = db.collection('releases');
-    let release = releasesCollection.findOne({
+    let release = await releasesCollection.findOne({
       projectId: releasePayload.projectId,
       release: releasePayload.release
     })
