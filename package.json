@@ -16,6 +16,7 @@
         "test:javascript": "jest workers/javascript",
         "test:nodejs": "jest workers/nodejs",
         "test:php": "jest workers/php",
+        "test:releases": "jest workers/releases",
         "test:slack": "jest workers/slack",
         "test:limiter": "jest workers/limiter",
         "test:clear": "jest --clearCache",

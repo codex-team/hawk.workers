@@ -1,19 +1,23 @@
 /* tslint:disable:no-string-literal */
-import { Collection, Db, MongoClient } from 'mongodb';
-import { ProjectDBScheme } from 'hawk.types';
+import { Db, MongoClient } from 'mongodb';
 
 /**
  * Tests for Source Maps Worker
  */
 import ReleasesWorker from '../src/index';
-import { SourcemapCollectedData, SourceMapDataExtended } from '../types';
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types'; 
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
+
+const releasePayload: ReleaseWorkerAddReleasePayload = {
+  projectId: '5e4ff518628a6c714515f844',
+  release: 'Dapper Dragon',
+  commits: [],
+}
 
 describe('Release Worker', () => {
   let connection: MongoClient;
   let db: Db;
-  let releasesCollection: Collection<ProjectDBScheme>;
 
   /**
    * Testing bundle of a mock application from './mock/src/'
@@ -24,6 +28,12 @@ describe('Release Worker', () => {
    * Create webpack bundle and source map for Mock App
    */
   beforeAll(async () => {
+    connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    db = await connection.db('hawk');
+
     await mockBundle.build();
   });
 
@@ -66,19 +76,16 @@ describe('Release Worker', () => {
 
     workerInstance.handle({
       type: 'add-release',
-      payload: {
-        projectId: '5e4ff518628a6c714515f844',
-        release: 'Dapper Dragon',
-        commits: [],
-      },
-
-      // connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
-      // useNewUrlParser: true,
-      // useUnifiedTopology: true,
-      // });
-      // db = await connection.db('hawk');
-      // projectCollection = db.collection<ProjectDBScheme>('projects');
+      payload: releasePayload
     });
+
+    let releasesCollection = db.collection('releases');
+    let release = releasesCollection.findOne({
+      projectId: releasePayload.projectId,
+      release: releasePayload.release
+    })
+
+    await expect(release).toMatchObject(releasePayload);
   });
 
   /**
