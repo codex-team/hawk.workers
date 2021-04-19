@@ -1,10 +1,10 @@
 {
-  "name": "hawk-worker-sourcemaps",
+  "name": "hawk-worker-releases",
   "description": "Collects and parses the source maps",
-  "workerType": "release/javascript",
+  "workerType": "releases/javascript",
   "version": "0.0.1",
   "main": "src/index.ts",
-  "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/source-maps",
+  "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/releases",
   "author": "CodeX",
   "license": "UNLICENSED",
   "private": true,

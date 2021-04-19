@@ -8,13 +8,13 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerSourceMapsPayload, ReleaseWorkerAddReleasePayload } from '../types/sender-task';
+import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload } from '../types';
 import { ObjectId } from 'mongodb';
 
 /**
- * Java Script source maps worker
+ * Java Script releases worker
  */
-export default class SourceMapsWorker extends Worker {
+export default class ReleasesWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -55,7 +55,6 @@ export default class SourceMapsWorker extends Worker {
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
     switch (task.type) {
-      case 'source-maps': this.saveSourceMap(task.payload as ReleaseWorkerSourceMapsPayload); break;
       case 'add-release': this.saveRelease(task.payload as ReleaseWorkerAddReleasePayload); break;
     }
   }
@@ -66,14 +65,14 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param payload - source map data
    */
-  private async saveSourceMap(payload: ReleaseWorkerSourceMapsPayload): Promise<void> {
+  private async saveSourceMap(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
     try {
       const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
 
       /**
        * Save source map
        */
-      await this.save({
+      await this.saveSourceMapJS({
         projectId: payload.projectId,
         release: payload.release,
         files: sourceMapsFilesExtended,
@@ -93,8 +92,24 @@ export default class SourceMapsWorker extends Worker {
    * @param payload - release payload
    */
   private async saveRelease(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
-    // todo: save release
+    try {
+      const commits = payload.commits;
 
+      const release = await this.db.getConnection()
+        .collection(this.dbCollectionName)
+        .insertOne({
+          projectId: payload.projectId,
+          release: payload.release,
+          commits: commits,
+        });
+
+      // save source maps
+      this.saveSourceMap(payload);
+
+      console.log(commits, release);
+    } catch (err) {
+      throw new DatabaseReadWriteError(err);
+    }
   }
 
   /**
@@ -128,7 +143,7 @@ export default class SourceMapsWorker extends Worker {
    *
    * @param releaseData - info with source map
    */
-  private async save(releaseData: SourceMapsRecord): Promise<ObjectId | null> {
+  private async saveSourceMapJS(releaseData: SourceMapsRecord): Promise<ObjectId | null> {
     try {
       const existedRelease = await this.db.getConnection()
         .collection(this.dbCollectionName)

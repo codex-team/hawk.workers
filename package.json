@@ -35,7 +35,7 @@
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-notifier": "yarn worker hawk-worker-notifier",
-        "run-maps": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps",
+        "run-releases": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-releases",
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
         "run-limiter": "yarn worker hawk-worker-limiter"

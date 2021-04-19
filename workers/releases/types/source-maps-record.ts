@@ -82,3 +82,15 @@ export interface SourceMapFileChunk {
    */
   md5: string;
 }
+
+export interface SourcemapCollectedData {
+  /**
+   * Bundle or chunk name
+   */
+  name: string;
+
+  /**
+   * Source map body
+   */
+  payload: string;
+}

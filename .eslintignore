@@ -1,6 +1,6 @@
 /coverage
 ecosystem.config.js
 node_modules
-/workers/source-maps/tests/mock
+/workers/releases/tests/mock
 /workers/migrations
 .github

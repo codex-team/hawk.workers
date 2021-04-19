@@ -42,7 +42,7 @@ For simplicity, Hawk workers can be used as part of the [Mono repository](https:
 > Note. You can override some env variables on worker running:
 
 ```
-SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-sourcemaps
+SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-releases
 ```
 
 ## Running workers with PM2

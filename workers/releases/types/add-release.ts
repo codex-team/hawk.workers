@@ -1,4 +1,4 @@
-import { SourcemapCollectedData } from './source-maps';
+import { SourcemapCollectedData } from './source-maps-record';
 
 /**
  * Git commit data needed to create a release
@@ -47,7 +47,7 @@ export interface ReleaseWorkerAddReleasePayload {
   /**
    * List of source maps for all chunks
    */
-  files: SourcemapCollectedData[];
+  files?: SourcemapCollectedData[];
 }
 
 /**

@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-javascript
 
-  hawk-worker-sourcemaps:
+  hawk-worker-releases:
     image: "codexteamuser/hawk-workers:prod"
     network_mode: host
     env_file:
@@ -20,7 +20,7 @@ services:
     environment:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-sourcemaps
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-releases
 
   hawk-worker-nodejs:
     image: "codexteamuser/hawk-workers:prod"
