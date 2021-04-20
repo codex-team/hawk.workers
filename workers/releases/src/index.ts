@@ -60,6 +60,32 @@ export default class ReleasesWorker extends Worker {
   }
 
   /**
+   * Save user's release
+   *
+   * @param payload - release payload
+   */
+  private async saveRelease(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+    try {
+      const commits = payload.commits;
+
+      await this.db.getConnection()
+        .collection(this.dbCollectionName)
+        .insertOne({
+          projectId: payload.projectId,
+          release: payload.release,
+          commits: commits,
+        });
+
+      // save source maps
+      if (payload.files) {
+        this.saveSourceMap(payload);
+      }
+    } catch (err) {
+      throw new DatabaseReadWriteError(err);
+    }
+  }
+
+  /**
    * Extract original file name from source-map's "file" property
    * and extend data-to-save with it
    *
@@ -83,32 +109,6 @@ export default class ReleasesWorker extends Worker {
       });
 
       throw new NonCriticalError('Can\'t parse source-map file');
-    }
-  }
-
-  /**
-   * Save user's release
-   *
-   * @param payload - release payload
-   */
-  private async saveRelease(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
-    try {
-      const commits = payload.commits;
-
-      const release = await this.db.getConnection()
-        .collection(this.dbCollectionName)
-        .insertOne({
-          projectId: payload.projectId,
-          release: payload.release,
-          commits: commits,
-        });
-
-      // save source maps
-      this.saveSourceMap(payload);
-
-      console.log(commits, release);
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
     }
   }
 

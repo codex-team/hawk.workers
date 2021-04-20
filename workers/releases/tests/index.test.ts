@@ -5,7 +5,7 @@ import { Db, MongoClient } from 'mongodb';
  * Tests for Source Maps Worker
  */
 import ReleasesWorker from '../src/index';
-import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types'; 
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
@@ -13,9 +13,10 @@ const releasePayload: ReleaseWorkerAddReleasePayload = {
   projectId: '5e4ff518628a6c714515f844',
   release: 'Dapper Dragon',
   commits: [],
-}
+};
 
 describe('Release Worker', () => {
+  const worker = new ReleasesWorker();
   let connection: MongoClient;
   let db: Db;
 
@@ -28,6 +29,8 @@ describe('Release Worker', () => {
    * Create webpack bundle and source map for Mock App
    */
   beforeAll(async () => {
+    await worker.start();
+
     connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -41,6 +44,9 @@ describe('Release Worker', () => {
    * Clear webpack bundle
    */
   afterAll(async () => {
+    await worker.finish();
+
+    connection.close();
     await mockBundle.clear();
   });
 
@@ -72,18 +78,16 @@ describe('Release Worker', () => {
   });
 
   test('should save release if it does not exists', async () => {
-    const workerInstance = new ReleasesWorker();
-
-    workerInstance.handle({
+    await worker.handle({
       type: 'add-release',
-      payload: releasePayload
+      payload: releasePayload,
     });
 
-    let releasesCollection = db.collection('releases');
-    let release = await releasesCollection.findOne({
+    const releasesCollection = await db.collection('releases');
+    const release = await releasesCollection.findOne({
       projectId: releasePayload.projectId,
-      release: releasePayload.release
-    })
+      release: releasePayload.release,
+    });
 
     await expect(release).toMatchObject(releasePayload);
   });
