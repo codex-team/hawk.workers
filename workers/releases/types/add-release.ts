@@ -12,17 +12,17 @@ export interface CommitData {
   /**
    * Title of the commit
    */
-  title?: string;
+  title: string;
 
   /**
    * Commit author
    */
-  author?: string;
+  author: string;
 
   /**
    * Commit date
    */
-  date?: string;
+  date: string;
 }
 
 /**

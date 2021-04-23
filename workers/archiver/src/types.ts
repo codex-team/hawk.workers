@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { CommitData } from '../../releases/types';
 import { ProjectDBScheme } from 'hawk.types';
 
 /**
@@ -91,6 +92,11 @@ export interface ReleaseRecord {
    * Project that sends the source map
    */
   projectId: string;
+
+  /**
+   * Commits data
+   */
+  commits: CommitData[];
 
   /**
    * Bundle version for this source map

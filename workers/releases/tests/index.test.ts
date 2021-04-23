@@ -5,9 +5,23 @@ import { Db, MongoClient } from 'mongodb';
  * Tests for Source Maps Worker
  */
 import ReleasesWorker from '../src/index';
-import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types';
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload, CommitData } from '../types';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
+
+const commits: CommitData[] = [
+  {
+    commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
+    author: 'geekan@codex.so',
+    title: 'Hot fix',
+    date: 'Fri, 23 Apr 2021 10:54:01 GMT',
+  }, {
+    commitHash: '0f9575d00e62924d08b031defe0a6b10133a88bb',
+    author: 'geekan@codex.so',
+    title: 'Add some features',
+    date: 'Fri, 23 Apr 2021 10:50:00 GMT',
+  },
+];
 
 const releasePayload: ReleaseWorkerAddReleasePayload = {
   projectId: '5e4ff518628a6c714515f844',
@@ -19,6 +33,7 @@ describe('Release Worker', () => {
   const worker = new ReleasesWorker();
   let connection: MongoClient;
   let db: Db;
+  let collection;
 
   /**
    * Testing bundle of a mock application from './mock/src/'
@@ -36,6 +51,7 @@ describe('Release Worker', () => {
       useUnifiedTopology: true,
     });
     db = await connection.db('hawk');
+    collection = await db.collection('releases');
 
     await mockBundle.build();
   });
@@ -44,10 +60,14 @@ describe('Release Worker', () => {
    * Clear webpack bundle
    */
   afterAll(async () => {
+    await collection.deleteMany({});
     await worker.finish();
-
     connection.close();
     await mockBundle.clear();
+  });
+
+  beforeEach(async () => {
+    await collection.deleteMany({});
   });
 
   test('should correctly extract original file name from source map', async () => {
@@ -78,18 +98,41 @@ describe('Release Worker', () => {
   });
 
   test('should save release if it does not exists', async () => {
+    await collection.findOne({
+      projectId: releasePayload.projectId,
+      release: releasePayload.release,
+    });
+
     await worker.handle({
       type: 'add-release',
       payload: releasePayload,
     });
 
-    const releasesCollection = await db.collection('releases');
-    const release = await releasesCollection.findOne({
+    const release = await collection.findOne({
       projectId: releasePayload.projectId,
       release: releasePayload.release,
     });
 
     await expect(release).toMatchObject(releasePayload);
+  });
+
+  test('should update a release if it is already exists', async () => {
+    await worker.handle({
+      type: 'add-release',
+      payload: releasePayload,
+    });
+
+    await worker.handle({
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+        commits,
+      },
+    });
+
+    const count = await collection.countDocuments();
+
+    await expect(count).toEqual(1);
   });
 
   /**

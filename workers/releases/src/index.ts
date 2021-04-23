@@ -55,7 +55,7 @@ export default class ReleasesWorker extends Worker {
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
     switch (task.type) {
-      case 'add-release': this.saveRelease(task.payload as ReleaseWorkerAddReleasePayload); break;
+      case 'add-release': await this.saveRelease(task.payload as ReleaseWorkerAddReleasePayload); break;
     }
   }
 
@@ -70,10 +70,15 @@ export default class ReleasesWorker extends Worker {
 
       await this.db.getConnection()
         .collection(this.dbCollectionName)
-        .insertOne({
+        .updateOne({
           projectId: payload.projectId,
           release: payload.release,
-          commits: commits,
+        }, {
+          $set: {
+            commits: commits,
+          },
+        }, {
+          upsert: true,
         });
 
       // save source maps
