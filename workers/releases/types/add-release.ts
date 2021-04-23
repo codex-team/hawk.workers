@@ -45,6 +45,11 @@ export interface ReleaseWorkerAddReleasePayload {
   commits: CommitData[];
 
   /**
+   * Type of a catcher to identify a sourceMaps handler
+   */
+  catcherType?: string;
+
+  /**
    * List of source maps for all chunks
    */
   files?: SourcemapCollectedData[];
