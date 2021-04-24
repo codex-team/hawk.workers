@@ -1,7 +1,7 @@
 {
   "name": "hawk-worker-releases",
   "description": "Collects and parses the source maps",
-  "workerType": "releases/javascript",
+  "workerType": "releases",
   "version": "0.0.1",
   "main": "src/index.ts",
   "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/releases",
