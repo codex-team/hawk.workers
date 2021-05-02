@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { CommitData } from '../../releases/types';
+import { CommitData } from '../../release/types';
 import { ProjectDBScheme } from 'hawk.types';
 
 /**

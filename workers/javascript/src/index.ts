@@ -5,7 +5,7 @@ import { EventWorker } from '../../../lib/event-worker';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
-import { SourceMapDataExtended, SourceMapsRecord } from '../../releases/types';
+import { SourceMapDataExtended, SourceMapsRecord } from '../../release/types';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';

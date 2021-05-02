@@ -4,12 +4,12 @@ import { Db, MongoClient } from 'mongodb';
 /**
  * Tests for Source Maps Worker
  */
-import ReleasesWorker from '../src/index';
-import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload, CommitData } from '../types';
+import ReleaseWorker from '../src/index';
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
-const commits: CommitData[] = [
+const commits = JSON.stringify([
   {
     commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
     author: 'geekan@codex.so',
@@ -21,16 +21,22 @@ const commits: CommitData[] = [
     title: 'Add some features',
     date: 'Fri, 23 Apr 2021 10:50:00 GMT',
   },
-];
+]);
 
 const releasePayload: ReleaseWorkerAddReleasePayload = {
   projectId: '5e4ff518628a6c714515f844',
   release: 'Dapper Dragon',
-  commits: [],
+  catcherType: 'errors/javascript',
+  commits: JSON.stringify([ {
+    commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
+    author: 'geekan@codex.so',
+    title: 'Hot fix',
+    date: 'Fri, 23 Apr 2021 10:54:01 GMT',
+  } ]),
 };
 
 describe('Release Worker', () => {
-  const worker = new ReleasesWorker();
+  const worker = new ReleaseWorker();
   let connection: MongoClient;
   let db: Db;
   let collection;
@@ -61,6 +67,9 @@ describe('Release Worker', () => {
    */
   afterAll(async () => {
     await collection.deleteMany({});
+    await db.collection('releases.chunks').deleteMany({});
+    await db.collection('releases.files').deleteMany({});
+
     await worker.finish();
     connection.close();
     await mockBundle.clear();
@@ -68,6 +77,8 @@ describe('Release Worker', () => {
 
   beforeEach(async () => {
     await collection.deleteMany({});
+    await db.collection('releases.chunks').deleteMany({});
+    await db.collection('releases.files').deleteMany({});
   });
 
   test('should correctly extract original file name from source map', async () => {
@@ -75,7 +86,7 @@ describe('Release Worker', () => {
      * Get a bundle
      */
     const map = await mockBundle.getSourceMap();
-    const workerInstance = new ReleasesWorker();
+    const workerInstance = new ReleaseWorker();
 
     const extendedInfo: SourceMapDataExtended[] = workerInstance['extendReleaseInfo']([ {
       name: 'main.js.map',
@@ -98,14 +109,34 @@ describe('Release Worker', () => {
   });
 
   test('should save release if it does not exists', async () => {
-    await collection.findOne({
+    await worker.handle({
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+      },
+    });
+
+    const release = await collection.findOne({
       projectId: releasePayload.projectId,
       release: releasePayload.release,
     });
 
+    await expect(release).toMatchObject(releasePayload);
+  });
+
+  test('should correctly save release with javascript source maps', async () => {
+    const map = await mockBundle.getSourceMap();
+    const collectedData = [ {
+      name: 'main.js.map',
+      payload: map,
+    } ] as SourcemapCollectedData[];
+
     await worker.handle({
       type: 'add-release',
-      payload: releasePayload,
+      payload: {
+        ...releasePayload,
+        files: collectedData,
+      },
     });
 
     const release = await collection.findOne({
@@ -133,6 +164,18 @@ describe('Release Worker', () => {
     const count = await collection.countDocuments();
 
     await expect(count).toEqual(1);
+  });
+
+  test('should not save a release with commits without necessary', async () => {
+    expect(worker.handle({
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+        commits: JSON.stringify([ {
+          commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
+        } ]),
+      },
+    })).rejects.toEqual(new Error('Commits are not valid'));
   });
 
   /**

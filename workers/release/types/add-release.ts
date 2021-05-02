@@ -40,14 +40,14 @@ export interface ReleaseWorkerAddReleasePayload {
   release: string;
 
   /**
-   * Commits data
+   * Commits data in JSON
    */
-  commits: CommitData[];
+  commits: string;
 
   /**
    * Type of a catcher to identify a sourceMaps handler
    */
-  catcherType?: string;
+  catcherType: string;
 
   /**
    * List of source maps for all chunks

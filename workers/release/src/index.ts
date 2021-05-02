@@ -8,13 +8,13 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload } from '../types';
+import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitData } from '../types';
 import { ObjectId } from 'mongodb';
 
 /**
  * Java Script releases worker
  */
-export default class ReleasesWorker extends Worker {
+export default class ReleaseWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -68,6 +68,10 @@ export default class ReleasesWorker extends Worker {
     try {
       const commits = payload.commits;
 
+      if (!this.areCommitsValid(commits)) {
+        throw new Error('Commits are not valid');
+      }
+
       await this.db.getConnection()
         .collection(this.dbCollectionName)
         .updateOne({
@@ -75,6 +79,7 @@ export default class ReleasesWorker extends Worker {
           release: payload.release,
         }, {
           $set: {
+            catcherType: payload.catcherType,
             commits: commits,
           },
         }, {
@@ -83,10 +88,37 @@ export default class ReleasesWorker extends Worker {
 
       // save source maps
       if (payload.files) {
-        this.saveSourceMap(payload);
+        await this.saveSourceMap(payload);
       }
     } catch (err) {
+      this.logger.error(`Couldn't save the release due to: ${err}`);
+
       throw new DatabaseReadWriteError(err);
+    }
+  }
+
+  /**
+   * Check commtis for the content of all required data
+   *
+   * @param commits - stringified commits
+   */
+  private areCommitsValid(commits: string): boolean {
+    try {
+      const parsedCommits: CommitData[] = JSON.parse(commits);
+
+      const commitValidation = (commit: CommitData): boolean => {
+        const date = Date.parse(commit.date);
+
+        return 'commitHash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
+      };
+
+      if (parsedCommits.length > 0) {
+        return parsedCommits.every(commitValidation);
+      }
+
+      throw new Error('Release must contains at least one commit');
+    } catch (err) {
+      throw new Error(`Commtis are not valid: ${err}`);
     }
   }
 
@@ -164,7 +196,8 @@ export default class ReleasesWorker extends Worker {
         /**
          * Skip already saved maps
          */
-        const alreadySaved = existedRelease && existedRelease.files.find((savedFile) => {
+
+        const alreadySaved = existedRelease && existedRelease.files && existedRelease.files.find((savedFile) => {
           return savedFile.mapFileName === map.mapFileName;
         });
 

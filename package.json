@@ -16,7 +16,7 @@
         "test:javascript": "jest workers/javascript",
         "test:nodejs": "jest workers/nodejs",
         "test:php": "jest workers/php",
-        "test:releases": "jest workers/releases",
+        "test:release": "jest workers/release",
         "test:slack": "jest workers/slack",
         "test:limiter": "jest workers/limiter",
         "test:grouper": "jest workers/grouper",
@@ -37,7 +37,7 @@
         "run-accountant": "yarn worker hawk-worker-accountant",
         "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-notifier": "yarn worker hawk-worker-notifier",
-        "run-releases": "SIMULTANEOUS_TASKS=1 yarn worker hawk-worker-releases",
+        "run-release": "yarn worker hawk-worker-release",
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
         "run-limiter": "yarn worker hawk-worker-limiter"
