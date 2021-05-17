@@ -72,6 +72,8 @@ export default class ReleaseWorker extends Worker {
         throw new Error('Commits are not valid');
       }
 
+      const parsedCommits: CommitData[] = JSON.parse(commits);
+
       await this.db.getConnection()
         .collection(this.dbCollectionName)
         .updateOne({
@@ -80,7 +82,7 @@ export default class ReleaseWorker extends Worker {
         }, {
           $set: {
             catcherType: payload.catcherType,
-            commits: commits,
+            commits: parsedCommits,
           },
         }, {
           upsert: true,
