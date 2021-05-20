@@ -9,30 +9,31 @@ import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleaseP
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
-const commits = JSON.stringify([
+const commits = [
   {
-    commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
+    hash: '599575d00e62924d08b031defe0a6b10133a75fc',
     author: 'geekan@codex.so',
     title: 'Hot fix',
     date: 'Fri, 23 Apr 2021 10:54:01 GMT',
   }, {
-    commitHash: '0f9575d00e62924d08b031defe0a6b10133a88bb',
+    hash: '0f9575d00e62924d08b031defe0a6b10133a88bb',
     author: 'geekan@codex.so',
     title: 'Add some features',
     date: 'Fri, 23 Apr 2021 10:50:00 GMT',
   },
-]);
+];
+
+const projectId = '5e4ff518628a6c714515f844';
 
 const releasePayload: ReleaseWorkerAddReleasePayload = {
-  projectId: '5e4ff518628a6c714515f844',
   release: 'Dapper Dragon',
   catcherType: 'errors/javascript',
-  commits: JSON.stringify([ {
-    commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
+  commits: [ {
+    hash: '599575d00e62924d08b031defe0a6b10133a75fc',
     author: 'geekan@codex.so',
     title: 'Hot fix',
     date: 'Fri, 23 Apr 2021 10:54:01 GMT',
-  } ]),
+  } ],
 };
 
 describe('Release Worker', () => {
@@ -110,6 +111,7 @@ describe('Release Worker', () => {
 
   test('should save release if it does not exists', async () => {
     await worker.handle({
+      projectId,
       type: 'add-release',
       payload: {
         ...releasePayload,
@@ -117,7 +119,7 @@ describe('Release Worker', () => {
     });
 
     const release = await collection.findOne({
-      projectId: releasePayload.projectId,
+      projectId: projectId,
       release: releasePayload.release,
     });
 
@@ -132,6 +134,7 @@ describe('Release Worker', () => {
     } ] as SourcemapCollectedData[];
 
     await worker.handle({
+      projectId,
       type: 'add-release',
       payload: {
         ...releasePayload,
@@ -140,7 +143,7 @@ describe('Release Worker', () => {
     });
 
     const release = await collection.findOne({
-      projectId: releasePayload.projectId,
+      projectId: projectId,
       release: releasePayload.release,
     });
 
@@ -149,11 +152,13 @@ describe('Release Worker', () => {
 
   test('should update a release if it is already exists', async () => {
     await worker.handle({
+      projectId,
       type: 'add-release',
       payload: releasePayload,
     });
 
     await worker.handle({
+      projectId,
       type: 'add-release',
       payload: {
         ...releasePayload,
@@ -164,18 +169,6 @@ describe('Release Worker', () => {
     const count = await collection.countDocuments();
 
     await expect(count).toEqual(1);
-  });
-
-  test('should not save a release with commits without necessary', async () => {
-    expect(worker.handle({
-      type: 'add-release',
-      payload: {
-        ...releasePayload,
-        commits: JSON.stringify([ {
-          commitHash: '599575d00e62924d08b031defe0a6b10133a75fc',
-        } ]),
-      },
-    })).rejects.toEqual(new Error('Commits are not valid'));
   });
 
   /**

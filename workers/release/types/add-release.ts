@@ -7,7 +7,7 @@ export interface CommitData {
   /**
    * Commit hash
    */
-  commitHash: string;
+  hash: string;
 
   /**
    * Title of the commit
@@ -30,11 +30,6 @@ export interface CommitData {
  */
 export interface ReleaseWorkerAddReleasePayload {
   /**
-   * Project id
-   */
-  projectId: string;
-
-  /**
    * Release id: custom release name
    */
   release: string;
@@ -42,7 +37,7 @@ export interface ReleaseWorkerAddReleasePayload {
   /**
    * Commits data in JSON
    */
-  commits: string;
+  commits: CommitData[];
 
   /**
    * Type of a catcher to identify a sourceMaps handler
@@ -59,6 +54,18 @@ export interface ReleaseWorkerAddReleasePayload {
  * Worker task for adding a new release
  */
 export interface ReleaseWorkerAddReleaseTask {
-  type: 'add-release',
+  /**
+   * Project id
+   */
+  projectId: string;
+
+  /**
+   * Task type for distribution to handlers
+   */
+  type: 'add-release';
+
+  /**
+   * Task payload for processing
+   */
   payload: ReleaseWorkerAddReleasePayload
 }

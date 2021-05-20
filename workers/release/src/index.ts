@@ -55,7 +55,7 @@ export default class ReleaseWorker extends Worker {
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
     switch (task.type) {
-      case 'add-release': await this.saveRelease(task.payload as ReleaseWorkerAddReleasePayload); break;
+      case 'add-release': await this.saveRelease(task.projectId ,task.payload as ReleaseWorkerAddReleasePayload); break;
     }
   }
 
@@ -64,7 +64,7 @@ export default class ReleaseWorker extends Worker {
    *
    * @param payload - release payload
    */
-  private async saveRelease(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+  private async saveRelease(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
     try {
       const commits = payload.commits;
 
@@ -72,17 +72,15 @@ export default class ReleaseWorker extends Worker {
         throw new Error('Commits are not valid');
       }
 
-      const parsedCommits: CommitData[] = JSON.parse(commits);
-
       await this.db.getConnection()
         .collection(this.dbCollectionName)
         .updateOne({
-          projectId: payload.projectId,
+          projectId: projectId,
           release: payload.release,
         }, {
           $set: {
             catcherType: payload.catcherType,
-            commits: parsedCommits,
+            commits: payload.commits,
           },
         }, {
           upsert: true,
@@ -90,7 +88,7 @@ export default class ReleaseWorker extends Worker {
 
       // save source maps
       if (payload.files) {
-        await this.saveSourceMap(payload);
+        await this.saveSourceMap(projectId, payload);
       }
     } catch (err) {
       this.logger.error(`Couldn't save the release due to: ${err}`);
@@ -104,18 +102,16 @@ export default class ReleaseWorker extends Worker {
    *
    * @param commits - stringified commits
    */
-  private areCommitsValid(commits: string): boolean {
+  private areCommitsValid(commits: CommitData[]): boolean {
     try {
-      const parsedCommits: CommitData[] = JSON.parse(commits);
-
       const commitValidation = (commit: CommitData): boolean => {
-        const date = Date.parse(commit.date);
+      const date = Date.parse(commit.date);
 
-        return 'commitHash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
+        return 'hash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
       };
 
-      if (parsedCommits.length > 0) {
-        return parsedCommits.every(commitValidation);
+      if (commits.length > 0) {
+        return commits.every(commitValidation);
       }
 
       throw new Error('Release must contains at least one commit');
@@ -130,7 +126,7 @@ export default class ReleaseWorker extends Worker {
    *
    * @param payload - source map data
    */
-  private async saveSourceMap(payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+  private async saveSourceMap(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
     try {
       const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
 
@@ -138,7 +134,7 @@ export default class ReleaseWorker extends Worker {
        * Save source map
        */
       await this.saveSourceMapJS({
-        projectId: payload.projectId,
+        projectId: projectId,
         release: payload.release,
         files: sourceMapsFilesExtended,
       } as SourceMapsRecord);
