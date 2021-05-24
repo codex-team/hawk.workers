@@ -25,7 +25,7 @@ services:
     environment:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
-    entrypoint: yarn run-maps
+    entrypoint: yarn run-release
     volumes:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
