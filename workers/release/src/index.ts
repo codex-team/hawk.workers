@@ -54,7 +54,6 @@ export default class ReleaseWorker extends Worker {
    * @param task - Message object from consume method
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
-    console.log(task);
     switch (task.type) {
       case 'add-release': await this.saveRelease(task.projectId ,task.payload as ReleaseWorkerAddReleasePayload); break;
     }
@@ -73,6 +72,11 @@ export default class ReleaseWorker extends Worker {
         throw new Error('Commits are not valid');
       }
 
+      const commitsWithParsedDate = commits.map(commit => ({
+        ...commit,
+        date: new Date(commit.date)
+      }));
+
       await this.db.getConnection()
         .collection(this.dbCollectionName)
         .updateOne({
@@ -81,7 +85,7 @@ export default class ReleaseWorker extends Worker {
         }, {
           $set: {
             catcherType: payload.catcherType,
-            commits: payload.commits,
+            commits: commitsWithParsedDate,
           },
         }, {
           upsert: true,

@@ -36,6 +36,18 @@ const releasePayload: ReleaseWorkerAddReleasePayload = {
   } ],
 };
 
+// Release payload with parsed date
+const parsedReleasePayload = {
+  release: 'Dapper Dragon',
+  catcherType: 'errors/javascript',
+  commits: [ {
+    hash: '599575d00e62924d08b031defe0a6b10133a75fc',
+    author: 'geekan@codex.so',
+    title: 'Hot fix',
+    date: new Date('Fri, 23 Apr 2021 10:54:01 GMT'),
+  } ],
+};
+
 describe('Release Worker', () => {
   const worker = new ReleaseWorker();
   let connection: MongoClient;
@@ -53,11 +65,11 @@ describe('Release Worker', () => {
   beforeAll(async () => {
     await worker.start();
 
-    connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
+    connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    db = await connection.db('hawk');
+    db = await connection.db('hawk_events');
     collection = await db.collection('releases');
 
     await mockBundle.build();
@@ -123,7 +135,7 @@ describe('Release Worker', () => {
       release: releasePayload.release,
     });
 
-    await expect(release).toMatchObject(releasePayload);
+    await expect(release).toMatchObject(parsedReleasePayload);
   });
 
   test('should correctly save release with javascript source maps', async () => {
@@ -147,7 +159,7 @@ describe('Release Worker', () => {
       release: releasePayload.release,
     });
 
-    await expect(release).toMatchObject(releasePayload);
+    await expect(release).toMatchObject(parsedReleasePayload);
   });
 
   test('should update a release if it is already exists', async () => {
