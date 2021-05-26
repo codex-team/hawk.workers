@@ -5,7 +5,8 @@ import { Db, MongoClient } from 'mongodb';
  * Tests for Source Maps Worker
  */
 import ReleaseWorker from '../src/index';
-import { SourcemapCollectedData, SourceMapDataExtended, ReleaseWorkerAddReleasePayload } from '../types';
+import { ReleaseWorkerAddReleasePayload } from '../types';
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseDBScheme } from 'hawk.types';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 
@@ -27,7 +28,6 @@ const projectId = '5e4ff518628a6c714515f844';
 
 const releasePayload: ReleaseWorkerAddReleasePayload = {
   release: 'Dapper Dragon',
-  catcherType: 'errors/javascript',
   commits: [ {
     hash: '599575d00e62924d08b031defe0a6b10133a75fc',
     author: 'geekan@codex.so',
@@ -39,7 +39,6 @@ const releasePayload: ReleaseWorkerAddReleasePayload = {
 // Release payload with parsed date
 const parsedReleasePayload = {
   release: 'Dapper Dragon',
-  catcherType: 'errors/javascript',
   commits: [ {
     hash: '599575d00e62924d08b031defe0a6b10133a75fc',
     author: 'geekan@codex.so',
@@ -69,8 +68,8 @@ describe('Release Worker', () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    db = await connection.db('hawk_events');
-    collection = await db.collection('releases');
+    db = connection.db();
+    collection = await db.collection<ReleaseDBScheme>('releases');
 
     await mockBundle.build();
   });

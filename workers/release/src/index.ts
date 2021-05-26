@@ -8,15 +8,15 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
-import { SourcemapCollectedData, SourceMapDataExtended, SourceMapFileChunk, SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitData } from '../types';
+import { SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
 import { ObjectId } from 'mongodb';
-
+import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData } from 'hawk.types';
 /**
  * Java Script releases worker
  */
 export default class ReleaseWorker extends Worker {
   /**
-   * Worker type (will pull tasks from Registry queue with the same name)
+   * Worker type (will pull tasks from Registry fqueue with the same name)
    */
   public readonly type: string = pkg.workerType;
 
@@ -72,7 +72,7 @@ export default class ReleaseWorker extends Worker {
         throw new Error('Commits are not valid');
       }
 
-      const commitsWithParsedDate = commits.map(commit => ({
+      const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
         ...commit,
         date: new Date(commit.date)
       }));
@@ -84,7 +84,6 @@ export default class ReleaseWorker extends Worker {
           release: payload.release,
         }, {
           $set: {
-            catcherType: payload.catcherType,
             commits: commitsWithParsedDate,
           },
         }, {
@@ -107,9 +106,9 @@ export default class ReleaseWorker extends Worker {
    *
    * @param commits - stringified commits
    */
-  private areCommitsValid(commits: CommitData[]): boolean {
+  private areCommitsValid(commits: CommitDataUnparsed[]): boolean {
     try {
-      const commitValidation = (commit: CommitData): boolean => {
+      const commitValidation = (commit: CommitDataUnparsed): boolean => {
       const date = Date.parse(commit.date);
 
         return 'hash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
