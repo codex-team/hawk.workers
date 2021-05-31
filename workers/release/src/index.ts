@@ -55,13 +55,14 @@ export default class ReleaseWorker extends Worker {
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
     switch (task.type) {
-      case 'add-release': await this.saveRelease(task.projectId ,task.payload as ReleaseWorkerAddReleasePayload); break;
+      case 'add-release': await this.saveRelease(task.projectId, task.payload as ReleaseWorkerAddReleasePayload); break;
     }
   }
 
   /**
    * Save user's release
    *
+   * @param projectId - project id to bind the corresponding release.
    * @param payload - release payload
    */
   private async saveRelease(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
@@ -74,7 +75,7 @@ export default class ReleaseWorker extends Worker {
 
       const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
         ...commit,
-        date: new Date(commit.date)
+        date: new Date(commit.date),
       }));
 
       await this.db.getConnection()
@@ -109,7 +110,7 @@ export default class ReleaseWorker extends Worker {
   private areCommitsValid(commits: CommitDataUnparsed[]): boolean {
     try {
       const commitValidation = (commit: CommitDataUnparsed): boolean => {
-      const date = Date.parse(commit.date);
+        const date = Date.parse(commit.date);
 
         return 'hash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
       };
@@ -128,6 +129,7 @@ export default class ReleaseWorker extends Worker {
    * Extract original file name from source-map's "file" property
    * and extend data-to-save with it
    *
+   * @param projectId - project id in hawk
    * @param payload - source map data
    */
   private async saveSourceMap(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {

@@ -1,7 +1,4 @@
-import { ObjectID, Timestamp } from 'mongodb';
-import { SourceMapDataExtended, SourcemapCollectedData } from 'hawk.types';
-
-
+import { SourceMapDataExtended } from 'hawk.types';
 
 export interface SourceMapsRecord {
   /**
