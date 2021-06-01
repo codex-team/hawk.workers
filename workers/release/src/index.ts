@@ -9,8 +9,8 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { SourceMapsRecord, ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { ObjectId } from 'mongodb';
-import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData } from 'hawk.types';
+import { ObjectId, Collection } from 'mongodb';
+import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from 'hawk.types';
 /**
  * Java Script releases worker
  */
@@ -32,11 +32,17 @@ export default class ReleaseWorker extends Worker {
   private readonly dbCollectionName: string = 'releases';
 
   /**
+   * Collection to save releases
+   */
+  private releasesCollection: Collection<ReleaseDBScheme>;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
     await this.db.connect();
     this.db.createGridFsBucket(this.dbCollectionName);
+    this.releasesCollection = this.db.getConnection().collection(this.dbCollectionName);
     await super.start();
   }
 
@@ -78,18 +84,16 @@ export default class ReleaseWorker extends Worker {
         date: new Date(commit.date),
       }));
 
-      await this.db.getConnection()
-        .collection(this.dbCollectionName)
-        .updateOne({
-          projectId: projectId,
-          release: payload.release,
-        }, {
-          $set: {
-            commits: commitsWithParsedDate,
-          },
-        }, {
-          upsert: true,
-        });
+      await this.releasesCollection.updateOne({
+        projectId: projectId,
+        release: payload.release,
+      }, {
+        $set: {
+          commits: commitsWithParsedDate,
+        },
+      }, {
+        upsert: true,
+      });
 
       // save source maps
       if (payload.files) {
@@ -134,69 +138,17 @@ export default class ReleaseWorker extends Worker {
    */
   private async saveSourceMap(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
     try {
-      const sourceMapsFilesExtended: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
+      const files: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
 
-      /**
-       * Save source map
-       */
-      await this.saveSourceMapJS({
+      const existedRelease = await this.releasesCollection.findOne({
         projectId: projectId,
         release: payload.release,
-        files: sourceMapsFilesExtended,
-      } as SourceMapsRecord);
-    } catch (error) {
-      this.logger.error('Can\'t extract release info:\n', {
-        error,
       });
-
-      throw new NonCriticalError('Can\'t parse source-map file');
-    }
-  }
-
-  /**
-   * Extract original file name from source-map's "file" property
-   * and extend data-to-save with it
-   *
-   * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
-   */
-  private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourceMapDataExtended[] {
-    return sourceMaps.map((file: SourcemapCollectedData) => {
-      /**
-       * Decode base64 source map content
-       */
-      const buffer = Buffer.from(file.payload, 'base64');
-      const mapBodyString = buffer.toString();
-      /**
-       * @todo use more efficient method to extract "file" from big JSON
-       */
-      const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
-
-      return {
-        mapFileName: file.name,
-        originFileName: mapContent.file,
-        content: mapBodyString,
-      };
-    });
-  }
-
-  /**
-   * Save map file to database
-   *
-   * @param releaseData - info with source map
-   */
-  private async saveSourceMapJS(releaseData: SourceMapsRecord): Promise<ObjectId | null> {
-    try {
-      const existedRelease = await this.db.getConnection()
-        .collection(this.dbCollectionName)
-        .findOne({
-          projectId: releaseData.projectId,
-          release: releaseData.release,
-        });
 
       /**
        * Iterate all maps of the new release and save only new
        */
-      let savedFiles = await Promise.all(releaseData.files.map(async (map: SourceMapDataExtended) => {
+      let savedFiles = await Promise.all(files.map(async (map: SourceMapDataExtended) => {
         /**
          * Skip already saved maps
          */
@@ -242,34 +194,56 @@ export default class ReleaseWorker extends Worker {
        * - update previous record with adding new saved maps
        */
       if (!existedRelease) {
-        const insertion = await this.db.getConnection()
-          .collection(this.dbCollectionName)
-          .insertOne({
-            projectId: releaseData.projectId,
-            release: releaseData.release,
-            files: savedFiles as SourceMapDataExtended[],
-          });
-
-        return insertion ? insertion.insertedId : null;
+        await this.releasesCollection.insertOne({
+          projectId: projectId,
+          release: payload.release,
+          files: savedFiles as SourceMapDataExtended[],
+        } as ReleaseDBScheme);
       }
 
-      const updating = await this.db.getConnection()
-        .collection(this.dbCollectionName)
-        .findOneAndUpdate({
-          projectId: releaseData.projectId,
-          release: releaseData.release,
-        }, {
-          $push: {
-            files: {
-              $each: savedFiles as SourceMapDataExtended[],
-            },
+      await this.releasesCollection.findOneAndUpdate({
+        projectId: projectId,
+        release: payload.release,
+      }, {
+        $push: {
+          files: {
+            $each: savedFiles as SourceMapDataExtended[],
           },
-        });
+        },
+      });
+    } catch (error) {
+      this.logger.error('Can\'t extract release info:\n', {
+        error,
+      });
 
-      return updating ? updating.value._id : null;
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
+      throw new NonCriticalError('Can\'t parse source-map file');
     }
+  }
+
+  /**
+   * Extract original file name from source-map's "file" property
+   * and extend data-to-save with it
+   *
+   * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
+   */
+  private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourceMapDataExtended[] {
+    return sourceMaps.map((file: SourcemapCollectedData) => {
+      /**
+       * Decode base64 source map content
+       */
+      const buffer = Buffer.from(file.payload, 'base64');
+      const mapBodyString = buffer.toString();
+      /**
+       * @todo use more efficient method to extract "file" from big JSON
+       */
+      const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
+
+      return {
+        mapFileName: file.name,
+        originFileName: mapContent.file,
+        content: mapBodyString,
+      };
+    });
   }
 
   /**
@@ -279,7 +253,7 @@ export default class ReleaseWorker extends Worker {
    */
   private saveFile(file: SourceMapDataExtended): Promise<SourceMapFileChunk> {
     return new Promise((resolve, reject) => {
-      const readable = Readable.from([ file.content ]);
+      const readable = Readable.from([file.content]);
       const writeStream = this.db.getBucket().openUploadStream(file.mapFileName);
 
       readable

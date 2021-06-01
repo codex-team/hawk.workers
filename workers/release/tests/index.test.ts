@@ -1,4 +1,3 @@
-/* tslint:disable:no-string-literal */
 import { Db, MongoClient } from 'mongodb';
 
 /**
