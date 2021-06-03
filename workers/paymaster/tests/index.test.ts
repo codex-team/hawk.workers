@@ -49,6 +49,7 @@ const createWorkspaceMock = (parameters: {
   return {
     _id: new ObjectId(),
     name: 'Mocked workspace',
+    inviteHash: '',
     tariffPlanId: parameters.plan._id,
     billingPeriodEventsCount: parameters.billingPeriodEventsCount,
     lastChargeDate: parameters.lastChargeDate,
