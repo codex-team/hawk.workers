@@ -119,6 +119,30 @@ describe('Release Worker', () => {
     await expect(currentMapData).toHaveProperty('content');
   });
 
+  test('should add sourcemaps to the collections', async () => {
+    const map = await mockBundle.getSourceMap();
+
+    // Release with commits and sourcemap
+    await worker.handle({
+      projectId,
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+        commits,
+        files: [ {
+          name: 'main.js.map',
+          payload: map,
+        } ],
+      },
+    });
+
+    const releasesChunksCount = await db.collection('releases.chunks').countDocuments();
+    const releasesFilesCount = await db.collection('releases.files').countDocuments();
+
+    await expect(releasesChunksCount).toEqual(1);
+    await expect(releasesFilesCount).toEqual(1);
+  });
+
   test('should save release if it does not exists', async () => {
     await worker.handle({
       projectId,
