@@ -1,4 +1,4 @@
-# Source map parsing
+# Release worker
 
 This worker is needed to save releases with commits or/and source-maps uploaded from user to our DB. Commits are used to identify suspicious ones. 
 
@@ -29,4 +29,3 @@ curl --request POST \
 
 4. Collector accepts file and give a task for ReleaseWorker for saving it to DB
 5. ReleaseWorker saves it to DB.
-
