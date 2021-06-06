@@ -6,7 +6,7 @@ This worker is needed to save releases with commits or/and source-maps uploaded 
 
 **Current implementation supports only single Rabbit prefetch count (SIMULTANEOUS_TASKS=1)**
 
-## Parsing scheme
+## Source maps delivery scheme
 
 1. User wants to deploy project
 2. He runs deploy script on the server and it runs static builder, for example Webpack.
