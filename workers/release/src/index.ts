@@ -12,7 +12,7 @@ import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed }
 import { Collection } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from 'hawk.types';
 /**
- * Java Script releases worker
+ * Worker to save releases
  */
 export default class ReleaseWorker extends Worker {
   /**

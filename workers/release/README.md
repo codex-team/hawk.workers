@@ -10,7 +10,7 @@ This worker is needed to save releases with commits or/and source-maps uploaded 
 
 1. User wants to deploy project
 2. He runs deploy script on the server and it runs static builder, for example Webpack.
-3. After Webpack finished his job, our **Webpack Plugin** gets a source maps for new bundles and sends them to us.
+3. After Webpack finished his job, our [Webpack Plugin](https://github.com/codex-team/hawk.webpack.plugin) gets a source maps for new bundles and sends them to us.
 
 example request:
 
