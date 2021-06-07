@@ -16,7 +16,7 @@ import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollect
  */
 export default class ReleaseWorker extends Worker {
   /**
-   * Worker type (will pull tasks from Registry fqueue with the same name)
+   * Worker type (will pull tasks from Registry queue with the same name)
    */
   public readonly type: string = pkg.workerType;
 
