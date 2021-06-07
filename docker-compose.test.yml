@@ -1,0 +1,24 @@
+version: "3.2"
+services:
+  #
+  # Tests
+  #
+
+  hawk-worker-test:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    entrypoint: yarn jest
+    volumes:
+      - .:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+volumes:
+  workers-deps:
+
+networks:
+  default:
+    external:
+      name: hawkmono_default

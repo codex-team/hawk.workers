@@ -5,13 +5,13 @@ import { EventWorker } from '../../../lib/event-worker';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
 import * as WorkerNames from '../../../lib/workerNames';
 import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
-import { SourceMapDataExtended, SourceMapsRecord } from '../../source-maps/types/source-maps-record';
+import { SourceMapsRecord } from '../../release/types';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
-import { BacktraceFrame, SourceCodeLine } from 'hawk.types';
+import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from 'hawk.types';
 import { beautifyUserAgent } from './utils';
 
 /**
@@ -31,7 +31,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Collection where source maps stored
    */
-  private releasesDbCollectionName = 'releases-js';
+  private releasesDbCollectionName = 'releases';
 
   /**
    * Extract base filename from path

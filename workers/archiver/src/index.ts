@@ -60,9 +60,9 @@ export default class ArchiverWorker extends Worker {
     const accountDbConnection = await this.accountsDb.connect();
 
     this.projectCollection = accountDbConnection.collection<ProjectDBScheme>('projects');
-    this.releasesCollection = this.eventsDbConnection.collection('releases-js');
+    this.releasesCollection = this.eventsDbConnection.collection('releases');
 
-    this.gridFsBucket = this.eventsDb.createGridFsBucket('releases-js');
+    this.gridFsBucket = this.eventsDb.createGridFsBucket('releases');
     await super.start();
   }
 

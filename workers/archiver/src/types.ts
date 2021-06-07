@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { ProjectDBScheme } from 'hawk.types';
+import { CommitData, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Report data for specific project
@@ -91,6 +91,11 @@ export interface ReleaseRecord {
    * Project that sends the source map
    */
   projectId: string;
+
+  /**
+   * Commits data
+   */
+  commits: CommitData[];
 
   /**
    * Bundle version for this source map

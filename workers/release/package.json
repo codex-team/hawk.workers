@@ -1,0 +1,15 @@
+{
+  "name": "hawk-worker-release",
+  "description": "Collects and parses release with commits and source maps",
+  "workerType": "release",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/release",
+  "author": "CodeX",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "rimraf": "^3.0.0",
+    "webpack": "^4.39.3"
+  }
+}

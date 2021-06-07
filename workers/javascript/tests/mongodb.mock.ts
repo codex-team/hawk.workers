@@ -34,7 +34,7 @@ export const dailyEventsQueryMock = jest.fn(() => 1);
 
 export const dbCollectionMock = jest.fn((collection: string) => {
   switch (true) {
-    case collection.startsWith('releases-js'):
+    case collection.startsWith('releases'):
       return {
         findOne: releasesJsQueryMock,
       };
