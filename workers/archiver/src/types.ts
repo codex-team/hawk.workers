@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { CommitData } from '../../release/types';
-import { ProjectDBScheme } from 'hawk.types';
+import { CommitData, ProjectDBScheme } from 'hawk.types';
 
 /**
  * Report data for specific project
