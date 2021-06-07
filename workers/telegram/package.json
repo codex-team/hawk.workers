@@ -3,10 +3,5 @@
     "version": "0.0.1",
     "main": "src/index.ts",
     "license": "UNLICENSED",
-    "workerType": "sender/telegram",
-    "scripts": {},
-    "dependencies": {
-        "axios": "^0.21.1"
-    },
-    "devDependencies": {}
+    "workerType": "sender/telegram"
 }
