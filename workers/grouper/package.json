@@ -10,7 +10,6 @@
   "workerType": "grouper",
   "dependencies": {
     "@types/redis": "^2.8.28",
-    "object-recursive-iterator": "^2.1.0",
     "redis": "^3.1.1"
   }
 }
