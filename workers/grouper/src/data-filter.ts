@@ -1,6 +1,30 @@
 import { EventAddons, EventDataAccepted, Json } from 'hawk.types';
-import iterator from 'object-recursive-iterator';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
+
+/**
+ * Recursevly iterate through object and call function on each key
+ *
+ * @param obj - Object to iterate
+ * @param callback - Function to call on each iteratin
+ */
+function forAll(obj: Record<string, unknown>, callback: (path: string[], key: string, obj: Record<string, unknown>) => void): void {
+  const visit = (current, path: string[]): void => {
+    for (const key in current) {
+      if (!Object.prototype.hasOwnProperty.call(current, key)) {
+        continue;
+      }
+      const value = current[key];
+
+      if (!(typeof value === 'object' && !Array.isArray(value))) {
+        callback(path, key, current);
+      } else {
+        visit(value, [...path, key]);
+      }
+    }
+  };
+
+  visit(obj, []);
+}
 
 /**
  * This file contains class with methods for sensitive data filtering
@@ -10,6 +34,25 @@ export default class DataFilter {
    * This string will be substituted instead of a sensitive data value
    */
   private filteredValuePlaceholder = '[filtered]';
+
+  /**
+   * Possibly sensitive keys
+   */
+  private possiblySensitiveDataKeys = new Set([
+    'pan',
+    'secret',
+    'credentials',
+    'card[number]',
+    'password',
+    'auth',
+    'access_token',
+    'accessToken',
+  ]);
+
+  /**
+   * Bank card PAN Regex
+   */
+  private bankCardRegex = /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/g;
 
   /**
    * Accept event and process 'addons' and 'context' fields.
@@ -31,11 +74,11 @@ export default class DataFilter {
    * @param field - any object to iterate
    */
   private processField(field): void {
-    iterator.forAll(field, (path, key, obj) => {
+    forAll(field, (path, key, obj) => {
       const value = obj[key];
 
-      obj[key] = this.filterPanNumbers(value);
-      obj[key] = this.filterSensitiveData(key, value);
+      obj[key] = this.filterPanNumbers(value as any);
+      obj[key] = this.filterSensitiveData(key, value as any);
     });
   }
 
@@ -44,7 +87,7 @@ export default class DataFilter {
    *
    * @param string - value to process
    */
-  private filterPanNumbers(string: string | number | boolean): string | number | boolean {
+  private filterPanNumbers(string: string | number | boolean | Json): string | number | boolean | Json {
     /**
      * If value is not a string — it is not a PAN
      */
@@ -52,14 +95,12 @@ export default class DataFilter {
       return string;
     }
 
-    const bankCardRegex = /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/g;
-
     /**
      * Remove all non-digit chars
      */
     string = string.replace(/\D/g, '');
 
-    if (!bankCardRegex.test(string)) {
+    if (!this.bankCardRegex.test(string)) {
       return string;
     }
 
@@ -80,25 +121,7 @@ export default class DataFilter {
       return value;
     }
 
-    const possibleSensitiveDataKeys = [
-      'pan',
-      'secret',
-      'credentials',
-      'card[number]',
-      'password',
-      'auth',
-      'access_token',
-      'accessToken',
-    ];
-    const keyRegex = new RegExp(
-      possibleSensitiveDataKeys
-        .join('|')
-        .replace('[', '\\[')
-        .replace(']', '\\]'),
-      'gi'
-    );
-
-    if (keyRegex.test(key)) {
+    if (this.possiblySensitiveDataKeys.has(key.toLowerCase())) {
       return this.filteredValuePlaceholder;
     }
 
