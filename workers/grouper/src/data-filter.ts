@@ -1,4 +1,4 @@
-import { EventAddons, EventDataAccepted, Json } from 'hawk.types';
+import { EventAddons, EventDataAccepted } from 'hawk.types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -46,7 +46,7 @@ export default class DataFilter {
     'password',
     'auth',
     'access_token',
-    'accessToken',
+    'accesstoken',
   ]);
 
   /**
@@ -74,34 +74,34 @@ export default class DataFilter {
    * @param field - any object to iterate
    */
   private processField(field): void {
-    forAll(field, (path, key, obj) => {
-      const value = obj[key];
-
-      obj[key] = this.filterPanNumbers(value as any);
-      obj[key] = this.filterSensitiveData(key, value as any);
+    forAll(field, (_path, key, obj) => {
+      obj[key] = this.filterPanNumbers(obj[key]);
+      obj[key] = this.filterSensitiveData(key, obj[key]);
     });
   }
 
   /**
    * Replace PAN numbers in values
    *
-   * @param string - value to process
+   * @param value - value to process
    */
-  private filterPanNumbers(string: string | number | boolean | Json): string | number | boolean | Json {
+  private filterPanNumbers<T>(value: T): T | string {
     /**
      * If value is not a string — it is not a PAN
      */
-    if (typeof string !== 'string') {
-      return string;
+    if (typeof value !== 'string') {
+      return value;
     }
 
     /**
      * Remove all non-digit chars
      */
-    string = string.replace(/\D/g, '');
+    const clean = value.replace(/\D/g, '');
 
-    if (!this.bankCardRegex.test(string)) {
-      return string;
+    // Reset last index to 0
+    this.bankCardRegex.lastIndex = 0;
+    if (!this.bankCardRegex.test(clean)) {
+      return clean;
     }
 
     return this.filteredValuePlaceholder;
@@ -113,7 +113,7 @@ export default class DataFilter {
    * @param key - object key to check
    * @param value - object value to filter
    */
-  private filterSensitiveData(key: string, value: string | number | boolean | Json): string | number | boolean | Json {
+  private filterSensitiveData<T>(key: string, value: T): T | string {
     /**
      * Values can be an object — leave them as is
      */
