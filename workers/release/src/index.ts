@@ -119,11 +119,7 @@ export default class ReleaseWorker extends Worker {
         return 'hash' in commit && 'author' in commit && !isNaN(date) && 'title' in commit;
       };
 
-      if (commits.length > 0) {
-        return commits.every(commitValidation);
-      }
-
-      throw new Error('Release must contains at least one commit');
+      return commits.every(commitValidation);
     } catch (err) {
       throw new Error(`Commtis are not valid: ${err}`);
     }
