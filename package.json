@@ -9,7 +9,7 @@
         "workers/*"
     ],
     "scripts": {
-        "test": "jest --coverage",
+        "test": "jest --coverage --runInBand",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:cache": "jest lib/cache",
