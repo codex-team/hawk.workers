@@ -131,7 +131,7 @@ export default class GrouperWorker extends Worker {
          * If we caught Database duplication error, then another worker thread has already saved it to the database
          * and we need to process this event as repetition
          */
-        if (e.code.toString() === DB_DUPLICATE_KEY_ERROR) {
+        if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
         } else {
