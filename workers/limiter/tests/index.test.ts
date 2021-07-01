@@ -369,7 +369,7 @@ describe('Limiter worker', () => {
       });
     });
 
-    test('Should block projects if workspace has isBlocked field with value true', async (done) => {
+    test(`Should block projects if workspace has been blocked by Paymaster-worker (isBlocked field is presented with value 'true')`, async (done) => {
       /**
        * Arrange
        */
