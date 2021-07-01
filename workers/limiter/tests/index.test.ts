@@ -38,11 +38,13 @@ describe('Limiter worker', () => {
    * @param parameters.plan - workspace plan
    * @param parameters.billingPeriodEventsCount - billing period events count
    * @param parameters.lastChargeDate - workspace last charge date
+   * @param parameters.isBlocked - is workspace blocked for catching new events
    */
   const createWorkspaceMock = (parameters: {
     plan: PlanDBScheme;
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
+    isBlocked?: boolean;
   }): WorkspaceDBScheme => {
     return {
       _id: new ObjectId(),
@@ -53,6 +55,7 @@ describe('Limiter worker', () => {
       lastChargeDate: parameters.lastChargeDate,
       accountId: '',
       balance: 0,
+      isBlocked: parameters.isBlocked,
     };
   };
 
@@ -365,6 +368,48 @@ describe('Limiter worker', () => {
         data: expect.any(String),
       });
     });
+
+    test('Should block projects if workspace has isBlocked field with value true', async (done) => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+        isBlocked: true,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 15,
+      });
+
+      /**
+       * Act
+       *
+       * Worker initialization
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       *
+       * Gets all members of set with key 'DisabledProjectsSet' from Redis
+       */
+      redisClient.smembers('DisabledProjectsSet', (err, result) => {
+        expect(err).toBeNull();
+        expect(result).toContain(project._id.toString());
+        done();
+      });
+
+    })
   });
 
   describe('check-single-workspace', () => {
