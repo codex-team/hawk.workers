@@ -350,6 +350,14 @@ export default class LimiterWorker extends Worker {
 
       throw error;
     }
+
+    if (workspace.isBlocked) {
+      return {
+        isBanned: true,
+        updatedWorkspace: workspace,
+      };
+    }
+
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
     const workspaceEventsCount = await this.getEventsCountByProjects(projects, since);
