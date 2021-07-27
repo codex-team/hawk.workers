@@ -23,14 +23,14 @@ export type Notification = EventNotification
   | BlockWorkspaceNotification
   | PaymentFailedNotification
   | PaymentSuccessNotification
-  | SignUpNotification; 
+  | SignUpNotification;
 
 /**
  * Template variables for notify-senders
  */
-export type TemplateVariables = EventsTemplateVariables 
-  | AssigneeTemplateVariables 
-  | BlockWorkspaceTemplateVariables 
-  | PaymentFailedTemplateVariables 
+export type TemplateVariables = EventsTemplateVariables
+  | AssigneeTemplateVariables
+  | BlockWorkspaceTemplateVariables
+  | PaymentFailedTemplateVariables
   | PaymentSuccessTemplateVariables
   | SignUpVariables;
