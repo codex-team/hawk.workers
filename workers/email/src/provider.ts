@@ -48,6 +48,7 @@ export default class EmailProvider extends NotificationsProvider {
       case 'block-workspace': templateName = Templates.BlockWorkspace; break;
       case 'payment-failed': templateName = Templates.PaymentFailed; break;
       case 'payment-success': templateName = Templates.PaymentSuccess; break;
+      case 'sign-up': templateName = Templates.SignUp; break;
     }
 
     this.sendNotification(to, notification, templateName);
