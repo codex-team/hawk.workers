@@ -13,6 +13,7 @@ import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
 import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from 'hawk.types';
 import { beautifyUserAgent } from './utils';
+import { Collection } from 'mongodb';
 
 /**
  * Worker for handling Javascript events
@@ -22,6 +23,11 @@ export default class JavascriptEventWorker extends EventWorker {
    * Worker type (will pull tasks from Registry queue with the same name)
    */
   public readonly type: string = pkg.workerType;
+
+  /**
+   * Releases collection in database
+   */
+  public releasesDbCollection: Collection;
 
   /**
    * Database Controller
@@ -60,6 +66,7 @@ export default class JavascriptEventWorker extends EventWorker {
     await this.db.connect();
     this.db.createGridFsBucket(this.releasesDbCollectionName);
     this.prepareCache();
+    this.releasesDbCollection = this.db.getConnection().collection(this.releasesDbCollectionName);
     await super.start();
   }
 
@@ -293,8 +300,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
     try {
-      return await this.db.getConnection()
-        .collection(this.releasesDbCollectionName)
+      return await this.releasesDbCollection
         .findOne({
           projectId,
           release,

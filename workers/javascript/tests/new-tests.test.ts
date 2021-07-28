@@ -1,10 +1,14 @@
 import JavascriptEventWorker from '../src';
 import '../../../env-test';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import { ObjectId } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
+import { ReleaseDBScheme } from 'hawk.types';
 
 describe('JavaScript event worker', () => {
+  let connection: MongoClient;
+  let db: Db;
+
   const objectIdAsString = (): string => {
     return (new ObjectId()).toHexString();
   };
@@ -16,7 +20,7 @@ describe('JavaScript event worker', () => {
     browserVersion: '80.0.0',
   };
 
-  const createEventMock = ({ withUserAgent }: {withUserAgent?: boolean}): JavaScriptEventWorkerTask => {
+  const createEventMock = ({ withUserAgent, withBacktrace }: {withUserAgent?: boolean, withBacktrace?: boolean}): JavaScriptEventWorkerTask => {
     return {
       catcherType: 'errors/javascript',
       projectId: objectIdAsString(),
@@ -24,6 +28,7 @@ describe('JavaScript event worker', () => {
         title: 'Mocker event for JS event worker',
         type: 'Error',
         timestamp: Date.now(),
+        release: '3fa0f290c014',
         addons: {
           window: {
             innerHeight: 1337,
@@ -32,9 +37,50 @@ describe('JavaScript event worker', () => {
           userAgent: withUserAgent && 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
           url: 'https://error.hawk.so',
         },
+        backtrace: withBacktrace && [
+          {
+            file: 'file:///main.js',
+            line: 1,
+            column: 4,
+          },
+          {
+            file: 'file:///static/js/second.js',
+            line: 2,
+            column: 3,
+          },
+        ],
       },
     };
   };
+
+  const createReleaseMock = ({ projectId, release }: { projectId: string, release: string }): ReleaseDBScheme => {
+    return {
+      _id: new ObjectId(),
+      projectId,
+      commits: [],
+      release,
+      files: [
+        {
+          mapFileName: 'main.js.map',
+          originFileName: 'main.js',
+          _id: new ObjectId(),
+        },
+        {
+          mapFileName: 'second.js.map',
+          originFileName: 'static/js/second.js',
+          _id: new ObjectId(),
+        },
+      ],
+    };
+  };
+
+  beforeAll(async () => {
+    connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    db = connection.db('hawk');
+  });
 
   it('should have correct catcher type', () => {
     /**
@@ -149,7 +195,7 @@ describe('JavaScript event worker', () => {
     expect(worker.addTask).toHaveBeenCalledTimes(1);
     expect(worker.addTask).toHaveBeenCalledWith(
       WorkerNames.GROUPER,
-      expect.objectContaining({
+      {
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
         event: {
@@ -159,15 +205,50 @@ describe('JavaScript event worker', () => {
             beautifiedUserAgent: expect.objectContaining(beautifiedUserAgent),
           },
         },
-      })
+      }
     );
   });
 
   it('should parse source maps correctly', () => {
-
+    /**
+     * This test will check source maps parsing
+     */
   });
 
-  it('should use cache while processing source maps', () => {
+  it('should use cache while processing source maps', async () => {
+    /**
+     * Arrange
+     */
+    const worker = new JavascriptEventWorker();
 
+    await worker.start();
+    jest.spyOn(worker.releasesDbCollection, 'findOne');
+
+    const workerEvent = createEventMock({ withBacktrace: true });
+    const release = createReleaseMock({
+      projectId: workerEvent.projectId,
+      release: workerEvent.payload.release,
+    });
+
+    await db.collection('releases').insertOne(release);
+
+    /**
+     * Act
+     *
+     * Handle event twice
+     */
+    await worker.handle(workerEvent);
+    await worker.handle(workerEvent);
+
+    /**
+     * Assert
+     *
+     * Did only one request to database
+     */
+    expect(worker.releasesDbCollection.findOne).toHaveBeenCalledTimes(1);
+  });
+
+  afterAll(async () => {
+    await connection.close();
   });
 });
