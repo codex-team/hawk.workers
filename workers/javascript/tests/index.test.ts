@@ -17,6 +17,11 @@ describe('JavaScript event worker', () => {
   };
 
   /**
+   * Original user agent before beautification
+   */
+  const originalUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0';
+
+  /**
    * Parsed user agent for comparing
    */
   const beautifiedUserAgent = {
@@ -46,7 +51,7 @@ describe('JavaScript event worker', () => {
             innerHeight: 1337,
             innerWidth: 960,
           },
-          userAgent: withUserAgent && 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
+          userAgent: withUserAgent && originalUserAgent,
           url: 'https://error.hawk.so',
         },
         backtrace: withBacktrace && [
@@ -100,67 +105,7 @@ describe('JavaScript event worker', () => {
     db = connection.db('hawk');
   });
 
-  it('should have correct catcher type', () => {
-    /**
-     * Arrange
-     */
-    const worker = new JavascriptEventWorker();
-
-    /**
-     * Act
-     */
-    const workerType = worker.type;
-
-    /**
-     * Assert
-     */
-    expect(workerType).toEqual('errors/javascript');
-  });
-
-  it('should start correctly', async () => {
-    /**
-     * Arrange
-     */
-    const worker = new JavascriptEventWorker();
-
-    /**
-     * Act
-     *
-     * Start worker
-     */
-    await worker.start();
-
-    /**
-     * Assert
-     *
-     * No errors
-     */
-    await worker.finish();
-  });
-
-  it('should finish correctly', async () => {
-    /**
-     * Arrange
-     */
-    const worker = new JavascriptEventWorker();
-
-    await worker.start();
-
-    /**
-     * Act
-     *
-     * Finish worker
-     */
-    await worker.finish();
-
-    /**
-     * Assert
-     *
-     * No errors
-     */
-  });
-
-  it('should handle event and add task to grouper', async () => {
+  it('should process an event without errors and add a task with correct event information to grouper', async () => {
     /**
      * Arrange
      */
