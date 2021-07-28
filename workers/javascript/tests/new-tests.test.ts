@@ -19,8 +19,46 @@ describe('JavaScript event worker', () => {
     expect(workerType).toEqual('errors/javascript');
   });
 
-  it('should start correctly', () => {
+  it('should start correctly', async () => {
+    /**
+     * Arrange
+     */
+    const worker = new JavascriptEventWorker();
 
+    /**
+     * Act
+     *
+     * Start worker
+     */
+    await worker.start();
+
+    /**
+     * Assert
+     *
+     * No errors
+     */
+  });
+
+  it('should finish correctly', async () => {
+    /**
+     * Arrange
+     */
+    const worker = new JavascriptEventWorker();
+
+    await worker.start();
+
+    /**
+     * Act
+     *
+     * Finish worker
+     */
+    await worker.finish();
+
+    /**
+     * Assert
+     *
+     * No errors
+     */
   });
 
   it('should handle events without throwing errors', () => {
