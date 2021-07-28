@@ -20,7 +20,8 @@
       Password: {{ password }}
       <br>
       To change your password click to profile image at
-      the top left corner or follow this link
+      the top left corner or follow this 
+      {% include '../../components/inline-link.twig' with {href: host ~ '/account/general', label: 'link'} %}
     </font>
   </td>
 </tr>
