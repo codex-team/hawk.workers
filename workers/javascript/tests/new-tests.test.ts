@@ -1,7 +1,26 @@
 import JavascriptEventWorker from '../src';
 import '../../../env-test';
+import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import { ObjectId } from 'mongodb';
+import * as WorkerNames from '../../../lib/workerNames';
 
 describe('JavaScript event worker', () => {
+  const objectIdAsString = (): string => {
+    return (new ObjectId()).toHexString();
+  };
+
+  const createEventMock = (): JavaScriptEventWorkerTask => {
+    return {
+      catcherType: 'errors/javascript',
+      projectId: objectIdAsString(),
+      payload: {
+        title: 'Mocker event for JS event worker',
+        type: 'Error',
+        timestamp: Date.now(),
+      },
+    };
+  };
+
   it('should have correct catcher type', () => {
     /**
      * Arrange
@@ -61,8 +80,33 @@ describe('JavaScript event worker', () => {
      */
   });
 
-  it('should handle events without throwing errors', () => {
+  it('should handle event and add task to grouper', async () => {
+    /**
+     * Arrange
+     */
+    const worker = new JavascriptEventWorker();
 
+    jest.spyOn(worker, 'addTask');
+
+    await worker.start();
+    const workerEvent = createEventMock();
+
+    /**
+     * Act
+     *
+     * Handle event
+     */
+    await worker.handle(workerEvent);
+
+    /**
+     * Assert
+     */
+    expect(worker.addTask).toBeCalledTimes(1);
+    expect(worker.addTask).toBeCalledWith(WorkerNames.GROUPER, {
+      projectId: workerEvent.projectId,
+      catcherType: workerEvent.catcherType,
+      event: workerEvent.payload,
+    });
   });
 
   it('should parse user agent correctly', () => {
