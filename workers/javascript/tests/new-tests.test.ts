@@ -9,7 +9,14 @@ describe('JavaScript event worker', () => {
     return (new ObjectId()).toHexString();
   };
 
-  const createEventMock = (): JavaScriptEventWorkerTask => {
+  const beautifiedUserAgent = {
+    os: 'Windows',
+    osVersion: '10.0.0',
+    browser: 'Firefox',
+    browserVersion: '80.0.0',
+  };
+
+  const createEventMock = ({ withUserAgent }: {withUserAgent?: boolean}): JavaScriptEventWorkerTask => {
     return {
       catcherType: 'errors/javascript',
       projectId: objectIdAsString(),
@@ -17,6 +24,14 @@ describe('JavaScript event worker', () => {
         title: 'Mocker event for JS event worker',
         type: 'Error',
         timestamp: Date.now(),
+        addons: {
+          window: {
+            innerHeight: 1337,
+            innerWidth: 960,
+          },
+          userAgent: withUserAgent && 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0',
+          url: 'https://error.hawk.so',
+        },
       },
     };
   };
@@ -87,9 +102,8 @@ describe('JavaScript event worker', () => {
     const worker = new JavascriptEventWorker();
 
     jest.spyOn(worker, 'addTask');
-
     await worker.start();
-    const workerEvent = createEventMock();
+    const workerEvent = createEventMock({});
 
     /**
      * Act
@@ -101,27 +115,52 @@ describe('JavaScript event worker', () => {
     /**
      * Assert
      */
-    expect(worker.addTask).toBeCalledTimes(1);
-    expect(worker.addTask).toBeCalledWith(WorkerNames.GROUPER, {
-      projectId: workerEvent.projectId,
-      catcherType: workerEvent.catcherType,
-      event: workerEvent.payload,
-    });
+    expect(worker.addTask).toHaveBeenCalledTimes(1);
+    expect(worker.addTask).toHaveBeenCalledWith(
+      WorkerNames.GROUPER,
+      expect.objectContaining({
+        projectId: workerEvent.projectId,
+        catcherType: workerEvent.catcherType,
+        event: workerEvent.payload,
+      })
+    );
   });
 
-  it('should parse user agent correctly', () => {
+  it('should parse user agent correctly', async () => {
     /**
      * Arrange
      */
+    const worker = new JavascriptEventWorker();
+
+    jest.spyOn(worker, 'addTask');
+    await worker.start();
+    const workerEvent = createEventMock({ withUserAgent: true });
 
     /**
      * Act
+     *
+     * Handle event
      */
+    await worker.handle(workerEvent);
 
     /**
      * Assert
      */
-
+    expect(worker.addTask).toHaveBeenCalledTimes(1);
+    expect(worker.addTask).toHaveBeenCalledWith(
+      WorkerNames.GROUPER,
+      expect.objectContaining({
+        projectId: workerEvent.projectId,
+        catcherType: workerEvent.catcherType,
+        event: {
+          ...workerEvent.payload,
+          addons: {
+            ...workerEvent.payload.addons,
+            beautifiedUserAgent: expect.objectContaining(beautifiedUserAgent),
+          },
+        },
+      })
+    );
   });
 
   it('should parse source maps correctly', () => {
