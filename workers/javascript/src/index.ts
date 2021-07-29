@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
@@ -38,26 +37,6 @@ export default class JavascriptEventWorker extends EventWorker {
    * Collection where source maps stored
    */
   private releasesDbCollectionName = 'releases';
-
-  /**
-   * Extract base filename from path
-   * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
-   *
-   * @param filePath - path to extract
-   */
-  private static extractFileNameFromFullPath(filePath: string): string {
-    /**
-     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js?v=10"
-     */
-    let nameFromPath = path.basename(filePath);
-
-    /**
-     * "main.js?v=10" -> "main.js"
-     */
-    nameFromPath = nameFromPath.split('?').shift();
-
-    return nameFromPath;
-  }
 
   /**
    * Start consuming messages
@@ -165,17 +144,23 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     /**
-     * Extract base filename from path
-     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
-     */
-    const nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
-
-    /**
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
      */
     const mapForFrame: SourceMapDataExtended = releaseRecord.files.find((mapFileName: SourceMapDataExtended) => {
-      return mapFileName.originFileName === nameFromPath;
+      /**
+       * File name with full path from stack frame
+       * For example, 'file:///main.js' or 'file:///codex.so/static/js/main.js'
+       */
+      const fullPathFileName = stackFrame.file;
+
+      /**
+       * Origin file name from source map
+       * For example, 'main.js' or 'static/js/main.js'
+       */
+      const originFileName = mapFileName.originFileName;
+
+      return fullPathFileName.includes(originFileName);
     });
 
     if (!mapForFrame) {
