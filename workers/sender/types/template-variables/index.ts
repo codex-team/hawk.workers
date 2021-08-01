@@ -13,6 +13,7 @@ export { AssigneeTemplateVariables, AssigneeNotification } from './assignee';
 export { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './blockWorkspace';
 export { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 export { PaymentSuccessNotification } from './payment-success';
+export { SignUpNotification } from './sign-up';
 
 /**
  * Variables for notify-senders wrapped in payload with type
