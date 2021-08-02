@@ -88,6 +88,7 @@ services:
       context: .
     env_file:
       - .env
+      - workers/grouper/.env
     restart: unless-stopped
     entrypoint: yarn run-grouper
     volumes:
@@ -95,7 +96,10 @@ services:
       - workers-deps:/usr/src/app/node_modules
 
   #
-  # System workers: archiver
+  # System workers:
+  # - archiver
+  # - limiter
+  # - paymaster
   #
 
   hawk-worker-archiver:
@@ -107,6 +111,32 @@ services:
       - workers/archiver/.env
     restart: unless-stopped
     entrypoint: yarn run-archiver
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+  hawk-worker-limiter:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+      - workers/limiter/.env
+    restart: unless-stopped
+    entrypoint: yarn run-limiter
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+  hawk-worker-paymaster:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+      - workers/paymaster/.env
+    restart: unless-stopped
+    entrypoint: yarn run-paymaster
     volumes:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
@@ -157,5 +187,4 @@ volumes:
 
 networks:
   default:
-    external:
-      name: hawkmono_default
+    name: hawkmono_default
