@@ -110,6 +110,8 @@ export default abstract class SenderWorker extends Worker {
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
+      default:
+        throw new Error(`Unknown task type found ${task.type}`);
     }
   }
 
@@ -433,7 +435,11 @@ export default abstract class SenderWorker extends Worker {
   private async getUsers(userIds: string[]): Promise<UserDBScheme[] | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('users').find({ _id: userIds.map(userId => new ObjectId(userId)) })
+    return connection.collection('users').find({
+      _id: {
+        $in: userIds.map(userId => new ObjectId(userId)),
+      },
+    })
       .toArray();
   }
 
