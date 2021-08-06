@@ -1,4 +1,4 @@
-import * as shortNumber from 'short-number';
+import { shortNumber } from 'short-number';
 import * as Twig from 'twig';
 import type { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import { BacktraceFrame } from 'hawk.types';
@@ -25,7 +25,7 @@ Twig.extendFunction('findTrace', (backtrace: BacktraceFrame[]): BacktraceFrame |
  * @param {string} value - path to prettify
  * @returns {string}
  */
-Twig.extendFilter('prettyPath', (value: string): string => {
+Twig.extendFilter('prettyPath', (value = ''): string => {
   return value
     // remove protocol
     .replace(/^(.*?)\/{2,3}/, '')
