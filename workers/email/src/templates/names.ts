@@ -4,7 +4,7 @@
 enum Templates {
   Assignee = 'assignee',
   BlockWorkspace = 'block-workspace',
-  Event = 'event',
+  NewEvent = 'new-event',
   PaymentFailed = 'payment-failed',
   PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
