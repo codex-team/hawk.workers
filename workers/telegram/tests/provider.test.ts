@@ -56,7 +56,7 @@ describe('TelegramProvider', () => {
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const render = (): string => provider.render(templates.NewEventTpl, vars.payload);
+      const render = (): string => provider.render(templates.EventTpl, vars.payload);
 
       expect(render).not.toThrowError();
 

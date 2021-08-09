@@ -1,4 +1,4 @@
-import { shortNumber } from 'short-number';
+import shortNumber from 'short-number';
 import * as Twig from 'twig';
 import type { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 import { BacktraceFrame } from 'hawk.types';
@@ -126,6 +126,17 @@ Twig.extendFilter('colorById', (id: string): string => {
 Twig.extendFilter('abbrNumber', (value: number): string => {
   const MAX_VALUE_SIZE = 1000;
 
+  /**
+   * Check if value is missing
+   */
+  if (!value) {
+    return '';
+  }
+
+  /**
+   * Check if we no need to process value
+   * We need to show it without letters
+   */
   if (value < MAX_VALUE_SIZE) {
     return value.toString();
   }

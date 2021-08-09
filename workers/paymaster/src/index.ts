@@ -23,7 +23,7 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
 /**
  * Days after payday for paying in actual subscription
  */
-const DAYS_AFTER_PAYDAY = -3;
+const DAYS_AFTER_PAYDAY = -2;
 
 /**
  * Number of days left to notify admins about future payments
@@ -189,7 +189,7 @@ export default class PaymasterWorker extends Worker {
        *
        * @todo do not notify if card is linked?
        */
-      if (daysLeft < 3) {
+      if (daysLeft <= DAYS_LEFT_THRESHOLD) {
         /**
          * Add task for Sender worker
          */
@@ -224,7 +224,7 @@ export default class PaymasterWorker extends Worker {
      * Block workspace if it has subscription,
      * but after payday 3 days have passed
      */
-    if (workspace.subscriptionId && daysLeft > DAYS_AFTER_PAYDAY) {
+    if (workspace.subscriptionId && (daysLeft < DAYS_AFTER_PAYDAY)) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
