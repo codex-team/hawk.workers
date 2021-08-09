@@ -187,4 +187,5 @@ volumes:
 
 networks:
   default:
+    external: true
     name: hawkmono_default
