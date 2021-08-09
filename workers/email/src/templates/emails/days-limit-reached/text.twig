@@ -1,4 +1,4 @@
-{{ daysLeft | escape }} days left for.......... workspace "{{ workspace.name | escape }}" was blocked because the plan was not renewed.
+{{ daysLeft | escape }} day{{ daysLeft > 1 ? 's' : '' }} left to the paid plan ending for workspace {{ workspace.name | escape }}.
 
 Please, check payment settings and renew the plan: {{ host }}/workspace/{{ workspace._id }}/billing
 
