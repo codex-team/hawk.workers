@@ -18,7 +18,7 @@ export default class TelegramProvider extends NotificationsProvider {
     let template: TelegramTemplate;
 
     switch (notification.type) {
-      case 'event': template = templates.NewEventTpl; break;
+      case 'event': template = templates.EventTpl; break;
       case 'several-events':template = templates.SeveralEventsTpl; break;
       /**
        * @todo add assignee notification for telegram provider

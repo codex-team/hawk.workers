@@ -60,11 +60,11 @@ export default abstract class SenderWorker extends Worker {
     super();
 
     if (!process.env.GARAGE_URL) {
-      throw Error('procces.env.GARAGE_URL does not specified. Check workers/sender/.env');
+      throw Error('process.env.GARAGE_URL does not specified. Check workers/sender/.env');
     }
 
     if (!process.env.API_STATIC_URL) {
-      throw Error('procces.env.API_STATIC_URL does not specified. Check workers/sender/.env');
+      throw Error('process.env.API_STATIC_URL does not specified. Check workers/sender/.env');
     }
   }
 
@@ -105,9 +105,9 @@ export default abstract class SenderWorker extends Worker {
     }
 
     switch (task.type) {
-      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
       default:

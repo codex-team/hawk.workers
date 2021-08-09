@@ -44,7 +44,7 @@ export default class EmailProvider extends NotificationsProvider {
     switch (notification.type) {
       case 'assignee': templateName = Templates.Assignee; break;
       case 'block-workspace': templateName = Templates.BlockWorkspace; break;
-      case 'event': templateName = Templates.NewEvent; break;
+      case 'event': templateName = Templates.Event; break;
       case 'payment-failed': templateName = Templates.PaymentFailed; break;
       case 'payment-success': templateName = Templates.PaymentSuccess; break;
       case 'several-events': templateName = Templates.SeveralEvents; break;
