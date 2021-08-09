@@ -182,6 +182,18 @@ services:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
 
+  hawk-worker-slack:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-slack
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
 volumes:
   workers-deps:
 
