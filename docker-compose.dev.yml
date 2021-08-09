@@ -142,7 +142,7 @@ services:
       - workers-deps:/usr/src/app/node_modules
 
   #
-  # Notification workers: notifier, email, telegram
+  # Notification workers: notifier, email, telegram, slack
   #
 
   hawk-worker-notifier:
