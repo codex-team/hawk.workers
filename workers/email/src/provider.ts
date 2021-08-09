@@ -45,9 +45,14 @@ export default class EmailProvider extends NotificationsProvider {
       case 'assignee': templateName = Templates.Assignee; break;
       case 'block-workspace': templateName = Templates.BlockWorkspace; break;
       case 'event': templateName = Templates.Event; break;
+      case 'days-limit-reached': templateName = Templates.DaysLimitReached; break;
       case 'payment-failed': templateName = Templates.PaymentFailed; break;
       case 'payment-success': templateName = Templates.PaymentSuccess; break;
       case 'several-events': templateName = Templates.SeveralEvents; break;
+    }
+
+    if (!templateName) {
+      throw new Error(`Cannot find template for the task type ${notification.type}`);
     }
 
     this.sendNotification(to, notification, templateName);

@@ -23,7 +23,12 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
 /**
  * Days after payday for paying in actual subscription
  */
-const DAYS_AFTER_PAYDAY = 3;
+const DAYS_AFTER_PAYDAY = -3;
+
+/**
+ * Number of days left to notify admins about future payments
+ */
+const DAYS_LEFT_THRESHOLD = 3;
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -169,9 +174,37 @@ export default class PaymasterWorker extends Worker {
     );
 
     /**
-     * If today is not payday for workspace do nothing
+     * Define readable values
      */
-    if (!PaymasterWorker.isTimeToPay(workspace.lastChargeDate)) {
+    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate);
+    const daysLeft = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) * -1;
+    const isFreePlan = currentPlan.monthlyCharge === 0;
+
+    /**
+     * Today is not payday for workspace
+     */
+    if (!isTimeToPay && !isFreePlan) {
+      /**
+       * If payday is coming then notify admins
+       *
+       * @todo do not notify if card is linked?
+       */
+      if (daysLeft < 3) {
+        /**
+         * Add task for Sender worker
+         */
+        await this.addTask(WorkerNames.EMAIL, {
+          type: 'days-limit-reached',
+          payload: {
+            workspaceId: workspace._id,
+            daysLeft: daysLeft,
+          },
+        });
+      }
+
+      /**
+       * Do nothing
+       */
       return [workspace, false];
     }
 
@@ -179,9 +212,10 @@ export default class PaymasterWorker extends Worker {
      * If workspace has free plan,
      * Then update last charge date and clear count of events for billing period
      */
-    if (currentPlan.monthlyCharge === 0) {
+    if (isFreePlan) {
       await this.updateLastChargeDate(workspace, date);
       await this.clearBillingPeriodEventsCount(workspace);
+      await this.unblockWorkspace(workspace);
 
       return [workspace, false];
     }
@@ -190,7 +224,7 @@ export default class PaymasterWorker extends Worker {
      * Block workspace if it has subscription,
      * but after payday 3 days have passed
      */
-    if (workspace.subscriptionId && PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) > DAYS_AFTER_PAYDAY) {
+    if (workspace.subscriptionId && daysLeft > DAYS_AFTER_PAYDAY) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
@@ -225,7 +259,7 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * Update isBlocked in workspace
+   * Set isBlocked=true in workspace
    *
    * @param workspace - workspace for block
    */
@@ -245,6 +279,21 @@ export default class PaymasterWorker extends Worker {
       type: 'block-workspace',
       payload: {
         workspaceId: workspace._id,
+      },
+    });
+  }
+
+  /**
+   * Set isBlocked=false in workspace
+   *
+   * @param workspace - workspace for block
+   */
+  private async unblockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        isBlocked: false,
       },
     });
   }

@@ -23,7 +23,8 @@ import {
   SenderWorkerTask,
   SenderWorkerBlockWorkspaceTask,
   SenderWorkerPaymentFailedTask,
-  SenderWorkerPaymentSuccessTask
+  SenderWorkerPaymentSuccessTask,
+  SenderWorkerDaysLimitReachedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -107,6 +108,7 @@ export default abstract class SenderWorker extends Worker {
     switch (task.type) {
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'days-limit-reached': return this.handleDaysLimitReachedTask(task as SenderWorkerDaysLimitReachedTask);
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
@@ -269,6 +271,50 @@ export default abstract class SenderWorker extends Worker {
             host: process.env.GARAGE_URL,
             hostOfStatic: process.env.API_STATIC_URL,
             workspace,
+          },
+        });
+      }
+    }));
+  }
+
+  /**
+   * Handle task when days limit is almost reached
+   *
+   * @param task - task to handle
+   */
+  private async handleDaysLimitReachedTask(task: SenderWorkerDaysLimitReachedTask): Promise<void> {
+    const { workspaceId, daysLeft } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send days limit reached notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send days limit reached notification: workspace team not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'days-limit-reached',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+            daysLeft,
           },
         });
       }
