@@ -129,7 +129,7 @@ Twig.extendFilter('abbrNumber', (value: number): string => {
   /**
    * Check if value is missing
    */
-  if (!value) {
+  if (value === undefined) {
     return '';
   }
 
