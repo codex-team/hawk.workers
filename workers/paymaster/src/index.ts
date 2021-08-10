@@ -30,6 +30,7 @@ const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 2;
 /**
  * List of days left number to notify admins about upcoming payment
  */
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
 const DAYS_LEFT_ALERT = [3, 2, 1, 0];
 
 /**
