@@ -1,7 +1,7 @@
 /**
  * Payload for task when days limit is almost reached
  */
-export interface SenderWorkerDaysLimitReachedPayload {
+export interface SenderWorkerDaysLimitAlmostReachedPayload {
   /**
    * Target workspace id
    */
@@ -16,14 +16,14 @@ export interface SenderWorkerDaysLimitReachedPayload {
 /**
  * Payload of an event when days limit is almost reached
  */
-export interface SenderWorkerDaysLimitReachedTask {
+export interface SenderWorkerDaysLimitAlmostReachedTask {
   /**
    * Task name
    */
-  type: 'days-limit-reached',
+  type: 'days-limit-almost-reached',
 
   /**
    * Payload data
    */
-  payload: SenderWorkerDaysLimitReachedPayload
+  payload: SenderWorkerDaysLimitAlmostReachedPayload
 }

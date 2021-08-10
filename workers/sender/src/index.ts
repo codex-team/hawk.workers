@@ -24,7 +24,7 @@ import {
   SenderWorkerBlockWorkspaceTask,
   SenderWorkerPaymentFailedTask,
   SenderWorkerPaymentSuccessTask,
-  SenderWorkerDaysLimitReachedTask
+  SenderWorkerDaysLimitAlmostReachedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -108,7 +108,7 @@ export default abstract class SenderWorker extends Worker {
     switch (task.type) {
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
-      case 'days-limit-reached': return this.handleDaysLimitReachedTask(task as SenderWorkerDaysLimitReachedTask);
+      case 'days-limit-almost-reached': return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
@@ -282,7 +282,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
-  private async handleDaysLimitReachedTask(task: SenderWorkerDaysLimitReachedTask): Promise<void> {
+  private async handleDaysLimitAlmostReachedTask(task: SenderWorkerDaysLimitAlmostReachedTask): Promise<void> {
     const { workspaceId, daysLeft } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);
@@ -309,7 +309,7 @@ export default abstract class SenderWorker extends Worker {
 
       if (channel.isEnabled) {
         await this.provider.send(channel.endpoint, {
-          type: 'days-limit-reached',
+          type: 'days-limit-almost-reached',
           payload: {
             host: process.env.GARAGE_URL,
             hostOfStatic: process.env.API_STATIC_URL,

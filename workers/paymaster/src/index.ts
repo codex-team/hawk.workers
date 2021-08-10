@@ -21,14 +21,16 @@ dotenv.config({
 const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
- * Days after payday for paying in actual subscription
+ * Days after payday to try paying in actual subscription
+ * When days after payday is more than this const and we still
+ * can not get successful payments then workspace will be blocked.
  */
-const DAYS_AFTER_PAYDAY = -2;
+const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 2;
 
 /**
- * Number of days left to notify admins about future payments
+ * List of days left number to notify admins about upcoming payment
  */
-const DAYS_LEFT_THRESHOLD = 3;
+const DAYS_LEFT_ALERT = [3, 2, 1, 0];
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -173,11 +175,26 @@ export default class PaymasterWorker extends Worker {
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
 
+    /** Define readable values */
+
     /**
-     * Define readable values
+     * Is it time to pay
      */
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate);
-    const daysLeft = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) * -1;
+
+    /**
+     * How many days have passed since payments the expected day of payments
+     */
+    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate);
+
+    /**
+     * How many days left for the expected day of payments
+     */
+    const daysLeft = daysAfterPayday * -1;
+
+    /**
+     * Do we need to ask for money
+     */
     const isFreePlan = currentPlan.monthlyCharge === 0;
 
     /**
@@ -189,12 +206,12 @@ export default class PaymasterWorker extends Worker {
        *
        * @todo do not notify if card is linked?
        */
-      if (daysLeft <= DAYS_LEFT_THRESHOLD) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft)) {
         /**
          * Add task for Sender worker
          */
         await this.addTask(WorkerNames.EMAIL, {
-          type: 'days-limit-reached',
+          type: 'days-limit-almost-reached',
           payload: {
             workspaceId: workspace._id,
             daysLeft: daysLeft,
@@ -222,9 +239,9 @@ export default class PaymasterWorker extends Worker {
 
     /**
      * Block workspace if it has subscription,
-     * but after payday 3 days have passed
+     * but a few days have passed after payday
      */
-    if (workspace.subscriptionId && (daysLeft < DAYS_AFTER_PAYDAY)) {
+    if (workspace.subscriptionId && (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING)) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];

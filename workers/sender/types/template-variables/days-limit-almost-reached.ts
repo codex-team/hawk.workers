@@ -5,7 +5,7 @@ import { Notification } from './notification';
 /**
  * Variables for days limit is almost reached template
  */
-export interface DaysLimitReachedTemplateVariables extends CommonTemplateVariables {
+export interface DaysLimitAlmostReachedTemplateVariables extends CommonTemplateVariables {
   /**
    * Blocked workspace data
    */
@@ -20,14 +20,14 @@ export interface DaysLimitReachedTemplateVariables extends CommonTemplateVariabl
 /**
  * Object with notification type and variables for the days limit is almost reached event template
  */
-export interface DaysLimitReachedNotification extends Notification<DaysLimitReachedTemplateVariables> {
+export interface DaysLimitAlmostReachedNotification extends Notification<DaysLimitAlmostReachedTemplateVariables> {
   /**
    * Notification when days limit is almost reached
    */
-  type: 'days-limit-reached';
+  type: 'days-limit-almost-reached';
 
   /**
    * Notification payload
    */
-  payload: DaysLimitReachedTemplateVariables;
+  payload: DaysLimitAlmostReachedTemplateVariables;
 }
