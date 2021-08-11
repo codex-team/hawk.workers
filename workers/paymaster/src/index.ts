@@ -25,7 +25,7 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
  * When days after payday is more than this const and we still
  * can not get successful payments then workspace will be blocked.
  */
-const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 2;
+const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
 
 /**
  * List of days left number to notify admins about upcoming payment
