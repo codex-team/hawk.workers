@@ -9,7 +9,7 @@ export interface SenderWorkerBlockWorkspacePayload {
 }
 
 /**
- * Payload of an event assigning someone to resolve the issue (event)
+ * Payload of an event when workspace blocked
  */
 export interface SenderWorkerBlockWorkspaceTask {
   /**

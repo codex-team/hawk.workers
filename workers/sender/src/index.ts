@@ -23,7 +23,8 @@ import {
   SenderWorkerTask,
   SenderWorkerBlockWorkspaceTask,
   SenderWorkerPaymentFailedTask,
-  SenderWorkerPaymentSuccessTask
+  SenderWorkerPaymentSuccessTask,
+  SenderWorkerDaysLimitAlmostReachedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -60,11 +61,11 @@ export default abstract class SenderWorker extends Worker {
     super();
 
     if (!process.env.GARAGE_URL) {
-      throw Error('procces.env.GARAGE_URL does not specified. Check workers/sender/.env');
+      throw Error('process.env.GARAGE_URL does not specified. Check workers/sender/.env');
     }
 
     if (!process.env.API_STATIC_URL) {
-      throw Error('procces.env.API_STATIC_URL does not specified. Check workers/sender/.env');
+      throw Error('process.env.API_STATIC_URL does not specified. Check workers/sender/.env');
     }
   }
 
@@ -105,11 +106,14 @@ export default abstract class SenderWorker extends Worker {
     }
 
     switch (task.type) {
-      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'days-limit-almost-reached': return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
+      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
+      default:
+        throw new Error(`Unknown task type found ${task.type}`);
     }
   }
 
@@ -267,6 +271,50 @@ export default abstract class SenderWorker extends Worker {
             host: process.env.GARAGE_URL,
             hostOfStatic: process.env.API_STATIC_URL,
             workspace,
+          },
+        });
+      }
+    }));
+  }
+
+  /**
+   * Handle task when days limit is almost reached
+   *
+   * @param task - task to handle
+   */
+  private async handleDaysLimitAlmostReachedTask(task: SenderWorkerDaysLimitAlmostReachedTask): Promise<void> {
+    const { workspaceId, daysLeft } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send days limit reached notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send days limit reached notification: workspace team not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'days-limit-almost-reached',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+            daysLeft,
           },
         });
       }
@@ -433,7 +481,11 @@ export default abstract class SenderWorker extends Worker {
   private async getUsers(userIds: string[]): Promise<UserDBScheme[] | null> {
     const connection = await this.accountsDb.getConnection();
 
-    return connection.collection('users').find({ _id: userIds.map(userId => new ObjectId(userId)) })
+    return connection.collection('users').find({
+      _id: {
+        $in: userIds.map(userId => new ObjectId(userId)),
+      },
+    })
       .toArray();
   }
 

@@ -21,9 +21,17 @@ dotenv.config({
 const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
- * Days after payday for paying in actual subscription
+ * Days after payday to try paying in actual subscription
+ * When days after payday is more than this const and we still
+ * can not get successful payments then workspace will be blocked.
  */
-const DAYS_AFTER_PAYDAY = 3;
+const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
+
+/**
+ * List of days left number to notify admins about upcoming payment
+ */
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const DAYS_LEFT_ALERT = [3, 2, 1, 0];
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -65,6 +73,24 @@ export default class PaymasterWorker extends Worker {
     const now = new Date().getTime();
 
     return now >= expectedPayDay.getTime();
+  }
+
+  /**
+   * Returns difference between now and payday in days
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static daysBeforePayday(date: Date): number {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
+
+    const now = new Date().getTime();
+
+    return Math.floor((expectedPayDay.getTime() - now) / MILLISECONDS_IN_DAY);
   }
 
   /**
@@ -168,10 +194,53 @@ export default class PaymasterWorker extends Worker {
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
 
+    /** Define readable values */
+
     /**
-     * If today is not payday for workspace do nothing
+     * Is it time to pay
      */
-    if (!PaymasterWorker.isTimeToPay(workspace.lastChargeDate)) {
+    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate);
+
+    /**
+     * How many days have passed since payments the expected day of payments
+     */
+    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate);
+
+    /**
+     * How many days left for the expected day of payments
+     */
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate);
+
+    /**
+     * Do we need to ask for money
+     */
+    const isFreePlan = currentPlan.monthlyCharge === 0;
+
+    /**
+     * Today is not payday for workspace
+     */
+    if (!isTimeToPay && !isFreePlan) {
+      /**
+       * If payday is coming then notify admins
+       *
+       * @todo do not notify if card is linked?
+       */
+      if (DAYS_LEFT_ALERT.includes(daysLeft)) {
+        /**
+         * Add task for Sender worker
+         */
+        await this.addTask(WorkerNames.EMAIL, {
+          type: 'days-limit-almost-reached',
+          payload: {
+            workspaceId: workspace._id,
+            daysLeft: daysLeft,
+          },
+        });
+      }
+
+      /**
+       * Do nothing
+       */
       return [workspace, false];
     }
 
@@ -179,18 +248,19 @@ export default class PaymasterWorker extends Worker {
      * If workspace has free plan,
      * Then update last charge date and clear count of events for billing period
      */
-    if (currentPlan.monthlyCharge === 0) {
+    if (isFreePlan) {
       await this.updateLastChargeDate(workspace, date);
       await this.clearBillingPeriodEventsCount(workspace);
+      await this.unblockWorkspace(workspace);
 
       return [workspace, false];
     }
 
     /**
      * Block workspace if it has subscription,
-     * but after payday 3 days have passed
+     * but a few days have passed after payday
      */
-    if (workspace.subscriptionId && PaymasterWorker.daysAfterPayday(workspace.lastChargeDate) > DAYS_AFTER_PAYDAY) {
+    if (workspace.subscriptionId && (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING)) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
@@ -225,7 +295,7 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * Update isBlocked in workspace
+   * Set isBlocked=true in workspace
    *
    * @param workspace - workspace for block
    */
@@ -245,6 +315,21 @@ export default class PaymasterWorker extends Worker {
       type: 'block-workspace',
       payload: {
         workspaceId: workspace._id,
+      },
+    });
+  }
+
+  /**
+   * Set isBlocked=false in workspace
+   *
+   * @param workspace - workspace for block
+   */
+  private async unblockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        isBlocked: false,
       },
     });
   }

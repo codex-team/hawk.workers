@@ -1,5 +1,5 @@
 /* eslint-disable */
-import type { EventsTemplateVariables, AssigneeTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import type {EventsTemplateVariables, AssigneeTemplateVariables, Notification} from 'hawk-worker-sender/types/template-variables';
 
 const nodemailerMock = jest.genMockFromModule('nodemailer') as any;
 const sendMailMock = jest.fn();
@@ -36,7 +36,13 @@ describe('EmailProvider', () => {
         text: '',
       }));
 
-      await provider.send(to, { events: [{ event: {} }], project: {} } as any);
+      await provider.send(to, {
+        type: 'event',
+        payload: {
+          events: [{ event: {} }],
+          project: {}
+        }
+      } as Notification);
 
       const options = {
         from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
@@ -51,7 +57,7 @@ describe('EmailProvider', () => {
   });
 
   describe('templates', () => {
-    it('should successfully render a new-event template', async () => {
+    it('should successfully render a event template', async () => {
       const vars: EventsTemplateVariables = {
         events: [{
           event: {
@@ -89,7 +95,7 @@ describe('EmailProvider', () => {
       let template;
 
       // @ts-ignore
-      const render = () => provider.render(Templates.NewEvent, vars);
+      const render = () => provider.render(Templates.Event, vars);
 
       expect(render).not.toThrowError();
 
