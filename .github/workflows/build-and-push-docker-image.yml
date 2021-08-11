@@ -1,4 +1,4 @@
-name: Build and deploy
+name: Build and push docker image
 
 on: [push]
 
@@ -47,8 +47,3 @@ jobs:
           file: ./stage.Dockerfile
           tags: ${{ env.DOCKER_REPO }}:migration
           push: ${{ endsWith(github.ref, '/migration') }}
-
-      - name: Deploy on stage
-        if: endsWith(github.ref, '/stage')
-        run: |
-          curl --user ${{ secrets.DEPLOY_HAWK_STAGE_AUTH }} ${{ secrets.DEPLOY_HAWK_STAGE_ADDRESS }}?image=${{ env.DOCKER_REPO }}:stage
