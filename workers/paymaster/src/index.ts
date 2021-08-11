@@ -76,6 +76,24 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
+   * Returns difference between now and payday in days
+   *
+   * Pay day is calculated by formula: last charge date + 30 days
+   *
+   * @param date - last charge date
+   */
+  private static daysBeforePayday(date: Date): number {
+    const numberOfDays = 30;
+    const expectedPayDay = new Date(date);
+
+    expectedPayDay.setDate(date.getDate() + numberOfDays);
+
+    const now = new Date().getTime();
+
+    return Math.floor((expectedPayDay.getTime() - now) / MILLISECONDS_IN_DAY);
+  }
+
+  /**
    * Returns difference between payday and now in days
    *
    * Pay day is calculated by formula: last charge date + 30 days
@@ -191,7 +209,7 @@ export default class PaymasterWorker extends Worker {
     /**
      * How many days left for the expected day of payments
      */
-    const daysLeft = daysAfterPayday * -1;
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate);
 
     /**
      * Do we need to ask for money
