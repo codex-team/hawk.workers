@@ -9,19 +9,15 @@
   <tr>
     <td style="padding-top: 15px; padding-right: 0; padding-left: 0; padding-bottom: 15px; text-align: center;">
       <font color="#dbe6ff" style="font-size: 15px; color: #dbe6ff; letter-spacing: 0.4px;">
-          Thank you for registering on Hawk
+        Your account has been created
       </font>
     </td>
   </tr>
   <tr>
   <td style="display: block; padding-top: 20px; padding-right: 20px; padding-bottom: 20px; padding-left: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
     <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-      Use this password to sign in to your account and create your first workspace!<br>
-      Password: {{ password }}
-      <br>
-      To change your password click to profile image at
-      the top left corner or follow this 
-      {% include '../../components/inline-link.twig' with {href: host ~ '/account/general', label: 'link'} %}
+      Use this password to sign in. You can change it later.<br>
+      Password: <font style="font-weight: bold;">{{ password }}</font>
     </font>
   </td>
 </tr>
