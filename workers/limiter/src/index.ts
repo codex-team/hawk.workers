@@ -115,7 +115,7 @@ export default class LimiterWorker extends Worker {
 
     await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
 
-    if (report.isBanned) {
+    if (report.isBlocked) {
       await this.redis.appendBannedProjects(workspaceProjectsIds);
     } else {
       await this.redis.removeBannedProjects(workspaceProjectsIds);
@@ -123,7 +123,7 @@ export default class LimiterWorker extends Worker {
 
     await this.sendSingleWorkspacesCheckReport(report);
     this.logger.info(
-      `Limiter worker finished workspace checking. Workspace with id ${event.workspaceId} was ${report.isBanned ? 'banned' : 'unbanned'}`
+      `Limiter worker finished workspace checking. Workspace with id ${event.workspaceId} was ${report.isBlocked ? 'banned' : 'unbanned'}`
     );
   }
 
@@ -161,12 +161,13 @@ export default class LimiterWorker extends Worker {
       const workspaceProjects = projects.filter(p => p.workspaceId.toString() === workspace._id.toString());
 
       try {
-        const { isBanned, updatedWorkspace } = await this.analyzeWorkspaceData(workspace, workspaceProjects);
+        const { isBlocked, updatedWorkspace } = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
-        if (isBanned) {
+        if (isBlocked) {
           bannedProjectIds.push(...workspaceProjects.map(p => p._id.toString()));
           bannedWorkspaces.push(updatedWorkspace);
         }
+
         updatedWorkspaces.push(updatedWorkspace);
       } catch (e) {
         this.logger.error(e);
@@ -332,6 +333,8 @@ export default class LimiterWorker extends Worker {
    *
    * @param workspace - workspace data to check
    * @param projects - workspaces projects
+   *
+   * @returns {{isBlocked: boolean, updatedWorkspace: WorkspaceDBScheme}}
    */
   private async analyzeWorkspaceData(
     workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]
@@ -351,23 +354,22 @@ export default class LimiterWorker extends Worker {
       throw error;
     }
 
-    if (workspace.isBlocked) {
-      return {
-        isBanned: true,
-        updatedWorkspace: workspace,
-      };
-    }
-
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
     const workspaceEventsCount = await this.getEventsCountByProjects(projects, since);
+    const shouldBeBlocked = workspace.tariffPlan.eventsLimit < workspaceEventsCount;
+    const isAlreadyBlocked = workspace.isBlocked;
+
+    console.log(`WKSP ${workspace._id} has ${workspace.tariffPlan.eventsLimit - workspaceEventsCount} events left`);
+
     const updatedWorkspace = {
       ...workspace,
       billingPeriodEventsCount: workspaceEventsCount,
+      isBlocked: isAlreadyBlocked || shouldBeBlocked,
     };
 
     return {
-      isBanned: workspace.tariffPlan.eventsLimit < workspaceEventsCount,
+      isBlocked: isAlreadyBlocked || shouldBeBlocked,
       updatedWorkspace,
     };
   }
@@ -384,7 +386,12 @@ export default class LimiterWorker extends Worker {
           filter: {
             _id: workspace._id,
           },
-          update: { $set: { billingPeriodEventsCount: workspace.billingPeriodEventsCount } },
+          update: {
+            $set: {
+              billingPeriodEventsCount: workspace.billingPeriodEventsCount,
+              isBlocked: workspace.isBlocked,
+            },
+          },
         },
       };
     });
@@ -407,7 +414,7 @@ ${encodeURIComponent(workspace.name)} wants to be unblocked
 
 It has ${shortNumber(workspace.billingPeriodEventsCount)} events of ${workspace.tariffPlan.eventsLimit}. Last charge date: ${workspace.lastChargeDate.toISOString()}
 
-${reportData.isBanned ? 'Blocked ❌' : 'Unblocked ✅'}
+${reportData.isBlocked ? 'Blocked ❌' : 'Unblocked ✅'}
 `;
 
     await this.sendReport(reportString);

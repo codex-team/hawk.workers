@@ -221,7 +221,7 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
-       * If payday is coming then notify admins
+       * If payday is coming for the paid plans then notify admins
        *
        * @todo do not notify if card is linked?
        */
@@ -245,8 +245,9 @@ export default class PaymasterWorker extends Worker {
     }
 
     /**
-     * If workspace has free plan,
-     * Then update last charge date and clear count of events for billing period
+     * If workspace has free plan and it is a time to pay
+     * then update last charge date, clear count of events
+     * for billing period and unblock the workspace
      */
     if (isFreePlan) {
       await this.updateLastChargeDate(workspace, date);
