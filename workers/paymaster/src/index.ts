@@ -219,13 +219,13 @@ export default class PaymasterWorker extends Worker {
     /**
      * Today is not payday for workspace
      */
-    if (!isTimeToPay && !isFreePlan) {
+    if (!isTimeToPay) {
       /**
        * If payday is coming then notify admins
        *
        * @todo do not notify if card is linked?
        */
-      if (DAYS_LEFT_ALERT.includes(daysLeft)) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan) {
         /**
          * Add task for Sender worker
          */
