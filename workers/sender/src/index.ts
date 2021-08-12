@@ -24,7 +24,8 @@ import {
   SenderWorkerBlockWorkspaceTask,
   SenderWorkerPaymentFailedTask,
   SenderWorkerPaymentSuccessTask,
-  SenderWorkerDaysLimitAlmostReachedTask
+  SenderWorkerDaysLimitAlmostReachedTask,
+  SenderWorkerEventsLimitAlmostReachedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -110,6 +111,7 @@ export default abstract class SenderWorker extends Worker {
       case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
       case 'days-limit-almost-reached': return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
       case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
+      case 'events-limit-almost-reached': return this.handleEventsLimitAlmostReachedTask(task as SenderWorkerEventsLimitAlmostReachedTask);
       case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
       default:
@@ -315,6 +317,51 @@ export default abstract class SenderWorker extends Worker {
             hostOfStatic: process.env.API_STATIC_URL,
             workspace,
             daysLeft,
+          },
+        });
+      }
+    }));
+  }
+
+  /**
+   * Handle task when events limit is almost reached
+   *
+   * @param task - task to handle
+   */
+  private async handleEventsLimitAlmostReachedTask(task: SenderWorkerEventsLimitAlmostReachedTask): Promise<void> {
+    const { workspaceId, eventsCount, eventsLimit } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send events limit reached notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send events limit reached notification: workspace team not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'events-limit-almost-reached',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+            eventsCount,
+            eventsLimit,
           },
         });
       }
