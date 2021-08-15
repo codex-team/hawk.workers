@@ -15,8 +15,11 @@ import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
 import RedisHelper from './redisHelper';
 import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';
 import { WorkspaceWithTariffPlan } from '../types';
+import * as WorkerNames from '../../../lib/workerNames';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+const NOTIFY_ABOUT_LIMIT = [0.5, 0.8, 1];
 
 /**
  * Worker for checking current total events count in workspaces and limits events receiving if workspace exceed the limit
@@ -357,10 +360,32 @@ export default class LimiterWorker extends Worker {
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
     const workspaceEventsCount = await this.getEventsCountByProjects(projects, since);
-    const shouldBeBlocked = workspace.tariffPlan.eventsLimit < workspaceEventsCount;
+    const usedQuota = workspaceEventsCount / workspace.tariffPlan.eventsLimit;
+    const shouldBeBlocked = usedQuota > 1;
     const isAlreadyBlocked = workspace.isBlocked;
 
     console.log(`WKSP ${workspace._id} has ${workspace.tariffPlan.eventsLimit - workspaceEventsCount} events left`);
+
+    const quotaNotification = NOTIFY_ABOUT_LIMIT.reverse().find(quota => quota < usedQuota);
+
+    /**
+     * Check if at least
+     */
+    if (quotaNotification) {
+      console.log(`WKSP ${workspace._id} has used more than ${quotaNotification * 100}% events`);
+
+      /**
+       * Add task for Sender worker
+       */
+      await this.addTask(WorkerNames.EMAIL, {
+        type: 'events-limit-almost-reached',
+        payload: {
+          workspaceId: workspace._id,
+          eventsCount: workspaceEventsCount,
+          eventsLimit: workspace.tariffPlan.eventsLimit
+        },
+      });
+    }
 
     const updatedWorkspace = {
       ...workspace,
