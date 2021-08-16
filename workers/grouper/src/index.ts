@@ -1,3 +1,4 @@
+import './env';
 import * as crypto from 'crypto';
 import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';

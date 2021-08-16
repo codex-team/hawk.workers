@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
@@ -13,6 +12,7 @@ import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
 import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from 'hawk.types';
 import { beautifyUserAgent } from './utils';
+import { Collection } from 'mongodb';
 
 /**
  * Worker for handling Javascript events
@@ -22,6 +22,11 @@ export default class JavascriptEventWorker extends EventWorker {
    * Worker type (will pull tasks from Registry queue with the same name)
    */
   public readonly type: string = pkg.workerType;
+
+  /**
+   * Releases collection in database
+   */
+  public releasesDbCollection: Collection;
 
   /**
    * Database Controller
@@ -34,32 +39,13 @@ export default class JavascriptEventWorker extends EventWorker {
   private releasesDbCollectionName = 'releases';
 
   /**
-   * Extract base filename from path
-   * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
-   *
-   * @param filePath - path to extract
-   */
-  private static extractFileNameFromFullPath(filePath: string): string {
-    /**
-     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js?v=10"
-     */
-    let nameFromPath = path.basename(filePath);
-
-    /**
-     * "main.js?v=10" -> "main.js"
-     */
-    nameFromPath = nameFromPath.split('?').shift();
-
-    return nameFromPath;
-  }
-
-  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
     await this.db.connect();
     this.db.createGridFsBucket(this.releasesDbCollectionName);
     this.prepareCache();
+    this.releasesDbCollection = this.db.getConnection().collection(this.releasesDbCollectionName);
     await super.start();
   }
 
@@ -158,17 +144,23 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     /**
-     * Extract base filename from path
-     * "file:///Users/specc/neSpecc.github.io/telegraph/dist/main.js?v=10" -> "main.js"
-     */
-    const nameFromPath = JavascriptEventWorker.extractFileNameFromFullPath(stackFrame.file);
-
-    /**
      * One releaseRecord can contain several source maps for different chunks,
      * so find a map by for current stack-frame file
      */
     const mapForFrame: SourceMapDataExtended = releaseRecord.files.find((mapFileName: SourceMapDataExtended) => {
-      return mapFileName.originFileName === nameFromPath;
+      /**
+       * File name with full path from stack frame
+       * For example, 'file:///main.js' or 'file:///codex.so/static/js/main.js'
+       */
+      const fullPathFileName = stackFrame.file;
+
+      /**
+       * Origin file name from source map
+       * For example, 'main.js' or 'static/js/main.js'
+       */
+      const originFileName = mapFileName.originFileName;
+
+      return fullPathFileName.includes(originFileName);
     });
 
     if (!mapForFrame) {
@@ -293,8 +285,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
     try {
-      return await this.db.getConnection()
-        .collection(this.releasesDbCollectionName)
+      return await this.releasesDbCollection
         .findOne({
           projectId,
           release,

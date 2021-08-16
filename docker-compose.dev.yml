@@ -88,6 +88,7 @@ services:
       context: .
     env_file:
       - .env
+      - workers/grouper/.env
     restart: unless-stopped
     entrypoint: yarn run-grouper
     volumes:
@@ -95,7 +96,10 @@ services:
       - workers-deps:/usr/src/app/node_modules
 
   #
-  # System workers: archiver
+  # System workers:
+  # - archiver
+  # - limiter
+  # - paymaster
   #
 
   hawk-worker-archiver:
@@ -111,8 +115,34 @@ services:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
 
+  hawk-worker-limiter:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+      - workers/limiter/.env
+    restart: unless-stopped
+    entrypoint: yarn run-limiter
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+  hawk-worker-paymaster:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+      - workers/paymaster/.env
+    restart: unless-stopped
+    entrypoint: yarn run-paymaster
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
   #
-  # Notification workers: notifier, email, telegram
+  # Notification workers: notifier, email, telegram, slack
   #
 
   hawk-worker-notifier:
@@ -152,10 +182,22 @@ services:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
 
+  hawk-worker-slack:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-slack
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
 volumes:
   workers-deps:
 
 networks:
   default:
-    external:
-      name: hawkmono_default
+    external: true
+    name: hawkmono_default

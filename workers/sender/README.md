@@ -1,6 +1,7 @@
 # Sender worker / Abstract 🧰
 
-This worker provides abstract classes for implementing notify-senders for different channels. For example, Email, Telegram, Slack notifiers.
+This worker provides abstract classes for implementing notify-senders
+for different channels. For example, Email, Telegram, Slack notifiers.
 
 ## How to implement a new worker for a specific channel
 
@@ -55,3 +56,27 @@ export default class NewProvider extends TemplateVariables {
   }
 }
 ```
+
+## How to implement a new template
+
+1. Create a new type for task and payload in `workers/sender/src/types/sender-task`.
+
+2. Create a new type for notification in `workers/sender/src/types/template-variables`.
+
+3. Create a new case for switch in `SenderWorker.handle()` method.
+
+4. Create a new handler method in `SenderWorker` class.
+
+Let's create a template for Email worker for example.
+
+5. Go to `workers/email/src/emails` and create a new directory for templates.
+
+6. Go to `workers/email` and update `names` file by the following command:
+
+`yarn generate-tpl-names`
+
+7. Then go provider's switch in `EmailProvider.send` method which resolves template and add a new one.
+
+Now you can test it by adding new tasks with a new name type.
+
+Good luck.

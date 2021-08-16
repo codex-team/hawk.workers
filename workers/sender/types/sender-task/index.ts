@@ -3,6 +3,7 @@ import { SenderWorkerEventTask } from './event';
 import { SenderWorkerBlockWorkspaceTask } from './blockWorkspace';
 import { SenderWorkerPaymentFailedTask } from './payment-failed';
 import { SenderWorkerPaymentSuccessTask } from './payment-success';
+import { SenderWorkerDaysLimitAlmostReachedTask } from './days-limit-almost-reached';
 import { SenderWorkerSignUpTask } from './signUp';
 
 export { SenderWorkerEventTask, SenderWorkerEventPayload } from './event';
@@ -10,6 +11,7 @@ export { SenderWorkerAssigneeTask, SenderWorkerAssigneePayload } from './assigne
 export { SenderWorkerBlockWorkspaceTask, SenderWorkerBlockWorkspacePayload } from './blockWorkspace';
 export { SenderWorkerPaymentFailedTask, SenderWorkerPaymentFailedPayload } from './payment-failed';
 export { SenderWorkerPaymentSuccessTask, SenderWorkerPaymentSuccessPayload } from './payment-success';
+export { SenderWorkerDaysLimitAlmostReachedTask, SenderWorkerDaysLimitAlmostReachedPayload } from './days-limit-almost-reached';
 export { SenderWorkerSignUpTask, SenderWorkerSignUpPayload } from './signUp';
 
 export type SenderWorkerTask = SenderWorkerEventTask
@@ -17,4 +19,5 @@ export type SenderWorkerTask = SenderWorkerEventTask
   | SenderWorkerBlockWorkspaceTask
   | SenderWorkerPaymentFailedTask
   | SenderWorkerPaymentSuccessTask
+  | SenderWorkerDaysLimitAlmostReachedTask
   | SenderWorkerSignUpTask;

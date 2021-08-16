@@ -1,5 +1,5 @@
 import templates from '../src/templates';
-import NewEventNotifyMock from './__mocks__/new-event-notify';
+import EventNotifyMock from './__mocks__/event-notify';
 import SeveralEventsNotifyMock from './__mocks__/several-events-notify';
 import SlackProvider from '../src/provider';
 
@@ -41,7 +41,7 @@ describe('SlackProvider', () => {
   it('The "send" method should render and deliver message', async () => {
     const provider = new SlackProvider();
 
-    await provider.send(slackEndpointSample, NewEventNotifyMock);
+    await provider.send(slackEndpointSample, EventNotifyMock);
 
     expect(deliver).toHaveBeenCalledTimes(1);
     expect(deliver).toHaveBeenCalledWith(slackEndpointSample, expect.anything());
@@ -56,12 +56,12 @@ describe('SlackProvider', () => {
      */
     it('Select the new-event template if there is a single event in notify payload', async () => {
       const provider = new SlackProvider();
-      const NewEventTpl = jest.spyOn(templates, 'NewEventTpl');
+      const EventTpl = jest.spyOn(templates, 'EventTpl');
       const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
 
-      await provider.send(slackEndpointSample, NewEventNotifyMock);
+      await provider.send(slackEndpointSample, EventNotifyMock);
 
-      expect(NewEventTpl).toHaveBeenCalledTimes(1);
+      expect(EventTpl).toHaveBeenCalledTimes(1);
       expect(SeveralEventsTpl).toHaveBeenCalledTimes(0);
     });
 
@@ -70,12 +70,12 @@ describe('SlackProvider', () => {
      */
     it('Select the several-events template if there are several events in notify payload', async () => {
       const provider = new SlackProvider();
-      const NewEventTpl = jest.spyOn(templates, 'NewEventTpl');
+      const EventTpl = jest.spyOn(templates, 'EventTpl');
       const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
 
       await provider.send(slackEndpointSample, SeveralEventsNotifyMock);
 
-      expect(NewEventTpl).toHaveBeenCalledTimes(0);
+      expect(EventTpl).toHaveBeenCalledTimes(0);
       expect(SeveralEventsTpl).toHaveBeenCalledTimes(1);
     });
   });

@@ -34,7 +34,7 @@ export default class SlackProvider extends NotificationsProvider {
     let template: SlackTemplate;
 
     switch (notification.type) {
-      case 'event': template = templates.NewEventTpl; break;
+      case 'event': template = templates.EventTpl; break;
       case 'several-events':template = templates.SeveralEventsTpl; break;
       /**
        * @todo add assignee notification for telegram provider
