@@ -372,19 +372,25 @@ export default class LimiterWorker extends Worker {
 
     const workspaceEventsCount = await this.getEventsCountByProjects(projects, since);
     const usedQuota = workspaceEventsCount / workspace.tariffPlan.eventsLimit;
-    const shouldBeBlocked = usedQuota > 1;
-    const isAlreadyBlocked = workspace.isBlocked;
-
-    console.log(`WKSP ${workspace._id} has ${workspace.tariffPlan.eventsLimit - workspaceEventsCount} events left`);
-
     const quotaNotification = NOTIFY_ABOUT_LIMIT.reverse().find(quota => quota < usedQuota);
 
-    /**
-     * Check if at least
-     */
-    if (quotaNotification) {
-      console.log(`WKSP ${workspace._id} has used more than ${quotaNotification * 100}% events`);
+    const shouldBeBlocked = usedQuota >= 1;
+    const isAlreadyBlocked = workspace.isBlocked;
 
+    /**
+     * Send notification if workspace will be blocked cause events limit
+     */
+    if (!isAlreadyBlocked && shouldBeBlocked) {
+      /**
+       * Add task for Sender worker
+       */
+      await this.addTask(WorkerNames.EMAIL, {
+        type: 'block-workspace',
+        payload: {
+          workspaceId: workspace._id,
+        },
+      });
+    } else if (quotaNotification) {
       /**
        * Add task for Sender worker
        */
@@ -393,7 +399,7 @@ export default class LimiterWorker extends Worker {
         payload: {
           workspaceId: workspace._id,
           eventsCount: workspaceEventsCount,
-          eventsLimit: workspace.tariffPlan.eventsLimit
+          eventsLimit: workspace.tariffPlan.eventsLimit,
         },
       });
     }
@@ -403,6 +409,8 @@ export default class LimiterWorker extends Worker {
       billingPeriodEventsCount: workspaceEventsCount,
       isBlocked: isAlreadyBlocked || shouldBeBlocked,
     };
+
+
 
     return {
       isBlocked: isAlreadyBlocked || shouldBeBlocked,
