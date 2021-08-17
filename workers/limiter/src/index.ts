@@ -19,7 +19,18 @@ import * as WorkerNames from '../../../lib/workerNames';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const NOTIFY_ABOUT_LIMIT = [0.5, 0.8, 1];
+/**
+ * List of threshold to notify after
+ *
+ * @todo implement support for sending single
+ *       one message per threshold
+ */
+const NOTIFY_ABOUT_LIMIT = [
+  /**
+   * Start notify after 95%
+   */
+  0.95,
+];
 
 /**
  * Worker for checking current total events count in workspaces and limits events receiving if workspace exceed the limit
