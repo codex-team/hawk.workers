@@ -30,7 +30,7 @@
 </tr>
 <tr>
   <td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-    {% set url = host ~ '/workspace/' ~ workspace._id ~ '/billing' %}
+    {% set url = host ~ '/workspace/' ~ workspace._id ~ '/settings/billing' %}
     {% include '../../components/button.twig' with {href: url, label: 'Go to payment settings'} %}
   </td>
 </tr>
