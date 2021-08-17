@@ -3295,7 +3295,7 @@ hash.js@^1.0.0, hash.js@^1.0.3:
 
 "hawk.types@https://github.com/codex-team/hawk.types":
   version "0.1.5"
-  resolved "https://github.com/codex-team/hawk.types#c44fceb281215186a7fd85936d994c3312758ae5"
+  resolved "https://github.com/codex-team/hawk.types#6bc2ab6e3bef9bb7622a7803be271c0e1f3f10fd"
   dependencies:
     "@types/mongodb" "^3.5.34"
 
