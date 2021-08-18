@@ -636,7 +636,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Calculate current interval from last notification
      */
-    const currentInterval = Date.now() - lastNotificationDateForType;
+    const currentInterval = Date.now() - lastNotificationDateForType.getTime();
 
     /**
      * Return true if we can send a new notification message
@@ -650,7 +650,7 @@ export default abstract class SenderWorker extends Worker {
    * @param {string} type - event type
    * @param {number} date - date to be set
    */
-  private async updateLastNoticationDate(workspace: WorkspaceDBScheme, type: string, date = Date.now()): Promise<void> {
+  private async updateLastNoticationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
     /**
      * Throw an error if workspace is missing
      */
