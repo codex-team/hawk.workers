@@ -29,6 +29,7 @@ const NOTIFY_ABOUT_LIMIT = [
   /**
    * Start notify after 95%
    */
+  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   0.95,
 ];
 
