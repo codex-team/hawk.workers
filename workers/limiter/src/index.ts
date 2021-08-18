@@ -241,11 +241,6 @@ export default class LimiterWorker extends Worker {
           path: '$tariffPlan',
         },
       },
-      {
-        $addFields: {
-          billingPeriodEventsCount: 0,
-        },
-      },
     ]).toArray();
   }
 
@@ -272,11 +267,6 @@ export default class LimiterWorker extends Worker {
       {
         $unwind: {
           path: '$tariffPlan',
-        },
-      },
-      {
-        $addFields: {
-          billingPeriodEventsCount: 0,
         },
       },
     ]).toArray();
@@ -409,8 +399,6 @@ export default class LimiterWorker extends Worker {
       billingPeriodEventsCount: workspaceEventsCount,
       isBlocked: isAlreadyBlocked || shouldBeBlocked,
     };
-
-
 
     return {
       isBlocked: isAlreadyBlocked || shouldBeBlocked,
