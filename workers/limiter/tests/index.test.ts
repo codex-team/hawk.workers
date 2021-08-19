@@ -348,8 +348,7 @@ describe('Limiter worker', () => {
         expect(result).toContain(project._id.toString());
         done();
       });
-
-    })
+    });
   });
 
   describe('check-single-workspace', () => {
