@@ -258,16 +258,6 @@ export default class PaymasterWorker extends Worker {
     }
 
     /**
-     * Block workspace if it has subscription,
-     * but a few days have passed after payday
-     */
-    if (workspace.subscriptionId && (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING)) {
-      await this.blockWorkspace(workspace);
-
-      return [workspace, true];
-    }
-
-    /**
      * Block workspace if it hasn't subscription
      */
     if (!workspace.subscriptionId) {
@@ -276,6 +266,20 @@ export default class PaymasterWorker extends Worker {
       return [workspace, true];
     }
 
+    /**
+     * Block workspace if it has paid subscription,
+     * but a few days have passed after payday
+     */
+    if (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
+      await this.blockWorkspace(workspace);
+
+      return [workspace, true];
+    }
+
+    /**
+     * Do not block workspace with paid subscription
+     * Need to pay but we give admins a few days to pay
+     */
     return [workspace, false];
   }
 
