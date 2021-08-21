@@ -231,66 +231,6 @@ describe('Limiter worker', () => {
       });
     });
 
-    test('Should unban previously banned projects if the limit allows', async (done) => {
-      /**
-       * Arrange
-       */
-      const workspace = createWorkspaceMock({
-        plan: mockedPlans.eventsLimit10,
-        billingPeriodEventsCount: 0,
-        lastChargeDate: LAST_CHARGE_DATE,
-      });
-      const project = createProjectMock({ workspaceId: workspace._id });
-
-      await fillDatabaseWithMockedData({
-        workspace,
-        project,
-        eventsToMock: 15,
-      });
-
-      /**
-       * Act
-       *
-       * Worker initialization
-       */
-      const worker = new LimiterWorker();
-
-      await worker.start();
-      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
-
-      /**
-       * Gets all members of set with key 'DisabledProjectsSet' from Redis
-       * Project should be banned
-       */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-        expect(result).toContain(project._id.toString());
-      });
-
-      /**
-       * Change workspace plan to plan with big events limit
-       */
-      await workspaceCollection.findOneAndUpdate({ _id: workspace._id }, {
-        $set: {
-          tariffPlanId: mockedPlans.eventsLimit10000._id,
-        },
-      });
-
-      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
-      await worker.finish();
-
-      /**
-       * Assert
-       *
-       * Gets all members of set with key 'DisabledProjectsSet' from Redis
-       */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-        expect(result).not.toContain(project._id.toString());
-        done();
-      });
-    });
-
     test('Should not ban project if it does not reach the limit', async (done) => {
       /**
        * Arrange

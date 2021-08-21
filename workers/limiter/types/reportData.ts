@@ -5,9 +5,9 @@ import { WorkspaceWithTariffPlan } from './index';
  */
 export interface SingleWorkspaceAnalyzeReport {
   /**
-   * Is workspace get banned
+   * Is workspace get blocked
    */
-  isBanned: boolean;
+  isBlocked: boolean;
 
   /**
    * Workspace with updated data (current events count)

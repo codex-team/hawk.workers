@@ -5,6 +5,7 @@ import { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './b
 import { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 import { PaymentSuccessNotification, PaymentSuccessTemplateVariables } from './payment-success';
 import { DaysLimitAlmostReachedTemplateVariables, DaysLimitAlmostReachedNotification } from './days-limit-almost-reached';
+import { EventsLimitAlmostReachedNotification, EventsLimitAlmostReachedTemplateVariables } from './events-limit-almost-reached';
 import { SignUpNotification, SignUpVariables } from './sign-up';
 
 export { CommonTemplateVariables } from './common-template';
@@ -26,6 +27,7 @@ export type Notification = EventNotification
   | PaymentFailedNotification
   | PaymentSuccessNotification
   | DaysLimitAlmostReachedNotification
+  | EventsLimitAlmostReachedNotification
   | SignUpNotification;
 
 /**
@@ -37,4 +39,5 @@ export type TemplateVariables = EventsTemplateVariables
   | PaymentFailedTemplateVariables
   | PaymentSuccessTemplateVariables
   | DaysLimitAlmostReachedTemplateVariables
+  | EventsLimitAlmostReachedTemplateVariables
   | SignUpVariables;

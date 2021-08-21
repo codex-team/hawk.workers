@@ -6,6 +6,7 @@ enum Templates {
   BlockWorkspace = 'block-workspace',
   DaysLimitAlmostReached = 'days-limit-almost-reached',
   Event = 'event',
+  EventsLimitAlmostReached = 'events-limit-almost-reached',
   PaymentFailed = 'payment-failed',
   PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
