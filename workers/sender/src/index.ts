@@ -26,10 +26,11 @@ import {
   SenderWorkerPaymentFailedTask,
   SenderWorkerPaymentSuccessTask,
   SenderWorkerDaysLimitAlmostReachedTask,
-  SenderWorkerEventsLimitAlmostReachedTask
+  SenderWorkerEventsLimitAlmostReachedTask,
+  SenderWorkerSignUpTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
+import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification, SignUpNotification } from '../types/template-variables';
 
 /**
  * Worker to send email notifications
@@ -122,8 +123,8 @@ export default abstract class SenderWorker extends Worker {
         return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success':
         return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
-      default:
-        throw new Error(`Unknown task type found ${task.type}`);
+      case 'sign-up':
+        return this.handleSignUpTask(task as SenderWorkerSignUpTask);
     }
   }
 
@@ -478,6 +479,24 @@ export default abstract class SenderWorker extends Worker {
         plan,
       },
     } as PaymentSuccessNotification);
+  }
+
+  /**
+   * Handle task when user has successfully registered
+   *
+   * @param task - task to handle
+   */
+  private async handleSignUpTask(task: SenderWorkerSignUpTask): Promise<void> {
+    const { password, endpoint } = task.payload;
+
+    this.provider.send(endpoint, {
+      type: 'sign-up',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        password,
+      },
+    } as SignUpNotification);
   }
 
   /**

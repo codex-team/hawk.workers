@@ -10,6 +10,7 @@ enum Templates {
   PaymentFailed = 'payment-failed',
   PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
+  SignUp = 'sign-up',
 }
 
 export default Templates;

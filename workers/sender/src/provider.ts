@@ -27,5 +27,5 @@ export default abstract class NotificationsProvider {
    * @param endpoint - endpoint where to send notification
    * @param variables - notification variables
    */
-  public abstract async send(endpoint: string, variables: Notification): Promise<void>;
+  public abstract send(endpoint: string, variables: Notification): Promise<void>;
 }
