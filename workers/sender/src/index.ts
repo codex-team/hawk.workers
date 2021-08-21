@@ -12,6 +12,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
+import Time from './utils/time';
 
 import { PaymentSuccessNotification, TemplateEventData } from '../types/template-variables/';
 import NotificationsProvider from './provider';
@@ -24,7 +25,8 @@ import {
   SenderWorkerBlockWorkspaceTask,
   SenderWorkerPaymentFailedTask,
   SenderWorkerPaymentSuccessTask,
-  SenderWorkerDaysLimitAlmostReachedTask
+  SenderWorkerDaysLimitAlmostReachedTask,
+  SenderWorkerEventsLimitAlmostReachedTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification } from '../types/template-variables';
@@ -106,12 +108,20 @@ export default abstract class SenderWorker extends Worker {
     }
 
     switch (task.type) {
-      case 'assignee': return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
-      case 'block-workspace': return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
-      case 'days-limit-almost-reached': return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
-      case 'event': return this.handleEventTask(task as SenderWorkerEventTask);
-      case 'payment-failed': return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
-      case 'payment-success': return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
+      case 'assignee':
+        return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
+      case 'block-workspace':
+        return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'days-limit-almost-reached':
+        return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
+      case 'event':
+        return this.handleEventTask(task as SenderWorkerEventTask);
+      case 'events-limit-almost-reached':
+        return this.handleEventsLimitAlmostReachedTask(task as SenderWorkerEventsLimitAlmostReachedTask);
+      case 'payment-failed':
+        return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
+      case 'payment-success':
+        return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
       default:
         throw new Error(`Unknown task type found ${task.type}`);
     }
@@ -283,6 +293,13 @@ export default abstract class SenderWorker extends Worker {
    * @param task - task to handle
    */
   private async handleDaysLimitAlmostReachedTask(task: SenderWorkerDaysLimitAlmostReachedTask): Promise<void> {
+    const eventType = 'days-limit-almost-reached';
+
+    /**
+     * Send message not often than once per day
+     */
+    const throttleInterval = Time.DAY;
+
     const { workspaceId, daysLeft } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);
@@ -290,6 +307,15 @@ export default abstract class SenderWorker extends Worker {
     if (!workspace) {
       this.logger.error(`Cannot send days limit reached notification: workspace not found. Payload: ${task}`);
 
+      return;
+    }
+
+    const allowToSendNotification = this.needToSendNextNotification(workspace, eventType, throttleInterval);
+
+    /**
+     * Do not send any notifications if we have already done in target throttle time
+     */
+    if (!allowToSendNotification) {
       return;
     }
 
@@ -308,8 +334,11 @@ export default abstract class SenderWorker extends Worker {
       const channel = user.notifications.channels[this.channelType];
 
       if (channel.isEnabled) {
+        /**
+         * Send message
+         */
         await this.provider.send(channel.endpoint, {
-          type: 'days-limit-almost-reached',
+          type: eventType,
           payload: {
             host: process.env.GARAGE_URL,
             hostOfStatic: process.env.API_STATIC_URL,
@@ -317,6 +346,74 @@ export default abstract class SenderWorker extends Worker {
             daysLeft,
           },
         });
+
+        /**
+         * Update last notification data in DB
+         */
+        await this.updateLastNoticationDate(workspace, eventType);
+      }
+    }));
+  }
+
+  /**
+   * Handle task when events limit is almost reached
+   *
+   * @param task - task to handle
+   */
+  private async handleEventsLimitAlmostReachedTask(task: SenderWorkerEventsLimitAlmostReachedTask): Promise<void> {
+    const eventType = 'events-limit-almost-reached';
+
+    /**
+     * Send message not often than once per day
+     */
+    const throttleInterval = Time.DAY;
+
+    const { workspaceId, eventsCount, eventsLimit } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send events limit reached notification: workspace not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const allowToSendNotification = this.needToSendNextNotification(workspace, eventType, throttleInterval);
+
+    /**
+     * Do not send any notifications if we have already done in target throttle time
+     */
+    if (!allowToSendNotification) {
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send events limit reached notification: workspace team not found. Payload: ${task}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: eventType,
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+            eventsCount,
+            eventsLimit,
+          },
+        });
+
+        await this.updateLastNoticationDate(workspace, eventType);
       }
     }));
   }
@@ -498,5 +595,77 @@ export default abstract class SenderWorker extends Worker {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('plans').findOne({ _id: new ObjectId(planId) });
+  }
+
+  /**
+   * @private
+   * @param {WorkspaceDBScheme} workspace - workspace object
+   * @param {string} type - event type
+   * @param {number} throttleTime - number of ms as interval for rejecting sending
+   *
+   * @returns {boolean} - should we send a message or not
+   */
+  private needToSendNextNotification(workspace: WorkspaceDBScheme, type: string, throttleTime: number): boolean {
+    if (!throttleTime) {
+      return true;
+    }
+
+    /**
+     * Throw an error if workspace is missing
+     */
+    if (!workspace) {
+      throw Error('Workspace is missing');
+    }
+
+    /**
+     * If lastNotificationDate is missing then do not block anything
+     */
+    if (!workspace.lastNotificationDate) {
+      return true;
+    }
+
+    const lastNotificationDateForType = workspace.lastNotificationDate[type];
+
+    /**
+     * If date is missing then allow action
+     */
+    if (!lastNotificationDateForType) {
+      return true;
+    }
+
+    /**
+     * Calculate current interval from last notification
+     */
+    const currentInterval = Date.now() - lastNotificationDateForType.getTime();
+
+    /**
+     * Return true if we can send a new notification message
+     * Otherwise it is not time yet
+     */
+    return currentInterval >= throttleTime;
+  }
+
+  /**
+   * @param {WorkspaceDBScheme} workspace - workspace object
+   * @param {string} type - event type
+   * @param {number} date - date to be set
+   */
+  private async updateLastNoticationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
+    /**
+     * Throw an error if workspace is missing
+     */
+    if (!workspace) {
+      throw Error('Workspace is missing');
+    }
+
+    const connection = await this.accountsDb.getConnection();
+
+    await connection.collection('workspaces').updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        [`lastNotificationDate.${type}`]: date,
+      },
+    });
   }
 }

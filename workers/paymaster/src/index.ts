@@ -219,13 +219,13 @@ export default class PaymasterWorker extends Worker {
     /**
      * Today is not payday for workspace
      */
-    if (!isTimeToPay && !isFreePlan) {
+    if (!isTimeToPay) {
       /**
-       * If payday is coming then notify admins
+       * If payday is coming for the paid plans then notify admins
        *
        * @todo do not notify if card is linked?
        */
-      if (DAYS_LEFT_ALERT.includes(daysLeft)) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan) {
         /**
          * Add task for Sender worker
          */
@@ -245,8 +245,9 @@ export default class PaymasterWorker extends Worker {
     }
 
     /**
-     * If workspace has free plan,
-     * Then update last charge date and clear count of events for billing period
+     * If workspace has free plan and it is a time to pay
+     * then update last charge date, clear count of events
+     * for billing period and unblock the workspace
      */
     if (isFreePlan) {
       await this.updateLastChargeDate(workspace, date);
@@ -254,16 +255,6 @@ export default class PaymasterWorker extends Worker {
       await this.unblockWorkspace(workspace);
 
       return [workspace, false];
-    }
-
-    /**
-     * Block workspace if it has subscription,
-     * but a few days have passed after payday
-     */
-    if (workspace.subscriptionId && (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING)) {
-      await this.blockWorkspace(workspace);
-
-      return [workspace, true];
     }
 
     /**
@@ -275,6 +266,20 @@ export default class PaymasterWorker extends Worker {
       return [workspace, true];
     }
 
+    /**
+     * Block workspace if it has paid subscription,
+     * but a few days have passed after payday
+     */
+    if (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
+      await this.blockWorkspace(workspace);
+
+      return [workspace, true];
+    }
+
+    /**
+     * Do not block workspace with paid subscription
+     * Need to pay but we give admins a few days to pay
+     */
     return [workspace, false];
   }
 
