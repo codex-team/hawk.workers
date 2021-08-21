@@ -26,7 +26,7 @@ import {
   SenderWorkerPaymentFailedTask,
   SenderWorkerPaymentSuccessTask,
   SenderWorkerDaysLimitAlmostReachedTask,
-  SenderWorkerEventsLimitAlmostReachedTask
+  SenderWorkerEventsLimitAlmostReachedTask,
   SenderWorkerSignUpTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -123,10 +123,8 @@ export default abstract class SenderWorker extends Worker {
         return this.handlePaymentFailedTask(task as SenderWorkerPaymentFailedTask);
       case 'payment-success':
         return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
-      case 'sign-up': 
+      case 'sign-up':
         return this.handleSignUpTask(task as SenderWorkerSignUpTask);
-      default:
-        throw new Error(`Unknown task type found ${task.type}`);
     }
   }
 
