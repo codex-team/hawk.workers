@@ -75,7 +75,9 @@ export default class ReleaseWorker extends Worker {
     try {
       const commits = payload.commits;
 
-      // save commits
+      /**
+       * Save commits
+       */
       if (commits && this.areCommitsValid(commits)) {
         const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
           ...commit,
