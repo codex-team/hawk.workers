@@ -51,6 +51,8 @@ export default class EmailProvider extends NotificationsProvider {
       case 'payment-success': templateName = Templates.PaymentSuccess; break;
       case 'several-events': templateName = Templates.SeveralEvents; break;
       case 'sign-up': templateName = Templates.SignUp; break;
+      case 'password-reset': templateName = Templates.PasswordReset; break;
+      case 'workspace-invite': templateName = Templates.WorkspaceInvite; break;
     }
 
     if (!templateName) {

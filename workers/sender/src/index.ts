@@ -14,7 +14,7 @@ import * as pkg from '../package.json';
 import './env';
 import Time from './utils/time';
 
-import { PaymentSuccessNotification, TemplateEventData } from '../types/template-variables/';
+import { PasswordResetNotification, PaymentSuccessNotification, TemplateEventData, WorkspaceInviteNotification } from '../types/template-variables/';
 import NotificationsProvider from './provider';
 
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
@@ -27,7 +27,9 @@ import {
   SenderWorkerPaymentSuccessTask,
   SenderWorkerDaysLimitAlmostReachedTask,
   SenderWorkerEventsLimitAlmostReachedTask,
-  SenderWorkerSignUpTask
+  SenderWorkerSignUpTask,
+  SenderWorkerPasswordResetTask,
+  SenderWorkerWorkspaceInviteTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification, SignUpNotification } from '../types/template-variables';
@@ -125,6 +127,10 @@ export default abstract class SenderWorker extends Worker {
         return this.handlePaymentSuccessTask(task as SenderWorkerPaymentSuccessTask);
       case 'sign-up':
         return this.handleSignUpTask(task as SenderWorkerSignUpTask);
+      case 'password-reset':
+        return this.handlePasswordResetTask(task as SenderWorkerPasswordResetTask);
+      case 'workspace-invite':
+        return this.handleWorkspaceInviteTask(task as SenderWorkerWorkspaceInviteTask);
     }
   }
 
@@ -479,6 +485,43 @@ export default abstract class SenderWorker extends Worker {
         plan,
       },
     } as PaymentSuccessNotification);
+  }
+
+  /**
+   * Handle task when user recovers his password
+   *
+   * @param task - task to handle
+   */
+  private async handlePasswordResetTask(task: SenderWorkerPasswordResetTask): Promise<void> {
+    const { newPassword, endpoint } = task.payload;
+
+    this.provider.send(endpoint, {
+      type: 'password-reset',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        password: newPassword,
+      },
+    } as PasswordResetNotification);
+  }
+
+  /**
+   * Handle task when user recovers his password
+   *
+   * @param task - task to handle
+   */
+  private async handleWorkspaceInviteTask(task: SenderWorkerWorkspaceInviteTask): Promise<void> {
+    const { workspaceName, inviteLink, endpoint } = task.payload;
+
+    this.provider.send(endpoint, {
+      type: 'workspace-invite',
+      payload: {
+        host: process.env.GARAGE_URL,
+        hostOfStatic: process.env.API_STATIC_URL,
+        workspaceName,
+        inviteLink,
+      },
+    } as WorkspaceInviteNotification);
   }
 
   /**

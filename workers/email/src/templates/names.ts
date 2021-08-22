@@ -7,10 +7,12 @@ enum Templates {
   DaysLimitAlmostReached = 'days-limit-almost-reached',
   Event = 'event',
   EventsLimitAlmostReached = 'events-limit-almost-reached',
+  PasswordReset = 'password-reset',
   PaymentFailed = 'payment-failed',
   PaymentSuccess = 'payment-success',
   SeveralEvents = 'several-events',
   SignUp = 'sign-up',
+  WorkspaceInvite = 'workspace-invite',
 }
 
 export default Templates;

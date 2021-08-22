@@ -2,7 +2,7 @@ import { CommonTemplateVariables } from './common-template';
 import { Notification } from './notification';
 
 /**
- * Variables for events template
+ * Variables for sign up template
  */
 export interface SignUpVariables extends CommonTemplateVariables {
   /**
@@ -12,7 +12,8 @@ export interface SignUpVariables extends CommonTemplateVariables {
 }
 
 /**
- * Object with notification type and variables for the assignee event template
+ * An object with the notification type and variables
+ * for sending a registration message with a password to the user
  */
 export interface SignUpNotification extends Notification<SignUpVariables> {
   /**

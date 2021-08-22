@@ -5,7 +5,9 @@ import { SenderWorkerPaymentFailedTask } from './payment-failed';
 import { SenderWorkerPaymentSuccessTask } from './payment-success';
 import { SenderWorkerDaysLimitAlmostReachedTask } from './days-limit-almost-reached';
 import { SenderWorkerEventsLimitAlmostReachedTask } from './events-limit-almost-reached';
-import { SenderWorkerSignUpTask } from './signUp';
+import { SenderWorkerSignUpTask } from './sign-up';
+import { SenderWorkerPasswordResetTask } from './password-reset';
+import { SenderWorkerWorkspaceInviteTask } from './workspace-invite';
 
 export { SenderWorkerEventTask, SenderWorkerEventPayload } from './event';
 export { SenderWorkerAssigneeTask, SenderWorkerAssigneePayload } from './assignee';
@@ -14,7 +16,9 @@ export { SenderWorkerPaymentFailedTask, SenderWorkerPaymentFailedPayload } from 
 export { SenderWorkerPaymentSuccessTask, SenderWorkerPaymentSuccessPayload } from './payment-success';
 export { SenderWorkerDaysLimitAlmostReachedTask, SenderWorkerDaysLimitAlmostReachedPayload } from './days-limit-almost-reached';
 export { SenderWorkerEventsLimitAlmostReachedTask, SenderWorkerEventsLimitAlmostReachedPayload } from './events-limit-almost-reached';
-export { SenderWorkerSignUpTask, SenderWorkerSignUpPayload } from './signUp';
+export { SenderWorkerSignUpTask, SenderWorkerSignUpPayload } from './sign-up';
+export { SenderWorkerPasswordResetTask, SenderWorkerPasswordResetPayload } from './password-reset';
+export { SenderWorkerWorkspaceInviteTask, SenderWorkerWorkspaceInvitePayload } from './workspace-invite';
 
 export type SenderWorkerTask = SenderWorkerEventTask
   | SenderWorkerAssigneeTask
@@ -23,4 +27,6 @@ export type SenderWorkerTask = SenderWorkerEventTask
   | SenderWorkerPaymentSuccessTask
   | SenderWorkerDaysLimitAlmostReachedTask
   | SenderWorkerEventsLimitAlmostReachedTask
-  | SenderWorkerSignUpTask;
+  | SenderWorkerSignUpTask
+  | SenderWorkerPasswordResetTask
+  | SenderWorkerWorkspaceInviteTask;
