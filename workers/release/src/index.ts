@@ -75,25 +75,24 @@ export default class ReleaseWorker extends Worker {
     try {
       const commits = payload.commits;
 
-      if (!this.areCommitsValid(commits)) {
-        throw new Error('Commits are not valid');
+      // save commits
+      if (commits && this.areCommitsValid(commits)) {
+        const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
+          ...commit,
+          date: new Date(commit.date),
+        }));
+  
+        await this.releasesCollection.updateOne({
+          projectId: projectId,
+          release: payload.release,
+        }, {
+          $set: {
+            commits: commitsWithParsedDate,
+          },
+        }, {
+          upsert: true,
+        });
       }
-
-      const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
-        ...commit,
-        date: new Date(commit.date),
-      }));
-
-      await this.releasesCollection.updateOne({
-        projectId: projectId,
-        release: payload.release,
-      }, {
-        $set: {
-          commits: commitsWithParsedDate,
-        },
-      }, {
-        upsert: true,
-      });
 
       // save source maps
       if (payload.files) {
