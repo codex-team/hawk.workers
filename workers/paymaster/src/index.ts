@@ -157,7 +157,7 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspaceSubscriptionCheckEvent(): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    const result = await Promise.all(workspaces
+    await Promise.all(workspaces
       .filter(workspace => {
         /**
          * Skip workspace without lastChargeDate
