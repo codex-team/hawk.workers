@@ -10,7 +10,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
 import { CriticalError } from '../../../lib/workerErrors';
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
 import RedisHelper from './redisHelper';
 import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';

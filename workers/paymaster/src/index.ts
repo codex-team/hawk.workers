@@ -10,7 +10,6 @@ import axios from 'axios';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 import * as WorkerNames from '../../../lib/workerNames';
 import HawkCatcher from '@hawk.so/nodejs';
-import {WorkspaceWithTariffPlan} from "hawk-worker-limiter/types";
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
