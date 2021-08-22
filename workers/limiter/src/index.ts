@@ -10,7 +10,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
 import { CriticalError } from '../../../lib/workerErrors';
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
 import RedisHelper from './redisHelper';
 import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';
@@ -153,8 +153,6 @@ export default class LimiterWorker extends Worker {
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
-
-    await this.sendRegularWorkspacesCheckReport(report);
 
     this.logger.info('Limiter worker finished task');
   }
@@ -309,31 +307,6 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Send report with charged workspaces to Telegram
-   *
-   * @param reportData - data for sending notification after task handling
-   */
-  private async sendRegularWorkspacesCheckReport(reportData: MultiplyWorkspacesAnalyzeReport): Promise<void> {
-    let report = process.env.SERVER_NAME ? ` Hawk Limiter (${process.env.SERVER_NAME}) 🚧\n` : ' Hawk Limiter 🚧\n';
-
-    if (reportData.bannedWorkspaces.length) {
-      report += `\nBanned workspaces:\n`;
-      reportData.bannedWorkspaces.forEach((workspace) => {
-        const timeFromLastChargeDate = Date.now() - new Date(workspace.lastChargeDate).getTime();
-
-        const millisecondsInDay = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
-        const timeInDays = Math.floor(timeFromLastChargeDate / millisecondsInDay);
-
-        report += `\n${encodeURIComponent(workspace.name)} | <code>${workspace._id}</code> | ${shortNumber(workspace.billingPeriodEventsCount)} in ${timeInDays} days`;
-      });
-    }
-
-    report += `\n\n${reportData.bannedWorkspaces.length} workspaces with ${reportData.bannedProjectIds.length} projects totally banned`;
-
-    await this.sendReport(report);
-  }
-
-  /**
    * Analyses workspace data and gives a report about events limit
    *
    * @param workspace - workspace data to check
@@ -381,6 +354,8 @@ export default class LimiterWorker extends Worker {
           workspaceId: workspace._id,
         },
       });
+
+      await this.sendWorkspaceBlockedReport(workspace);
     } else if (quotaNotification) {
       /**
        * Add task for Sender worker
@@ -430,6 +405,23 @@ export default class LimiterWorker extends Worker {
     });
 
     await this.workspacesCollection.bulkWrite(operations);
+  }
+
+  /**
+   * Send a notification to the reports chat about banned workspace
+   *
+   * @param {WorkspaceDBScheme} workspace - workspace to be reported
+   * @returns {Promise<void>}
+   * @private
+   */
+  private async sendWorkspaceBlockedReport(workspace: WorkspaceDBScheme): Promise<void> {
+    const reportMessage = `
+🚧 Hawk Limiter ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''}
+
+Workspace "${workspace.name}" has been blocked.
+    `;
+
+    await this.sendReport(reportMessage);
   }
 
   /**

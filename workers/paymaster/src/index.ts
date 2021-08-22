@@ -157,7 +157,7 @@ export default class PaymasterWorker extends Worker {
   private async handleWorkspaceSubscriptionCheckEvent(): Promise<void> {
     const workspaces = await this.workspaces.find({}).toArray();
 
-    const result = await Promise.all(workspaces
+    await Promise.all(workspaces
       .filter(workspace => {
         /**
          * Skip workspace without lastChargeDate
@@ -177,8 +177,6 @@ export default class PaymasterWorker extends Worker {
       .map(
         (workspace) => this.processWorkspaceSubscriptionCheck(workspace)
       ));
-
-    await this.sendReport(result);
   }
 
   /**
@@ -322,6 +320,8 @@ export default class PaymasterWorker extends Worker {
         workspaceId: workspace._id,
       },
     });
+
+    await this.sendWorkspaceBlockedReport(workspace);
   }
 
   /**
@@ -355,34 +355,38 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * Send report with blocked workspaces to Telegram
+   * Send a notification to the reports chat about banned workspace
    *
-   * @param reportData - data for sending report
+   * @param {WorkspaceDBScheme} workspace - workspace to be reported
+   * @returns {Promise<void>}
+   * @private
    */
-  private async sendReport(reportData: [WorkspaceDBScheme, boolean][]): Promise<void> {
+  private async sendWorkspaceBlockedReport(workspace: WorkspaceDBScheme): Promise<void> {
+    const reportMessage = `
+💰 Hawk Paymaster ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''}
+
+Workspace "${workspace.name}" has been blocked.
+    `;
+
+    await this.sendReport(reportMessage);
+  }
+
+  /**
+   * Sends notify to the chat
+   *
+   * @param reportData - report notify in HTML markup to send
+   */
+  private async sendReport(reportData: string): Promise<void> {
     if (!process.env.REPORT_NOTIFY_URL) {
       this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
 
       return;
     }
 
-    reportData = reportData
-      .filter(([, isBlocked]) => isBlocked);
-
-    let report = process.env.SERVER_NAME ? ` Hawk Paymaster (${process.env.SERVER_NAME}) 💰\n` : ' Hawk Paymaster 💰\n';
-    let totalBlockedWorkspaces = 0;
-
-    reportData.forEach(([ workspace ]) => {
-      report += `\nBlocked ⛔ | <b>${encodeURIComponent(workspace.name)}</b> | <code>${workspace._id}</code>`;
-      totalBlockedWorkspaces++;
-    });
-
-    report += `\n\n<b>${totalBlockedWorkspaces}</b> totally banned ⛔`;
-
     await axios({
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
-      data: 'message=' + report + '&parse_mode=HTML',
+      data: 'message=' + reportData + '&parse_mode=HTML',
     });
   }
 }
