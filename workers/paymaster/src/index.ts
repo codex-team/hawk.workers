@@ -363,9 +363,9 @@ export default class PaymasterWorker extends Worker {
    */
   private async sendWorkspaceBlockedReport(workspace: WorkspaceDBScheme): Promise<void> {
     const reportMessage = `
-    💰 Hawk Paymaster ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''}
+💰 Hawk Paymaster ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''}
 
-    Workspace "${workspace.name}" has been blocked.
+Workspace "${workspace.name}" has been blocked.
     `;
 
     await this.sendReport(reportMessage);
