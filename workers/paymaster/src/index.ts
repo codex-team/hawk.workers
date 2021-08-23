@@ -187,7 +187,6 @@ export default class PaymasterWorker extends Worker {
    */
   private async processWorkspaceSubscriptionCheck(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, boolean]> {
     const date = new Date();
-
     const currentPlan = this.plans.find(
       (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
     );
@@ -256,7 +255,15 @@ export default class PaymasterWorker extends Worker {
     }
 
     /**
-     * Block workspace if it hasn't subscription
+     * Time to pay but workspace has paid plan
+     * If it is blocked then do nothing
+     */
+    if (workspace.isBlocked) {
+      return [workspace, true];
+    }
+
+    /**
+     * Block workspace if it hasn't subscription from CloudPayments
      */
     if (!workspace.subscriptionId) {
       await this.blockWorkspace(workspace);
