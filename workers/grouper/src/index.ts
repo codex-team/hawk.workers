@@ -7,13 +7,14 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
+import {EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme} from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
+import levenshtein from 'js-levenshtein';
 
 /**
  * Error code of MongoDB key duplication error
@@ -30,7 +31,7 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Contains event grouphashes by its catcher type and event title as keys
+   * Contains event group hashes by its catcher type and event title as keys
    *
    * @example
    * {
@@ -94,14 +95,31 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask): Promise<void> {
+    /**
+     * @todo this is not need anymore since we have Levensteing distance algo
+     */
     const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
 
     /**
      * Find event by group hash.
      */
-    const existedEvent = await this.getEvent(task.projectId, {
+    let existedEvent = await this.getEvent(task.projectId, {
       groupHash: uniqueEventHash,
     });
+
+    /**
+     * If we couldn't group by group hash (title), tru grouping by Levenshtein distance with last 20 events
+     */
+    if (!existedEvent){
+      const similarEvents = await this.findSimilar(task.projectId, task.event);
+
+      if (similarEvents.length){
+        const similarEvent = similarEvents.pop();
+
+        existedEvent = similarEvent;
+      }
+    }
+
 
     /**
      * Event happened for the first time
@@ -156,6 +174,7 @@ export default class GrouperWorker extends Worker {
 
       /**
        * Save event's repetitions
+       * @todo check if title is stored in repetitions
        */
       const diff = utils.deepDiff(existedEvent.payload, task.event);
       const newRepetition = {
@@ -184,6 +203,46 @@ export default class GrouperWorker extends Worker {
         },
       });
     }
+  }
+
+  /**
+   * Tries to find events with a small Levenstein distance of title
+   *
+   * @param projectId - where to find
+   * @param event - event to compare
+   */
+  async findSimilar(projectId: string, event: EventDataAccepted<EventAddons>) {
+    const eventsCountToCompare = 20;
+    const diffTreshold = 0.35;
+
+    /**
+     * @todo add cache
+     */
+    const lastUniqueEvents = await this.findLastEvents(projectId, 20);
+
+    return lastUniqueEvents.filter(prevEvent => {
+      const distance = levenshtein(event.title, prevEvent.payload.title);
+      const threshold = event.title.length * diffTreshold;
+
+       return distance < threshold;
+    })
+
+  }
+
+  /**
+   * Returns last N unique events by a project id
+   * @param projectId - where to find
+   * @param count - how many events to return
+   */
+  findLastEvents(projectId: string, count) {
+    return this.db.getConnection()
+      .collection(`events:${projectId}`)
+      .find()
+      .sort({
+        _id: 1
+      })
+      .limit(count)
+      .toArray();
   }
 
   /**
