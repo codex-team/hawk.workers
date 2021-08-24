@@ -7,13 +7,14 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
+import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
 import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
+import levenshtein from 'js-levenshtein';
 
 /**
  * Error code of MongoDB key duplication error
@@ -30,16 +31,6 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Contains event grouphashes by its catcher type and event title as keys
-   *
-   * @example
-   * {
-   *   'grouper:Hawk client catcher test': '7e2b961c35b915dcbe2704e144e8d2c3517e2c5281a5de4403c0c58978b435a0'
-   * }
-   */
-  private static cachedHashValues: Record<string, string> = {};
-
-  /**
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -53,23 +44,6 @@ export default class GrouperWorker extends Worker {
    * Redis helper instance for modifying data through redis
    */
   private redis = new RedisHelper();
-
-  /**
-   * Get unique hash from event data
-   *
-   * @param task - worker task to create hash
-   */
-  private static getUniqueEventHash(task: GroupWorkerTask): string {
-    const computedHashValueCacheKey = `${task.catcherType}:${task.event.title}`;
-
-    if (!this.cachedHashValues[computedHashValueCacheKey]) {
-      this.cachedHashValues[computedHashValueCacheKey] = crypto.createHmac('sha256', process.env.EVENT_SECRET)
-        .update(task.catcherType + task.event.title)
-        .digest('hex');
-    }
-
-    return this.cachedHashValues[computedHashValueCacheKey];
-  }
 
   /**
    * Start consuming messages
@@ -94,14 +68,30 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask): Promise<void> {
-    const uniqueEventHash = GrouperWorker.getUniqueEventHash(task);
+    let uniqueEventHash = await this.getUniqueEventHash(task);
 
     /**
      * Find event by group hash.
      */
-    const existedEvent = await this.getEvent(task.projectId, {
+    let existedEvent = await this.getEvent(task.projectId, {
       groupHash: uniqueEventHash,
     });
+
+    /**
+     * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last N events
+     */
+    if (!existedEvent) {
+      const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
+
+      if (similarEvent) {
+        /**
+         * Override group hash with found event's group hash
+         */
+        uniqueEventHash = similarEvent.groupHash;
+
+        existedEvent = similarEvent;
+      }
+    }
 
     /**
      * Event happened for the first time
@@ -158,6 +148,7 @@ export default class GrouperWorker extends Worker {
        * Save event's repetitions
        */
       const diff = utils.deepDiff(existedEvent.payload, task.event);
+
       const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
@@ -184,6 +175,60 @@ export default class GrouperWorker extends Worker {
         },
       });
     }
+  }
+
+  /**
+   * Get unique hash based on event type and title
+   *
+   * @param task - worker task to create hash
+   */
+  private getUniqueEventHash(task: GroupWorkerTask): Promise<string> {
+    return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.event.title}`, () => {
+      return crypto.createHmac('sha256', process.env.EVENT_SECRET)
+        .update(task.catcherType + task.event.title)
+        .digest('hex');
+    });
+  }
+
+  /**
+   * Tries to find events with a small Levenshtein distance of a title
+   *
+   * @param projectId - where to find
+   * @param event - event to compare
+   */
+  private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
+    const eventsCountToCompare = 60;
+    const diffTreshold = 0.35;
+
+    const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
+
+    return lastUniqueEvents.filter(prevEvent => {
+      const distance = levenshtein(event.title, prevEvent.payload.title);
+      const threshold = event.title.length * diffTreshold;
+
+      return distance < threshold;
+    }).pop();
+  }
+
+  /**
+   * Returns last N unique events by a project id
+   *
+   * @param projectId - where to find
+   * @param count - how many events to return
+   */
+  private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
+    const msInOneMinute = 60000;
+
+    return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
+      return this.db.getConnection()
+        .collection(`events:${projectId}`)
+        .find()
+        .sort({
+          _id: 1,
+        })
+        .limit(count)
+        .toArray();
+    }, msInOneMinute);
   }
 
   /**

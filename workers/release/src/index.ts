@@ -83,7 +83,7 @@ export default class ReleaseWorker extends Worker {
           ...commit,
           date: new Date(commit.date),
         }));
-  
+
         await this.releasesCollection.updateOne({
           projectId: projectId,
           release: payload.release,
