@@ -78,7 +78,7 @@ export default class GrouperWorker extends Worker {
     });
 
     /**
-     * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last 20 events
+     * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last N events
      */
     if (!existedEvent) {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
@@ -197,7 +197,7 @@ export default class GrouperWorker extends Worker {
    * @param event - event to compare
    */
   private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
-    const eventsCountToCompare = 20;
+    const eventsCountToCompare = 60;
     const diffTreshold = 0.35;
 
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
@@ -217,6 +217,8 @@ export default class GrouperWorker extends Worker {
    * @param count - how many events to return
    */
   private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
+    const msInOneMinute = 60000;
+
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
@@ -226,7 +228,7 @@ export default class GrouperWorker extends Worker {
         })
         .limit(count)
         .toArray();
-    });
+    }, msInOneMinute);
   }
 
   /**
