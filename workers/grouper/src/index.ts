@@ -78,7 +78,7 @@ export default class GrouperWorker extends Worker {
     });
 
     /**
-     * If we couldn't group by group hash (title), tru grouping by Levenshtein distance with last 20 events
+     * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last 20 events
      */
     if (!existedEvent) {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
