@@ -11,18 +11,17 @@ jest.mock('amqplib');
  * Mock cache controller
  */
 jest.mock('../../../lib/cache/controller', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return class CacheControllerMock {
-    /**
-     * Will call resolver without caching
-     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, jsdoc/require-jsdoc
     public async get(key, resolver): Promise<any> {
       return resolver();
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
     public flushAll(): void {}
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
     public set(): void {}
   };
 });
