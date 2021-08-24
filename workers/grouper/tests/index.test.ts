@@ -3,8 +3,29 @@ import GrouperWorker from '../src';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import redis from 'redis';
 import { Collection, MongoClient } from 'mongodb';
+import { EventAddons, EventDataAccepted } from 'hawk.types';
 
 jest.mock('amqplib');
+
+/**
+ * Mock cache controller
+ */
+jest.mock('../../../lib/cache/controller', () => {
+  return class CacheControllerMock {
+    /**
+     * Will call resolver without caching
+     */
+    public async get(key, resolver): Promise<any> {
+      return resolver();
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    public flushAll(): void {}
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    public set(): void {}
+  };
+});
 
 /**
  * Returns random string
@@ -24,21 +45,19 @@ const projectIdMock = '5d206f7f9aaf7c0071d64596';
 /**
  * Generates task for testing
  *
- * @param userId - user id in event, if false provided, user field will be missed
+ * @param event - allows to override some event properties in generated task
  */
-function generateTask(userId: string | false = generateRandomId()): GroupWorkerTask {
+function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined): GroupWorkerTask {
   return {
     projectId: projectIdMock,
     catcherType: 'grouper',
-    event: {
+    event: Object.assign({
       title: 'Hawk client catcher test',
       timestamp: (new Date()).getTime(),
       backtrace: [],
-      ...(userId && {
-        user: {
-          id: userId,
-        },
-      }),
+      user: {
+        id: generateRandomId(),
+      },
       context: {
         testField: 8,
         'ima$ge.jpg': 'img',
@@ -51,7 +70,7 @@ function generateTask(userId: string | false = generateRandomId()): GroupWorkerT
           },
         },
       },
-    },
+    }, event),
   };
 }
 
@@ -73,6 +92,7 @@ describe('GrouperWorker', () => {
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
     redisClient = redis.createClient({ url: process.env.REDIS_URL });
+    jest.resetAllMocks();
   });
 
   /**
@@ -108,10 +128,10 @@ describe('GrouperWorker', () => {
     });
 
     test('Should not increment total usersAffected count if it is event from first user', async () => {
-      await worker.handle(generateTask('123'));
-      await worker.handle(generateTask('123'));
-      await worker.handle(generateTask('123'));
-      await worker.handle(generateTask('123'));
+      await worker.handle(generateTask({ user: { id: '123' } }));
+      await worker.handle(generateTask({ user: { id: '123' } }));
+      await worker.handle(generateTask({ user: { id: '123' } }));
+      await worker.handle(generateTask({ user: { id: '123' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(1);
     });
@@ -126,28 +146,28 @@ describe('GrouperWorker', () => {
     });
 
     test('Should not increment usersAffected count if already there is error from that user', async () => {
-      await worker.handle(generateTask('kek'));
-      await worker.handle(generateTask('foo'));
-      await worker.handle(generateTask('kek'));
-      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask({ user: { id: 'kek' } }));
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
+      await worker.handle(generateTask({ user: { id: 'kek' } }));
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
     });
 
     test('Should increment usersAffected count if there is no user in original event', async () => {
-      await worker.handle(generateTask(false));
-      await worker.handle(generateTask('foo'));
-      await worker.handle(generateTask('kek'));
-      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask());
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
+      await worker.handle(generateTask({ user: { id: 'kek' } }));
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(3);
     });
 
     test('Should not increment usersAffected count if there is no user in processed event', async () => {
-      await worker.handle(generateTask('kek'));
-      await worker.handle(generateTask('foo'));
-      await worker.handle(generateTask(false));
-      await worker.handle(generateTask('foo'));
+      await worker.handle(generateTask({ user: { id: 'kek' } }));
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
+      await worker.handle(generateTask({ user: undefined }));
+      await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
     });
@@ -202,9 +222,9 @@ describe('GrouperWorker', () => {
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
-      const generatedTask = generateTask(false);
+      const generatedTask = generateTask();
 
-      await worker.handle(generateTask(false));
+      await worker.handle(generateTask());
       await worker.handle({
         ...generatedTask,
         event: {
@@ -253,6 +273,20 @@ describe('GrouperWorker', () => {
 
       expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
       expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+    });
+  });
+
+  describe('Grouping', () => {
+    test('should group events with partially different titles', async () => {
+      await worker.handle(generateTask({ title: 'Some error (but not filly identical) example' }));
+      await worker.handle(generateTask({ title: 'Some error (yes, it is not the identical) example' }));
+      await worker.handle(generateTask({ title: 'Some error (and it is not identical) example' }));
+
+      const originalEvent = await eventsCollection.findOne({});
+
+      expect((await repetitionsCollection.find({
+        groupHash: originalEvent.groupHash,
+      }).toArray()).length).toBe(2);
     });
   });
 
