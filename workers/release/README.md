@@ -6,11 +6,12 @@ This worker is needed to save releases with commits or/and source-maps uploaded 
 
 **Current implementation supports only single Rabbit prefetch count (SIMULTANEOUS_TASKS=1)**
 
-## Delivery scheme
+## Release delivery scheme
 
 1. User wants to deploy project
 2. He runs deploy script on the server and it runs static builder, for example Webpack.
 3. After Webpack finished his job, our [Webpack Plugin](https://github.com/codex-team/hawk.webpack.plugin) gets a source maps for new bundles and sends them to us.
+4. Also webpack plugin will try to get a few last commits from `.git` directory that will be used to display commits suspected of an error event in the garage. 
 
 Example request:
 
@@ -23,15 +24,9 @@ curl --request POST \
  http://localhost:3000/release
 ```
 
-4. Collector accepts files and give a task for ReleaseWorker for saving it to the database.
-5. ReleaseWorker saves commits and source maps to the database.
+5. Collector accepts commits and source map files and give a task for ReleaseWorker for saving it to the database.
+6. ReleaseWorker saves commits and source maps to the database.
 
-## Script for sending comments
-To make it easier to send commits, you can use a [shell script](./scripts/commits.sh) that will take the last few commits and send them to the collector
+A release doesn't have to contain commits or sourcemaps. But if there is a possibility it will be a useful feature for investigating errors.
 
-#### Script arguments
-| Argument name | Required | Description |
-| -- | -- | -- |
-| `-t` \| `--token` | Yes | Hawk integration token for your project. |
-| `-r` \| `--release` | Yes | Release name. Any string that will be associated with project events. |
-| `-ce` \| `--collectorEndpoint` | No | Endpoint to send release data. |
+To send commits not through the webpack plugin, you can use a script from the [hawk.release](https://github.com/codex-team/hawk.release) repository.
