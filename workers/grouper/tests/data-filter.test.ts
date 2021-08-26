@@ -76,7 +76,7 @@ describe('GrouperWorker', () => {
     });
 
     test('should not replace values if they are not a PAN number', async () => {
-      const normalValue = '123';
+      const normalValue = 'test123';
       const event = generateEvent({
         context: {
           normalKey: normalValue,
@@ -125,7 +125,7 @@ describe('GrouperWorker', () => {
     });
 
     test('should not replace values with keynames not in a list', async () => {
-      const normalValue = '123';
+      const normalValue = 'test123';
       const event = generateEvent({
         context: {
           normalKey: normalValue,
