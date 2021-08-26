@@ -326,7 +326,7 @@ export default class LimiterWorker extends Worker {
       const error = new Error('Workspace without lastChargeDate detected');
 
       HawkCatcher.send(error, {
-        workspaceId: workspace._id,
+        workspaceId: workspace._id.toString(),
       });
 
       throw error;

@@ -118,7 +118,7 @@ export default class JavascriptEventWorker extends EventWorker {
                * Send error to Hawk
                */
               HawkCatcher.send(error, {
-                payload: event.payload,
+                payload: event.payload as unknown as Record<string, never>,
               });
 
               return event.payload.backtrace[index];

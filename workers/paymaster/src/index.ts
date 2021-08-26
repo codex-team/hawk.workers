@@ -166,7 +166,7 @@ export default class PaymasterWorker extends Worker {
           const error = new Error('[Paymaster] Workspace without lastChargeDate detected');
 
           HawkCatcher.send(error, {
-            workspaceId: workspace._id,
+            workspaceId: workspace._id.toString(),
           });
 
           return false;
