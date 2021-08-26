@@ -2,12 +2,10 @@
 node_modules
 coverage
 /**/tests
-migrations
 tools
 bin
 
 # config files
-migrate-mongo-config.js
 jest-mongodb-config.js
 jest.config.js
 ecosystem.config.js
