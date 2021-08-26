@@ -198,6 +198,14 @@ export abstract class Worker {
      */
     this.registryConnection = await amqp.connect(this.registryUrl);
 
+    const errorHandler = (error: Error): void => {
+      HawkCatcher.send(error, {
+        workerType: this.type,
+      });
+    };
+
+    this.registryConnection.on('error', errorHandler);
+
     /**
      * Open channel inside the connection
      */
@@ -207,6 +215,8 @@ export abstract class Worker {
      * Assert queue exists
      */
     await this.channelWithRegistry.assertQueue(this.type);
+
+    this.channelWithRegistry.on('error', errorHandler);
 
     /**
      * Set prefetch value (process only `prefetchValue` task at one time)
@@ -281,7 +291,7 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
-      HawkCatcher.send(e);
+      HawkCatcher.send(e, event);
 
       switch (e.constructor) {
         case CriticalError:
