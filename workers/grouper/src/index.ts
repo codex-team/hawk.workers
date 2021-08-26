@@ -146,8 +146,10 @@ export default class GrouperWorker extends Worker {
 
       /**
        * Save event's repetitions
+       *
+       * Leave timestamp in diff for database queries
        */
-      const diff = utils.deepDiff(existedEvent.payload, task.event);
+      const diff = utils.deepDiff(existedEvent.payload, task.event, [ 'timestamp' ]);
 
       const newRepetition = {
         groupHash: uniqueEventHash,
