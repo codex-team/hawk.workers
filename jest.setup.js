@@ -11,6 +11,7 @@ const mockedAmqpChannel = {
   assertQueue: jest.fn(),
   prefetch: jest.fn(),
   sendToQueue: jest.fn(),
+  on: jest.fn(),
   consume: jest.fn().mockReturnValue('mockedTag'),
 };
 
@@ -20,6 +21,7 @@ const mockedAmqpChannel = {
 const mockedAmqpConnection = {
   createChannel: () => mockedAmqpChannel,
   close: jest.fn(),
+  on: jest.fn(),
 };
 
 const mockedConnect = amqp.connect;
