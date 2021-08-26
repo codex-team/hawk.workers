@@ -1,9 +1,8 @@
 /**
- * This migration updates date from format `dd-mm-YYYY` to midnight unixtime
- * so that each client with different timezone could convert it to local time
+ * This migration sets timestamp for event repetitions if it was omitted because it's the same as original event one
  */
 module.exports = {
-  async up(db) {
+  async up(db, client) {
     const collections = await db.listCollections({}, {
       authorizedCollections: true,
       nameOnly: true,
@@ -19,25 +18,33 @@ module.exports = {
       }
     });
 
-    for (const projectId of projectIds) {
-      const originalEvents = await db.collection(`${EVENTS}:${projectId}`).find({}).toArray();
-      const repetitions = await db.collection(`${REPETITIONS}:${projectId}`).find({
-        'payload.timestamp': { $eq: null }
-      }).toArray();
+    const session = client.startSession();
 
-      for (const event of originalEvents) {
-        const eventRepetitions = repetitions.filter(rep => rep.groupHash === event.groupHash);
+    try {
+      session.withTransaction(async () => {
+        for (const projectId of projectIds) {
+          const originalEvents = await db.collection(`${EVENTS}:${projectId}`).find({}).toArray();
+          const repetitions = await db.collection(`${REPETITIONS}:${projectId}`).find({
+            'payload.timestamp': {$eq: null}
+          }).toArray();
 
-        for (const repetition of eventRepetitions) {
-          await db.collection(`${REPETITIONS}:${projectId}`).updateOne({
-            _id: repetition._id,
-          }, {
-            $set: {
-              'payload.timestamp': event.payload.timestamp,
-            },
-          });
+          for (const event of originalEvents) {
+            const eventRepetitions = repetitions.filter(rep => rep.groupHash === event.groupHash);
+
+            for (const repetition of eventRepetitions) {
+              await db.collection(`${REPETITIONS}:${projectId}`).updateOne({
+                _id: repetition._id,
+              }, {
+                $set: {
+                  'payload.timestamp': event.payload.timestamp,
+                },
+              });
+            }
+          }
         }
-      }
+      })
+    } finally {
+      session.endSession();
     }
   },
 };
