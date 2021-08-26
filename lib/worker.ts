@@ -291,7 +291,7 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
-      HawkCatcher.send(e, { event });
+      HawkCatcher.send(e, { event: event as Record<string, never> });
 
       switch (e.constructor) {
         case CriticalError:
