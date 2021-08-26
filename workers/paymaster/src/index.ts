@@ -167,7 +167,7 @@ export default class PaymasterWorker extends Worker {
 
           HawkCatcher.send(error, {
             workspaceId: workspace._id,
-          });
+          } as any);
 
           return false;
         }

@@ -119,7 +119,7 @@ export default class JavascriptEventWorker extends EventWorker {
                */
               HawkCatcher.send(error, {
                 payload: event.payload,
-              });
+              } as any);
 
               return event.payload.backtrace[index];
             });

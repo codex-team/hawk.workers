@@ -327,7 +327,7 @@ export default class LimiterWorker extends Worker {
 
       HawkCatcher.send(error, {
         workspaceId: workspace._id,
-      });
+      } as any);
 
       throw error;
     }
