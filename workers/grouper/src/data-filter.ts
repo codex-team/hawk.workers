@@ -2,10 +2,10 @@ import { EventAddons, EventDataAccepted } from 'hawk.types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
- * Recursevly iterate through object and call function on each key
+ * Recursively iterate through object and call function on each key
  *
  * @param obj - Object to iterate
- * @param callback - Function to call on each iteratin
+ * @param callback - Function to call on each iteration
  */
 function forAll(obj: Record<string, unknown>, callback: (path: string[], key: string, obj: Record<string, unknown>) => void): void {
   const visit = (current, path: string[]): void => {
@@ -74,6 +74,9 @@ export default class DataFilter {
    * @param field - any object to iterate
    */
   private processField(field): void {
+    if (typeof field === 'string') {
+      return;
+    }
     forAll(field, (_path, key, obj) => {
       obj[key] = this.filterPanNumbers(obj[key]);
       obj[key] = this.filterSensitiveData(key, obj[key]);

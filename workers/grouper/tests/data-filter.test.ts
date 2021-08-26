@@ -1,6 +1,7 @@
 import '../../../env-test';
 import { EventAddons, EventDataAccepted, Json } from 'hawk.types';
 import DataFilter from '../src/data-filter';
+import failed_event from './fail.json';
 jest.mock('amqplib');
 
 /**
@@ -144,5 +145,9 @@ describe('GrouperWorker', () => {
       expect(event.context['normalKey']).toBe(normalValue);
       expect(event.addons['vue']['props']['normalKey']).toBe(normalValue);
     });
+  });
+
+  test('kek', () => {
+    dataFilter.processEvent(failed_event);
   });
 });

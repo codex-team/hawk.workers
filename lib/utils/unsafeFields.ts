@@ -36,6 +36,8 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
     try {
       if (typeof fieldValue !== 'string') {
         newValue = JSON.stringify(fieldValue);
+      } else {
+        newValue = fieldValue;
       }
     } catch {
       newValue = undefined;
