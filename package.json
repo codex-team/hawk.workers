@@ -45,11 +45,11 @@
     },
     "dependencies": {
         "@hawk.so/nodejs": "^2.1.0",
-        "@types/amqplib": "^0.5.13",
+        "@types/amqplib": "^0.8.2",
         "@types/jest": "^25.2.1",
         "@types/mongodb": "^3.5.15",
         "@types/node": "^13.13.4",
-        "amqplib": "^0.5.5",
+        "amqplib": "^0.8.0",
         "codex-accounting-sdk": "codex-team/codex-accounting-sdk",
         "debug": "^4.1.1",
         "dotenv": "^8.2.0",
