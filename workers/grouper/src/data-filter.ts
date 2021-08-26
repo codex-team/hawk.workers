@@ -101,7 +101,7 @@ export default class DataFilter {
     // Reset last index to 0
     this.bankCardRegex.lastIndex = 0;
     if (!this.bankCardRegex.test(clean)) {
-      return clean;
+      return value;
     }
 
     return this.filteredValuePlaceholder;
