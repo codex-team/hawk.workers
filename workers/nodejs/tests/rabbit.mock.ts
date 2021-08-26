@@ -9,6 +9,7 @@ export const mockedAmqpChannel = {
   prefetch: jest.fn(),
   consume: jest.fn().mockReturnValue('mockedTag'),
   sendToQueue: jest.fn(),
+  on: jest.fn(),
 };
 
 /**
@@ -17,6 +18,7 @@ export const mockedAmqpChannel = {
 const mockedAmqpConnection = {
   createChannel: (): typeof mockedAmqpChannel => mockedAmqpChannel,
   close: jest.fn(),
+  on: jest.fn(),
 };
 
 const mockedConnect = amqp.connect as jest.Mock;
