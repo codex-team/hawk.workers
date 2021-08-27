@@ -293,7 +293,7 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
-      let context: EventContext = { event: event as Record<string, never> };
+      let context: EventContext = { task: event as Record<string, never> };
 
       if (e instanceof ErrorWithContext) {
         context = {
