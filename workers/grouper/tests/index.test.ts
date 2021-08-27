@@ -177,6 +177,15 @@ describe('GrouperWorker', () => {
       expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
       expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
     });
+
+    test('Should save event even if its context is type of string', async () => {
+      const task = generateTask();
+
+      task.event.context = 'string context';
+      await worker.handle(task);
+
+      expect((await eventsCollection.findOne({})).payload.context).toBe(null);
+    });
   });
 
   describe('Saving daily events', () => {
