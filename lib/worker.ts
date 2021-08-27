@@ -199,6 +199,7 @@ export abstract class Worker {
     this.registryConnection = await amqp.connect(this.registryUrl);
 
     const errorHandler = (error: Error): void => {
+      this.logger.error(error);
       HawkCatcher.send(error, {
         workerType: this.type,
       });

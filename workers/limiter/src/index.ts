@@ -416,7 +416,7 @@ export default class LimiterWorker extends Worker {
    */
   private async sendWorkspaceBlockedReport(workspace: WorkspaceDBScheme): Promise<void> {
     const reportMessage = `
-🚧 Hawk Limiter ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''}
+🚧 Hawk Limiter ${process.env.ENVIRONMENT_NAME ? `(${process.env.ENVIRONMENT_NAME})` : ''}
 
 Workspace "${workspace.name}" has been blocked.
     `;
@@ -433,7 +433,7 @@ Workspace "${workspace.name}" has been blocked.
     const workspace = reportData.updatedWorkspace;
 
     const reportString = `
-Hawk Limiter ${process.env.SERVER_NAME ? `(${process.env.SERVER_NAME})` : ''} 🚧
+Hawk Limiter ${process.env.ENVIRONMENT_NAME ? `(${process.env.ENVIRONMENT_NAME})` : ''} 🚧
 
 ${encodeURIComponent(workspace.name)} wants to be unblocked
 
