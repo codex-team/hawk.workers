@@ -8,7 +8,7 @@ import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
-import { DatabaseReadWriteError, ValidationError } from '../../../lib/workerErrors';
+import {DatabaseReadWriteError, DiffCalculationError, ValidationError} from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
@@ -144,10 +144,16 @@ export default class GrouperWorker extends Worker {
        */
       decodeUnsafeFields(existedEvent);
 
-      /**
-       * Save event's repetitions
-       */
-      const diff = utils.deepDiff(existedEvent.payload, task.event);
+      let diff;
+
+      try {
+        /**
+         * Save event's repetitions
+         */
+        diff = utils.deepDiff(existedEvent.payload, task.event);
+      } catch (e) {
+        throw new DiffCalculationError(e, existedEvent.payload, task.event);
+      }
 
       const newRepetition = {
         groupHash: uniqueEventHash,

@@ -2,7 +2,7 @@
  * Class for critical errors
  * have to stop process
  */
-import { EventContext } from 'hawk.types';
+import {EventAddons, EventContext, EventDataAccepted} from 'hawk.types';
 
 /**
  * Error class with additional error context for debugging
@@ -17,8 +17,8 @@ export class ErrorWithContext extends Error {
    * @param msg - error message
    * @param context - additional event context for debugging
    */
-  constructor(msg?: string, context?: EventContext) {
-    super(msg);
+  constructor(msg?: string | Error, context?: EventContext) {
+    super(msg.toString());
     this.context = context;
   }
 }
@@ -58,4 +58,26 @@ export class DatabaseConnectionError extends CriticalError {
  * Class for validation errors
  */
 export class ValidationError extends NonCriticalError {
+}
+
+/**
+ * Class for representing errors during events difference calculation
+ */
+export class DiffCalculationError extends NonCriticalError {
+  /**
+   * @param msg - error message
+   * @param originalEvent - original event for diff calculation
+   * @param eventToCompare - second event for diff calculation
+   */
+  constructor(
+    msg: string | Error,
+    originalEvent: EventDataAccepted<EventAddons>,
+    eventToCompare: EventDataAccepted<EventAddons>
+  ) {
+    super(msg);
+    this.context = {
+      originalEvent: originalEvent as unknown as Record<string, never>,
+      eventToCompare: eventToCompare as unknown as Record<string, never>,
+    };
+  }
 }

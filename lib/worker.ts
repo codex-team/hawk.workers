@@ -1,11 +1,12 @@
 import * as amqp from 'amqplib';
 import * as client from 'prom-client';
 import { WorkerTask } from './types/worker-task';
-import { CriticalError, NonCriticalError, ParsingError } from './workerErrors';
+import { CriticalError, ErrorWithContext, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
 import CacheController from '../lib/cache/controller';
 import createLogger from './logger';
+import {EventContext} from "hawk.types";
 
 /**
  * Base worker class for processing tasks
@@ -292,7 +293,16 @@ export abstract class Worker {
        */
       this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
-      HawkCatcher.send(e, { event: event as Record<string, never> });
+      let context: EventContext = { event: event as Record<string, never> };
+
+      if (e instanceof ErrorWithContext) {
+        context = {
+          ...context,
+          exceptionContext: e.context,
+        };
+      }
+
+      HawkCatcher.send(e, context);
 
       switch (e.constructor) {
         case CriticalError:
