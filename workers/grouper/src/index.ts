@@ -329,7 +329,10 @@ export default class GrouperWorker extends Worker {
 
       return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
     } catch (err) {
-      throw new DatabaseReadWriteError(err);
+      throw new DatabaseReadWriteError(err, {
+        repetition: repetition as unknown as Record<string, never>,
+        projectId,
+      });
     }
   }
 
