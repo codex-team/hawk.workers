@@ -303,7 +303,7 @@ export default class ArchiverWorker extends Worker {
 
     reportData.projectsData.sort((a, b) => b.archivedEventsCount - a.archivedEventsCount);
 
-    let report = process.env.SERVER_NAME ? ` Hawk Archiver (${process.env.SERVER_NAME}) 📦️\n` : ' Hawk Archiver 📦️\n';
+    let report = process.env.ENVIRONMENT_NAME ? ` Hawk Archiver (${process.env.ENVIRONMENT_NAME}) 📦️\n` : ' Hawk Archiver 📦️\n';
     let totalArchivedEventsCount = 0;
 
     reportData.projectsData.forEach(dataByProject => {
