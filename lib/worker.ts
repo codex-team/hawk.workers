@@ -200,7 +200,7 @@ export abstract class Worker {
     this.registryConnection = await amqp.connect(this.registryUrl);
 
     const errorHandler = (error: Error): void => {
-      this.logger.error(error);
+      this.logger.error('Error in RabbitMQ has been occurred', error);
       HawkCatcher.send(error, {
         workerType: this.type,
       });
