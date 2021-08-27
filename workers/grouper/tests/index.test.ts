@@ -184,7 +184,7 @@ describe('GrouperWorker', () => {
       task.event.context = 'string context';
       await worker.handle(task);
 
-      expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
+      expect((await eventsCollection.findOne({})).payload.context).toBe(null);
     });
   });
 
