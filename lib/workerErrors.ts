@@ -2,7 +2,7 @@
  * Class for critical errors
  * have to stop process
  */
-import {EventAddons, EventContext, EventDataAccepted} from 'hawk.types';
+import { EventAddons, EventContext, EventDataAccepted } from 'hawk.types';
 
 /**
  * Error class with additional error context for debugging

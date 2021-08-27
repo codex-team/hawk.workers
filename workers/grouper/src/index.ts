@@ -8,7 +8,7 @@ import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
-import {DatabaseReadWriteError, DiffCalculationError, ValidationError} from '../../../lib/workerErrors';
+import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';

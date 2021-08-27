@@ -6,7 +6,7 @@ import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
 import CacheController from '../lib/cache/controller';
 import createLogger from './logger';
-import {EventContext} from "hawk.types";
+import { EventContext } from 'hawk.types';
 
 /**
  * Base worker class for processing tasks
