@@ -477,6 +477,28 @@ describe('Limiter worker', () => {
         done();
       });
     });
+
+    test('Should correctly work if projects count equals 0', async () => {
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+
+      await workspaceCollection.insertOne(workspace);
+
+      const worker = new LimiterWorker();
+
+      /**
+       * Act
+       */
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
+    });
   });
 
   afterAll(async () => {

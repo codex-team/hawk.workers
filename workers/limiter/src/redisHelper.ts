@@ -54,6 +54,8 @@ export default class RedisHelper {
 
       if (projectIds.length) {
         this.redisClient.sadd(this.redisDisabledProjectsKey, projectIds, callback);
+      } else {
+        resolve();
       }
     });
   }
@@ -69,6 +71,8 @@ export default class RedisHelper {
 
       if (projectIds.length) {
         this.redisClient.srem(this.redisDisabledProjectsKey, projectIds, callback);
+      } else {
+        resolve();
       }
     });
   }
