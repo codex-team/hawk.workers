@@ -85,7 +85,6 @@ export default class RedisHelper {
    */
   private createCallback(resolve: () => void, reject: (reason?: unknown) => void) {
     return (execError: Error | null): void => {
-      console.log('callback');
       if (execError) {
         this.logger.error(execError);
         HawkCatcher.send(execError);
