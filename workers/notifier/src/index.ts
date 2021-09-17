@@ -11,6 +11,7 @@ import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import Time from '../../../lib/utils/time';
 
 /**
  * Worker to buffer events before sending notifications about them
@@ -41,6 +42,7 @@ export default class NotifierWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.db.connect();
+    this.prepareCache();
     await super.start();
   }
 
@@ -49,6 +51,7 @@ export default class NotifierWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
+    this.clearCache();
     await this.db.close();
   }
 
@@ -100,7 +103,13 @@ export default class NotifierWorker extends Worker {
     let rules: Rule[] = [];
 
     try {
-      rules = await this.getProjectNotificationRules(projectId);
+      rules = await this.cache.get(
+        `projectNotificationRules:${projectId}`,
+        () => {
+          return this.getProjectNotificationRules(projectId);
+        },
+        Time.MINUTE
+      );
     } catch (e) {
       this.logger.warn('Failed to get project notification rules because ', e);
     }

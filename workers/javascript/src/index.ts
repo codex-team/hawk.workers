@@ -54,6 +54,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   public async finish(): Promise<void> {
     await super.finish();
+    this.clearCache();
     await this.db.close();
   }
 
