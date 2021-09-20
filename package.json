@@ -21,6 +21,7 @@
         "test:limiter": "jest workers/limiter",
         "test:grouper": "jest workers/grouper",
         "test:paymaster": "jest workers/paymaster",
+        "test:notifier": "jest workers/notifier",
         "test:clear": "jest --clearCache",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "migration-add": "migrate-mongo create",

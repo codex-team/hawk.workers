@@ -42,7 +42,6 @@ export default class NotifierWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.db.connect();
-    this.prepareCache();
     await super.start();
   }
 
@@ -51,7 +50,6 @@ export default class NotifierWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
-    this.clearCache();
     await this.db.close();
   }
 
@@ -81,7 +79,6 @@ export default class NotifierWorker extends Worker {
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;
-
       const rules = await this.getFittedRules(projectId, event);
 
       rules.forEach((rule) => {

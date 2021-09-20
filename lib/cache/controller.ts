@@ -67,15 +67,14 @@ export default class CacheController {
    * @param {number} [ttl] — data's time to live in seconds
    * @returns {CacheValue} — cached data
    */
-  public async get(key: string, resolver?: () => CacheValue | Promise<CacheValue>, ttl?: number): Promise<CacheValue> {
+  public async get(key: string, resolver?: () => Promise<CacheValue>, ttl?: number): Promise<CacheValue> {
     const keyPrefixed = this.getKey(key);
-
     let value = this.cache.get(keyPrefixed);
 
     /**
      * If value is missing then resolve it and save
      */
-    if (!value && resolver) {
+    if (value === undefined && resolver) {
       /**
        * Get value from resolver function
        */

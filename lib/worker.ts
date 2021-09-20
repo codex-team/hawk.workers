@@ -144,6 +144,11 @@ export abstract class Worker {
      * Remember consumer tag to cancel subscription in future
      */
     this.registryConsumerTag = consumerTag;
+
+    /**
+     * Prepare cache
+     */
+    this.prepareCache();
   }
 
   /**
@@ -157,6 +162,9 @@ export abstract class Worker {
      * Process remaining tasks
      */
     await Promise.all(this.tasksMap.values());
+
+    this.clearCache();
+
     await this.disconnect();
   }
 
