@@ -84,6 +84,13 @@ describe('NotifierWorker', () => {
     DatabaseController: MockDBController,
   }));
 
+  /**
+   * Reset calls number after each test
+   */
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
 
@@ -114,6 +121,8 @@ describe('NotifierWorker', () => {
     it('should get db connection on message handle', async () => {
       const worker = new NotifierWorker();
 
+      await worker.start();
+
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -121,44 +130,80 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(dbConnectionMock).toBeCalled();
+
+      await worker.finish();
+    });
+
+    it('should get db connection on message handle and cache result', async () => {
+      const worker = new NotifierWorker();
+
+      await worker.start();
+
+      const message = { ...messageMock };
+
+      worker.sendToSenderWorker = jest.fn();
+
+      await worker.handle(message);
+      await worker.handle(message);
+      await worker.handle(message);
+      await worker.handle(message);
+      await worker.handle(message);
+
+      expect(dbConnectionMock).toBeCalledTimes(1);
+
+      await worker.finish();
     });
 
     it('should query correct collection on message handle', async () => {
       const worker = new NotifierWorker();
       const message = { ...messageMock };
 
+      await worker.start();
+
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbCollectionMock).toBeCalledWith('projects');
+
+      await worker.finish();
     });
 
     it('should query correct project on message handle', async () => {
       const worker = new NotifierWorker();
       const message = { ...messageMock };
 
+      await worker.start();
+
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbQueryMock).toBeCalledWith({ _id: new ObjectID(message.projectId) });
+
+      await worker.finish();
     });
 
     it('should close db connection on finish', async () => {
       const worker = new NotifierWorker();
+
+      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.finish();
 
       expect(dbCloseMock).toBeCalled();
+
+      await worker.finish();
     });
   });
 
   describe('handling', () => {
     it('should correctly handle first message', async () => {
       const worker = new NotifierWorker();
+
+      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -191,10 +236,14 @@ describe('NotifierWorker', () => {
           events
         );
       });
+
+      await worker.finish();
     });
 
     it('should correctly handle messages after first one', async () => {
       const worker = new NotifierWorker();
+
+      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -226,10 +275,14 @@ describe('NotifierWorker', () => {
       });
 
       jest.useRealTimers();
+
+      await worker.finish();
     });
 
     it('should send events after timeout', async () => {
       const worker = new NotifierWorker();
+
+      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -265,10 +318,14 @@ describe('NotifierWorker', () => {
 
         resolve();
       }, 1000));
+
+      await worker.finish();
     });
 
     it('should do nothing if project doesn\'t exist', async () => {
       const worker = new NotifierWorker();
+
+      await worker.start();
 
       worker.addEventsToChannels = jest.fn();
 
@@ -283,11 +340,17 @@ describe('NotifierWorker', () => {
       expect(worker.addEventsToChannels).not.toBeCalled();
 
       dbQueryMock = oldMock;
+
+      await worker.finish();
     });
   });
 
   it('should send task to sender workers', async () => {
     const worker = new NotifierWorker();
+
+    await worker.start();
+
+    await worker.start();
 
     worker.addTask = jest.fn();
 
@@ -330,5 +393,7 @@ describe('NotifierWorker', () => {
         }
       );
     }, 2000);
+
+    await worker.finish();
   });
 });
