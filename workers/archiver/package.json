@@ -9,7 +9,7 @@
     "private": true,
     "workerType": "cron-tasks/archiver",
     "dependencies": {
-        "axios": "^0.21.1",
+        "axios": "^0.21.2",
         "dotenv": "^8.2.0",
         "prettysize": "^2.0.0"
     }
