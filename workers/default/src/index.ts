@@ -9,7 +9,7 @@ export default class DefaultEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: string = pkg.workerType;
+  public type: string = pkg.workerType;
 
   /**
    * Message handle function
@@ -17,6 +17,11 @@ export default class DefaultEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: DefaultEventWorkerTask): Promise<void> {
+    /**
+     * Define  event type
+     */
+    this.type = event.catcherType;
+
     return super.handle(event);
   }
 }

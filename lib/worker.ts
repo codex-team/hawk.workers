@@ -102,7 +102,7 @@ export abstract class Worker {
    * Worker type
    * (will pull tasks from Registry queue with the same name)
    */
-  public abstract readonly type: string;
+  public abstract type: string;
 
   /**
    * Initialize prometheus metrics
