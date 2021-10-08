@@ -42,6 +42,7 @@
     },
     "dependencies": {
         "@hawk.so/nodejs": "^3.1.1",
+        "@hawk.so/types": "^0.1.16",
         "@types/amqplib": "^0.8.2",
         "@types/jest": "^25.2.1",
         "@types/mongodb": "^3.5.15",
@@ -50,7 +51,6 @@
         "codex-accounting-sdk": "codex-team/codex-accounting-sdk",
         "debug": "^4.1.1",
         "dotenv": "^8.2.0",
-        "hawk.types": "https://github.com/codex-team/hawk.types",
         "lodash.mergewith": "^4.6.2",
         "migrate-mongo": "^7.2.1",
         "mockdate": "^3.0.2",
