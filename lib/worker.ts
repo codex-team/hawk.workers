@@ -212,6 +212,11 @@ export abstract class Worker {
       HawkCatcher.send(error, {
         workerType: this.type,
       });
+
+      /**
+       * Exit process on RabbitMQ connection error to restart worker
+       */
+      process.exit(1);
     };
 
     this.registryConnection.on('error', errorHandler);
