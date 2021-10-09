@@ -1,4 +1,4 @@
-import { EventAddons, EventDataAccepted } from 'hawk.types';
+import { EventAddons, EventDataAccepted } from '@hawk.so/types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**

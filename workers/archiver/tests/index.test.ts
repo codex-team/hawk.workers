@@ -5,7 +5,7 @@ import ArchiverWorker from '../src';
 import { mockedEvents } from './events.mock';
 import '../../../env-test';
 import { mockedReleases } from './releases.mock';
-import { ProjectDBScheme } from 'hawk.types';
+import { ProjectDBScheme } from '@hawk.so/types';
 jest.mock('axios');
 jest.mock('amqplib');
 
@@ -19,6 +19,7 @@ process.env.MAX_DAYS_NUMBER = '30';
 const mockedProject: ProjectDBScheme = {
   notifications: [],
   token: '5342',
+  integrationId: 'kekekkekekekek',
   uidAdded: new ObjectId('5e4ff518628a6c714515f4db'),
   workspaceId: new ObjectId('5e4ff518628a6c714515f4de'),
   _id: new ObjectId('5e4ff518628a6c714515f4da'),

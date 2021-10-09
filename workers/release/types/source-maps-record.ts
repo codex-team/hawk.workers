@@ -1,4 +1,4 @@
-import { SourceMapDataExtended } from 'hawk.types';
+import { SourceMapDataExtended } from '@hawk.so/types';
 
 export interface SourceMapsRecord {
   /**

@@ -1,7 +1,7 @@
 import PaymasterWorker from '../src';
 import { Collection, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import MockDate from 'mockdate';
 import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import { mocked } from 'ts-jest/utils';

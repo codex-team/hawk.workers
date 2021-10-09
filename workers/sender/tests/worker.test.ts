@@ -1,4 +1,4 @@
-import { GroupedEventDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme } from '@hawk.so/types';
 import { WhatToReceive } from 'hawk-worker-notifier/src/validator';
 import { ObjectId } from 'mongodb';
 import '../../../env-test';

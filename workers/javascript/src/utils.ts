@@ -1,4 +1,4 @@
-import { JavaScriptAddons } from 'hawk.types';
+import { JavaScriptAddons } from '@hawk.so/types';
 import useragent from 'useragent';
 
 /**

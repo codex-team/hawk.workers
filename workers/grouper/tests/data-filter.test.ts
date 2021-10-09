@@ -1,5 +1,5 @@
 import '../../../env-test';
-import { EventAddons, EventDataAccepted, Json } from 'hawk.types';
+import { EventAddons, EventDataAccepted, Json } from '@hawk.so/types';
 import DataFilter from '../src/data-filter';
 jest.mock('amqplib');
 

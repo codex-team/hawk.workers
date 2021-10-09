@@ -1,6 +1,6 @@
 import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import LimiterWorker from '../src';
 import redis from 'redis';
 import { mockedPlans } from './plans.mock';
@@ -69,6 +69,7 @@ describe('Limiter worker', () => {
     return {
       _id: new ObjectId(),
       name: 'Mocked project',
+      integrationId: 'kekekkekekekek',
       workspaceId: parameters.workspaceId,
       notifications: [],
       token: '',

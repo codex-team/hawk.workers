@@ -6,7 +6,7 @@ import {
   WorkspaceDBScheme,
   ConfirmedMemberDBScheme,
   PlanDBScheme
-} from 'hawk.types';
+} from '@hawk.so/types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';

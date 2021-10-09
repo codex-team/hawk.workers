@@ -3,7 +3,7 @@ import GrouperWorker from '../src';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import redis from 'redis';
 import { Collection, MongoClient } from 'mongodb';
-import { EventAddons, EventDataAccepted } from 'hawk.types';
+import { EventAddons, EventDataAccepted } from '@hawk.so/types';
 
 jest.mock('amqplib');
 

@@ -1,5 +1,5 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData, DefaultAddons } from 'hawk.types';
+import { DecodedEventData, DefaultAddons } from '@hawk.so/types';
 
 /**
  * Describe a context passed from Default Catcher
