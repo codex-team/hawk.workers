@@ -69,7 +69,7 @@ describe('Limiter worker', () => {
     return {
       _id: new ObjectId(),
       name: 'Mocked project',
-      integrationId: 'kekekkekekekek',
+      integrationId: 'eyJpbnRlZ3JhdGlvbklkIjoiMzg3NGNkOWMtZjJiYS00ZDVkLTk5ZmQtM2UzZjYzMDcxYmJhIiwic2VjcmV0IjoiMGZhM2JkM2EtYmMyZC00YWRiLThlMWMtNjg2OGY0MzM1YjRiIn0=',
       workspaceId: parameters.workspaceId,
       notifications: [],
       token: '',

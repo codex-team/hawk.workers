@@ -19,7 +19,7 @@ process.env.MAX_DAYS_NUMBER = '30';
 const mockedProject: ProjectDBScheme = {
   notifications: [],
   token: '5342',
-  integrationId: 'kekekkekekekek',
+  integrationId: 'eyJpbnRlZ3JhdGlvbklkIjoiMzg3NGNkOWMtZjJiYS00ZDVkLTk5ZmQtM2UzZjYzMDcxYmJhIiwic2VjcmV0IjoiMGZhM2JkM2EtYmMyZC00YWRiLThlMWMtNjg2OGY0MzM1YjRiIn0=',
   uidAdded: new ObjectId('5e4ff518628a6c714515f4db'),
   workspaceId: new ObjectId('5e4ff518628a6c714515f4de'),
   _id: new ObjectId('5e4ff518628a6c714515f4da'),
