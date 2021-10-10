@@ -3,7 +3,7 @@ import '../../../env-test';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
-import { ReleaseDBScheme } from 'hawk.types';
+import { ReleaseDBScheme } from '@hawk.so/types';
 
 describe('JavaScript event worker', () => {
   let connection: MongoClient;

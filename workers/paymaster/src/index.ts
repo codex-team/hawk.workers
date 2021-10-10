@@ -4,7 +4,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Collection } from 'mongodb';
-import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import axios from 'axios';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';

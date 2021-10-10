@@ -1,4 +1,4 @@
-import { EventDataAccepted, EventAddons } from 'hawk.types';
+import { EventDataAccepted, EventAddons } from '@hawk.so/types';
 import { WorkerTask } from '../../../lib/types/worker-task';
 
 /**

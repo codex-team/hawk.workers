@@ -1,7 +1,7 @@
 import shortNumber from 'short-number';
 import * as Twig from 'twig';
 import type { TemplateEventData } from 'hawk-worker-sender/types/template-variables';
-import { BacktraceFrame } from 'hawk.types';
+import { BacktraceFrame } from '@hawk.so/types';
 
 /**
  * Function to use in template to find backtrace frame with source code

@@ -4,7 +4,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType } from '../types/accountant-worker-events';
-import { WorkspaceDBScheme } from 'hawk.types';
+import { WorkspaceDBScheme } from '@hawk.so/types';
 
 /**
  * Worker for managing workspaces balance

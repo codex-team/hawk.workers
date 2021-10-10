@@ -1,4 +1,4 @@
-import { GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 
 /**
  * Fields in event payload with unsafe data for encoding before saving in database

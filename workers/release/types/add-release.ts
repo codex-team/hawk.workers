@@ -1,4 +1,4 @@
-import { SourcemapCollectedData } from 'hawk.types';
+import { SourcemapCollectedData } from '@hawk.so/types';
 
 /**
  * Git commit data needed to create a release

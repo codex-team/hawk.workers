@@ -1,5 +1,5 @@
 import { CommonTemplateVariables } from './common-template';
-import { WorkspaceDBScheme } from 'hawk.types';
+import { WorkspaceDBScheme } from '@hawk.so/types';
 import { Notification } from './notification';
 
 /**

@@ -1,5 +1,5 @@
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData, JavaScriptAddons } from 'hawk.types';
+import { DecodedEventData, JavaScriptAddons } from '@hawk.so/types';
 
 /**
  * Describe a context passed from JavaScript Catcher
