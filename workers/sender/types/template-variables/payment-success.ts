@@ -1,6 +1,6 @@
 import { Notification } from './notification';
 import { CommonTemplateVariables } from './common-template';
-import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 
 export interface PaymentSuccessTemplateVariables extends CommonTemplateVariables {
   /**

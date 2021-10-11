@@ -1,8 +1,16 @@
 version: "3.2"
 services:
   #
-  # Programming language workers: javascript (+sourcemaps), nodejs, python
+  # Default and specific programming language workers: javascript (+sourcemaps)
   #
+
+  hawk-worker-default:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-default
 
   hawk-worker-javascript:
     image: "codexteamuser/hawk-workers:prod"
@@ -21,38 +29,6 @@ services:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-release
-
-  hawk-worker-nodejs:
-    image: "codexteamuser/hawk-workers:prod"
-    network_mode: host
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-nodejs
-
-  hawk-worker-php:
-    image: "codexteamuser/hawk-workers:prod"
-    network_mode: host
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-php
-
-  hawk-worker-python:
-    image: "codexteamuser/hawk-workers:prod"
-    network_mode: host
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-python
-
-  hawk-worker-go:
-    image: "codexteamuser/hawk-workers:prod"
-    network_mode: host
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-go
 
   #
   # Processing workers: grouper

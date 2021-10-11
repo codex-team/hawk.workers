@@ -1,0 +1,10 @@
+{
+  "name": "hawk-worker-default",
+  "version": "0.0.1",
+  "description": "Handles events in correct format",
+  "main": "src/index.ts",
+  "author": "CodeX",
+  "license": "UNLICENSED",
+  "private": true,
+  "workerType": "errors/default"
+}

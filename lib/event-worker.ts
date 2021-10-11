@@ -12,7 +12,7 @@ export abstract class EventWorker extends Worker {
    * Worker type (will pull tasks from Registry queue with the same name)
    * 'errors/nodejs' for example
    */
-  public readonly type: string = '';
+  public type = '';
 
   /**
    * Message handle function

@@ -5,7 +5,7 @@ import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';

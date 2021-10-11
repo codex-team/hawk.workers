@@ -1,5 +1,5 @@
 import { WorkerTask } from './worker-task';
-import { DecodedEventData, EventAddons } from 'hawk.types';
+import { DecodedEventData, EventAddons } from '@hawk.so/types';
 
 /**
  * Format of task that handled by Event Workers

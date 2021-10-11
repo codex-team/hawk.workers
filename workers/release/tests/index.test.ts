@@ -5,7 +5,7 @@ import { Db, MongoClient } from 'mongodb';
  */
 import ReleaseWorker from '../src/index';
 import { ReleaseWorkerAddReleasePayload } from '../types';
-import { SourcemapCollectedData, SourceMapDataExtended, ReleaseDBScheme } from 'hawk.types';
+import { SourcemapCollectedData, SourceMapDataExtended, ReleaseDBScheme } from '@hawk.so/types';
 import MockBundle from './create-mock-bundle';
 import '../../../env-test';
 

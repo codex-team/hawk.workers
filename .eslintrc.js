@@ -7,6 +7,7 @@ module.exports = {
   extends: ['codex', 'codex/ts'],
   rules: {
     '@typescript-eslint/no-unused-expressions': 'error',
+    '@typescript-eslint/no-var-requires': 'off',
     'no-unused-expressions': 'off',
   },
   globals: {

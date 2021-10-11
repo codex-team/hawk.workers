@@ -8,7 +8,7 @@ import { ReleaseFileData, ReleaseRecord, ReportData, ReportDataByProject } from 
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
-import { ProjectDBScheme } from 'hawk.types';
+import { ProjectDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
