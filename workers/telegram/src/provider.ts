@@ -41,7 +41,7 @@ export default class TelegramProvider extends NotificationsProvider {
   }
 
   /**
-   * Sends message to the telegram through the @codex_bot
+   * Sends message to the telegram through the @hawkso_bot
    *
    * @param endpoint - where to send
    * @param message - what to send
