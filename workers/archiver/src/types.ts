@@ -105,5 +105,5 @@ export interface ReleaseRecord {
   /**
    * List of source maps for all chunks
    */
-  files: ReleaseFileData[];
+  files?: ReleaseFileData[];
 }
