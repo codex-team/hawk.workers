@@ -37,7 +37,7 @@
 
   {% if event.payload.backtrace is not empty %}
     <tr>
-      <td class="backtrace-wrap" style="padding-top: 10px;padding-right: 10px;padding-left: 10px;padding-bottom: 10px;">
+      <td class="backtrace-wrap" style="padding-top: 10px; padding-right: 10px;padding-left: 10px;padding-bottom: 10px; text-decoration: none !important;">
         {% include '../../components/backtrace.twig' with {backtrace: findTrace(event.payload.backtrace)} %}
       </td>
     </tr>
