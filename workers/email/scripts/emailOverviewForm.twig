@@ -167,17 +167,6 @@
                     <br></br>
 
                     <label>
-                        Workspace
-                    </label>
-                    <select name="workspaceId" id="workspace">
-                        {% for workspace in workspaces %}
-                            <option value="{{ workspace._id }}"> {{ workspace.name }}</option>
-                        {% endfor %}
-                    </select>
-
-                    <br><br>
-
-                    <label>
                         Event ids
                     </label>
                     <select name="eventIds" id="events" multiple style="height: 200px"></select>
