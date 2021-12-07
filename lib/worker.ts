@@ -186,7 +186,9 @@ export abstract class Worker {
    * Forced clears worker cache
    */
   public clearCache(): void {
-    this.cache.flushAll();
+    if (this.cache) {
+      this.cache.flushAll();
+    }
   }
 
   /**
