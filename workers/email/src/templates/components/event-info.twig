@@ -8,18 +8,22 @@
       </font>
     </div>
   {% endif %}
+  {% if event.event.totalCount is not empty %}
   <font color="#969FB3" style="font-size: 12px; line-height: 20px;letter-spacing: 0.17px;text-align: center; color: #969FB3;">
     <nobr>
       {{ event.event.totalCount | abbrNumber }}&nbsp;total
     </nobr>
   </font>
   &nbsp;&nbsp;
+  {% endif %}
+  {% if event.daysRepeated is not empty %}
   <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
     <nobr>
       {{ event.daysRepeated }}&nbsp;days&nbsp;repeating
     </nobr>
   </font>
   &nbsp;&nbsp;
+  {% endif %}
   {% if event.usersAffected %}
     <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
       <nobr>
