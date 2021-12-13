@@ -116,7 +116,7 @@
                 {% block header %}{% endblock %}
                 {% block content %}{% endblock %}
 
-                {% if unsubscribeLink %}
+                {% if block('unsubscribeLink') is not empty %}
                 <tr>
                     <td style="text-align: center">
                         <a href="{% block unsubscribeLink %}{% endblock %}"

@@ -1,3 +1,7 @@
-<font color="#969FB3" style="font-size: 11px; letter-spacing: 0.34px; color: #969FB3;">
-  {{ file | prettyPath | leftTrim(70) }}
+<font color="#969FB3" style="font-size: 11px; letter-spacing: 0.34px; color: #969FB3; text-decoration: none; pointer-events: none;">
+	{% if file is not empty %}
+	  {{ file | prettyPath | leftTrim(70) }}
+	{% else %}
+		Unknown location
+	{% endif %}
 </font>

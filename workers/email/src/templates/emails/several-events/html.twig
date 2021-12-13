@@ -8,11 +8,7 @@
     <tr>
       <td class="several-items-event" style="padding-top: 0;padding-right: 20px;padding-left: 20px;padding-bottom: 0;">
         {% if eventData.event.payload.backtrace is not empty %}
-          {% if eventData.event.payload.backtrace[0].file is not empty %}
-            {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
-          {% else %}
-            Unknown location
-          {% endif %}
+          {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
         {% endif %}
         <div style="padding-top: 10px;padding-right: 0;padding-left: 0;padding-bottom: 10px;">
           <font color="#dbe6ff" style="font-size: 13px; line-height: 1.54; letter-spacing: 0.35px; color: #dbe6ff">
@@ -33,11 +29,7 @@
         <tr>
             <td class="several-items-event" style="padding-top: 0;padding-right: 20px;padding-left: 20px;padding-bottom: 0;">
                 {% if eventData.event.payload.backtrace is not empty %}
-                    {% if eventData.event.payload.backtrace[0].file is not empty %}
-                        {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
-                    {% else %}
-                        Unknown location
-                    {% endif %}
+                  {% include '../../components/filename.twig' with {file: eventData.event.payload.backtrace[0].file} %}
                 {% endif %}
                 <div style="padding-top: 10px;padding-right: 0;padding-left: 0;padding-bottom: 10px;">
                     <font color="#dbe6ff"
