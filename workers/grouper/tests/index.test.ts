@@ -19,10 +19,12 @@ jest.mock('../../../lib/cache/controller', () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
-    public flushAll(): void {}
+    public flushAll(): void {
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
-    public set(): void {}
+    public set(): void {
+    }
   };
 });
 
@@ -213,6 +215,32 @@ describe('GrouperWorker', () => {
       const repetition = await repetitionsCollection.findOne({});
 
       expect((await dailyEventsCollection.findOne({})).lastRepetitionId).toEqual(repetition._id);
+    });
+
+    test('Should update affected users list', async () => {
+      const task1 = generateTask();
+      const task2 = generateTask();
+
+      await worker.handle(task1);
+      await worker.handle(task2);
+
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toEqual([task1.event.user.id, task2.event.user.id]);
+    });
+
+    test('Should add anonymous user to affected users list if user is not passed with event', async () => {
+      await worker.handle(generateTask({ user: undefined }));
+
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toEqual([ 'anonymous' ]);
+    });
+
+    test('Should not add user to affected users list if its already there', async () => {
+      const task1 = generateTask();
+      const task2 = generateTask({ user: { id: task1.event.user.id } });
+
+      await worker.handle(task1);
+      await worker.handle(task2);
+
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toEqual([ task1.event.user.id ]);
     });
   });
 
