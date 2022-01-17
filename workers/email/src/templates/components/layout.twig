@@ -112,11 +112,11 @@
       <tr>
         <td width="20"></td>
         <td>
-            <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" align="center" style="max-width: 480px; word-wrap: anywhere;">
                 {% block header %}{% endblock %}
                 {% block content %}{% endblock %}
 
-                {% if unsubscribeLink %}
+                {% if block('unsubscribeLink') is not empty %}
                 <tr>
                     <td style="text-align: center">
                         <a href="{% block unsubscribeLink %}{% endblock %}"

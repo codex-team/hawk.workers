@@ -69,19 +69,19 @@ Twig.extendFilter('prettyTime', (seconds: number): string => {
   let result = '';
 
   if (days) {
-    result += days + ' days ';
+    result += days + days === 1 ? ' day' : ' days';
   }
 
   if (hours) {
-    result += hours + ' hours ';
+    result += hours + hours === 1 ? ' hour' : ' hours';
   }
 
   if (minutes) {
-    result += minutes + ' minutes ';
+    result += minutes + minutes === 1 ? ' minute' : ' minutes';
   }
 
   if (sec) {
-    result += sec + ' seconds';
+    result += sec + sec === 1 ? ' second' : ' seconds';
   }
 
   return result;
