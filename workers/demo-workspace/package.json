@@ -1,0 +1,14 @@
+{
+  "name": "hawk-worker-demo-workspace",
+  "description": "Send random event to the demo workspace",
+  "workerType": "demo-workspace",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/demo-workspace",
+  "author": "CodeX",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "ws": "^8.6.0"
+  }
+}
