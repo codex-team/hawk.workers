@@ -147,12 +147,33 @@ export default class GrouperWorker extends Worker {
 
       let diff;
 
+      /**
+       * Debugging of the Grouper Problem
+       *
+       * @see https://garage.hawk.so/project/5ee7a80de6ce2b651831f26e/event/617ff4ab45ff50ee4b8a19fb/62ce3b943ad77549f35a2235/overview
+       */
+      if (utils === null) {
+        console.log('\n\nUtils is null\n\n');
+      }
+      if (existedEvent === null) {
+        console.log('\n\nexistedEvent is null\n\n');
+      }
+      if (task === null) {
+        console.log('\n\ntask is null\n\n');
+      }
+      if (DiffCalculationError === null) {
+        console.log('\n\nDiffCalculationError is null\n\n');
+      }
+
       try {
         /**
          * Save event's repetitions
          */
         diff = utils.deepDiff(existedEvent.payload, task.event);
       } catch (e) {
+        console.log('DEBUG GROUPER (error):', e);
+        console.log('DEBUG GROUPER (existedEvent.payload):', existedEvent.payload);
+        console.log('DEBUG GROUPER (task.event):', task.event);
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
       }
 
