@@ -39,8 +39,7 @@
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
         "run-limiter": "yarn worker hawk-worker-limiter",
-        "ts:check": "tsc --project ./tsconfig.json --noEmit",
-        "tsc": "tsc ./workers/grouper/src/index.ts --noEmit"
+        "ts:check": "tsc --project ./tsconfig.json --noEmit"
     },
     "dependencies": {
         "@hawk.so/nodejs": "^3.1.1",
