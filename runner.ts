@@ -1,5 +1,3 @@
-import * as utils from './lib/utils';
-
 /* Prometheus client for pushing metrics to the pushgateway */
 import os from 'os';
 import * as promClient from 'prom-client';
@@ -9,6 +7,7 @@ import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
+import sendReport from './lib/utils/sendReport';
 
 dotenv.config();
 
@@ -184,11 +183,11 @@ class WorkerRunner {
             `\n\n( ಠ ͜ʖರೃ) Worker ${worker.constructor.name} started with pid ${process.pid} \n`
           );
 
-          utils.sendReport(worker.constructor.name + ' started');
+          sendReport(worker.constructor.name + ' started');
         } catch (startingError) {
           this.exceptionHandler(startingError);
 
-          utils.sendReport(worker.constructor.name + ' failed to start');
+          sendReport(worker.constructor.name + ' failed to start');
 
           await this.stopWorker(worker);
         }
@@ -218,7 +217,7 @@ class WorkerRunner {
 
     const workerConstructorNames = this.workers.map(worker => worker.constructor.name).join(', ');
 
-    utils.sendReport(`${workerConstructorNames}: Error has been occurred: ${error ? error.message : 'unknown'}`);
+    sendReport(`${workerConstructorNames}: Error has been occurred: ${error ? error.message : 'unknown'}`);
   }
 
   /**
