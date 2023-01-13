@@ -1,5 +1,5 @@
 import * as amqp from 'amqplib';
-import * as client from 'prom-client';
+// import * as client from 'prom-client';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, ErrorWithContext, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
@@ -59,7 +59,7 @@ export abstract class Worker {
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
-  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
+  // private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint
@@ -107,19 +107,19 @@ export abstract class Worker {
   /**
    * Initialize prometheus metrics
    */
-  public initMetrics(): void {
-    this.metricSuccessfullyProcessedMessages = new client.Counter({
-      name: 'successfully_processed_messages',
-      help: 'number of successfully processed messages since last restart',
-    });
-  }
+  // public initMetrics(): void {
+  //   this.metricSuccessfullyProcessedMessages = new client.Counter({
+  //     name: 'successfully_processed_messages',
+  //     help: 'number of successfully processed messages since last restart',
+  //   });
+  // }
 
   /**
    * Get array of available prometheus metrics
    */
-  public getMetrics(): client.Counter<string>[] {
-    return [ this.metricSuccessfullyProcessedMessages ];
-  }
+  // public getMetrics(): client.Counter<string>[] {
+  //   return [ this.metricSuccessfullyProcessedMessages ];
+  // }
 
   /**
    * Start consuming messages
@@ -306,7 +306,7 @@ export abstract class Worker {
       /**
        * Increment counter of successfully processed messages if metrics are enabled
        */
-      this.metricSuccessfullyProcessedMessages?.inc();
+      // this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       let context: EventContext = { task: event as Record<string, never> };
 
