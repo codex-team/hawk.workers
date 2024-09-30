@@ -126,6 +126,8 @@ export default class GrouperWorker extends Worker {
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
+
+          return;
         } else {
           throw e;
         }
