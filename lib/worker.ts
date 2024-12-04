@@ -346,6 +346,7 @@ export abstract class Worker {
 
           return;
         default:
+          console.error(e)
           this.logger.error('Unknown error: ', e);
           await this.sendToStash(msg);
       }
