@@ -98,7 +98,7 @@ export default class SentryEventWorker extends EventWorker {
     delete trace.public_key;
 
     // convert sent_at from ISO 8601 to Unix timestamp
-    const sent_at_unix = new Date(sent_at).getTime();
+    const sent_at_unix = Math.floor(new Date(sent_at).getTime() / 1000);
 
     const backtrace = Payload.exception?.values?.[0]?.stacktrace?.frames?.map((frame: any) => ({
       file: frame.filename,
