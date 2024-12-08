@@ -4,11 +4,10 @@ import { ObjectID } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import { Channel } from '../types/channel';
+import { Channel, ChannelKey, SenderData } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
 import { Rule } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
-import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
 import Time from '../../../lib/utils/time';
 import RedisHelper from './redisHelper';
@@ -27,16 +26,6 @@ export default class NotifierWorker extends Worker {
    */
   private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
   private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
-  
-  /**
-   * Received events buffer
-   */
-  private buffer: Buffer = new Buffer();
-
-  /**
-   * Default period between messages in seconds
-   */
-  private readonly DEFAULT_MIN_PERIOD = 60;
 
   /**
    * Redis helper instance for modifying data through redis
@@ -87,7 +76,7 @@ export default class NotifierWorker extends Worker {
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;
-    
+
       /**
        * Increment event repetitions count in digest
        */
@@ -111,11 +100,12 @@ export default class NotifierWorker extends Worker {
   /**
    * Method that returns threshold for current project
    * Used to check if event is critical or not
+   *
    * @param projectId - if of the project, to get notification threshold for
    */
   private async getNotificationThreshold(projectId: string): Promise<number> {
     const storedEventsCount = this.redis.getProjectNotificationThreshold(projectId);
-    
+
     /**
      * If redis has no threshold stored, then get it from the database
      */
@@ -132,17 +122,21 @@ export default class NotifierWorker extends Worker {
       /**
        * Get ten events of the current project
        */
-      const eventsToEvaluate = await events.find({}).limit(10).toArray();
+      const eventsToEvaluate = await events.find({}).limit(10)
+        .toArray();
 
-      let averageProjectRepetitionsADay = 0
+      let averageProjectRepetitionsADay = 0;
 
       /**
-       * For each event get repetitions since two days to one day ago 
+       * For each event get repetitions since two days to one day ago
        */
       eventsToEvaluate.forEach(async (event) => {
         const repetitionsCount = await repetitions.countDocuments({
-          'payload.timestamp': {$gte: twoDaysAgo, $le: oneDayAgo},
-          'groupHash': event.groupHash,
+          'payload.timestamp': {
+            $gte: twoDaysAgo,
+            $le: oneDayAgo,
+          },
+          groupHash: event.groupHash,
         });
 
         averageProjectRepetitionsADay += repetitionsCount;
@@ -162,6 +156,8 @@ export default class NotifierWorker extends Worker {
 
   /**
    * Check if event is critical
+   *
+   * @param projectId - id of the project to of the event
    * @param {NotifierEvent} event — received event
    * @returns {boolean}
    */
@@ -178,19 +174,19 @@ export default class NotifierWorker extends Worker {
      */
     if (eventRepetitionsToday !== null && eventRepetitionsToday === projectThreshold) {
       return true;
-    } 
     /**
      * Check if event is new
      */
-    else if (event.isNew) {
+    } else if (event.isNew) {
       return true;
-    } 
-  
+    }
+
     /**
      * Event is not critical in other cases
      */
     return false;
   }
+
   /**
    * Get project notifications rules that matches received event
    *
@@ -244,14 +240,7 @@ export default class NotifierWorker extends Worker {
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-      const eventKey: EventKey = [projectId, rule._id.toString(), name, event.groupHash];
-
-      if (this.buffer.getTimer(channelKey)) {
-        this.buffer.push(eventKey);
-
-        return;
-      }
-
+      
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
@@ -260,29 +249,12 @@ export default class NotifierWorker extends Worker {
   }
 
   /**
-   * Get events from buffer, flush buffer and send event to sender workers
-   *
-   * @param {ChannelKey} channelKey — buffer key
-   */
-  private sendEvents = async (channelKey: ChannelKey): Promise<void> => {
-    this.buffer.clearTimer(channelKey);
-
-    const events = this.buffer.flush(channelKey);
-
-    if (!events.length) {
-      return;
-    }
-
-    await this.sendToSenderWorker(channelKey, events);
-  };
-
-  /**
    * Send task to sender workers
    *
    * @param {ChannelKey} key — buffer key
-   * @param {BufferData[]} events - events to send
+   * @param {SenderData[]} events - events to send
    */
-  private async sendToSenderWorker(key: ChannelKey, events: BufferData[]): Promise<void> {
+  private async sendToSenderWorker(key: ChannelKey, events: SenderData[]): Promise<void> {
     const [projectId, ruleId, channelName] = key;
 
     await this.addTask(`sender/${channelName}`, {

@@ -16,9 +16,13 @@ export default class RedisHelper {
    */
   private logger = createLogger();
 
+  /**
+   * @param projectId
+   * @param groupHash
+   */
   public async addEventToDigest(projectId: string, groupHash: string): Promise<void> {
     this.logger.debug('Stored in Redis digest');
-    
+
     const script = `
     local structure_key = KEYS[1]
     local group_hash = ARGV[1]
@@ -40,29 +44,31 @@ export default class RedisHelper {
         end
     end
     `;
-    
+
     const digestKey = `digest:${projectId}`;
-    
+
     await this.redisClient.eval(script, {
-      keys: [digestKey],
-      arguments: [groupHash],
+      keys: [ digestKey ],
+      arguments: [ groupHash ],
     });
   }
 
   /**
    * Method that get repetitions event repetitions count from todays digest of the project
+   *
    * @param projectId - id of the project to get the repetitions count from
    * @param groupHash - hash of the event group
-   * @returns 
+   * @returns
    */
   public async getEventRepetitionsFromDigest(projectId: string, groupHash: string): Promise<number | null> {
-    const digestRepetitionCount = await this.redisClient.get(`digest:${projectId}:${groupHash}`)
+    const digestRepetitionCount = await this.redisClient.get(`digest:${projectId}:${groupHash}`);
 
-    return (digestRepetitionCount !== null) ? parseInt(digestRepetitionCount) : null
+    return (digestRepetitionCount !== null) ? parseInt(digestRepetitionCount) : null;
   }
 
   /**
    * Method that sets the event threshold in redis storage
+   *
    * @param projectId - id of the project to set the threshold for
    * @param threshold - threshold value to set
    */
@@ -72,6 +78,7 @@ export default class RedisHelper {
 
   /**
    * Method that gets the event threshold from redis storage
+   *
    * @param projectId - id of the project to get the threshold from
    * @returns threshold value for the project
    */
