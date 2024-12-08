@@ -17,8 +17,8 @@ export default class RedisHelper {
   private logger = createLogger();
 
   /**
-   * @param projectId
-   * @param groupHash
+   * @param projectId - id of the project to add the event to digest
+   * @param groupHash - hash of the event group
    */
   public async addEventToDigest(projectId: string, groupHash: string): Promise<void> {
     this.logger.debug('Stored in Redis digest');
@@ -58,7 +58,7 @@ export default class RedisHelper {
    *
    * @param projectId - id of the project to get the repetitions count from
    * @param groupHash - hash of the event group
-   * @returns
+   * @returns {number | null} event repetitions count from the digest
    */
   public async getEventRepetitionsFromDigest(projectId: string, groupHash: string): Promise<number | null> {
     const digestRepetitionCount = await this.redisClient.get(`digest:${projectId}:${groupHash}`);
@@ -80,7 +80,7 @@ export default class RedisHelper {
    * Method that gets the event threshold from redis storage
    *
    * @param projectId - id of the project to get the threshold from
-   * @returns threshold value for the project
+   * @returns {number | null} threshold value for the project, or null if it is not stored in redis
    */
   public async getProjectNotificationThreshold(projectId: string): Promise<number | null> {
     const threshold = await this.redisClient.get(`threshold:${projectId}`);

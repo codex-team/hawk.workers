@@ -113,7 +113,9 @@ export default class NotifierWorker extends Worker {
       const connection = this.eventsDb.getConnection();
 
       const currentTime = Date.now();
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       const twoDaysAgo = currentTime - 48 * 60 * 60 * 1000;
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       const oneDayAgo = currentTime - 24 * 60 * 60 * 1000;
 
       const events = connection.collection(`events:${projectId}`);
@@ -122,6 +124,7 @@ export default class NotifierWorker extends Worker {
       /**
        * Get ten events of the current project
        */
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       const eventsToEvaluate = await events.find({}).limit(10)
         .toArray();
 
@@ -150,6 +153,7 @@ export default class NotifierWorker extends Worker {
       /**
        * Return floored average repetitions count
        */
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       return Math.floor(averageProjectRepetitionsADay / 10);
     }
   }
@@ -240,7 +244,7 @@ export default class NotifierWorker extends Worker {
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-      
+
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
