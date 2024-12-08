@@ -4,6 +4,10 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import redis from 'redis';
 import { Collection, MongoClient } from 'mongodb';
 import { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import { HawkEvent } from '@hawk.so/nodejs/dist/types';
+import { projectIdMock } from './mocks/projectId';
+import { generateTask } from './mocks/generateTask';
+import { generateRandomId } from './mocks/randomId';
 
 jest.mock('amqplib');
 
@@ -26,52 +30,6 @@ jest.mock('../../../lib/cache/controller', () => {
   };
 });
 
-/**
- * Returns random string
- */
-function generateRandomId(): string {
-  return Math.random().toString(36)
-    .substring(2, 15) +
-    Math.random().toString(36)
-      .substring(2, 15);
-}
-
-/**
- * Mocked Project id used for tests
- */
-const projectIdMock = '5d206f7f9aaf7c0071d64596';
-
-/**
- * Generates task for testing
- *
- * @param event - allows to override some event properties in generated task
- */
-function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined): GroupWorkerTask {
-  return {
-    projectId: projectIdMock,
-    catcherType: 'grouper',
-    event: Object.assign({
-      title: 'Hawk client catcher test',
-      timestamp: (new Date()).getTime(),
-      backtrace: [],
-      user: {
-        id: generateRandomId(),
-      },
-      context: {
-        testField: 8,
-        'ima$ge.jpg': 'img',
-      },
-      addons: {
-        vue: {
-          props: {
-            'test-test': false,
-            'ima$ge.jpg': 'img',
-          },
-        },
-      },
-    }, event),
-  };
-}
 
 describe('GrouperWorker', () => {
   const worker = new GrouperWorker();
@@ -136,10 +94,10 @@ describe('GrouperWorker', () => {
     });
 
     test('Should increment usersAffected count if users are different', async () => {
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(4);
     });
@@ -174,8 +132,10 @@ describe('GrouperWorker', () => {
     test('Should stringify payload`s addons and context fields', async () => {
       await worker.handle(generateTask());
 
-      expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
-      expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
+      const savedEvent = await eventsCollection.findOne({});
+
+      expect(typeof savedEvent.payload.addons).toBe('string');
+      expect(typeof savedEvent.payload.context).toBe('string');
     });
 
     test('Should save event even if its context is type of string', async () => {
@@ -238,6 +198,7 @@ describe('GrouperWorker', () => {
         event: {
           ...generatedTask.event,
           addons: { test: '8fred' },
+          context: { test: '8fred' },
         },
       });
 
@@ -251,12 +212,23 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
       await worker.handle(generateTask());
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{}');
+      const savedRepetition = await repetitionsCollection.findOne({});
+      const savedPayload = savedRepetition.payload as EventDataAccepted<EventAddons>;
+
+      expect(savedPayload.title).toBe(undefined);
+      expect(savedPayload.type).toBe(undefined);
+      expect(savedPayload.backtrace).toBe(undefined);
+      expect(savedPayload.context).toBe(undefined);
+      expect(savedPayload.addons).toBe(undefined);
+      expect(savedPayload.release).toBe(undefined);
+      expect(savedPayload.user).toBe(undefined);
+      expect(savedPayload.catcherVersion).toBe(undefined);
 
       /**
-       * Should to be true when bug in utils.deepDiff will be fixed
+       * Timestamp always unique, so it should be present in a stored payload diff
        */
-      // expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{}');
+      expect(savedPayload.timestamp).not.toBe(undefined);
+      expect(typeof savedPayload.timestamp).toBe('number');
     });
 
     test('Should correctly calculate diff after encoding original event when they are different', async () => {
@@ -279,8 +251,11 @@ describe('GrouperWorker', () => {
         },
       });
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
-      expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+      const savedRepetition = await repetitionsCollection.findOne({});
+      const savedPayload = savedRepetition.payload as EventDataAccepted<EventAddons>;
+
+      expect(savedPayload.context).toBe('{"testField":9}');
+      expect(savedPayload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
     });
   });
 

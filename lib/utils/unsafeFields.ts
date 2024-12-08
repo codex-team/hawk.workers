@@ -19,7 +19,9 @@ export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
       if (typeof fieldValue === 'string') {
         event.payload[field] = JSON.parse(fieldValue);
       }
-    } catch { /* ignore if caught */ }
+    } catch {
+      console.error(`Failed to parse field ${field} in event ${event._id}`);
+    }
   });
 }
 
@@ -31,6 +33,15 @@ export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
 export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
   unsafeFields.forEach((field) => {
     const fieldValue = event.payload[field];
+
+    /**
+     * Repetition diff can omit these fields if they are not changed
+     */
+    if (fieldValue === undefined) {
+      return;
+    }
+    
+
     let newValue: string;
 
     try {
@@ -38,6 +49,7 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
         newValue = JSON.stringify(fieldValue);
       }
     } catch {
+      console.error(`Failed to stringify field ${field} in event ${event._id}`);
       newValue = undefined;
     }
     event.payload[field] = newValue;

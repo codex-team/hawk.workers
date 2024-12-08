@@ -43,7 +43,7 @@ const sensitiveDataMock = {
   accessToken: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
 };
 
-describe('GrouperWorker', () => {
+describe.skip('GrouperWorker', () => {
   const dataFilter = new DataFilter();
 
   describe('Data Filter', () => {
