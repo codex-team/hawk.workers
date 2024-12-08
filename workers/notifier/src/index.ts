@@ -50,8 +50,6 @@ export default class NotifierWorker extends Worker {
     await this.accountsDb.connect();
     await this.eventsDb.connect();
     await super.start();
-
-    await this.handle();
   }
 
   /**
@@ -86,36 +84,25 @@ export default class NotifierWorker extends Worker {
    *
    * @param {NotifierWorkerTask} task — task to handle
    */
-  public async handle(task?: NotifierWorkerTask): Promise<void> {
+  public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
-      // const { projectId, event } = task;
-      const projectId = '673d8c2c1df5f6e57de2b269';
-      const event = {
-        title: 'asdfasdf',
-        groupHash: 'asdfasdf',
-        isNew: true,
-      } 
-      
-      const rules = await this.getFittedRules(projectId, event);
-      
-      rules.forEach((rule) => {
-        this.addEventToChannels(projectId, rule, event);
-      });
+      const { projectId, event } = task;
+    
+      /**
+       * Increment event repetitions count in digest
+       */
+      this.redis.addEventToDigest(projectId, event.groupHash);
 
+      /**
+       * If event is critical, then send it to the channels
+       */
       if (await this.isEventCritical(projectId, event)) {
-        console.log('critical');
-      } else {
-        console.log('not critical');
+        const rules = await this.getFittedRules(projectId, event);
+
+        rules.forEach((rule) => {
+          this.addEventToChannels(projectId, rule, event);
+        });
       }
-
-      // const connection = this.db.getConnection();
-      // const repetitions = connection.collection('dailyEvents:673d8c2c1df5f6e57de2b269');
-      // const repetitions = connection.collection('adsfasdf');
-      
-      // console.log(await repetitions.find({_id: new ObjectID('673d8e2c316c4c0b85c08d9a')}).toArray());
-      // console.log(await repetitions.find({}).toArray());
-      // await this.redis.addEventToDigest(task.projectId, task.event.groupHash);
-
     } catch (e) {
       this.logger.error('Failed to handle message because of ', e);
     }
@@ -179,11 +166,6 @@ export default class NotifierWorker extends Worker {
    * @returns {boolean}
    */
   private async isEventCritical(projectId: string, event: NotifierEvent): Promise<boolean> {
-    /**
-     * Increment event repetitions count in digest
-     */
-    this.redis.addEventToDigest(projectId, event.groupHash);
-    
     /**
      * Get current event repetitions from digest
      */
@@ -270,17 +252,10 @@ export default class NotifierWorker extends Worker {
         return;
       }
 
-      // const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * MS_IN_SEC;
-
-      // /**
-      //  * Set timer to send events after min period of time is passed
-      //  */
-      // this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
-
-      // await this.sendToSenderWorker(channelKey, [ {
-      //   key: event.groupHash,
-      //   count: 1,
-      // } ]);
+      await this.sendToSenderWorker(channelKey, [ {
+        key: event.groupHash,
+        count: 1,
+      } ]);
     });
   }
 
