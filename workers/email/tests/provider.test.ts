@@ -10,7 +10,7 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from '@hawk.so/types';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';

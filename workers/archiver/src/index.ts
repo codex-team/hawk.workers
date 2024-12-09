@@ -8,7 +8,7 @@ import { ReleaseFileData, ReleaseRecord, ReportData, ReportDataByProject } from 
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
-import { ProjectDBScheme } from 'hawk.types';
+import { ProjectDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -171,7 +171,7 @@ export default class ArchiverWorker extends Worker {
       'payload.timestamp': {
         $lt: maxOldTimestamp,
       },
-    }).remove();
+    }).delete();
     const deleteRepetitionsResult = await repetitionsBulk.execute();
 
     return deleteRepetitionsResult.nRemoved || 0;
@@ -193,7 +193,7 @@ export default class ArchiverWorker extends Worker {
       groupingTimestamp: {
         $lt: maxOldTimestamp,
       },
-    }).remove();
+    }).delete();
     await dailyEventsBulk.execute();
   }
 
@@ -283,7 +283,7 @@ export default class ArchiverWorker extends Worker {
       groupHash: {
         $in: groupHashesToRemove,
       },
-    }).remove();
+    }).delete();
     const deleteOriginalEventsResult = await eventsBulk.execute();
 
     return deleteOriginalEventsResult.nRemoved || 0;
@@ -358,7 +358,7 @@ export default class ArchiverWorker extends Worker {
       .toArray();
 
     const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(
-      (acc, curr) => acc.concat(curr.files), []
+      (acc, curr) => acc.concat(curr.files || []), []
     );
 
     await Promise.all(filesToDelete.map(file => {
@@ -390,7 +390,7 @@ export default class ArchiverWorker extends Worker {
       _id: {
         $in: releasesIdsToDelete,
       },
-    }).remove();
+    }).delete();
     const result = await releasesBulk.execute();
 
     this.logger.info(`Summary deleted releases for project ${project._id.toString()}: ${result.nRemoved}`);

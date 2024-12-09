@@ -1,5 +1,5 @@
 import { SeveralEventsNotification } from 'hawk-worker-sender/types/template-variables';
-import { GroupedEventDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme } from '@hawk.so/types';
 import { ObjectId } from 'mongodb';
 
 /**

@@ -1,8 +1,20 @@
 version: "3.2"
 services:
   #
-  # Programming language workers: javascript (+sourcemaps), nodejs, python
+  # Default and specific programming language workers: javascript (+sourcemaps)
   #
+
+  hawk-worker-default:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-default
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
 
   hawk-worker-javascript:
     build:
@@ -26,54 +38,6 @@ services:
       - SIMULTANEOUS_TASKS=1
     restart: unless-stopped
     entrypoint: yarn run-release
-    volumes:
-      - ./:/usr/src/app
-      - workers-deps:/usr/src/app/node_modules
-
-  hawk-worker-nodejs:
-    build:
-      dockerfile: "dev.Dockerfile"
-      context: .
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: yarn run-nodejs
-    volumes:
-      - ./:/usr/src/app
-      - workers-deps:/usr/src/app/node_modules
-
-  hawk-worker-php:
-    build:
-      dockerfile: "dev.Dockerfile"
-      context: .
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: yarn run-php
-    volumes:
-      - ./:/usr/src/app
-      - workers-deps:/usr/src/app/node_modules
-
-  hawk-worker-python:
-    build:
-      dockerfile: "dev.Dockerfile"
-      context: .
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: yarn run-python
-    volumes:
-      - ./:/usr/src/app
-      - workers-deps:/usr/src/app/node_modules
-
-  hawk-worker-go:
-    build:
-      dockerfile: "dev.Dockerfile"
-      context: .
-    env_file:
-      - .env
-    restart: unless-stopped
-    entrypoint: yarn run-go
     volumes:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules

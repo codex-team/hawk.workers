@@ -1,11 +1,11 @@
 import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
-import os from 'os';
-import * as promClient from 'prom-client';
-import gcStats from 'prometheus-gc-stats';
-import { nanoid } from 'nanoid';
-import * as url from 'url';
+// import os from 'os';
+// import * as promClient from 'prom-client';
+// import gcStats from 'prometheus-gc-stats';
+// import { nanoid } from 'nanoid';
+// import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
@@ -37,7 +37,7 @@ class WorkerRunner {
    */
   private workers: Worker[] = [];
 
-  private gateway?: promClient.Pushgateway;
+  // private gateway?: promClient.Pushgateway;
 
   /**
    * number returned by setInterval() of metrics push function
@@ -57,16 +57,16 @@ class WorkerRunner {
       .then((workerConstructors) => {
         this.constructWorkers(workerConstructors);
       })
-      .then(() => {
-        try {
-          this.startMetrics();
-        } catch (e) {
-          HawkCatcher.send(e);
-          console.error(`Metrics not started: ${e}`);
-        }
-
-        return Promise.resolve();
-      })
+      // .then(() => {
+      //   try {
+      //     this.startMetrics();
+      //   } catch (e) {
+      //     HawkCatcher.send(e);
+      //     console.error(`Metrics not started: ${e}`);
+      //   }
+      //
+      //   return Promise.resolve();
+      // })
       .then(() => {
         return this.startWorkers();
       })
@@ -82,67 +82,67 @@ class WorkerRunner {
   /**
    * Run metrics exporter
    */
-  private startMetrics(): void {
-    if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
-      return;
-    }
-
-    const PUSH_INTERVAL = parseInt(process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL);
-
-    if (isNaN(PUSH_INTERVAL)) {
-      throw new Error('PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set');
-    }
-
-    const collectDefaultMetrics = promClient.collectDefaultMetrics;
-    const Registry = promClient.Registry;
-
-    const register = new Registry();
-    const startGcStats = gcStats(register);
-
-    const hostname = os.hostname();
-
-    const ID_SIZE = 5;
-    const id = nanoid(ID_SIZE);
-
-    // eslint-disable-next-line node/no-deprecated-api
-    const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY_URL).host;
-
-    // Initialize metrics for workers
-    this.workers.forEach((worker) => {
-      worker.initMetrics();
-      worker.getMetrics().forEach((metric: promClient.Counter<string>) => register.registerMetric(metric));
-    });
-
-    collectDefaultMetrics({ register });
-    startGcStats();
-
-    this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY_URL, null, register);
-
-    console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY_URL}`);
-
-    // Pushing metrics to the pushgateway every PUSH_INTERVAL
-    this.pushIntervalNumber = setInterval(() => {
-      this.workers.forEach((worker) => {
-        if (!this.gateway || !instance) {
-          return;
-        }
-        // Use pushAdd not to overwrite previous metrics
-        this.gateway.pushAdd({
-          jobName: 'workers',
-          groupings: {
-            worker: worker.type.replace('/', '_'),
-            host: hostname,
-            id,
-          },
-        }, (err?: Error) => {
-          if (err) {
-            HawkCatcher.send(err);
-            console.log(`Error of pushing metrics to gateway: ${err}`);
-          }
-        });
-      });
-    }, PUSH_INTERVAL);
-  }
+  // private startMetrics(): void {
+  //   if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
+  //     return;
+  //   }
+  //
+  //   const PUSH_INTERVAL = parseInt(process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL);
+  //
+  //   if (isNaN(PUSH_INTERVAL)) {
+  //     throw new Error('PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set');
+  //   }
+  //
+  //   const collectDefaultMetrics = promClient.collectDefaultMetrics;
+  //   const Registry = promClient.Registry;
+  //
+  //   const register = new Registry();
+  //   const startGcStats = gcStats(register);
+  //
+  //   const hostname = os.hostname();
+  //
+  //   const ID_SIZE = 5;
+  //   const id = nanoid(ID_SIZE);
+  //
+  //   // eslint-disable-next-line node/no-deprecated-api
+  //   const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY_URL).host;
+  //
+  //   // Initialize metrics for workers
+  //   this.workers.forEach((worker) => {
+  //     // worker.initMetrics();
+  //     worker.getMetrics().forEach((metric: promClient.Counter<string>) => register.registerMetric(metric));
+  //   });
+  //
+  //   collectDefaultMetrics({ register });
+  //   startGcStats();
+  //
+  //   this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY_URL, null, register);
+  //
+  //   console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY_URL}`);
+  //
+  //   // Pushing metrics to the pushgateway every PUSH_INTERVAL
+  //   this.pushIntervalNumber = setInterval(() => {
+  //     this.workers.forEach((worker) => {
+  //       if (!this.gateway || !instance) {
+  //         return;
+  //       }
+  //       // Use pushAdd not to overwrite previous metrics
+  //       this.gateway.pushAdd({
+  //         jobName: 'workers',
+  //         groupings: {
+  //           worker: worker.type.replace('/', '_'),
+  //           host: hostname,
+  //           id,
+  //         },
+  //       }, (err?: Error) => {
+  //         if (err) {
+  //           HawkCatcher.send(err);
+  //           console.log(`Error of pushing metrics to gateway: ${err}`);
+  //         }
+  //       });
+  //     });
+  //   }, PUSH_INTERVAL);
+  // }
 
   /**
    * Dynamically loads workers through the yarn workspaces

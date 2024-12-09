@@ -1,4 +1,4 @@
-import { PlanDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { PlanDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 
 /**
  * Workspace with its tariff plan

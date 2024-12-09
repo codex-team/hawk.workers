@@ -1,5 +1,5 @@
 import { EventNotification, SeveralEventsNotification } from 'hawk-worker-sender/types/template-variables';
-import { DecodedGroupedEvent, ProjectDBScheme } from 'hawk.types';
+import { DecodedGroupedEvent, ProjectDBScheme } from '@hawk.so/types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
 import { ObjectId } from 'mongodb';

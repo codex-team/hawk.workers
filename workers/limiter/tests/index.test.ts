@@ -1,6 +1,6 @@
 import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
-import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import LimiterWorker from '../src';
 import redis from 'redis';
 import { mockedPlans } from './plans.mock';
@@ -69,6 +69,7 @@ describe('Limiter worker', () => {
     return {
       _id: new ObjectId(),
       name: 'Mocked project',
+      integrationId: 'eyJpbnRlZ3JhdGlvbklkIjoiMzg3NGNkOWMtZjJiYS00ZDVkLTk5ZmQtM2UzZjYzMDcxYmJhIiwic2VjcmV0IjoiMGZhM2JkM2EtYmMyZC00YWRiLThlMWMtNjg2OGY0MzM1YjRiIn0=',
       workspaceId: parameters.workspaceId,
       notifications: [],
       token: '',
@@ -476,6 +477,28 @@ describe('Limiter worker', () => {
         expect(result).toContain(project._id.toString());
         done();
       });
+    });
+
+    test('Should correctly work if projects count equals 0', async () => {
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+
+      await workspaceCollection.insertOne(workspace);
+
+      const worker = new LimiterWorker();
+
+      /**
+       * Act
+       */
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
     });
   });
 

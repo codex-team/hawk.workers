@@ -5,7 +5,7 @@ import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { ProjectDBScheme, WorkspaceDBScheme } from 'hawk.types';
+import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import HawkCatcher from '@hawk.so/nodejs';
 import axios from 'axios';
 import shortNumber from 'short-number';
@@ -126,15 +126,21 @@ export default class LimiterWorker extends Worker {
     const workspaceProjects = await this.getProjects(event.workspaceId);
     const workspaceProjectsIds = workspaceProjects.map(p => p._id.toString());
 
+    this.logger.info(`Starting analyzing for workspace with id ${event.workspaceId} and ${workspaceProjects.length} projects.`);
+
     const report = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
+    this.logger.info(`Finished analyzing for workspace with id ${event.workspaceId}`);
     await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
 
     if (report.isBlocked) {
+      this.logger.info(`Block workspace with id ${event.workspaceId}`);
       await this.redis.appendBannedProjects(workspaceProjectsIds);
     } else {
+      this.logger.info(`Unblock workspace with id ${event.workspaceId}`);
       await this.redis.removeBannedProjects(workspaceProjectsIds);
     }
+    this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
 
     await this.sendSingleWorkspacesCheckReport(report);
     this.logger.info(
@@ -456,11 +462,13 @@ ${reportData.isBlocked ? 'Blocked ❌' : 'Unblocked ✅'}
 
       return;
     }
+    this.logger.debug('Sending report...');
 
     await axios({
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + reportData + '&parse_mode=HTML',
     });
+    this.logger.debug('Report was sent');
   }
 }

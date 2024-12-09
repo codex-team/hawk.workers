@@ -1,12 +1,12 @@
 import * as amqp from 'amqplib';
-import * as client from 'prom-client';
+// import * as client from 'prom-client';
 import { WorkerTask } from './types/worker-task';
 import { CriticalError, ErrorWithContext, NonCriticalError, ParsingError } from './workerErrors';
 import { MongoError } from 'mongodb';
 import HawkCatcher from '@hawk.so/nodejs';
 import CacheController from '../lib/cache/controller';
 import createLogger from './logger';
-import { EventContext } from 'hawk.types';
+import { EventContext } from '@hawk.so/types';
 
 /**
  * Base worker class for processing tasks
@@ -59,7 +59,7 @@ export abstract class Worker {
    * Prometheus metrics
    * metricProcessedMessages: prom-client.Counter – number of successfully processed messages
    */
-  private metricSuccessfullyProcessedMessages!: client.Counter<string>;
+  // private metricSuccessfullyProcessedMessages!: client.Counter<string>;
 
   /**
    * Registry Endpoint
@@ -102,24 +102,24 @@ export abstract class Worker {
    * Worker type
    * (will pull tasks from Registry queue with the same name)
    */
-  public abstract readonly type: string;
+  public abstract type: string;
 
   /**
    * Initialize prometheus metrics
    */
-  public initMetrics(): void {
-    this.metricSuccessfullyProcessedMessages = new client.Counter({
-      name: 'successfully_processed_messages',
-      help: 'number of successfully processed messages since last restart',
-    });
-  }
+  // public initMetrics(): void {
+  //   this.metricSuccessfullyProcessedMessages = new client.Counter({
+  //     name: 'successfully_processed_messages',
+  //     help: 'number of successfully processed messages since last restart',
+  //   });
+  // }
 
   /**
    * Get array of available prometheus metrics
    */
-  public getMetrics(): client.Counter<string>[] {
-    return [ this.metricSuccessfullyProcessedMessages ];
-  }
+  // public getMetrics(): client.Counter<string>[] {
+  //   return [ this.metricSuccessfullyProcessedMessages ];
+  // }
 
   /**
    * Start consuming messages
@@ -144,6 +144,11 @@ export abstract class Worker {
      * Remember consumer tag to cancel subscription in future
      */
     this.registryConsumerTag = consumerTag;
+
+    /**
+     * Prepare cache
+     */
+    this.prepareCache();
   }
 
   /**
@@ -157,6 +162,9 @@ export abstract class Worker {
      * Process remaining tasks
      */
     await Promise.all(this.tasksMap.values());
+
+    this.clearCache();
+
     await this.disconnect();
   }
 
@@ -178,7 +186,9 @@ export abstract class Worker {
    * Forced clears worker cache
    */
   public clearCache(): void {
-    this.cache.flushAll();
+    if (this.cache) {
+      this.cache.flushAll();
+    }
   }
 
   /**
@@ -200,10 +210,15 @@ export abstract class Worker {
     this.registryConnection = await amqp.connect(this.registryUrl);
 
     const errorHandler = (error: Error): void => {
-      this.logger.error(error);
+      this.logger.error('Error in RabbitMQ has been occurred', error);
       HawkCatcher.send(error, {
         workerType: this.type,
       });
+
+      /**
+       * Exit process on RabbitMQ connection error to restart worker
+       */
+      process.exit(1);
     };
 
     this.registryConnection.on('error', errorHandler);
@@ -291,7 +306,7 @@ export abstract class Worker {
       /**
        * Increment counter of successfully processed messages if metrics are enabled
        */
-      this.metricSuccessfullyProcessedMessages?.inc();
+      // this.metricSuccessfullyProcessedMessages?.inc();
     } catch (e) {
       let context: EventContext = { task: event as Record<string, never> };
 
@@ -331,6 +346,7 @@ export abstract class Worker {
 
           return;
         default:
+          console.error(e)
           this.logger.error('Unknown error: ', e);
           await this.sendToStash(msg);
       }

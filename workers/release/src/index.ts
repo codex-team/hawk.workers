@@ -10,7 +10,7 @@ import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErr
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
 import { Collection } from 'mongodb';
-import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from 'hawk.types';
+import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
 /**
  * Worker to save releases
  */

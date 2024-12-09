@@ -7,7 +7,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from 'hawk.types';
+import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -59,6 +59,7 @@ export default class GrouperWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
+    this.prepareCache();
     await this.db.close();
   }
 
@@ -125,6 +126,8 @@ export default class GrouperWorker extends Worker {
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
+
+          return;
         } else {
           throw e;
         }

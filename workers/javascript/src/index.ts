@@ -10,7 +10,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
 import { rightTrim } from '../../../lib/utils/string';
-import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from 'hawk.types';
+import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 
@@ -54,6 +54,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   public async finish(): Promise<void> {
     await super.finish();
+    this.clearCache();
     await this.db.close();
   }
 

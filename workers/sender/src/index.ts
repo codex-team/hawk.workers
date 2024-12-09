@@ -6,13 +6,13 @@ import {
   WorkspaceDBScheme,
   ConfirmedMemberDBScheme,
   PlanDBScheme
-} from 'hawk.types';
+} from '@hawk.so/types';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
-import Time from './utils/time';
+import Time from '../../../lib/utils/time';
 
 import { PasswordResetNotification, PaymentSuccessNotification, TemplateEventData, WorkspaceInviteNotification } from '../types/template-variables/';
 import NotificationsProvider from './provider';

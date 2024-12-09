@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { CommitData, ProjectDBScheme } from 'hawk.types';
+import { CommitData, ProjectDBScheme } from '@hawk.so/types';
 
 /**
  * Report data for specific project
@@ -105,5 +105,5 @@ export interface ReleaseRecord {
   /**
    * List of source maps for all chunks
    */
-  files: ReleaseFileData[];
+  files?: ReleaseFileData[];
 }
