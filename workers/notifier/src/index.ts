@@ -4,14 +4,13 @@ import { ObjectID } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import { Channel } from '../types/channel';
+import { Channel, ChannelKey, SenderData } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
 import { Rule } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
-import Buffer, { BufferData, ChannelKey, EventKey } from './buffer';
 import RuleValidator from './validator';
-import { MS_IN_SEC } from '../../../lib/utils/consts';
 import Time from '../../../lib/utils/time';
+import RedisHelper from './redisHelper';
 
 /**
  * Worker to buffer events before sending notifications about them
@@ -23,25 +22,22 @@ export default class NotifierWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Database Controller
+   * Database Controllers
    */
-  private db: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
+  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
+  private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
-   * Received events buffer
+   * Redis helper instance for modifying data through redis
    */
-  private buffer: Buffer = new Buffer();
-
-  /**
-   * Default period between messages in seconds
-   */
-  private readonly DEFAULT_MIN_PERIOD = 60;
+  private redis = new RedisHelper();
 
   /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
-    await this.db.connect();
+    await this.accountsDb.connect();
+    await this.eventsDb.connect();
     await super.start();
   }
 
@@ -50,7 +46,8 @@ export default class NotifierWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
-    await this.db.close();
+    await this.accountsDb.connect();
+    await this.eventsDb.connect();
   }
 
   /**
@@ -79,14 +76,119 @@ export default class NotifierWorker extends Worker {
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;
-      const rules = await this.getFittedRules(projectId, event);
 
-      rules.forEach((rule) => {
-        this.addEventToChannels(projectId, rule, event);
-      });
+      /**
+       * Increment event repetitions count in digest
+       */
+      this.redis.addEventToDigest(projectId, event.groupHash);
+
+      /**
+       * If event is critical, then send it to the channels
+       */
+      if (await this.isEventCritical(projectId, event)) {
+        const rules = await this.getFittedRules(projectId, event);
+
+        rules.forEach((rule) => {
+          this.addEventToChannels(projectId, rule, event);
+        });
+      }
     } catch (e) {
       this.logger.error('Failed to handle message because of ', e);
     }
+  }
+
+  /**
+   * Method that returns threshold for current project
+   * Used to check if event is critical or not
+   *
+   * @param projectId - if of the project, to get notification threshold for
+   */
+  private async getNotificationThreshold(projectId: string): Promise<number> {
+    const storedEventsCount = this.redis.getProjectNotificationThreshold(projectId);
+
+    /**
+     * If redis has no threshold stored, then get it from the database
+     */
+    if (storedEventsCount === null) {
+      const connection = this.eventsDb.getConnection();
+
+      const currentTime = Date.now();
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+      const twoDaysAgo = currentTime - 48 * 60 * 60 * 1000;
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+      const oneDayAgo = currentTime - 24 * 60 * 60 * 1000;
+
+      const events = connection.collection(`events:${projectId}`);
+      const repetitions = connection.collection(`repetitions:${projectId}`);
+
+      /**
+       * Get ten events of the current project
+       */
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+      const eventsToEvaluate = await events.find({}).limit(10)
+        .toArray();
+
+      let averageProjectRepetitionsADay = 0;
+
+      /**
+       * For each event get repetitions since two days to one day ago
+       */
+      eventsToEvaluate.forEach(async (event) => {
+        const repetitionsCount = await repetitions.countDocuments({
+          'payload.timestamp': {
+            $gte: twoDaysAgo,
+            $le: oneDayAgo,
+          },
+          groupHash: event.groupHash,
+        });
+
+        averageProjectRepetitionsADay += repetitionsCount;
+      });
+
+      /**
+       * Set counted repetitions count into redis storage
+       */
+      this.redis.setProjectNotificationTreshold(projectId, averageProjectRepetitionsADay);
+
+      /**
+       * Return floored average repetitions count
+       */
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+      return Math.floor(averageProjectRepetitionsADay / 10);
+    }
+  }
+
+  /**
+   * Check if event is critical
+   *
+   * @param projectId - id of the project to of the event
+   * @param {NotifierEvent} event — received event
+   * @returns {boolean}
+   */
+  private async isEventCritical(projectId: string, event: NotifierEvent): Promise<boolean> {
+    /**
+     * Get current event repetitions from digest
+     */
+    const eventRepetitionsToday = await this.redis.getEventRepetitionsFromDigest(projectId, event.groupHash);
+
+    const projectThreshold = await this.getNotificationThreshold(projectId);
+
+    /**
+     * Check if event repetitions are equal to threshold
+     */
+    if (eventRepetitionsToday !== null && eventRepetitionsToday === projectThreshold) {
+      return true;
+    /**
+     * Check if event is new
+     */
+    } else if (event.isNew) {
+      return true;
+    }
+
+    /**
+     * Event is not critical in other cases
+     */
+    return false;
   }
 
   /**
@@ -142,20 +244,6 @@ export default class NotifierWorker extends Worker {
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-      const eventKey: EventKey = [projectId, rule._id.toString(), name, event.groupHash];
-
-      if (this.buffer.getTimer(channelKey)) {
-        this.buffer.push(eventKey);
-
-        return;
-      }
-
-      const minPeriod = (options.minPeriod || this.DEFAULT_MIN_PERIOD) * MS_IN_SEC;
-
-      /**
-       * Set timer to send events after min period of time is passed
-       */
-      this.buffer.setTimer(channelKey, minPeriod, this.sendEvents);
 
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
@@ -165,29 +253,12 @@ export default class NotifierWorker extends Worker {
   }
 
   /**
-   * Get events from buffer, flush buffer and send event to sender workers
-   *
-   * @param {ChannelKey} channelKey — buffer key
-   */
-  private sendEvents = async (channelKey: ChannelKey): Promise<void> => {
-    this.buffer.clearTimer(channelKey);
-
-    const events = this.buffer.flush(channelKey);
-
-    if (!events.length) {
-      return;
-    }
-
-    await this.sendToSenderWorker(channelKey, events);
-  };
-
-  /**
    * Send task to sender workers
    *
    * @param {ChannelKey} key — buffer key
-   * @param {BufferData[]} events - events to send
+   * @param {SenderData[]} events - events to send
    */
-  private async sendToSenderWorker(key: ChannelKey, events: BufferData[]): Promise<void> {
+  private async sendToSenderWorker(key: ChannelKey, events: SenderData[]): Promise<void> {
     const [projectId, ruleId, channelName] = key;
 
     await this.addTask(`sender/${channelName}`, {
@@ -208,7 +279,7 @@ export default class NotifierWorker extends Worker {
    * @returns {Promise<Rule[]>} - project notification rules
    */
   private async getProjectNotificationRules(projectId: string): Promise<Rule[]> {
-    const connection = this.db.getConnection();
+    const connection = this.accountsDb.getConnection();
     const projects = connection.collection('projects');
 
     const project = await projects.findOne({ _id: new ObjectID(projectId) });
