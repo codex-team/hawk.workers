@@ -166,10 +166,12 @@ export default class GrouperWorker extends Worker {
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
 
+    const eventUser = task.event.user;
+
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId, eventUser?.id);
 
     /**
      * Add task for NotifierWorker
@@ -207,13 +209,13 @@ export default class GrouperWorker extends Worker {
    */
   private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
     const eventsCountToCompare = 60;
-    const diffTreshold = 0.35;
+    const diffThreshold = 0.35;
 
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
     return lastUniqueEvents.filter(prevEvent => {
       const distance = levenshtein(event.title, prevEvent.payload.title);
-      const threshold = event.title.length * diffTreshold;
+      const threshold = event.title.length * diffThreshold;
 
       return distance < threshold;
     }).pop();
@@ -386,13 +388,15 @@ export default class GrouperWorker extends Worker {
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
    * @param {string|null} repetitionId - event's last repetition id
+   * @param {string} userId - affected user id
    * @returns {Promise<void>}
    */
   private async saveDailyEvents(
     projectId: string,
     eventHash: string,
     eventTimestamp: number,
-    repetitionId: string | null
+    repetitionId: string | null,
+    userId = 'anonymous'
   ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
@@ -425,6 +429,7 @@ export default class GrouperWorker extends Worker {
               lastRepetitionId: repetitionId,
             },
             $inc: { count: 1 },
+            $addToSet: { affectedUsers: userId },
           },
           { upsert: true });
     } catch (err) {
