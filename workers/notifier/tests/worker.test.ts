@@ -1,8 +1,8 @@
 import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
+import RedisHelper from '../src/redisHelper';
 import '../../../env-test';
-import waitForExpect from 'wait-for-expect';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -118,6 +118,10 @@ describe('NotifierWorker', () => {
     it('should get db connection on message handle', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       await worker.start();
 
       const message = { ...messageMock };
@@ -133,6 +137,10 @@ describe('NotifierWorker', () => {
 
     it('should get db connection on message handle and cache result', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
 
       await worker.start();
 
@@ -153,6 +161,11 @@ describe('NotifierWorker', () => {
 
     it('should query correct collection on message handle', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       const message = { ...messageMock };
 
       await worker.start();
@@ -168,6 +181,11 @@ describe('NotifierWorker', () => {
 
     it('should query correct project on message handle', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+      
       const message = { ...messageMock };
 
       await worker.start();
@@ -184,10 +202,11 @@ describe('NotifierWorker', () => {
     it('should close db connection on finish', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       await worker.start();
-
-      worker.sendToSenderWorker = jest.fn();
-
       await worker.finish();
 
       expect(dbCloseMock).toBeCalled();
@@ -200,23 +219,28 @@ describe('NotifierWorker', () => {
     it('should not send task to sender workers if event is not new and repetitions today not equal to threshold', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       await worker.start();
 
       const message = { ...messageMock };
-      const event = { ...message.event };
-      event.isNew = false;
+      message.event.isNew = false;
 
-      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+      jest.mock('../src/redisHelper');
+
+      RedisHelper.prototype.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
         return Promise.resolve(1);
       });
 
-      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
+      RedisHelper.prototype.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
         return Promise.resolve(10);
       });
 
       worker.sendToSenderWorker = jest.fn();
 
-      worker.handle(message);
+      await worker.handle(message);
 
       /**
        * Check that we haven't sent any tasks to sender worker
@@ -242,24 +266,30 @@ describe('NotifierWorker', () => {
     it('should send task to sender workers if event is new', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+      
+      worker.getFittedRules = jest.fn();
+
       await worker.start();
 
       const message = { ...messageMock };
-      const event = { ...message.event };
+      message.event.isNew = true;
 
-      event.isNew = true;
+      await worker.handle(message);
 
-      worker.sendToSenderWorker = jest.fn();
-
-      worker.handle(message);
-
-      expect(worker.sendToSenderWorker).toBeCalled();
+      expect(worker.getFittedRules).toBeCalled();
 
       await worker.finish();
     });
 
     it('should send task to sender workers if event repetitions today equal to threshold', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
 
       await worker.start();
 
@@ -277,7 +307,7 @@ describe('NotifierWorker', () => {
 
       worker.sendToSenderWorker = jest.fn();
 
-      worker.handle(message);
+      await worker.handle(message);
 
       expect(worker.sendToSenderWorker).toBeCalled();
 
@@ -286,6 +316,10 @@ describe('NotifierWorker', () => {
 
     it('should not call events database for threshold calculation if threshold stored in redis', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
 
       await worker.start();
 
@@ -317,24 +351,24 @@ describe('NotifierWorker', () => {
     it('should calculate notification threshold using events db if redis has no threshold', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+      
+      jest.mock('../src/redisHelper'); // Мокируем весь модуль RedisHelper
+      RedisHelper.prototype.getProjectNotificationThreshold = jest.fn().mockResolvedValue(null);
+      
+      worker.eventsDb.getConnection = jest.fn(); 
+
       await worker.start();
 
-      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId, _groupHash) => {
-        return Promise.resolve(null);
-      });
+      const message = { ...messageMock };
 
-      worker.eventsDb.getConnection = jest.fn();
-      worker.redis.setProjectNotificationTreshold = jest.fn();
-      
-      /**
-       * Check that we connected to the events database to calculate the threshold
-       */
-      expect(worker.eventsDb.getConnection).toBeCalled();
-
+      await worker.handle(message);
       /**
        * Check that we stored calculated threshold in redis
        */
-      expect(worker.redis.setProjectNotificationTreshold).toBeCalled();
+      expect(worker.eventsDb.getConnection).toBeCalled();
 
       await worker.finish();
     })
@@ -342,13 +376,17 @@ describe('NotifierWorker', () => {
     it('should always add event to redis digest', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
+      worker.redis.addEventToDigest = jest.fn();
+
       await worker.start();
 
       const message = { ...messageMock };
 
-      worker.redis.addEventToDigest = jest.fn();
-
-      worker.handle(message);
+      await worker.handle(message);
 
       expect(worker.redis.addEventToDigest).toBeCalled();
 

@@ -46,8 +46,8 @@ export default class NotifierWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
-    await this.accountsDb.connect();
-    await this.eventsDb.connect();
+    await this.accountsDb.close();
+    await this.eventsDb.close();
   }
 
   /**
@@ -88,7 +88,7 @@ export default class NotifierWorker extends Worker {
       if (await this.isEventCritical(projectId, event)) {
         const rules = await this.getFittedRules(projectId, event);
 
-        rules.forEach((rule) => {
+        rules?.forEach((rule) => {
           this.addEventToChannels(projectId, rule, event);
         });
       }
@@ -104,7 +104,7 @@ export default class NotifierWorker extends Worker {
    * @param projectId - if of the project, to get notification threshold for
    */
   private async getNotificationThreshold(projectId: string): Promise<number> {
-    const storedEventsCount = this.redis.getProjectNotificationThreshold(projectId);
+    const storedEventsCount = await this.redis.getProjectNotificationThreshold(projectId);
 
     /**
      * If redis has no threshold stored, then get it from the database
@@ -156,6 +156,8 @@ export default class NotifierWorker extends Worker {
       /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       return Math.floor(averageProjectRepetitionsADay / 10);
     }
+
+    return storedEventsCount;
   }
 
   /**
