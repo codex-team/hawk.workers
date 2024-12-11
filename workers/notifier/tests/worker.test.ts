@@ -17,17 +17,14 @@ const rule = {
     telegram: {
       isEnabled: true,
       endpoint: 'tgEndpoint',
-      minPeriod: 0.5,
     },
     slack: {
       isEnabled: true,
       endpoint: 'slackEndpoint',
-      minPeriod: 0.5,
     },
     email: {
       isEnabled: false,
       endpoint: 'emailEndpoint',
-      minPeriod: 0.5,
     },
   },
 } as any;
@@ -200,200 +197,162 @@ describe('NotifierWorker', () => {
   });
 
   describe('handling', () => {
-    it('should correctly handle first message', async () => {
+    it('should not send task to sender workers if event is not new and repetitions today not equal to threshold', async () => {
       const worker = new NotifierWorker();
-
+      
       await worker.start();
 
-      worker.sendToSenderWorker = jest.fn();
-
-      worker.buffer.push = jest.fn();
-      worker.buffer.setTimer = jest.fn();
-
       const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-      const events = [ {
-        key: message.event.groupHash,
-        count: 1,
-      } ];
+      const event = { ...message.event };
+      event.isNew = false;
 
-      await worker.handle(message);
-
-      expect(worker.buffer.setTimer).toBeCalledTimes(2);
-      expect(worker.buffer.push).not.toBeCalled();
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.setTimer).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel],
-          rule.channels[channel].minPeriod * 1000,
-          worker.sendEvents
-        );
-        expect(worker.sendToSenderWorker).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channels[i]],
-          events
-        );
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+        return Promise<1>;
       });
 
-      await worker.finish();
-    });
-
-    it('should correctly handle messages after first one', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
-      worker.sendToSenderWorker = jest.fn();
-
-      jest.useFakeTimers();
-
-      const realGetTimer = worker.buffer.getTimer;
-      const realSetTimer = worker.buffer.setTimer;
-
-      worker.buffer.getTimer = jest.fn((...args) => realGetTimer.apply(worker.buffer, args));
-      worker.buffer.setTimer = jest.fn((...args) => realSetTimer.apply(worker.buffer, args));
-      worker.buffer.push = jest.fn();
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-
-      await worker.handle(message);
-      await worker.handle(message);
-
-      expect(worker.buffer.getTimer).toBeCalledTimes(4);
-      expect(worker.buffer.push).toBeCalledTimes(2);
-      expect(worker.sendToSenderWorker).toBeCalledTimes(2);
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.push).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel, messageMock.event.groupHash]
-        );
+      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
+        return Promise<10>;
       });
 
-      jest.useRealTimers();
+      worker.sendToSenderWorker = jest.fn();
+
+      worker.handle(message);
+
+      /**
+       * Check that we haven't sent any tasks to sender worker
+       * because event repetitions today are less than threshold
+       */
+      expect(worker.sendToSenderWorker).not.toBeCalled();
+
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+        return Promise<100>;
+      });
+
+      worker.handle(message);
+
+      /**
+       * Check that we haven't sent any tasks to sender worker
+       * because event repetitions today are more than threshold
+       */
+      expect(worker.sendToSenderWorker).not.toBeCalled();
 
       await worker.finish();
     });
 
-    it('should send events after timeout', async () => {
+    it('should send task to sender workers if event is new', async () => {
       const worker = new NotifierWorker();
 
       await worker.start();
+
+      const message = { ...messageMock };
+      const event = { ...message.event };
+
+      event.isNew = true;
 
       worker.sendToSenderWorker = jest.fn();
 
-      const realSendEvents = worker.sendEvents;
+      worker.handle(message);
 
-      worker.sendEvents = jest.fn((...args) => realSendEvents.apply(worker, args));
-
-      const realFlush = worker.buffer.flush;
-
-      worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-
-      await worker.handle(message);
-      await worker.handle(message);
-
-      await new Promise((resolve) => setTimeout(() => {
-        expect(worker.sendEvents).toBeCalledTimes(2);
-        expect(worker.buffer.flush).toBeCalledTimes(2);
-
-        channels.forEach((channel, i) => {
-          expect(worker.buffer.flush).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-          expect(worker.sendEvents).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-        });
-
-        resolve();
-      }, 1000));
+      expect(worker.sendToSenderWorker).toBeCalled();
 
       await worker.finish();
     });
 
-    it('should do nothing if project doesn\'t exist', async () => {
+    it('should send task to sender workers if event repetitions today equal to threshold', async () => {
       const worker = new NotifierWorker();
 
       await worker.start();
 
-      worker.addEventsToChannels = jest.fn();
-
       const message = { ...messageMock };
+      const event = { ...message.event };
+      event.isNew = false;
 
-      const oldMock = dbQueryMock;
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+        return Promise<10>;
+      });
 
-      dbQueryMock = jest.fn(() => null);
+      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
+        return Promise<10>;
+      });
 
-      await worker.handle(message);
+      worker.sendToSenderWorker = jest.fn();
 
-      expect(worker.addEventsToChannels).not.toBeCalled();
+      worker.handle(message);
 
-      dbQueryMock = oldMock;
+      expect(worker.sendToSenderWorker).toBeCalled();
 
       await worker.finish();
     });
-  });
 
-  it('should send task to sender workers', async () => {
-    const worker = new NotifierWorker();
+    it('should not call events database for threshold calculation if threshold set in redis', async () => {
+      const worker = new NotifierWorker();
 
-    await worker.start();
+      await worker.start();
 
-    await worker.start();
+      /**
+       * Mock of the function that returns 
+       */
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+        return Promise<1>;
+      });
 
-    worker.addTask = jest.fn();
+      worker.redis.getProjectNotificationThreshold(async (_projectId) => {
+        return Promise<1>;
+      })
 
-    const message = { ...messageMock };
+      worker.eventsDb.getConnection = jest.fn();
 
-    await worker.handle(message);
+      const message = { ...messageMock };
 
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        1,
-        `sender/telegram`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
+      await worker.handle(message);
 
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        2,
-        `sender/slack`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
+      /**
+       * It should not be called beacuse event repetitions got from redis
+       */
+      expect(worker.eventsDb.getConnection).not.toBeCalled;
 
-    await worker.finish();
+      await worker.finish();
+    });
+
+    it('should calculate notification threshold using events db if redis has no threshold', async () => {
+      const worker = new NotifierWorker();
+
+      await worker.start();
+
+      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId, _groupHash) => {
+        return Promise<null>;
+      });
+
+      worker.eventsDb.getConnection = jest.fn();
+      worker.redis.setProjectNotificationTreshold = jest.fn();
+      
+      /**
+       * Check that we connected to the events database to calculate the threshold
+       */
+      expect(worker.eventsDb.getConnection).toBeCalled();
+
+      /**
+       * Check that we stored calculated threshold in redis
+       */
+      expect(worker.redis.setProjectNotificationTreshold).toBeCalled();
+
+      await worker.finish();
+    })
+
+    it('should always add event to redis digest', async () => {
+      const worker = new NotifierWorker();
+
+      await worker.start();
+
+      const message = { ...messageMock };
+
+      worker.redis.addEventToDigest = jest.fn();
+
+      worker.handle(message);
+
+      expect(worker.redis.addEventToDigest).toBeCalled();
+
+      await worker.finish();
+    });
   });
 });
