@@ -29,7 +29,7 @@ const rule = {
   },
 } as any;
 
-let dbQueryMock = jest.fn(() => ({
+const dbQueryMock = jest.fn(() => ({
   notifications: [ rule ],
 })) as any;
 
@@ -185,7 +185,7 @@ describe('NotifierWorker', () => {
       worker.redis.redisClient.eval = jest.fn(async () => {
         return Promise.resolve();
       });
-      
+
       const message = { ...messageMock };
 
       await worker.start();
@@ -226,15 +226,16 @@ describe('NotifierWorker', () => {
       await worker.start();
 
       const message = { ...messageMock };
+
       message.event.isNew = false;
 
       jest.mock('../src/redisHelper');
 
-      RedisHelper.prototype.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+      RedisHelper.prototype.getEventRepetitionsFromDigest = jest.fn(async () => {
         return Promise.resolve(1);
       });
 
-      RedisHelper.prototype.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
+      RedisHelper.prototype.getProjectNotificationThreshold = jest.fn(async () => {
         return Promise.resolve(10);
       });
 
@@ -248,7 +249,7 @@ describe('NotifierWorker', () => {
        */
       expect(worker.sendToSenderWorker).not.toBeCalled();
 
-      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async () => {
         return Promise.resolve(100);
       });
 
@@ -269,12 +270,13 @@ describe('NotifierWorker', () => {
       worker.redis.redisClient.eval = jest.fn(async () => {
         return Promise.resolve();
       });
-      
+
       worker.getFittedRules = jest.fn();
 
       await worker.start();
 
       const message = { ...messageMock };
+
       message.event.isNew = true;
 
       await worker.handle(message);
@@ -295,13 +297,14 @@ describe('NotifierWorker', () => {
 
       const message = { ...messageMock };
       const event = { ...message.event };
+
       event.isNew = false;
 
-      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async () => {
         return Promise.resolve(10);
       });
 
-      worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
+      worker.redis.getProjectNotificationThreshold = jest.fn(async () => {
         return Promise.resolve(10);
       });
 
@@ -324,15 +327,15 @@ describe('NotifierWorker', () => {
       await worker.start();
 
       /**
-       * Mock of the function that returns 
+       * Mock of the function that returns
        */
-      worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
+      worker.redis.getEventRepetitionsFromDigest = jest.fn(async () => {
         return Promise.resolve(1);
       });
 
-      worker.redis.getProjectNotificationThreshold(async (_projectId) => {
+      worker.redis.getProjectNotificationThreshold(async () => {
         return Promise.resolve(1);
-      })
+      });
 
       worker.eventsDb.getConnection = jest.fn();
 
@@ -343,7 +346,7 @@ describe('NotifierWorker', () => {
       /**
        * It should not be called beacuse event repetitions got from redis
        */
-      expect(worker.eventsDb.getConnection).not.toBeCalled;
+      expect(worker.eventsDb.getConnection).not.toBeCalled();
 
       await worker.finish();
     });
@@ -354,11 +357,11 @@ describe('NotifierWorker', () => {
       worker.redis.redisClient.eval = jest.fn(async () => {
         return Promise.resolve();
       });
-      
+
       jest.mock('../src/redisHelper'); // Мокируем весь модуль RedisHelper
       RedisHelper.prototype.getProjectNotificationThreshold = jest.fn().mockResolvedValue(null);
-      
-      worker.eventsDb.getConnection = jest.fn(); 
+
+      worker.eventsDb.getConnection = jest.fn();
 
       await worker.start();
 
@@ -371,7 +374,7 @@ describe('NotifierWorker', () => {
       expect(worker.eventsDb.getConnection).toBeCalled();
 
       await worker.finish();
-    })
+    });
 
     it('should always add event to redis digest', async () => {
       const worker = new NotifierWorker();
