@@ -199,7 +199,7 @@ describe('NotifierWorker', () => {
   describe('handling', () => {
     it('should not send task to sender workers if event is not new and repetitions today not equal to threshold', async () => {
       const worker = new NotifierWorker();
-      
+
       await worker.start();
 
       const message = { ...messageMock };
@@ -207,11 +207,11 @@ describe('NotifierWorker', () => {
       event.isNew = false;
 
       worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
-        return Promise<1>;
+        return Promise.resolve(1);
       });
 
       worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
-        return Promise<10>;
+        return Promise.resolve(10);
       });
 
       worker.sendToSenderWorker = jest.fn();
@@ -225,7 +225,7 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).not.toBeCalled();
 
       worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
-        return Promise<100>;
+        return Promise.resolve(100);
       });
 
       worker.handle(message);
@@ -268,11 +268,11 @@ describe('NotifierWorker', () => {
       event.isNew = false;
 
       worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
-        return Promise<10>;
+        return Promise.resolve(10);
       });
 
       worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId) => {
-        return Promise<10>;
+        return Promise.resolve(10);
       });
 
       worker.sendToSenderWorker = jest.fn();
@@ -284,7 +284,7 @@ describe('NotifierWorker', () => {
       await worker.finish();
     });
 
-    it('should not call events database for threshold calculation if threshold set in redis', async () => {
+    it('should not call events database for threshold calculation if threshold stored in redis', async () => {
       const worker = new NotifierWorker();
 
       await worker.start();
@@ -293,11 +293,11 @@ describe('NotifierWorker', () => {
        * Mock of the function that returns 
        */
       worker.redis.getEventRepetitionsFromDigest = jest.fn(async (_projectId, _groupHash) => {
-        return Promise<1>;
+        return Promise.resolve(1);
       });
 
       worker.redis.getProjectNotificationThreshold(async (_projectId) => {
-        return Promise<1>;
+        return Promise.resolve(1);
       })
 
       worker.eventsDb.getConnection = jest.fn();
@@ -320,7 +320,7 @@ describe('NotifierWorker', () => {
       await worker.start();
 
       worker.redis.getProjectNotificationThreshold = jest.fn(async (_projectId, _groupHash) => {
-        return Promise<null>;
+        return Promise.resolve(null);
       });
 
       worker.eventsDb.getConnection = jest.fn();
