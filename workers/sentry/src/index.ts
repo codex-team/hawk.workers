@@ -37,7 +37,7 @@ export default class SentryEventWorker extends EventWorker {
 
     this.validate(hawkEvent);
 
-    await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
+    await this.addTask(WorkerNames.DEFAULT, hawkEvent as SentryEventWorkerTask);
   }
 
   /**
@@ -90,7 +90,7 @@ export default class SentryEventWorker extends EventWorker {
     envelopeHeader: Record<string, any>,
     eventItem: SentryItem,
     projectId: string
-  ): DefaultEventWorkerTask {
+  ): SentryEventWorkerTask {
     const { sent_at, trace } = envelopeHeader;
     const { Payload } = eventItem;
 

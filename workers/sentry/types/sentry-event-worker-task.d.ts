@@ -9,4 +9,5 @@ export interface SentryEventWorkerTask extends WorkerTask {
    */
   payload: any;
   projectId: string;
+  catcherType: string;
 }
