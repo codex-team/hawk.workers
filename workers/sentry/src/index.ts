@@ -1,16 +1,15 @@
-import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
-import { SentryEnvelope, SentryItem, SentryHeader } from '../types/sentry-envelope';
 import { DefaultEventWorkerTask } from '../../default/types/default-event-worker-task';
-import * as WorkerNames from '../../../lib/workerNames';
-
-const b64decode = (str: string): string => Buffer.from(str, 'base64').toString('binary');
-
+import WorkerNames from '../../../lib/workerNames.js';
+import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from '@sentry/core';
+import { Worker } from '../../../lib/worker';
+import { composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
+import { b64decode } from './utils/base64';
 /**
  * Worker for handling Sentry events
  */
-export default class SentryEventWorker extends EventWorker {
+export default class SentryEventWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
@@ -24,21 +23,29 @@ export default class SentryEventWorker extends EventWorker {
   public async handle(event: SentryEventWorkerTask): Promise<void> {
     /**
      * Define  event type
+     *
+     * @todo Rename to external/sentry because it is not a Hawk event
      */
     this.type = 'errors/sentry';
 
     try {
       const rawEvent = b64decode(event.payload.envelope);
-      const envelope = this.parseSentryEnvelope(rawEvent);
+
+      console.log('event', event.payload.envelope);
+      console.log('parsed', rawEvent);
+
+      const envelope = parseEnvelope(rawEvent);
+
       this.logger.debug(JSON.stringify(envelope));
 
-      for (const item of envelope.Items) {
-        await this.handleEnvelopeItem(envelope.Header, item, event.projectId);
+      const [headers, items] = envelope;
+
+      for (const item of items) {
+        await this.handleEnvelopeItem(headers, item, event.projectId);
       }
 
       this.logger.debug('All envelope items processed successfully.');
-    }
-    catch (error) {
+    } catch (error) {
       this.logger.error('Error handling Sentry event task:', error);
       throw error;
     }
@@ -46,60 +53,29 @@ export default class SentryEventWorker extends EventWorker {
 
   /**
    * Process the envelope item
-   * 
-   * @param header - Sentry header
+   *
+   * @param envelopeHeaders - The whole envelope headers
    * @param item - Sentry item
    * @param projectId - Sentry project ID
    */
-  public async handleEnvelopeItem(header: SentryHeader, item: SentryItem, projectId: string): Promise<void> {
+  private async handleEnvelopeItem(envelopeHeaders: Envelope[0], item: EnvelopeItem, projectId: string): Promise<void> {
     try {
-      const hawkEvent = this.transformToHawkFormat(header, item, projectId);
-      this.validate(hawkEvent);
+      const [ itemHeader ] = item;
+
+      /**
+       * Skip non-event items
+       */
+      if (itemHeader.type !== 'event') {
+        return;
+      }
+
+      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
+
       await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
-    }
-    catch (error) {
+    } catch (error) {
       this.logger.error('Error handling envelope item:', JSON.stringify(item), error);
       throw error;
     }
-  }
-
-  /**
-    * Parse Sentry envelope into structured format
-    *
-    * @param data - raw Sentry envelope data
-    * @returns Parsed SentryEnvelope object
-    */
-  private parseSentryEnvelope(data: string): SentryEnvelope {
-    const lines = data.split('\n').filter(line => line.trim() !== '');
-    const envelope: SentryEnvelope = { Header: {}, Items: [] };
-
-    // Parse envelope header
-    const headerLine = lines.shift();
-    if (!headerLine) {
-      throw new Error('Failed to read envelope header');
-    }
-    envelope.Header = JSON.parse(headerLine);
-
-    // Parse each item
-    while (lines.length > 0) {
-      // Item header
-      const itemHeaderLine = lines.shift();
-      if (!itemHeaderLine) {
-        throw new Error('Failed to read item header');
-      }
-      const itemHeader = JSON.parse(itemHeaderLine);
-
-      // Item payload
-      const itemPayloadLine = lines.shift();
-      if (!itemPayloadLine) {
-        throw new Error('Failed to read item payload');
-      }
-      const itemPayload = JSON.parse(itemPayloadLine);
-
-      envelope.Items.push({ Header: itemHeader, Payload: itemPayload });
-    }
-
-    return envelope;
   }
 
   /**
@@ -107,51 +83,50 @@ export default class SentryEventWorker extends EventWorker {
    *
    * @param envelopeHeader - Sentry envelope header
    * @param eventItem - Sentry event item
-   * @returns Hawk-compatible event structure
+   * @param projectId - Hawk project ID
    */
   private transformToHawkFormat(
-    envelopeHeader: Record<string, any>,
-    eventItem: SentryItem,
+    envelopeHeader: EventEnvelope[0],
+    eventItem: EventItem,
     projectId: string
   ): DefaultEventWorkerTask {
+    /* eslint-disable @typescript-eslint/naming-convention */
     const { sent_at, trace } = envelopeHeader;
-    const { Payload } = eventItem;
 
-    // delete public_key from trace
-    delete trace.public_key;
+    /**
+     * Delete public_key from trace
+     */
+    if (trace) {
+      delete trace.public_key;
+    }
 
-    // convert sent_at from ISO 8601 to Unix timestamp
-    const sent_at_unix = Math.floor(new Date(sent_at).getTime() / 1000);
+    /**
+     * convert sent_at from ISO 8601 to Unix timestamp
+     */
+    const msInSecond = 1000;
+    const sentAtUnix = Math.floor(new Date(sent_at).getTime() / msInSecond);
+    /* eslint-enable @typescript-eslint/naming-convention */
 
-    const backtrace = Payload.exception?.values?.[0]?.stacktrace?.frames?.map((frame: any) => ({
-      file: frame.filename,
-      line: frame.lineno,
-      function: frame.function,
-      sourceCode: frame.pre_context?.concat(frame.context_line, frame.post_context || [])
-        .map((line: string, index: number) => ({
-          line: frame.lineno + index - frame.pre_context.length,
-          content: line
-        })) || [],
-    })) || [];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+    const [_eventHeaders, eventPayload] = eventItem;
+
+    const backtrace = composeBacktrace(eventPayload);
+    const context = composeContext(eventPayload);
+    const user = composeUserData(eventPayload);
 
     return {
-      projectId: projectId, // Public key is used as hawk project ID
+      projectId, // Public key is used as hawk project ID
       catcherType: 'errors/sentry',
       payload: {
-        title: `${Payload.exception?.values?.[0]?.type || 'Unknown'}: ${Payload.exception?.values?.[0]?.value || ''}`,
-        type: Payload.level || 'error',
-        timestamp: sent_at_unix,
+        title: composeTitle(eventPayload),
+        type: eventPayload.level || 'error',
+        timestamp: sentAtUnix,
         backtrace,
-        release: trace?.release || null,
-        context: {
-          sentAt: sent_at_unix,
-          trace: trace || {},
-          environment: trace?.environment || 'unknown',
-        },
+        release: trace?.release || undefined,
+        context,
         catcherVersion: pkg.version,
-        user: null, // Can be populated with user data if available
+        user,
       },
     };
   }
-
 }

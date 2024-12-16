@@ -6,5 +6,8 @@
   "author": "CodeX",
   "license": "UNLICENSED",
   "private": true,
-  "workerType": "errors/sentry"
+  "workerType": "errors/sentry",
+  "dependencies": {
+    "@sentry/core": "^8.45.1"
+  }
 }

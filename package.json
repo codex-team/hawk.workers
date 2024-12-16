@@ -19,7 +19,7 @@
         "test:db": "jest lib/db/",
         "test:cache": "jest lib/cache",
         "test:default": "jest workers/default",
-        "test:sentry": "jest workers/sentry",
+        "test:sentry": "jest workers/sentry --config workers/sentry/jest.config.js",
         "test:javascript": "jest workers/javascript",
         "test:release": "jest workers/release",
         "test:slack": "jest workers/slack",

@@ -5,6 +5,10 @@ module.exports = {
     jest: true,
   },
   extends: ['codex', 'codex/ts'],
+  ignorePatterns: [
+    'package.json',
+    'tsconfig.json',
+  ],
   rules: {
     '@typescript-eslint/no-unused-expressions': 'error',
     '@typescript-eslint/no-var-requires': 'off',
