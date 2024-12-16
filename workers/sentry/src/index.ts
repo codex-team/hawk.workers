@@ -1,7 +1,7 @@
 import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
-import { SentryEnvelope, SentryItem } from '../types/sentry-envelope';
+import { SentryEnvelope, SentryItem, SentryHeader } from '../types/sentry-envelope';
 import { DefaultEventWorkerTask } from '../../default/types/default-event-worker-task';
 import * as WorkerNames from '../../../lib/workerNames';
 
@@ -27,17 +27,40 @@ export default class SentryEventWorker extends EventWorker {
      */
     this.type = 'errors/sentry';
 
-    const rawEvent = b64decode(event.payload.envelope);
-    const envelope = this.parseSentryEnvelope(rawEvent);
-    this.logger.debug(JSON.stringify(envelope));
+    try {
+      const rawEvent = b64decode(event.payload.envelope);
+      const envelope = this.parseSentryEnvelope(rawEvent);
+      this.logger.debug(JSON.stringify(envelope));
 
-    // Todo: For now, we only handle the first item in the envelope
-    const hawkEvent = this.transformToHawkFormat(envelope.Header, envelope.Items[0], event.projectId);
-    this.logger.debug(JSON.stringify(hawkEvent));
+      for (const item of envelope.Items) {
+        await this.handleEnvelopeItem(envelope.Header, item, event.projectId);
+      }
 
-    this.validate(hawkEvent);
+      this.logger.debug('All envelope items processed successfully.');
+    }
+    catch (error) {
+      this.logger.error('Error handling Sentry event task:', error);
+      throw error;
+    }
+  }
 
-    await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
+  /**
+   * Process the envelope item
+   * 
+   * @param header - Sentry header
+   * @param item - Sentry item
+   * @param projectId - Sentry project ID
+   */
+  public async handleEnvelopeItem(header: SentryHeader, item: SentryItem, projectId: string): Promise<void> {
+    try {
+      const hawkEvent = this.transformToHawkFormat(header, item, projectId);
+      this.validate(hawkEvent);
+      await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
+    }
+    catch (error) {
+      this.logger.error('Error handling envelope item:', JSON.stringify(item), error);
+      throw error;
+    }
   }
 
   /**
