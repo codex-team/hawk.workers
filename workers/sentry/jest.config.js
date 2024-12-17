@@ -1,4 +1,8 @@
 /**
+ * We don't need mongo for this worker, so it has own setup file
+ */
+
+/**
  * To prevent problems related to timezones we set node timezone
  */
 process.env.TZ = 'GMT';
@@ -21,6 +25,4 @@ module.exports = {
   },
 
   setupFiles: [ './../../jest.setup.js' ],
-
-  setupFilesAfterEnv: [ './../../jest.setup.redis-mock.js' ],
 };

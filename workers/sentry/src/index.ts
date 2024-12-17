@@ -4,7 +4,7 @@ import { DefaultEventWorkerTask } from '../../default/types/default-event-worker
 import WorkerNames from '../../../lib/workerNames.js';
 import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from '@sentry/core';
 import { Worker } from '../../../lib/worker';
-import { composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
+import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
 /**
  * Worker for handling Sentry events
@@ -30,10 +30,6 @@ export default class SentryEventWorker extends Worker {
 
     try {
       const rawEvent = b64decode(event.payload.envelope);
-
-      console.log('event', event.payload.envelope);
-      console.log('parsed', rawEvent);
-
       const envelope = parseEnvelope(rawEvent);
 
       this.logger.debug(JSON.stringify(envelope));
@@ -110,15 +106,17 @@ export default class SentryEventWorker extends Worker {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
     const [_eventHeaders, eventPayload] = eventItem;
 
+    const title = composeTitle(eventPayload);
     const backtrace = composeBacktrace(eventPayload);
     const context = composeContext(eventPayload);
     const user = composeUserData(eventPayload);
+    const addons = composeAddons(eventPayload);
 
     return {
       projectId, // Public key is used as hawk project ID
       catcherType: 'errors/sentry',
       payload: {
-        title: composeTitle(eventPayload),
+        title,
         type: eventPayload.level || 'error',
         timestamp: sentAtUnix,
         backtrace,
@@ -126,6 +124,7 @@ export default class SentryEventWorker extends Worker {
         context,
         catcherVersion: pkg.version,
         user,
+        addons,
       },
     };
   }

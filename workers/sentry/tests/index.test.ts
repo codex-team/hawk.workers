@@ -1,10 +1,9 @@
 import SentryEventWorker from '../src';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 import '../../../env-test';
-import { mockedAmqpChannel } from './rabbit.mock';
+import { mockedAmqpChannel } from '../../../jest.setup.js';
 import { ClientReportEnvelope, ClientReportItem } from '@sentry/core';
 import { b64encode } from '../src/utils/base64';
-jest.mock('amqplib');
 
 /**
  * Testing Event
@@ -17,6 +16,15 @@ const testEventData = {
 
 describe('SentryEventWorker', () => {
   const worker = new SentryEventWorker();
+
+  beforeEach(async () => {
+    await worker.start();
+  });
+
+  afterEach(async () => {
+    await worker.finish();
+    jest.clearAllMocks();
+  });
 
   test('should not handle bad event data', async () => {
     const handleEvent = async (): Promise<void> => {

@@ -29,7 +29,7 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
 
       const isSomeLinesAvailable = frame.context_line || frame.pre_context || frame.post_context;
 
-      if (isSomeLinesAvailable && frame.lineno) {
+      if (isSomeLinesAvailable && frame.lineno !== undefined) {
         sourceCode = [];
         const lineNo = frame.lineno;
 
