@@ -29,7 +29,7 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
 
       const isSomeLinesAvailable = frame.context_line || frame.pre_context || frame.post_context;
 
-      if (isSomeLinesAvailable && frame.lineno !== undefined) {
+      if (isSomeLinesAvailable !== undefined && frame.lineno !== undefined) {
         sourceCode = [];
         const lineNo = frame.lineno;
 
@@ -50,10 +50,12 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
 
         if (frame.post_context) {
           sourceCode.push(...frame.post_context.map((line: string, index: number) => ({
-            line: lineNo + index,
+            line: lineNo + index + 1,
             content: line,
           })));
         }
+
+        backtraceFrame.sourceCode = sourceCode;
       }
 
       if (frame.colno) {
@@ -73,7 +75,7 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
       backtrace.push(backtraceFrame);
     });
 
-    return backtrace;
+    return backtrace.length > 0 ? backtrace : undefined;
   } catch (error) {
     return undefined;
   }

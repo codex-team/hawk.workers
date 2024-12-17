@@ -1,81 +1,528 @@
 import SentryEventWorker from '../src';
-import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 import '../../../env-test';
 import { mockedAmqpChannel } from '../../../jest.setup.js';
-import { ClientReportEnvelope, ClientReportItem } from '@sentry/core';
+import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode } from '../src/utils/base64';
+import { EventWorkerTask } from '../../../lib/types/event-worker-task';
 
 /**
- * Testing Event
+ * Worker adds a task to the queue with buffered payload
+ * So we need to get parse it back to compare
  */
-const testEventData = {
-  projectId: '674ef84b29b1620023eb4832',
-  payload: { envelope: 'eyJldmVudF9pZCI6IjE3ZDBiMWEwODJiOTQ5NTM5YThkZDFiYjY1M2MxZTE4Iiwic2VudF9hdCI6IjIwMjQtMTItMTNUMTk6NTE6MTkuMjEyNzQxWiIsInRyYWNlIjp7InRyYWNlX2lkIjoiN2MzNzJjNGNkNjNhNDVlZjg0OWRjYTdhYTAyY2Y2NTkiLCJlbnZpcm9ubWVudCI6InByb2R1Y3Rpb24iLCJyZWxlYXNlIjoiMTBiYWE4OWJhMmUwMWJjYmZlNmE4NGIyNGQ0ZTQ5YTRiOTcxYWM4MCIsInB1YmxpY19rZXkiOiJleUpwYm5SbFozSmhkR2x2Ymtsa0lqb2lPV1EwTXpVd016Z3RNV1EzT1MwME5UbGhMV0poTVdVdFpXUXdNRFZqWXpJME5UTTBJaXdpYzJWamNtVjBJam9pWkdVM09EWmtNREF0TnpFMk5pMDBaVFl6TFdJNVl6QXRZVEZqTmpjeU9XWmxPR1U1SW4wPSJ9fQp7InR5cGUiOiJldmVudCIsImNvbnRlbnRfdHlwZSI6ImFwcGxpY2F0aW9uL2pzb24iLCJsZW5ndGgiOjE5OTd9CnsibGV2ZWwiOiJlcnJvciIsImV4Y2VwdGlvbiI6eyJ2YWx1ZXMiOlt7Im1lY2hhbmlzbSI6eyJ0eXBlIjoiZXhjZXB0aG9vayIsImhhbmRsZWQiOmZhbHNlfSwibW9kdWxlIjpudWxsLCJ0eXBlIjoiWmVyb0RpdmlzaW9uRXJyb3IiLCJ2YWx1ZSI6ImRpdmlzaW9uIGJ5IHplcm8iLCJzdGFja3RyYWNlIjp7ImZyYW1lcyI6W3siZmlsZW5hbWUiOiJzZW50cnktc2VuZC5weSIsImFic19wYXRoIjoiL1VzZXJzL25vc3RyL2Rldi9jb2RleC9oYXdrLm1vbm8vdGVzdHMvbWFudWFsL3NlbnRyeS9zZW50cnktc2VuZC5weSIsImZ1bmN0aW9uIjoiPG1vZHVsZT4iLCJtb2R1bGUiOiJfX21haW5fXyIsImxpbmVubyI6MTAsInByZV9jb250ZXh0IjpbIiIsInNlbnRyeV9zZGsuaW5pdCgiLCIgICAgZHNuPWZcImh0dHA6Ly97SEFXS19JTlRFR1JBVElPTl9UT0tFTn1AbG9jYWxob3N0OjMwMDAvMFwiLCIsIiAgICBkZWJ1Zz1UcnVlIiwiKSJdLCJjb250ZXh0X2xpbmUiOiJkaXZpc2lvbl9ieV96ZXJvID0gMSAvIDAiLCJwb3N0X2NvbnRleHQiOlsicHJpbnQoXCJ0aGlzXCIpIiwicHJpbnQoXCJpc1wiKSIsInByaW50KFwib2tcIikiLCIjIHJhaXNlIEV4Y2VwdGlvbihcIlRoaXMgaXMgYSB0ZXN0IGV4Y2VwdGlvblwiKSJdLCJ2YXJzIjp7Il9fbmFtZV9fIjoiJ19fbWFpbl9fJyIsIl9fZG9jX18iOiJOb25lIiwiX19wYWNrYWdlX18iOiJOb25lIiwiX19sb2FkZXJfXyI6IjxfZnJvemVuX2ltcG9ydGxpYl9leHRlcm5hbC5Tb3VyY2VGaWxlTG9hZGVyIG9iamVjdCBhdCAweDEwNDllMTAyMD4iLCJfX3NwZWNfXyI6Ik5vbmUiLCJfX2Fubm90YXRpb25zX18iOnt9LCJfX2J1aWx0aW5zX18iOiI8bW9kdWxlICdidWlsdGlucycgKGJ1aWx0LWluKT4iLCJfX2ZpbGVfXyI6IicvVXNlcnMvbm9zdHIvZGV2L2NvZGV4L2hhd2subW9uby90ZXN0cy9tYW51YWwvc2VudHJ5L3NlbnRyeS1zZW5kLnB5JyIsIl9fY2FjaGVkX18iOiJOb25lIiwic2VudHJ5X3NkayI6Ijxtb2R1bGUgJ3NlbnRyeV9zZGsnIGZyb20gJy9Vc2Vycy9ub3N0ci9kZXYvY29kZXgvaGF3ay5tb25vLy52ZW52L2xpYi9weXRob24zLjEzL3NpdGUtcGFja2FnZXMvc2VudHJ5X3Nkay9fX2luaXRfXy5weSc+In0sImluX2FwcCI6dHJ1ZX1dfX1dfSwiZXZlbnRfaWQiOiIxN2QwYjFhMDgyYjk0OTUzOWE4ZGQxYmI2NTNjMWUxOCIsInRpbWVzdGFtcCI6IjIwMjQtMTItMTNUMTk6NTE6MTkuMjA3NDA1WiIsImNvbnRleHRzIjp7InRyYWNlIjp7InRyYWNlX2lkIjoiN2MzNzJjNGNkNjNhNDVlZjg0OWRjYTdhYTAyY2Y2NTkiLCJzcGFuX2lkIjoiOGYwZjBkOTBiMDhkYjdhYSIsInBhcmVudF9zcGFuX2lkIjpudWxsfSwicnVudGltZSI6eyJuYW1lIjoiQ1B5dGhvbiIsInZlcnNpb24iOiIzLjEzLjAiLCJidWlsZCI6IjMuMTMuMCAobWFpbiwgT2N0ICA3IDIwMjQsIDA1OjAyOjE0KSBbQ2xhbmcgMTYuMC4wIChjbGFuZy0xNjAwLjAuMjYuMyldIn19LCJ0cmFuc2FjdGlvbl9pbmZvIjp7fSwiYnJlYWRjcnVtYnMiOnsidmFsdWVzIjpbXX0sImV4dHJhIjp7InN5cy5hcmd2IjpbInNlbnRyeS1zZW5kLnB5Il19LCJtb2R1bGVzIjp7InBpcCI6IjI0LjMuMSIsInVybGxpYjMiOiIyLjIuMyIsInNlbnRyeS1zZGsiOiIyLjE5LjAiLCJjZXJ0aWZpIjoiMjAyNC44LjMwIn0sInJlbGVhc2UiOiIxMGJhYTg5YmEyZTAxYmNiZmU2YTg0YjI0ZDRlNDlhNGI5NzFhYzgwIiwiZW52aXJvbm1lbnQiOiJwcm9kdWN0aW9uIiwic2VydmVyX25hbWUiOiJNYWNCb29rLVByby1BbGVrc2FuZHItNS5sb2NhbCIsInNkayI6eyJuYW1lIjoic2VudHJ5LnB5dGhvbiIsInZlcnNpb24iOiIyLjE5LjAiLCJwYWNrYWdlcyI6W3sibmFtZSI6InB5cGk6c2VudHJ5LXNkayIsInZlcnNpb24iOiIyLjE5LjAifV0sImludGVncmF0aW9ucyI6WyJhcmd2IiwiYXRleGl0IiwiZGVkdXBlIiwiZXhjZXB0aG9vayIsImxvZ2dpbmciLCJtb2R1bGVzIiwic3RkbGliIiwidGhyZWFkaW5nIl19LCJwbGF0Zm9ybSI6InB5dGhvbiJ9Cg==' },
-  catcherType: 'errors/sentry' as const,
-};
+function getAddTaskPayloadFromLastCall(): EventWorkerTask {
+  /**
+   * Get last rabbit sendToQueue call
+   */
+  const lastCall = mockedAmqpChannel.sendToQueue.mock.calls[mockedAmqpChannel.sendToQueue.mock.calls.length - 1];
+  /**
+   * Parse second (from 0) argument — payload
+   */
+  const addedTaskPayload = JSON.parse(lastCall[1].toString());
+
+  return addedTaskPayload;
+}
 
 describe('SentryEventWorker', () => {
   const worker = new SentryEventWorker();
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     await worker.start();
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await worker.finish();
+  });
+
+  beforeEach(async () => {
     jest.clearAllMocks();
   });
 
-  test('should not handle bad event data', async () => {
-    const handleEvent = async (): Promise<void> => {
-      await worker.handle({} as SentryEventWorkerTask);
-    };
-
-    expect(handleEvent).rejects.toThrowError();
-  });
-
-  test('should handle good event data', async () => {
-    await worker.handle(testEventData);
-
-    expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
-  });
-
-  test('should skip non-event envelope items', async () => {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    const nonEventItem: ClientReportItem = [
-      {
-        type: 'client_report',
-      },
-      {
-        timestamp: 1718534400,
-        discarded_events: [],
-      },
-    ];
-
-    const envelope: ClientReportEnvelope = [
-      {
-        event_id: '123e4567-e89b-12d3-a456-426614174000',
-        dsn: 'https://example@sentry.io/123',
-        sdk: {
-          name: 'sentry.javascript.node',
-          version: '7.0.0',
+  describe('handle()', () => {
+    it('should process multiple envelope items correctly', async () => {
+      /* eslint-disable @typescript-eslint/naming-convention */
+      const envelope: EventEnvelope = [
+        {
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          trace: { trace_id: 'test-trace' },
         },
-      },
-      [ nonEventItem ],
-    ];
-    /* eslint-enable @typescript-eslint/naming-convention */
+        [
+          [
+            {
+              type: 'event',
+              content_type: 'application/json',
+            },
+            {
+              level: 'error',
+              message: 'Error 1',
+            },
+          ],
+          [
+            {
+              type: 'event',
+              content_type: 'application/json',
+            },
+            {
+              level: 'warning',
+              message: 'Warning 1',
+            },
+          ],
+        ],
+      ];
+      /* eslint-enable @typescript-eslint/naming-convention */
 
-    const handleEvent = async (): Promise<void> => {
       await worker.handle({
         payload: {
-          envelope: b64encode(JSON.stringify(envelope)),
+          envelope: b64encode(serializeEnvelope(envelope) as string),
         },
-        projectId: '123e4567-e89b-12d3-a456-426614174000',
+        projectId: '123',
         catcherType: 'errors/sentry',
       });
-    };
 
-    expect(handleEvent).not.toThrow();
-    expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(0);
+      expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle invalid base64 payload', async () => {
+      const invalidPayload = {
+        payload: {
+          envelope: 'invalid-base64!',
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry' as const,
+      };
+
+      worker.muteLogger(true);
+      await expect(worker.handle(invalidPayload)).rejects.toThrow();
+      worker.muteLogger(false);
+    });
+
+    it('should handle empty envelope', async () => {
+      const emptyEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          /**
+           * No items in envelope
+           */
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(JSON.stringify(emptyEnvelope)),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      expect(mockedAmqpChannel.sendToQueue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleEnvelopeItem()', () => {
+    it('should skip non-event type items', async () => {
+      const mixedEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'transaction' }, { name: 'Test Transaction' } ],
+          [ { type: 'attachment' }, { filename: 'test.txt' } ],
+          [ { type: 'client_report' }, {
+            timestamp: 1718534400,
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            discarded_events: [],
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(JSON.stringify(mixedEnvelope)),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(0);
+    });
+
+    it('should handle transformation errors gracefully', async () => {
+      const malformedEventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          /**
+           * Malformed event data
+           */
+          [ { type: 'event' }, null],
+        ],
+      ];
+
+      worker.muteLogger(true);
+      await expect(worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(malformedEventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      })).rejects.toThrow();
+      worker.muteLogger(false);
+    });
+  });
+
+  describe('transformToHawkFormat()', () => {
+    it('should handle different event levels', async () => {
+      const levels: SeverityLevel[] = ['error', 'warning', 'info', 'fatal'];
+
+      for (const level of levels) {
+        const eventEnvelope: EventEnvelope = [
+          {
+            /* eslint-disable @typescript-eslint/naming-convention */
+            event_id: '123e4567-e89b-12d3-a456-426614174000',
+            sent_at: '2024-01-01T00:00:00.000Z',
+            /* eslint-enable @typescript-eslint/naming-convention */
+          },
+          [
+            [ { type: 'event' }, {
+              level,
+              message: `Test ${level}`,
+            } ],
+          ],
+        ];
+
+        await worker.handle({
+          payload: {
+            envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+          },
+          projectId: '123',
+          catcherType: 'errors/sentry',
+        });
+
+        const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+        expect(addedTaskPayload).toMatchObject({
+          payload: expect.objectContaining({
+            type: level,
+          }),
+        });
+      }
+    });
+
+    it('should process different timestamp formats', async () => {
+      const timestamps = [
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-01T00:00:00Z',
+        '2024-01-01T00:00:00.000+00:00',
+      ];
+
+      for (const timestamp of timestamps) {
+        const eventEnvelope: EventEnvelope = [
+          {
+            /* eslint-disable @typescript-eslint/naming-convention */
+            event_id: '123e4567-e89b-12d3-a456-426614174000',
+            sent_at: timestamp,
+            /* eslint-enable @typescript-eslint/naming-convention */
+          },
+          [
+            [ { type: 'event' }, { message: 'Test timestamp' } ],
+          ],
+        ];
+
+        await worker.handle({
+          payload: {
+            envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+          },
+          projectId: '123',
+          catcherType: 'errors/sentry',
+        });
+
+        const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+        expect(addedTaskPayload).toMatchObject({
+          payload: expect.objectContaining({
+            timestamp: 1704067200,
+          }),
+        });
+      }
+    });
+
+    it('should extract backtrace from "exception" field if it is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, {
+            exception: {
+              values: [ {
+                stacktrace: {
+                  frames: [ {
+                    filename: 'test.js',
+                    lineno: 10,
+                  } ],
+                },
+              } ],
+            },
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          backtrace: [ {
+            file: 'test.js',
+            line: 10,
+          } ],
+        }),
+      });
+    });
+
+    it('should extract context from "contexts" field if it is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, {
+            contexts: {
+              device: {
+                model: 'iPhone',
+              },
+            },
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          context: {
+            device: {
+              model: 'iPhone',
+            },
+          },
+        }),
+      });
+    });
+
+    it('should extract user from "user" field if it is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, {
+            user: {
+              id: '123',
+              username: 'test',
+              email: 'test@test.com',
+            },
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          user: {
+            id: '123',
+            name: 'test',
+            url: 'test@test.com',
+          },
+        }),
+      });
+    });
+
+    it('should extract addons from remaining fields', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, {
+            platform: 'javascript',
+            environment: 'production',
+            request: { url: 'https://test.com' },
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          addons: {
+            platform: 'javascript',
+            environment: 'production',
+            request: { url: 'https://test.com' },
+          },
+        }),
+      });
+    });
+
+    it('should extract release from "trace" field if it is present', async () => {
+      /**
+       * Full trace object
+       */
+      const trace = {
+        /* eslint-disable @typescript-eslint/naming-convention */
+        trace_id: 'test-trace',
+        public_key: 'mocked-public-key',
+        release: '1.0.0',
+        /* eslint-enable @typescript-eslint/naming-convention */
+      };
+
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+          trace,
+        },
+        [
+          [ { type: 'event' }, { message: 'Test trace' } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          release: trace.release,
+        }),
+      });
+    });
+
+    it('should extract release from "release" field if it is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, { release: '1.0.0' } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          release: '1.0.0',
+        }),
+      });
+    });
+
+    it('should extract release from "release" field if envelope header has "trace.release" as well', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          trace: {
+            release: '1.0.0',
+          },
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, { release: '1.0.1' } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'errors/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          release: '1.0.1',
+        }),
+      });
+    });
   });
 });

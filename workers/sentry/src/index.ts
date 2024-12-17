@@ -6,6 +6,7 @@ import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from 
 import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
+import { DecodedEventData, EventAddons } from '@hawk.so/types';
 /**
  * Worker for handling Sentry events
  */
@@ -32,17 +33,15 @@ export default class SentryEventWorker extends Worker {
       const rawEvent = b64decode(event.payload.envelope);
       const envelope = parseEnvelope(rawEvent);
 
-      this.logger.debug(JSON.stringify(envelope));
-
       const [headers, items] = envelope;
 
       for (const item of items) {
         await this.handleEnvelopeItem(headers, item, event.projectId);
       }
-
-      this.logger.debug('All envelope items processed successfully.');
     } catch (error) {
-      this.logger.error('Error handling Sentry event task:', error);
+      this.logger.error(`Error handling Sentry event task:`, error);
+      this.logger.info('👇 Here is the problematic event:');
+      this.logger.json(event);
       throw error;
     }
   }
@@ -56,7 +55,11 @@ export default class SentryEventWorker extends Worker {
    */
   private async handleEnvelopeItem(envelopeHeaders: Envelope[0], item: EnvelopeItem, projectId: string): Promise<void> {
     try {
-      const [ itemHeader ] = item;
+      const [itemHeader, itemPayload] = item;
+
+      if (!itemPayload) {
+        throw new Error('Item payload is missing');
+      }
 
       /**
        * Skip non-event items
@@ -69,7 +72,9 @@ export default class SentryEventWorker extends Worker {
 
       await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
     } catch (error) {
-      this.logger.error('Error handling envelope item:', JSON.stringify(item), error);
+      this.logger.error('Error handling envelope item:', error);
+      this.logger.info('👇 Here is the problematic item:');
+      this.logger.json(item);
       throw error;
     }
   }
@@ -90,13 +95,6 @@ export default class SentryEventWorker extends Worker {
     const { sent_at, trace } = envelopeHeader;
 
     /**
-     * Delete public_key from trace
-     */
-    if (trace) {
-      delete trace.public_key;
-    }
-
-    /**
      * convert sent_at from ISO 8601 to Unix timestamp
      */
     const msInSecond = 1000;
@@ -112,20 +110,41 @@ export default class SentryEventWorker extends Worker {
     const user = composeUserData(eventPayload);
     const addons = composeAddons(eventPayload);
 
+    const event: DecodedEventData<EventAddons> = {
+      title,
+      type: eventPayload.level || 'error',
+      timestamp: sentAtUnix,
+      catcherVersion: pkg.version,
+    };
+
+    if (backtrace) {
+      event.backtrace = backtrace;
+    }
+
+    if (context) {
+      event.context = context;
+    }
+
+    if (user) {
+      event.user = user;
+    }
+
+    if (addons) {
+      event.addons = addons;
+    }
+
+    /**
+     * Event release is the release of the individual event
+     * while trace release is the release of the whole envelope (all items
+     */
+    if (eventPayload.release || trace?.release) {
+      event.release = eventPayload.release || trace?.release;
+    }
+
     return {
       projectId, // Public key is used as hawk project ID
       catcherType: 'errors/sentry',
-      payload: {
-        title,
-        type: eventPayload.level || 'error',
-        timestamp: sentAtUnix,
-        backtrace,
-        release: trace?.release || undefined,
-        context,
-        catcherVersion: pkg.version,
-        user,
-        addons,
-      },
+      payload: event,
     };
   }
 }
