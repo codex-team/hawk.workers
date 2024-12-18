@@ -164,12 +164,6 @@ describe('converter utils', () => {
         transaction: 'test-transaction',
         modules: { key: 'value' },
         fingerprint: [ 'test-fingerprint' ],
-        exception: {
-          values: [ {
-            type: 'Error',
-            value: 'Something went wrong',
-          } ],
-        },
         breadcrumbs: [ {
           message: 'Test breadcrumb',
         } ],

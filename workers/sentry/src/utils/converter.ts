@@ -117,7 +117,6 @@ export function composeAddons(eventPayload: SentryEvent): EventData<DefaultAddon
     'transaction',
     'modules',
     'fingerprint',
-    'exception',
     'breadcrumbs',
     'tags',
     'extra',
@@ -129,7 +128,7 @@ export function composeAddons(eventPayload: SentryEvent): EventData<DefaultAddon
     }
   });
 
-  return addons;
+  return Object.keys(addons).length > 0 ? addons : undefined;
 }
 
 /**

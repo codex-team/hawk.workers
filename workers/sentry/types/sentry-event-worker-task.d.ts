@@ -11,5 +11,5 @@ export interface SentryEventWorkerTask extends WorkerTask {
     envelope: string;
   };
   projectId: string;
-  catcherType: 'errors/sentry';
+  catcherType: 'external/sentry';
 }

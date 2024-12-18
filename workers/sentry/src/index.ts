@@ -7,6 +7,7 @@ import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
 import { DecodedEventData, EventAddons } from '@hawk.so/types';
+import { TextDecoder } from 'util';
 /**
  * Worker for handling Sentry events
  */
@@ -27,7 +28,7 @@ export default class SentryEventWorker extends Worker {
      *
      * @todo Rename to external/sentry because it is not a Hawk event
      */
-    this.type = 'errors/sentry';
+    this.type = 'external/sentry';
 
     try {
       const rawEvent = b64decode(event.payload.envelope);
@@ -102,7 +103,19 @@ export default class SentryEventWorker extends Worker {
     /* eslint-enable @typescript-eslint/naming-convention */
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    const [_eventHeaders, eventPayload] = eventItem;
+    let [_eventHeaders, eventPayload] = eventItem;
+
+    /**
+     * Sometimes Sentry parses the itemPayload as a Uint8Array
+     * (https://github.com/getsentry/sentry-javascript/blob/develop/packages/core/src/utils-hoist/envelope.ts#L173)
+     *
+     * We need to decode it to JSON
+     */
+    if (eventPayload instanceof Uint8Array) {
+      const textDecoder = new TextDecoder();
+
+      eventPayload = JSON.parse(textDecoder.decode(eventPayload as Uint8Array));
+    }
 
     const title = composeTitle(eventPayload);
     const backtrace = composeBacktrace(eventPayload);
@@ -141,9 +154,11 @@ export default class SentryEventWorker extends Worker {
       event.release = eventPayload.release || trace?.release;
     }
 
+    console.log('event', event);
+
     return {
       projectId, // Public key is used as hawk project ID
-      catcherType: 'errors/sentry',
+      catcherType: this.type,
       payload: event,
     };
   }

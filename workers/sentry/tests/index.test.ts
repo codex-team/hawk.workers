@@ -4,6 +4,7 @@ import { mockedAmqpChannel } from '../../../jest.setup.js';
 import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode } from '../src/utils/base64';
 import { EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 
 /**
  * Worker adds a task to the queue with buffered payload
@@ -76,7 +77,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(envelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(2);
@@ -88,7 +89,7 @@ describe('SentryEventWorker', () => {
           envelope: 'invalid-base64!',
         },
         projectId: '123',
-        catcherType: 'errors/sentry' as const,
+        catcherType: 'external/sentry' as const,
       };
 
       worker.muteLogger(true);
@@ -97,7 +98,7 @@ describe('SentryEventWorker', () => {
     });
 
     it('should handle empty envelope', async () => {
-      const emptyEnvelope = [
+      const emptyEnvelope: EventEnvelope = [
         {
           /* eslint-disable @typescript-eslint/naming-convention */
           event_id: '123e4567-e89b-12d3-a456-426614174000',
@@ -113,10 +114,10 @@ describe('SentryEventWorker', () => {
 
       await worker.handle({
         payload: {
-          envelope: b64encode(JSON.stringify(emptyEnvelope)),
+          envelope: b64encode(serializeEnvelope(emptyEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       expect(mockedAmqpChannel.sendToQueue).not.toHaveBeenCalled();
@@ -148,7 +149,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(JSON.stringify(mixedEnvelope)),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(0);
@@ -176,13 +177,55 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(malformedEventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       })).rejects.toThrow();
       worker.muteLogger(false);
     });
   });
 
   describe('transformToHawkFormat()', () => {
+    it('should support item payload in Uint8Array (when item header has a "length" property)', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [
+            {
+              type: 'event',
+              // eslint-disable-next-line @typescript-eslint/naming-convention
+              content_type: 'application/json',
+              /**
+               * If item header has a "length" property, sentry will parse the itemPayload to a Uint8Array
+               * https://github.com/getsentry/sentry-javascript/blob/develop/packages/core/src/utils-hoist/envelope.ts#L173
+               */
+              length: 100,
+            },
+            { message: 'Test timestamp' },
+          ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          type: 'error',
+        }),
+      });
+    });
+
     it('should handle different event levels', async () => {
       const levels: SeverityLevel[] = ['error', 'warning', 'info', 'fatal'];
 
@@ -207,7 +250,7 @@ describe('SentryEventWorker', () => {
             envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
           },
           projectId: '123',
-          catcherType: 'errors/sentry',
+          catcherType: 'external/sentry',
         });
 
         const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -245,7 +288,7 @@ describe('SentryEventWorker', () => {
             envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
           },
           projectId: '123',
-          catcherType: 'errors/sentry',
+          catcherType: 'external/sentry',
         });
 
         const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -287,7 +330,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -326,7 +369,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -366,7 +409,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -404,7 +447,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -450,7 +493,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -480,7 +523,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -513,7 +556,7 @@ describe('SentryEventWorker', () => {
           envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
         },
         projectId: '123',
-        catcherType: 'errors/sentry',
+        catcherType: 'external/sentry',
       });
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
@@ -522,6 +565,124 @@ describe('SentryEventWorker', () => {
         payload: expect.objectContaining({
           release: '1.0.1',
         }),
+      });
+    });
+  });
+  describe('(real-data tests)', () => {
+    it.only('should process real-world python error', async () => {
+      const event = {
+        projectId: '675c9605b8264d74b5a7dcf3',
+        payload: { envelope: 'eyJldmVudF9pZCI6ImE3OWVhYjNmY2ZjMDQ1ZjM5MTUyNzM5NWJmYzhlZGM2Iiwic2VudF9hdCI6IjIwMjQtMTItMThUMTQ6MDA6MTIuODY2NjYwWiIsInRyYWNlIjp7InRyYWNlX2lkIjoiYTAwMDA1NzEwOGFlNDJhMGIxNTRhY2ZmN2U5YTUxMTQiLCJlbnZpcm9ubWVudCI6InByb2R1Y3Rpb24iLCJyZWxlYXNlIjoiMzVjNDJmMmRkZjUyNGJiZGFmZTIyNDM5Yjk4MWRkZmQwZmIzYjVhZCIsInB1YmxpY19rZXkiOiIyMGRlYTRjN2NmZjg0NWZlYmE3YWJmNDlhYzZhOTdlZWFiMTg4NDNhOTczNDRmODZhY2QzNGM3MzAxNDc3YTQxIn19CnsidHlwZSI6ImV2ZW50IiwiY29udGVudF90eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImxlbmd0aCI6MTk5MH0KeyJsZXZlbCI6ImVycm9yIiwiZXhjZXB0aW9uIjp7InZhbHVlcyI6W3sibWVjaGFuaXNtIjp7InR5cGUiOiJleGNlcHRob29rIiwiaGFuZGxlZCI6ZmFsc2V9LCJtb2R1bGUiOm51bGwsInR5cGUiOiJaZXJvRGl2aXNpb25FcnJvciIsInZhbHVlIjoiZGl2aXNpb24gYnkgemVybyIsInN0YWNrdHJhY2UiOnsiZnJhbWVzIjpbeyJmaWxlbmFtZSI6InNlbnRyeS1wcm9kLnB5IiwiYWJzX3BhdGgiOiIvVXNlcnMvbm9zdHIvZGV2L2NvZGV4L2hhd2subW9uby90ZXN0cy9tYW51YWwvc2VudHJ5L3NlbnRyeS1wcm9kLnB5IiwiZnVuY3Rpb24iOiI8bW9kdWxlPiIsIm1vZHVsZSI6Il9fbWFpbl9fIiwibGluZW5vIjoxMSwicHJlX2NvbnRleHQiOlsiIiwic2VudHJ5X3Nkay5pbml0KCIsIiAgICBkc249ZlwiaHR0cHM6Ly97SEFXS19JTlRFR1JBVElPTl9UT0tFTn1Ae0hPU1R9LzBcIiwiLCIgICAgZGVidWc9VHJ1ZSIsIikiXSwiY29udGV4dF9saW5lIjoiZGl2aXNpb25fYnlfemVybyA9IDEgLyAwIiwicG9zdF9jb250ZXh0IjpbInByaW50KFwidGhpc1wiKSIsInByaW50KFwiaXNcIikiLCJwcmludChcIm9rXCIpIiwiIyByYWlzZSBFeGNlcHRpb24oXCJUaGlzIGlzIGEgdGVzdCBleGNlcHRpb25cIikiXSwidmFycyI6eyJfX25hbWVfXyI6IidfX21haW5fXyciLCJfX2RvY19fIjoiTm9uZSIsIl9fcGFja2FnZV9fIjoiTm9uZSIsIl9fbG9hZGVyX18iOiI8X2Zyb3plbl9pbXBvcnRsaWJfZXh0ZXJuYWwuU291cmNlRmlsZUxvYWRlciBvYmplY3QgYXQgMHgxMDI5MzRjYjA+IiwiX19zcGVjX18iOiJOb25lIiwiX19hbm5vdGF0aW9uc19fIjp7fSwiX19idWlsdGluc19fIjoiPG1vZHVsZSAnYnVpbHRpbnMnIChidWlsdC1pbik+IiwiX19maWxlX18iOiInL1VzZXJzL25vc3RyL2Rldi9jb2RleC9oYXdrLm1vbm8vdGVzdHMvbWFudWFsL3NlbnRyeS9zZW50cnktcHJvZC5weSciLCJfX2NhY2hlZF9fIjoiTm9uZSIsInNlbnRyeV9zZGsiOiI8bW9kdWxlICdzZW50cnlfc2RrJyBmcm9tICcvVXNlcnMvbm9zdHIvZGV2L2NvZGV4L2hhd2subW9uby8udmVudi9saWIvcHl0aG9uMy4xMy9zaXRlLXBhY2thZ2VzL3NlbnRyeV9zZGsvX19pbml0X18ucHknPiJ9LCJpbl9hcHAiOnRydWV9XX19XX0sImV2ZW50X2lkIjoiYTc5ZWFiM2ZjZmMwNDVmMzkxNTI3Mzk1YmZjOGVkYzYiLCJ0aW1lc3RhbXAiOiIyMDI0LTEyLTE4VDE0OjAwOjEyLjg2MzY4NFoiLCJjb250ZXh0cyI6eyJ0cmFjZSI6eyJ0cmFjZV9pZCI6ImEwMDAwNTcxMDhhZTQyYTBiMTU0YWNmZjdlOWE1MTE0Iiwic3Bhbl9pZCI6ImFmNzI2MjMwODk4ODJiNjciLCJwYXJlbnRfc3Bhbl9pZCI6bnVsbH0sInJ1bnRpbWUiOnsibmFtZSI6IkNQeXRob24iLCJ2ZXJzaW9uIjoiMy4xMy4xIiwiYnVpbGQiOiIzLjEzLjEgKG1haW4sIERlYyAgMyAyMDI0LCAxNzo1OTo1MikgW0NsYW5nIDE2LjAuMCAoY2xhbmctMTYwMC4wLjI2LjQpXSJ9fSwidHJhbnNhY3Rpb25faW5mbyI6e30sImJyZWFkY3J1bWJzIjp7InZhbHVlcyI6W119LCJleHRyYSI6eyJzeXMuYXJndiI6WyJzZW50cnktcHJvZC5weSJdfSwibW9kdWxlcyI6eyJwaXAiOiIyNC4zLjEiLCJ1cmxsaWIzIjoiMi4yLjMiLCJzZW50cnktc2RrIjoiMi4xOS4wIiwiY2VydGlmaSI6IjIwMjQuOC4zMCJ9LCJyZWxlYXNlIjoiMzVjNDJmMmRkZjUyNGJiZGFmZTIyNDM5Yjk4MWRkZmQwZmIzYjVhZCIsImVudmlyb25tZW50IjoicHJvZHVjdGlvbiIsInNlcnZlcl9uYW1lIjoiTWFjQm9vay1Qcm8tQWxla3NhbmRyLTUubG9jYWwiLCJzZGsiOnsibmFtZSI6InNlbnRyeS5weXRob24iLCJ2ZXJzaW9uIjoiMi4xOS4wIiwicGFja2FnZXMiOlt7Im5hbWUiOiJweXBpOnNlbnRyeS1zZGsiLCJ2ZXJzaW9uIjoiMi4xOS4wIn1dLCJpbnRlZ3JhdGlvbnMiOlsiYXJndiIsImF0ZXhpdCIsImRlZHVwZSIsImV4Y2VwdGhvb2siLCJsb2dnaW5nIiwibW9kdWxlcyIsInN0ZGxpYiIsInRocmVhZGluZyJdfSwicGxhdGZvcm0iOiJweXRob24ifQo=' },
+        catcherType: 'external/sentry',
+      };
+
+      await worker.handle(event as SentryEventWorkerTask);
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        /* eslint-disable @typescript-eslint/naming-convention */
+        payload: expect.objectContaining({
+          release: '35c42f2ddf524bbdafe22439b981ddfd0fb3b5ad',
+          catcherVersion: '0.0.1',
+          timestamp: 1734530412,
+          type: 'error',
+          title: 'ZeroDivisionError: division by zero',
+          backtrace: [
+            {
+              file: 'sentry-prod.py',
+              line: 11,
+              function: '<module>',
+              arguments: [
+                "__name__='__main__'",
+                '__doc__=None',
+                '__package__=None',
+                '__loader__=<_frozen_importlib_external.SourceFileLoader object at 0x102934cb0>',
+                '__spec__=None',
+                '__annotations__=[object Object]',
+                "__builtins__=<module 'builtins' (built-in)>",
+                "__file__='/Users/nostr/dev/codex/hawk.mono/tests/manual/sentry/sentry-prod.py'",
+                '__cached__=None',
+                "sentry_sdk=<module 'sentry_sdk' from '/Users/nostr/dev/codex/hawk.mono/.venv/lib/python3.13/site-packages/sentry_sdk/__init__.py'>",
+              ],
+              sourceCode: [
+                {
+                  content: '',
+                  line: 6,
+                },
+                {
+                  content: 'sentry_sdk.init(',
+                  line: 7,
+                },
+                {
+                  content: '    dsn=f"https://{HAWK_INTEGRATION_TOKEN}@{HOST}/0",',
+                  line: 8,
+                },
+                {
+                  content: '    debug=True',
+                  line: 9,
+                },
+                {
+                  content: ')',
+                  line: 10,
+                },
+                {
+                  content: 'division_by_zero = 1 / 0',
+                  line: 11,
+                },
+                {
+                  content: 'print("this")',
+                  line: 12,
+                },
+                {
+                  content: 'print("is")',
+                  line: 13,
+                },
+                {
+                  content: 'print("ok")',
+                  line: 14,
+                },
+                {
+                  content: '# raise Exception("This is a test exception")',
+                  line: 15,
+                },
+              ],
+            },
+          ],
+          context: {
+            runtime: {
+              build: '3.13.1 (main, Dec  3 2024, 17:59:52) [Clang 16.0.0 (clang-1600.0.26.4)]',
+              name: 'CPython',
+              version: '3.13.1',
+            },
+            trace: {
+              parent_span_id: null,
+              span_id: 'af72623089882b67',
+              trace_id: 'a000057108ae42a0b154acff7e9a5114',
+            },
+          },
+          addons: {
+            breadcrumbs: {
+              values: [],
+            },
+            environment: 'production',
+            platform: 'python',
+            extra: {
+              'sys.argv': [ 'sentry-prod.py' ],
+            },
+            level: 'error',
+            modules: {
+              certifi: '2024.8.30',
+              pip: '24.3.1',
+              'sentry-sdk': '2.19.0',
+              urllib3: '2.2.3',
+            },
+            release: '35c42f2ddf524bbdafe22439b981ddfd0fb3b5ad',
+            server_name: 'MacBook-Pro-Aleksandr-5.local',
+            timestamp: '2024-12-18T14:00:12.863684Z',
+          },
+        }),
+        /* eslint-enable @typescript-eslint/naming-convention */
       });
     });
   });

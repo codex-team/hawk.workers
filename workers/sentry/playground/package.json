@@ -1,0 +1,16 @@
+{
+  "name": "hawk-sentry-playground",
+  "version": "0.0.1",
+  "description": "You can send some events via Sentry SDK to Hawk here",
+  "main": "src/index.ts",
+  "author": "CodeX",
+  "license": "MIT",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.46.0",
+    "dotenv": "^16.4.7",
+    "ts-node": "^10.9.2"
+  }
+}
