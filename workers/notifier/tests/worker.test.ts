@@ -234,7 +234,7 @@ describe('NotifierWorker', () => {
       /**
        * Current event count is equal to rule threshold
        */
-      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
         return Promise.resolve(rule.threshold);
       });
 
@@ -263,7 +263,7 @@ describe('NotifierWorker', () => {
       /**
        * Current event count is equal to rule threshold
        */
-      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
         return Promise.resolve(rule.threshold - 1);
       });
 
@@ -292,7 +292,7 @@ describe('NotifierWorker', () => {
       /**
        * Current event count is equal to rule threshold
        */
-      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
         return Promise.resolve(rule.threshold + 1);
       });
 

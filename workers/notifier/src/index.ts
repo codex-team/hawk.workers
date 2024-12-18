@@ -71,7 +71,7 @@ export default class NotifierWorker extends Worker {
           return;
         }
 
-        const currentEventCount = await this.redis.getCurrentEventCount(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
+        const currentEventCount = await this.redis.computeEventCountForPeriod(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
 
         /**
          * If threshold reached, then send event to channels
