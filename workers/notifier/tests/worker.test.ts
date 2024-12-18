@@ -202,12 +202,6 @@ describe('NotifierWorker', () => {
   });
 
   describe('handling', () => {
-<<<<<<< Updated upstream
-    it('should correctly handle first message', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-=======
     it('should send task if event threshold reached', async () => {
       const worker = new NotifierWorker();
 
@@ -227,7 +221,6 @@ describe('NotifierWorker', () => {
       RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
         return Promise.resolve(rule.threshold);
       });
->>>>>>> Stashed changes
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -244,36 +237,11 @@ describe('NotifierWorker', () => {
 
       await worker.handle(message);
 
-<<<<<<< Updated upstream
-      expect(worker.buffer.setTimer).toBeCalledTimes(2);
-      expect(worker.buffer.push).not.toBeCalled();
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.setTimer).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel],
-          rule.channels[channel].minPeriod * 1000,
-          worker.sendEvents
-        );
-        expect(worker.sendToSenderWorker).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channels[i]],
-          events
-        );
-      });
-=======
       expect(worker.sendToSenderWorker).toHaveBeenCalled();
->>>>>>> Stashed changes
 
       await worker.finish();
     });
 
-<<<<<<< Updated upstream
-    it('should correctly handle messages after first one', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-=======
     it('should not send task if event repetitions number is less than threshold', async () => {
       const worker = new NotifierWorker();
 
@@ -293,7 +261,6 @@ describe('NotifierWorker', () => {
       RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
         return Promise.resolve(rule.threshold - 1);
       });
->>>>>>> Stashed changes
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -313,42 +280,6 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
       await worker.handle(message);
 
-<<<<<<< Updated upstream
-      expect(worker.buffer.getTimer).toBeCalledTimes(4);
-      expect(worker.buffer.push).toBeCalledTimes(2);
-      expect(worker.sendToSenderWorker).toBeCalledTimes(2);
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.push).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel, messageMock.event.groupHash]
-        );
-      });
-
-      jest.useRealTimers();
-
-      await worker.finish();
-    });
-
-    it('should send events after timeout', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
-      worker.sendToSenderWorker = jest.fn();
-
-      const realSendEvents = worker.sendEvents;
-
-      worker.sendEvents = jest.fn((...args) => realSendEvents.apply(worker, args));
-
-      const realFlush = worker.buffer.flush;
-
-      worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-=======
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
 
       await worker.finish();
@@ -375,54 +306,11 @@ describe('NotifierWorker', () => {
       });
 
       worker.sendToSenderWorker = jest.fn();
->>>>>>> Stashed changes
 
       await worker.handle(message);
       await worker.handle(message);
 
-<<<<<<< Updated upstream
-      await new Promise((resolve) => setTimeout(() => {
-        expect(worker.sendEvents).toBeCalledTimes(2);
-        expect(worker.buffer.flush).toBeCalledTimes(2);
-
-        channels.forEach((channel, i) => {
-          expect(worker.buffer.flush).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-          expect(worker.sendEvents).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-        });
-
-        resolve();
-      }, 1000));
-
-      await worker.finish();
-    });
-
-    it('should do nothing if project doesn\'t exist', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
-      worker.addEventsToChannels = jest.fn();
-
-      const message = { ...messageMock };
-
-      const oldMock = dbQueryMock;
-
-      dbQueryMock = jest.fn(() => null);
-
-      await worker.handle(message);
-
-      expect(worker.addEventsToChannels).not.toBeCalled();
-
-      dbQueryMock = oldMock;
-=======
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
->>>>>>> Stashed changes
 
       await worker.finish();
     });
