@@ -8,6 +8,35 @@ export enum ChannelType {
 }
 
 /**
+ * Composed key to identify channel
+ *
+ * [projectId, ruleId, channelName]
+ */
+export type ChannelKey = [string, string, string];
+
+/**
+ * Composed key to identify event
+ *
+ * [projectId, ruleId, channelName, eventGroupHash]
+ */
+export type EventKey = [string, string, string, string];
+
+/**
+ * Interface that represents data, that notifier passes to sender worker
+ */
+export interface SenderData {
+  /**
+   * Group hash of the event
+   */
+  key: string;
+
+  /**
+   * Number of events received
+   */
+  count: number;
+}
+
+/**
  * Notification channel object
  */
 export interface Channel {
