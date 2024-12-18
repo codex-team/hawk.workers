@@ -46,14 +46,15 @@ export default class NotifierWorker extends Worker {
    */
   public async finish(): Promise<void> {
     await super.finish();
-    await this.accountsDb.connect();
-    await this.eventsDb.connect();
+    await this.accountsDb.close();
+    await this.eventsDb.close();
   }
 
   /**
    * Task handling function
    * Checks if event count is equal to the threshold and sends event to channels if it is
    * Otherwise, increments the event count
+   *
    * @param task — notifier task to handle
    */
   public async handle(task: NotifierWorkerTask): Promise<void> {
@@ -73,12 +74,6 @@ export default class NotifierWorker extends Worker {
           return;
         }
 
-<<<<<<< Updated upstream
-        rules.forEach((rule) => {
-          this.addEventToChannels(projectId, rule, event);
-        });
-      }
-=======
         const currentEventCount = await this.redis.getCurrentEventCount(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
 
         /**
@@ -87,111 +82,13 @@ export default class NotifierWorker extends Worker {
         if (rule.threshold === currentEventCount) {
           await this.addEventToChannels(projectId, rule, event);
         }
-      }      
->>>>>>> Stashed changes
+      }
     } catch (e) {
       this.logger.error('Failed to handle message because of ', e);
     }
   }
 
   /**
-<<<<<<< Updated upstream
-   * Method that returns threshold for current project
-   * Used to check if event is critical or not
-   *
-   * @param projectId - if of the project, to get notification threshold for
-   */
-  private async getNotificationThreshold(projectId: string): Promise<number> {
-    const storedEventsCount = this.redis.getProjectNotificationThreshold(projectId);
-
-    /**
-     * If redis has no threshold stored, then get it from the database
-     */
-    if (storedEventsCount === null) {
-      const connection = this.eventsDb.getConnection();
-
-      const currentTime = Date.now();
-      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-      const twoDaysAgo = currentTime - 48 * 60 * 60 * 1000;
-      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-      const oneDayAgo = currentTime - 24 * 60 * 60 * 1000;
-
-      const events = connection.collection(`events:${projectId}`);
-      const repetitions = connection.collection(`repetitions:${projectId}`);
-
-      /**
-       * Get ten events of the current project
-       */
-      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-      const eventsToEvaluate = await events.find({}).limit(10)
-        .toArray();
-
-      let averageProjectRepetitionsADay = 0;
-
-      /**
-       * For each event get repetitions since two days to one day ago
-       */
-      eventsToEvaluate.forEach(async (event) => {
-        const repetitionsCount = await repetitions.countDocuments({
-          'payload.timestamp': {
-            $gte: twoDaysAgo,
-            $le: oneDayAgo,
-          },
-          groupHash: event.groupHash,
-        });
-
-        averageProjectRepetitionsADay += repetitionsCount;
-      });
-
-      /**
-       * Set counted repetitions count into redis storage
-       */
-      this.redis.setProjectNotificationTreshold(projectId, averageProjectRepetitionsADay);
-
-      /**
-       * Return floored average repetitions count
-       */
-      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-      return Math.floor(averageProjectRepetitionsADay / 10);
-    }
-  }
-
-  /**
-   * Check if event is critical
-   *
-   * @param projectId - id of the project to of the event
-   * @param {NotifierEvent} event — received event
-   * @returns {boolean}
-   */
-  private async isEventCritical(projectId: string, event: NotifierEvent): Promise<boolean> {
-    /**
-     * Get current event repetitions from digest
-     */
-    const eventRepetitionsToday = await this.redis.getEventRepetitionsFromDigest(projectId, event.groupHash);
-
-    const projectThreshold = await this.getNotificationThreshold(projectId);
-
-    /**
-     * Check if event repetitions are equal to threshold
-     */
-    if (eventRepetitionsToday !== null && eventRepetitionsToday === projectThreshold) {
-      return true;
-    /**
-     * Check if event is new
-     */
-    } else if (event.isNew) {
-      return true;
-    }
-
-    /**
-     * Event is not critical in other cases
-     */
-    return false;
-  }
-
-  /**
-=======
->>>>>>> Stashed changes
    * Get project notifications rules that matches received event
    *
    * @param {string} projectId — project id event is related to
@@ -242,14 +139,14 @@ export default class NotifierWorker extends Worker {
       if (!options.isEnabled) {
         return;
       }
-      
+
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-      
+
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
-      }]);
-    };
+      } ]);
+    }
   }
 
   /**

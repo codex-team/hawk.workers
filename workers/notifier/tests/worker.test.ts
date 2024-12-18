@@ -2,7 +2,7 @@ import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 import '../../../env-test';
-import waitForExpect from 'wait-for-expect';
+import RedisHelper from '../src/redisHelper';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -34,7 +34,7 @@ const rule = {
   },
 } as any;
 
-let dbQueryMock = jest.fn(() => ({
+const dbQueryMock = jest.fn(() => ({
   notifications: [ rule ],
 })) as any;
 
@@ -123,6 +123,10 @@ describe('NotifierWorker', () => {
     it('should get db connection on message handle', async () => {
       const worker = new NotifierWorker();
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       await worker.start();
 
       const message = { ...messageMock };
@@ -138,6 +142,10 @@ describe('NotifierWorker', () => {
 
     it('should get db connection on message handle and cache result', async () => {
       const worker = new NotifierWorker();
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
 
       await worker.start();
 
@@ -160,6 +168,10 @@ describe('NotifierWorker', () => {
       const worker = new NotifierWorker();
       const message = { ...messageMock };
 
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
       await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
@@ -174,6 +186,10 @@ describe('NotifierWorker', () => {
     it('should query correct project on message handle', async () => {
       const worker = new NotifierWorker();
       const message = { ...messageMock };
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
 
       await worker.start();
 
@@ -212,9 +228,9 @@ describe('NotifierWorker', () => {
       });
 
       await worker.start();
-      
+
       const message = { ...messageMock };
-      
+
       /**
        * Current event count is equal to rule threshold
        */
@@ -223,17 +239,6 @@ describe('NotifierWorker', () => {
       });
 
       worker.sendToSenderWorker = jest.fn();
-
-      worker.buffer.push = jest.fn();
-      worker.buffer.setTimer = jest.fn();
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-      const events = [ {
-        key: message.event.groupHash,
-        count: 1,
-      } ];
 
       await worker.handle(message);
 
@@ -252,9 +257,9 @@ describe('NotifierWorker', () => {
       });
 
       await worker.start();
-      
+
       const message = { ...messageMock };
-      
+
       /**
        * Current event count is equal to rule threshold
        */
@@ -264,27 +269,13 @@ describe('NotifierWorker', () => {
 
       worker.sendToSenderWorker = jest.fn();
 
-      jest.useFakeTimers();
-
-      const realGetTimer = worker.buffer.getTimer;
-      const realSetTimer = worker.buffer.setTimer;
-
-      worker.buffer.getTimer = jest.fn((...args) => realGetTimer.apply(worker.buffer, args));
-      worker.buffer.setTimer = jest.fn((...args) => realSetTimer.apply(worker.buffer, args));
-      worker.buffer.push = jest.fn();
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-
-      await worker.handle(message);
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
 
       await worker.finish();
     });
-    
+
     it('should not send task if event repetitions number is more than threshold', async () => {
       const worker = new NotifierWorker();
 
@@ -295,9 +286,9 @@ describe('NotifierWorker', () => {
       });
 
       await worker.start();
-      
+
       const message = { ...messageMock };
-      
+
       /**
        * Current event count is equal to rule threshold
        */
@@ -314,57 +305,5 @@ describe('NotifierWorker', () => {
 
       await worker.finish();
     });
-  });
-
-  it('should send task to sender workers', async () => {
-    const worker = new NotifierWorker();
-
-    await worker.start();
-
-    await worker.start();
-
-    worker.addTask = jest.fn();
-
-    const message = { ...messageMock };
-
-    await worker.handle(message);
-
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        1,
-        `sender/telegram`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
-
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        2,
-        `sender/slack`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
-
-    await worker.finish();
   });
 });

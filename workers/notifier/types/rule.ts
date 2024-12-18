@@ -48,7 +48,7 @@ export interface Rule {
   readonly threshold: number;
 
   /**
-   * Size of period (in milliseconds) to count events to compare to rule threshold  
+   * Size of period (in milliseconds) to count events to compare to rule threshold
    */
   readonly eventThresholdPeriod: number;
 
