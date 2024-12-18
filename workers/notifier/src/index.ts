@@ -25,7 +25,6 @@ export default class NotifierWorker extends Worker {
    * Database Controllers
    */
   private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
-  private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
   /**
    * Redis helper instance for modifying data through redis
@@ -37,7 +36,6 @@ export default class NotifierWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.accountsDb.connect();
-    await this.eventsDb.connect();
     await super.start();
   }
 
@@ -47,7 +45,6 @@ export default class NotifierWorker extends Worker {
   public async finish(): Promise<void> {
     await super.finish();
     await this.accountsDb.close();
-    await this.eventsDb.close();
   }
 
   /**
