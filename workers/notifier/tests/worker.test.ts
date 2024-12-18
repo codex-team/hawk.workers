@@ -11,6 +11,8 @@ const rule = {
   isEnabled: true,
   uidAdded: 'userid',
   whatToReceive: WhatToReceive.All,
+  threshold: 100,
+  thresholdPeriod: 60 * 1000,
   including: [],
   excluding: [],
   channels: {
@@ -200,10 +202,32 @@ describe('NotifierWorker', () => {
   });
 
   describe('handling', () => {
+<<<<<<< Updated upstream
     it('should correctly handle first message', async () => {
       const worker = new NotifierWorker();
 
       await worker.start();
+=======
+    it('should send task if event threshold reached', async () => {
+      const worker = new NotifierWorker();
+
+      jest.mock('../src/redisHelper');
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
+      await worker.start();
+      
+      const message = { ...messageMock };
+      
+      /**
+       * Current event count is equal to rule threshold
+       */
+      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+        return Promise.resolve(rule.threshold);
+      });
+>>>>>>> Stashed changes
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -220,6 +244,7 @@ describe('NotifierWorker', () => {
 
       await worker.handle(message);
 
+<<<<<<< Updated upstream
       expect(worker.buffer.setTimer).toBeCalledTimes(2);
       expect(worker.buffer.push).not.toBeCalled();
 
@@ -236,14 +261,39 @@ describe('NotifierWorker', () => {
           events
         );
       });
+=======
+      expect(worker.sendToSenderWorker).toHaveBeenCalled();
+>>>>>>> Stashed changes
 
       await worker.finish();
     });
 
+<<<<<<< Updated upstream
     it('should correctly handle messages after first one', async () => {
       const worker = new NotifierWorker();
 
       await worker.start();
+=======
+    it('should not send task if event repetitions number is less than threshold', async () => {
+      const worker = new NotifierWorker();
+
+      jest.mock('../src/redisHelper');
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
+      await worker.start();
+      
+      const message = { ...messageMock };
+      
+      /**
+       * Current event count is equal to rule threshold
+       */
+      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+        return Promise.resolve(rule.threshold - 1);
+      });
+>>>>>>> Stashed changes
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -263,6 +313,7 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
       await worker.handle(message);
 
+<<<<<<< Updated upstream
       expect(worker.buffer.getTimer).toBeCalledTimes(4);
       expect(worker.buffer.push).toBeCalledTimes(2);
       expect(worker.sendToSenderWorker).toBeCalledTimes(2);
@@ -297,10 +348,39 @@ describe('NotifierWorker', () => {
       const message = { ...messageMock };
       const channels = ['telegram', 'slack'];
       const channelKeyPart = [message.projectId, rule._id];
+=======
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+
+      await worker.finish();
+    });
+    
+    it('should not send task if event repetitions number is more than threshold', async () => {
+      const worker = new NotifierWorker();
+
+      jest.mock('../src/redisHelper');
+
+      worker.redis.redisClient.eval = jest.fn(async () => {
+        return Promise.resolve();
+      });
+
+      await worker.start();
+      
+      const message = { ...messageMock };
+      
+      /**
+       * Current event count is equal to rule threshold
+       */
+      RedisHelper.prototype.getCurrentEventCount = jest.fn(async () => {
+        return Promise.resolve(rule.threshold + 1);
+      });
+
+      worker.sendToSenderWorker = jest.fn();
+>>>>>>> Stashed changes
 
       await worker.handle(message);
       await worker.handle(message);
 
+<<<<<<< Updated upstream
       await new Promise((resolve) => setTimeout(() => {
         expect(worker.sendEvents).toBeCalledTimes(2);
         expect(worker.buffer.flush).toBeCalledTimes(2);
@@ -340,6 +420,9 @@ describe('NotifierWorker', () => {
       expect(worker.addEventsToChannels).not.toBeCalled();
 
       dbQueryMock = oldMock;
+=======
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+>>>>>>> Stashed changes
 
       await worker.finish();
     });

@@ -43,6 +43,16 @@ export interface Rule {
   readonly including: string[];
 
   /**
+   * If this number of events is reached in the eventThresholdPeriod, the rule will be triggered
+   */
+  readonly threshold: number;
+
+  /**
+   * Size of period (in milliseconds) to count events to compare to rule threshold  
+   */
+  readonly eventThresholdPeriod: number;
+
+  /**
    * Words event title must not include
    */
   readonly excluding: string[];

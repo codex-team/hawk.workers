@@ -52,52 +52,50 @@ export default class NotifierWorker extends Worker {
 
   /**
    * Task handling function
-   *
-   * Handling scheme:
-   *
-   * 1) On task received
-   *   -> receive task
-   *   -> get project notification rules
-   *   -> filter rules
-   *   -> check channel timer
-   *      a) if timer doesn't exist
-   *        -> send tasks to sender workers
-   *        -> set timeout for minPeriod
-   *      b) if timer exists
-   *        -> push event to channel's buffer
-   *
-   * 2) On timeout
-   *   -> get events from channel's buffer
-   *   -> flush channel's buffer
-   *   -> send tasks to sender workers
-   *
-   * @param {NotifierWorkerTask} task — task to handle
+   * Checks if event count is equal to the threshold and sends event to channels if it is
+   * Otherwise, increments the event count
+   * @param task — notifier task to handle
    */
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;
 
       /**
-       * Increment event repetitions count in digest
+       * Get fitter rules for received event
        */
-      this.redis.addEventToDigest(projectId, event.groupHash);
+      const rules = await this.getFittedRules(projectId, event);
 
-      /**
-       * If event is critical, then send it to the channels
-       */
-      if (await this.isEventCritical(projectId, event)) {
-        const rules = await this.getFittedRules(projectId, event);
+      for (const rule of rules) {
+        /**
+         * If rule is enabled no need to store data in redis
+         */
+        if (rule.isEnabled === false) {
+          return;
+        }
 
+<<<<<<< Updated upstream
         rules.forEach((rule) => {
           this.addEventToChannels(projectId, rule, event);
         });
       }
+=======
+        const currentEventCount = await this.redis.getCurrentEventCount(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
+
+        /**
+         * If threshold reached, then send event to channels
+         */
+        if (rule.threshold === currentEventCount) {
+          await this.addEventToChannels(projectId, rule, event);
+        }
+      }      
+>>>>>>> Stashed changes
     } catch (e) {
       this.logger.error('Failed to handle message because of ', e);
     }
   }
 
   /**
+<<<<<<< Updated upstream
    * Method that returns threshold for current project
    * Used to check if event is critical or not
    *
@@ -192,6 +190,8 @@ export default class NotifierWorker extends Worker {
   }
 
   /**
+=======
+>>>>>>> Stashed changes
    * Get project notifications rules that matches received event
    *
    * @param {string} projectId — project id event is related to
@@ -232,24 +232,24 @@ export default class NotifierWorker extends Worker {
    * @param {Rule} rule - notification rule
    * @param {NotifierEvent} event - received event
    */
-  private addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): void {
+  private async addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): Promise<void> {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels as { [name: string]: Channel });
 
-    channels.forEach(async ([name, options]) => {
+    for (const [name, options] of channels) {
       /**
        * If channel is disabled by user, do not add event to it
        */
       if (!options.isEnabled) {
         return;
       }
-
+      
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-
+      
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
-      } ]);
-    });
+      }]);
+    };
   }
 
   /**
