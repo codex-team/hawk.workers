@@ -11,7 +11,7 @@ module.exports = {
   /**
    * The test environment that will be used for testing
    */
-  // testEnvironment: 'node',
+  testEnvironment: 'node',
 
   /**
    * For testing mongodb queries
