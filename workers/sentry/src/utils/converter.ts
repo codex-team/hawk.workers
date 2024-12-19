@@ -19,7 +19,19 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
   try {
     const backtrace: EventData<DefaultAddons>['backtrace'] = [];
 
-    eventPayload.exception?.values?.[0]?.stacktrace?.frames?.forEach((frame) => {
+    let frames = eventPayload.exception?.values?.[0]?.stacktrace?.frames;
+
+    if (!frames) {
+      return undefined;
+    }
+
+    /**
+     * Sentry sends backtrace in reverse order
+     * We need to reverse it to get the correct order
+     */
+    frames = [ ...frames ].reverse();
+
+    frames.forEach((frame) => {
       const backtraceFrame: BacktraceFrame = {
         file: frame.filename || frame.abs_path || frame.module || frame.instruction_addr || 'unknown location',
         line: frame.lineno || 0,

@@ -154,10 +154,8 @@ export default class SentryEventWorker extends Worker {
       event.release = eventPayload.release || trace?.release;
     }
 
-    console.log('event', event);
-
     return {
-      projectId, // Public key is used as hawk project ID
+      projectId,
       catcherType: this.type,
       payload: event,
     };

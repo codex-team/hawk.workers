@@ -35,15 +35,16 @@ function getHexIntegrationToken(): string {
   return `${removeHyphens(integrationId)}${removeHyphens(secret)}`;
 }
 
+/**
+ * Compose DSN
+ */
 const dsn = `https://${getHexIntegrationToken()}@k1.hawk.so/0`;
-
-console.log('dsn', dsn);
 
 /**
  * Initialize Sentry
  */
 Sentry.init({
-  dsn: `https://${getHexIntegrationToken()}@k1.hawk.so/0`,
+  dsn,
   debug: true,
 });
 
@@ -68,7 +69,6 @@ async function main(): Promise<void> {
      * Capture and send error to Sentry
      */
     Sentry.captureException(error);
-    // console.error('Error caught and sent to Sentry:', error);
   }
 
   /**

@@ -92,6 +92,39 @@ describe('converter utils', () => {
         line: 0,
       });
     });
+
+    it('should reverse frames', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [
+                {
+                  filename: 'test1.js',
+                  lineno: 10,
+                },
+                {
+                  filename: 'test2.js',
+                  lineno: 123,
+                },
+              ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0]).toEqual({
+        file: 'test2.js',
+        line: 123,
+      });
+
+      expect(backtrace?.[1]).toEqual({
+        file: 'test1.js',
+        line: 10,
+      });
+    });
   });
 
   describe('composeContext()', () => {
