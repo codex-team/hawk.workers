@@ -11,8 +11,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev gdebi-core
-          wget http://ftp.us.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1n-0+deb11u4_amd64.deb
-          sudo gdebi --non-interactive libssl1.1_1.1.1n-0+deb11u4_amd64.deb
+          wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
+          sudo gdebi --non-interactive libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
       - uses: actions/checkout@v2
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
