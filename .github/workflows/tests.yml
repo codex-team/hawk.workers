@@ -5,14 +5,12 @@ on: [push]
 jobs:
   lint:
     name: Unit testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev gdebi-core
-          wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
-          sudo gdebi --non-interactive libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
+          sudo apt-get install -y libssl1.1 gdebi-core
       - uses: actions/checkout@v2
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
