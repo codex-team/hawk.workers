@@ -8,6 +8,8 @@ Sentry worker for handling events in correct format.
 3. `yarn install`
 4. `yarn run-sentry`
 
+To send some test events via Sentry SDK you can use [Playground](./playground/README.md).
+
 ## Sentry message
 
 ### SentryEventWorkerTask
