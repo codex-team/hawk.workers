@@ -19,6 +19,7 @@
         "test:db": "jest lib/db/",
         "test:cache": "jest lib/cache",
         "test:default": "jest workers/default",
+        "test:sentry": "jest workers/sentry --config workers/sentry/jest.config.js",
         "test:javascript": "jest workers/javascript",
         "test:release": "jest workers/release",
         "test:slack": "jest workers/slack",
@@ -28,6 +29,7 @@
         "test:notifier": "jest workers/notifier",
         "test:clear": "jest --clearCache",
         "run-default": "yarn worker hawk-worker-default",
+        "run-sentry": "yarn worker hawk-worker-sentry",
         "run-js": "yarn worker hawk-worker-javascript",
         "run-slack": "yarn worker hawk-worker-slack",
         "run-grouper": "yarn worker hawk-worker-grouper",
@@ -67,7 +69,7 @@
         "yup": "^0.28.5"
     },
     "devDependencies": {
-        "@shelf/jest-mongodb": "^1.2.3",
+        "@shelf/jest-mongodb": "^4.3.2",
         "eslint": "^7.14.0",
         "eslint-config-codex": "^1.6.1",
         "jest": "25.5.4",

@@ -192,6 +192,16 @@ export abstract class Worker {
   }
 
   /**
+   * Mute or unmute logger
+   * Used to mute logger in tests where we are expecting errors
+   *
+   * @param state - true to mute, false to unmute
+   */
+  public muteLogger(state: boolean): void {
+    this.logger.level = state ? 'none' : (process.env.LOG_LEVEL || 'info');
+  }
+
+  /**
    * Create cache controller instance
    */
   protected prepareCache(): void {
@@ -346,7 +356,6 @@ export abstract class Worker {
 
           return;
         default:
-          console.error(e)
           this.logger.error('Unknown error: ', e);
           await this.sendToStash(msg);
       }
