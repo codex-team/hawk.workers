@@ -1,0 +1,13 @@
+{
+  "name": "hawk-worker-sentry",
+  "version": "1.0.0",
+  "description": "Handles events in Sentry format",
+  "main": "src/index.ts",
+  "author": "CodeX",
+  "license": "UNLICENSED",
+  "private": true,
+  "workerType": "external/sentry",
+  "dependencies": {
+    "@sentry/core": "^8.45.1"
+  }
+}
