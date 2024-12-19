@@ -8,6 +8,7 @@ module.exports = {
   ignorePatterns: [
     'package.json',
     'tsconfig.json',
+    'dist',
   ],
   rules: {
     '@typescript-eslint/no-unused-expressions': 'error',
