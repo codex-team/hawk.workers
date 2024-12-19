@@ -574,7 +574,7 @@
   resolved "https://registry.yarnpkg.com/@sentry/core/-/core-8.45.1.tgz#da3b13a8fd2276e8a1d4f5a38f9b8a0ed6647b49"
   integrity sha512-1fGmkr0paZshh38mD29c4CfkRkgFoYDaAGyDLoGYfTbEph/lU8RHB2HWzN93McqNdMEhl1DRRyqIasUZoPlqSA==
 
-"@shelf/jest-mongodb@^1.2.3":
+"@shelf/jest-mongodb@^1.3.4":
   version "1.3.4"
   resolved "https://registry.yarnpkg.com/@shelf/jest-mongodb/-/jest-mongodb-1.3.4.tgz#200bac386cf513bed2d41952b1857689f0b88f31"
   integrity sha512-PQe/5jN8wHr30d8422+2CV+XzbJTCFLGxzb0OrwbxrRiNdZA+FFXOqVak1vd3dqk4qogmmqEVQFkwQ4PNHzNgA==
