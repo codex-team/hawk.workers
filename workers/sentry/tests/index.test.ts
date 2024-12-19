@@ -584,7 +584,6 @@ describe('SentryEventWorker', () => {
         /* eslint-disable @typescript-eslint/naming-convention */
         payload: expect.objectContaining({
           release: '35c42f2ddf524bbdafe22439b981ddfd0fb3b5ad',
-          catcherVersion: '0.0.1',
           timestamp: 1734530412,
           type: 'error',
           title: 'ZeroDivisionError: division by zero',
