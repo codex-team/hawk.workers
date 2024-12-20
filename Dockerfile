@@ -13,4 +13,4 @@ RUN yarn install
 COPY runner.ts tsconfig.json ./
 COPY lib/ ./lib/
 
-RUN yarn tsc
+RUN yarn build

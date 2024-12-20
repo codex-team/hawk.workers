@@ -3,4 +3,5 @@ ecosystem.config.js
 node_modules
 /workers/release/tests/mock
 /workers/migrations
+/workers/sentry/playground
 .github
