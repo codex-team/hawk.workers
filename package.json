@@ -9,6 +9,7 @@
         "workers/*"
     ],
     "scripts": {
+        "build": "tsc --project tsconfig.json",
         "worker": "ts-node -T ./runner.ts",
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
@@ -69,7 +70,7 @@
         "yup": "^0.28.5"
     },
     "devDependencies": {
-        "@shelf/jest-mongodb": "^4.3.2",
+        "@shelf/jest-mongodb": "^1.2.3",
         "eslint": "^7.14.0",
         "eslint-config-codex": "^1.6.1",
         "jest": "25.5.4",
