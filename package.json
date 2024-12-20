@@ -9,7 +9,6 @@
         "workers/*"
     ],
     "scripts": {
-        "build": "tsc --project tsconfig.json",
         "worker": "ts-node -T ./runner.ts",
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
