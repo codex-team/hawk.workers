@@ -72,7 +72,7 @@
         "migrations",
         "tools",
         "coverage",
-        "playground",
+        "workers/sentry/playground",
         "tests"
     ]
 }
