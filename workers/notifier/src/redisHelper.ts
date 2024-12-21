@@ -54,12 +54,12 @@ export default class RedisHelper {
 
     local startPeriodTimestamp = tonumber(redis.call("HGET", key, "timestamp"))
 
-    if ((startPeriodTimestamp == nil) or (currentTimestamp <= startPeriodTimestamp + thresholdExpirationPeriod)) then
+    if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdExpirationPeriod)) then
         redis.call("HSET", key, "timestamp", currentTimestamp)
-        redis.call("HSET", key, "counter", 0)
+        redis.call("HSET", key, "eventsCount", 0)
     end
     
-    local newCounter = redis.call("HINCRBY", key, "counter", 1)
+    local newCounter = redis.call("HINCRBY", key, "eventsCount", 1)
     return newCounter
     `;
 
