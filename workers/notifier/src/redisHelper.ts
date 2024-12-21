@@ -11,6 +11,9 @@ export default class RedisHelper {
    */
   private readonly redisClient: RedisClientType;
 
+  /**
+   *
+   */
   constructor() {
     this.redisClient = createClient({ url: process.env.REDIS_URL });
 
@@ -22,14 +25,14 @@ export default class RedisHelper {
   /**
    * Connect to redis client
    */
-  public async initialize() {
+  public async initialize(): Promise<void> {
     await this.redisClient.connect();
   }
 
   /**
    * Close redis client
    */
-  public async close() {
+  public async close(): Promise<void> {
     if (this.redisClient.isOpen) {
       await this.redisClient.quit();
     }
@@ -61,7 +64,7 @@ export default class RedisHelper {
     `;
 
     const key = `${ruleId}:${groupHash}:${thresholdPeriod}:times`;
-  
+
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
       arguments: [Date.now().toString(), (Date.now() + thresholdPeriod).toString()],

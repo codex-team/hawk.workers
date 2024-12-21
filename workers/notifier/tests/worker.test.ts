@@ -84,6 +84,8 @@ class MockDBController {
 describe('NotifierWorker', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
+  
+  let worker: typeof NotifierWorker;
 
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: MockDBController,
@@ -104,9 +106,7 @@ describe('NotifierWorker', () => {
     worker = new NotifierWorker();
 
     await worker.start();
-  })
-
-  let worker: typeof NotifierWorker;
+  });
 
   describe('db calls', () => {
     it('should connect to db on start', async () => {
@@ -161,7 +161,7 @@ describe('NotifierWorker', () => {
       worker.sendToSenderWorker = jest.fn();
 
       await worker.finish();
-      
+
       expect(dbCloseMock).toBeCalled();
     });
   });

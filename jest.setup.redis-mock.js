@@ -10,14 +10,14 @@ beforeAll(async () => {
     .withExposedPorts(6379)
     .start();
 
-    const port = redisTestContainer.getMappedPort(6379);
-    const host = redisTestContainer.getContainerIpAddress();
+  const port = redisTestContainer.getMappedPort(6379);
+  const host = redisTestContainer.getContainerIpAddress();
 
-    /**
-     * Set environment variable for redisHelper to connect to redis container
-     */
-    process.env.REDIS_URL = `redis://${host}:${port}`;
-  },
+  /**
+   * Set environment variable for redisHelper to connect to redis container
+   */
+  process.env.REDIS_URL = `redis://${host}:${port}`;
+}
 );
 
 afterAll(async () => {
