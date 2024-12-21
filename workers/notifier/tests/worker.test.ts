@@ -84,7 +84,7 @@ class MockDBController {
 describe('NotifierWorker', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
-  
+
   let worker: typeof NotifierWorker;
 
   jest.mock('../../../lib/db/controller', () => ({
