@@ -1,4 +1,4 @@
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { Rule } from '../types/rule';
 import { NotifierEvent } from '../types/notifier-task';
 
@@ -9,7 +9,31 @@ export default class RedisHelper {
   /**
    * Redis client for making queries
    */
-  private readonly redisClient = createClient({ url: process.env.REDIS_URL });
+  private readonly redisClient: RedisClientType;
+
+  constructor() {
+    this.redisClient = createClient({ url: process.env.REDIS_URL });
+
+    this.redisClient.on('error', (error) => {
+      console.error(error);
+    });
+  }
+
+  /**
+   * Connect to redis client
+   */
+  public async initialize() {
+    await this.redisClient.connect();
+  }
+
+  /**
+   * Close redis client
+   */
+  public async close() {
+    if (this.redisClient.isOpen) {
+      await this.redisClient.quit();
+    }
+  }
 
   /**
    * Method that updates the event count respectfully to the threshold reset period
@@ -23,11 +47,11 @@ export default class RedisHelper {
     const script = `
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])
-    local expirationPeriod = tonumber(ARGV[2])
+    local thresholdExpirationPeriod = tonumber(ARGV[2])
 
     local startPeriodTimestamp = tonumber(redis.call("HGET", key, "timestamp"))
 
-    if (startPeriodTimestamp > expirationPeriod or startPeriodTimestamp == nil) then
+    if ((startPeriodTimestamp == nil) or (currentTimestamp <= startPeriodTimestamp + thresholdExpirationPeriod)) then
         redis.call("HSET", key, "timestamp", currentTimestamp)
         redis.call("HSET", key, "counter", 0)
     end
@@ -37,7 +61,7 @@ export default class RedisHelper {
     `;
 
     const key = `${ruleId}:${groupHash}:${thresholdPeriod}:times`;
-
+  
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
       arguments: [Date.now().toString(), (Date.now() + thresholdPeriod).toString()],
