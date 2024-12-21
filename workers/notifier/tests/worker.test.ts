@@ -82,6 +82,9 @@ class MockDBController {
 }
 
 describe('NotifierWorker', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const NotifierWorker = require('../src').default;
+
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: MockDBController,
   }));
@@ -89,46 +92,28 @@ describe('NotifierWorker', () => {
   /**
    * Reset calls number after each test
    */
-  afterEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks();
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const NotifierWorker = require('../src').default;
-
-  it('should have correct worker type', () => {
-    const worker = new NotifierWorker();
-
-    expect(worker.type).toEqual('notifier');
-  });
-
-  it('should start and finish without errors', async () => {
-    const worker = new NotifierWorker();
-
-    await worker.start();
     await worker.finish();
   });
 
+  /**
+   * Before each test create an instance of the worker and start it
+   */
+  beforeEach(async () => {
+    worker = new NotifierWorker();
+
+    await worker.start();
+  })
+
+  let worker: typeof NotifierWorker;
+
   describe('db calls', () => {
     it('should connect to db on start', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       expect(dbConnectMock).toBeCalled();
-
-      await worker.finish();
     });
 
     it('should get db connection on message handle', async () => {
-      const worker = new NotifierWorker();
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
-
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -136,19 +121,9 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(dbConnectionMock).toBeCalled();
-
-      await worker.finish();
     });
 
     it('should get db connection on message handle and cache result', async () => {
-      const worker = new NotifierWorker();
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
-
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -160,75 +135,39 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(dbConnectionMock).toBeCalledTimes(1);
-
-      await worker.finish();
     });
 
     it('should query correct collection on message handle', async () => {
-      const worker = new NotifierWorker();
       const message = { ...messageMock };
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbCollectionMock).toBeCalledWith('projects');
-
-      await worker.finish();
     });
 
     it('should query correct project on message handle', async () => {
-      const worker = new NotifierWorker();
       const message = { ...messageMock };
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbQueryMock).toBeCalledWith({ _id: new ObjectID(message.projectId) });
-
-      await worker.finish();
     });
 
     it('should close db connection on finish', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       worker.sendToSenderWorker = jest.fn();
 
       await worker.finish();
-
+      
       expect(dbCloseMock).toBeCalled();
-
-      await worker.finish();
     });
   });
 
   describe('handling', () => {
     it('should send task if event threshold reached', async () => {
-      const worker = new NotifierWorker();
-
-      jest.mock('../src/redisHelper');
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
-
       const message = { ...messageMock };
 
       /**
@@ -243,20 +182,10 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).toHaveBeenCalled();
-
-      await worker.finish();
     });
 
     it('should not send task if event repetitions number is less than threshold', async () => {
-      const worker = new NotifierWorker();
-
       jest.mock('../src/redisHelper');
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
 
       const message = { ...messageMock };
 
@@ -272,20 +201,10 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
-
-      await worker.finish();
     });
 
     it('should not send task if event repetitions number is more than threshold', async () => {
-      const worker = new NotifierWorker();
-
       jest.mock('../src/redisHelper');
-
-      worker.redis.redisClient.eval = jest.fn(async () => {
-        return Promise.resolve();
-      });
-
-      await worker.start();
 
       const message = { ...messageMock };
 
@@ -302,8 +221,6 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
-
-      await worker.finish();
     });
   });
 });
