@@ -227,6 +227,7 @@ describe('Limiter worker', () => {
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
       const result = await redisClient.sMembers('DisabledProjectsSet');
+
       expect(result).toContain(project._id.toString());
       done();
     });
@@ -265,6 +266,7 @@ describe('Limiter worker', () => {
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
       const result = await redisClient.sMembers('DisabledProjectsSet');
+
       expect(result).not.toContain(project._id.toString());
       done();
     });
@@ -338,7 +340,7 @@ describe('Limiter worker', () => {
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
       const result = await redisClient.sMembers('DisabledProjectsSet');
-      
+
       expect(result).toContain(project._id.toString());
       done();
     });
@@ -458,8 +460,9 @@ describe('Limiter worker', () => {
       /**
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      
+
       const result = await redisClient.sMembers('DisabledProjectsSet');
+
       expect(result).toContain(project._id.toString());
       done();
     });

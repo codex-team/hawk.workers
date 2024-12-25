@@ -92,7 +92,7 @@ describe('GrouperWorker', () => {
     eventsCollection = connection.db().collection('events:' + projectIdMock);
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
-    
+
     redisClient = createClient({ url: process.env.REDIS_URL });
     await redisClient.connect();
 
