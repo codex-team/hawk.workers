@@ -9,7 +9,6 @@ export default class RedisHelper {
   /**
    * Redis client for making queries
    */
-  // private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
   private readonly redisClient: RedisClientType;
 
   /**
