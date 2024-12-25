@@ -46,15 +46,15 @@ export default class RedisHelper {
    * @param thresholdPeriod - period of time used to reset the event count
    * @returns {number} current event count
    */
-  public async computeEventCountForPeriod(ruleId: string, groupHash: NotifierEvent['groupHash'], thresholdPeriod: Rule['eventThresholdPeriod']): Promise<number> {
+  public async computeEventCountForPeriod(ruleId: string, groupHash: NotifierEvent['groupHash'], thresholdPeriod: Rule['thresholdPeriod']): Promise<number> {
     const script = `
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])
-    local thresholdExpirationPeriod = tonumber(ARGV[2])
+    local thresholdPeriod = tonumber(ARGV[2])
 
     local startPeriodTimestamp = tonumber(redis.call("HGET", key, "timestamp"))
 
-    if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdExpirationPeriod)) then
+    if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdPeriod)) then
         redis.call("HSET", key, "timestamp", currentTimestamp)
         redis.call("HSET", key, "eventsCount", 0)
     end
@@ -63,13 +63,13 @@ export default class RedisHelper {
     return newCounter
     `;
 
-    const key = `${ruleId}:${groupHash}:${thresholdPeriod}:times`;
-
+    const key = `${ruleId}:${groupHash}:${thresholdPeriod}`;
+    
     const currentTimestamp = Date.now();
 
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
-      arguments: [currentTimestamp.toString(), (currentTimestamp + thresholdPeriod).toString()],
+      arguments: [currentTimestamp.toString(), thresholdPeriod.toString()],
     }) as number;
 
     return (currentEventCount !== null) ? currentEventCount : 0;

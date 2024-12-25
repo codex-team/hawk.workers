@@ -6,13 +6,23 @@ import RedisHelper from '../src/redisHelper';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/**
+ * Determine the threshold for the rule
+ */
+const threshold = 100;
+
+/**
+ * Determine the threshold period for the rule
+ */
+const thresholdPeriod = 60 * 1000;
+
 const rule = {
   _id: 'ruleid',
   isEnabled: true,
   uidAdded: 'userid',
   whatToReceive: WhatToReceive.All,
-  threshold: 100,
-  thresholdPeriod: 60 * 1000,
+  threshold: threshold,
+  thresholdPeriod: thresholdPeriod,
   including: [],
   excluding: [],
   channels: {
@@ -166,16 +176,16 @@ describe('NotifierWorker', () => {
     });
   });
 
-  describe('handling', () => {
+  describe('worker functionality', () => {
     it('should send task if event threshold reached', async () => {
-      const message = { ...messageMock };
-
+      jest.mock('../src/redisHelper')
       /**
-       * Current event count is equal to rule threshold
+       * Mock redis helper to return threshold
        */
-      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
-        return Promise.resolve(rule.threshold);
-      });
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+
+      rule.isEnabled = true;
+      const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
 
@@ -184,43 +194,99 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).toHaveBeenCalled();
     });
 
-    it('should not send task if event repetitions number is less than threshold', async () => {
-      jest.mock('../src/redisHelper');
-
-      const message = { ...messageMock };
+    it('should not send task if event count is more than event threshold', async () => {
+      jest.mock('../src/redisHelper')
 
       /**
-       * Current event count is equal to rule threshold
+       * Mock redis helper to return threshold
        */
-      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
-        return Promise.resolve(rule.threshold - 1);
-      });
-
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold + 1);
+      
       worker.sendToSenderWorker = jest.fn();
+
+      rule.isEnabled = true;
+      const message = { ...messageMock };
 
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
     });
 
-    it('should not send task if event repetitions number is more than threshold', async () => {
-      jest.mock('../src/redisHelper');
-
-      const message = { ...messageMock };
-
+    it('should not send task if event count is less than event threshold', async () => {
+      jest.mock('../src/redisHelper')
+      
       /**
-       * Current event count is equal to rule threshold
+       * Mock redis helper to return threshold
        */
-      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => {
-        return Promise.resolve(rule.threshold + 1);
-      });
-
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold - 1);
+      
       worker.sendToSenderWorker = jest.fn();
 
-      await worker.handle(message);
+      rule.isEnabled = true;
+      const message = { ...messageMock };
+
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
     });
-  });
+
+    it('should not check for event count and should not send event to sender if rule is disabled', async () => {
+      jest.mock('../src/redisHelper')
+      
+      /**
+       * Mock redis helper to return threshold
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
+      
+      worker.sendToSenderWorker = jest.fn();
+
+      rule.isEnabled = false;
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should not check for event count and should not send event to sender stored if rule validation did not pass', async () => {
+      jest.mock('../src/redisHelper')
+      
+      /**
+       * Mock redis helper to return threshold
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
+      
+      worker.sendToSenderWorker = jest.fn();
+
+
+      rule.isEnabled = true;
+      rule.including = [ 'some string that is not in message' ];
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should send event to all channels that are enabled in rule', async () => {
+      jest.mock('../src/redisHelper')
+      
+      /**
+       * Mock redis helper to return threshold
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+      
+      worker.sendToSenderWorker = jest.fn();
+
+      rule.isEnabled = true;
+      rule.including = [];
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(worker.sendToSenderWorker).toBeCalledTimes(2);
+    });
+  })
 });

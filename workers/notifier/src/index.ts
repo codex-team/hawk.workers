@@ -73,13 +73,13 @@ export default class NotifierWorker extends Worker {
           return;
         }
 
-        const currentEventCount = await this.redis.computeEventCountForPeriod(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
+        const currentEventCount = await this.redis.computeEventCountForPeriod(rule._id.toString(), event.groupHash, rule.thresholdPeriod);
 
         /**
          * If threshold reached, then send event to channels
          */
         if (rule.threshold === currentEventCount) {
-          await this.addEventToChannels(projectId, rule, event);
+          await this.sendEventsToChannels(projectId, rule, event);
         }
       }
     } catch (e) {
@@ -128,7 +128,7 @@ export default class NotifierWorker extends Worker {
    * @param {Rule} rule - notification rule
    * @param {NotifierEvent} event - received event
    */
-  private async addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): Promise<void> {
+  private async sendEventsToChannels(projectId: string, rule: Rule, event: NotifierEvent): Promise<void> {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels as { [name: string]: Channel });
 
     for (const [name, options] of channels) {
@@ -138,7 +138,7 @@ export default class NotifierWorker extends Worker {
       if (!options.isEnabled) {
         return;
       }
-
+      
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
 
       await this.sendToSenderWorker(channelKey, [ {
