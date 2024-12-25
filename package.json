@@ -68,10 +68,10 @@
         "uuid": "^8.3.0",
         "winston": "^3.2.1",
         "yup": "^0.28.5",        
-        "@types/redis": "^2.8.28",
         "redis": "^4.7.0"
     },
     "devDependencies": {
+        "@types/redis": "^2.8.28",
         "@shelf/jest-mongodb": "^1.2.3",
         "testcontainers": "^3.0.0",
         "eslint": "^7.14.0",

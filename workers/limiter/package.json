@@ -9,7 +9,9 @@
     "private": true,
     "workerType": "cron-tasks/limiter",
     "dependencies": {
-        "@types/redis": "^2.8.28",
         "axios": "^0.21.2"
+    },
+    "devDependencies": {
+        "@types/redis": "^2.8.28"
     }
 }

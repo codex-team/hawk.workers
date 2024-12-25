@@ -1,15 +1,17 @@
 {
-  "name": "hawk-worker-grouper",
-  "version": "0.0.1",
-  "description": "Accepts processed errors from language-workers and saves it to the DB with grouping of similar ones. ",
-  "main": "src/index.ts",
-  "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/grouper",
-  "author": "CodeX <codex.so>",
-  "license": "UNLICENSED",
-  "private": true,
-  "workerType": "grouper",
-  "dependencies": {
-    "@types/redis": "^2.8.28",
-    "js-levenshtein": "^1.1.6"
-  }
+    "name": "hawk-worker-grouper",
+    "version": "0.0.1",
+    "description": "Accepts processed errors from language-workers and saves it to the DB with grouping of similar ones. ",
+    "main": "src/index.ts",
+    "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/grouper",
+    "author": "CodeX <codex.so>",
+    "license": "UNLICENSED",
+    "private": true,
+    "workerType": "grouper",
+    "dependencies": {
+        "js-levenshtein": "^1.1.6"
+    },
+    "devDependencies": {
+        "@types/redis": "^2.8.28"
+    }
 }

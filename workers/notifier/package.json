@@ -1,10 +1,10 @@
 {
-  "name": "hawk-worker-notifier",
-  "version": "1.0.0",
-  "main": "src/index.ts",
-  "license": "MIT",
-  "workerType": "notifier",
-  "dependencies": {
-    "@types/redis": "^2.8.28"
-}
+    "name": "hawk-worker-notifier",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "license": "MIT",
+    "workerType": "notifier",
+    "devDependencies": {
+        "@types/redis": "^2.8.28"
+    }
 }
