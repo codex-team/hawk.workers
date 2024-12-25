@@ -249,7 +249,7 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
     });
 
-    it('should not check for event count and should not send event to sender stored if rule validation did not pass', async () => {
+    it('should not check for event count and should not send event to sender if rule validation did not pass', async () => {
       jest.mock('../src/redisHelper')
       
       /**
