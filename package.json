@@ -67,8 +67,7 @@
         "typescript": "^3.8.3",
         "uuid": "^8.3.0",
         "winston": "^3.2.1",
-        "yup": "^0.28.5",        
-        "@types/redis": "^2.8.28",
+        "yup": "^0.28.5",
         "redis": "^4.7.0"
     },
     "devDependencies": {
