@@ -1,5 +1,5 @@
 import HawkCatcher from '@hawk.so/nodejs';
-import redis from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import createLogger from '../../../lib/logger';
 
 /**
@@ -14,7 +14,7 @@ export default class RedisHelper {
   /**
    * Redis client for making queries
    */
-  private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  private readonly redisClient: RedisClientType;
 
   /**
    * Logger instance
@@ -23,18 +23,59 @@ export default class RedisHelper {
   private logger = createLogger();
 
   /**
+   * Constructor of the Redis helper class
+   * Initializes the Redis client and sets up error handling
+   */
+  constructor() { 
+    this.redisClient = createClient({ url: process.env.REDIS_URL });
+
+    this.redisClient.on('error', (error) => {
+      if (error) {
+        this.logger.error(error);
+        HawkCatcher.send(error);
+      }
+    });
+  }
+
+  /**
+   * Connect to redis client
+   */
+  public async initialize(): Promise<void> {
+    try {
+      await this.redisClient.connect();
+    }
+    catch (error) {
+      console.error('Error connecting to redis', error);
+    }
+  }
+
+  /**
+   * Close redis client
+   */
+  public async close(): Promise<void> { 
+    if (this.redisClient.isOpen) {
+      await this.redisClient.quit();
+    }
+  }
+
+  /**
    * Checks if a lock exists on the given group hash and identifier pair. If it does not exist, creates a lock.
    * Returns true if lock exists
    *
    * @param groupHash - event group hash
    * @param userId - event user id
    */
-  public checkOrSetEventLock(groupHash: string, userId: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const callback = this.createCallback(resolve, reject);
-
-      this.redisClient.set(`${groupHash}:${userId}`, '1', 'EX', RedisHelper.LOCK_TTL, 'NX', callback);
-    });
+  public async checkOrSetEventLock(groupHash: string, userId: string): Promise<boolean> {
+    const result = await this.redisClient.set(
+      `${groupHash}:${userId}`, 
+      '1', 
+      { EX: RedisHelper.LOCK_TTL, NX: true } as const,
+    );
+    
+    /**
+     * Result would be null if lock already exists, false otherwise
+     */
+    return result === null;
   }
 
   /**
