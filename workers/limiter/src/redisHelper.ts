@@ -51,6 +51,7 @@ export default class RedisHelper {
       await this.redisClient.quit();
     }
   }
+
   /**
    * Saves banned project ids to redis
    * If there is no projects, then previous data in Redis will be erased
@@ -58,18 +59,18 @@ export default class RedisHelper {
    * @param projectIdsToBan - ids to ban
    */
   public saveBannedProjectsSet(projectIdsToBan: string[]): Promise<void> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const callback = this.createCallback(resolve, reject);
 
       if (projectIdsToBan.length) {
         const pipeline = this.redisClient.multi();
-        
+
         pipeline.del(this.redisDisabledProjectsKey);
 
         pipeline.sAdd(this.redisDisabledProjectsKey, projectIdsToBan);
-      
+
         try {
-          await pipeline.exec();
+          pipeline.exec();
           callback(null);
         } catch (err) {
           callback(err);
@@ -82,7 +83,7 @@ export default class RedisHelper {
           .catch((err) => {
             callback(err);
           });
-      }      
+      }
     });
   }
 

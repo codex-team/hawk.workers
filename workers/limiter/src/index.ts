@@ -83,7 +83,7 @@ export default class LimiterWorker extends Worker {
     this.workspacesCollection = accountDbConnection.collection<WorkspaceDBScheme>('workspaces');
 
     await this.redis.initialize();
-    
+
     await super.start();
   }
 

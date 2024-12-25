@@ -26,7 +26,7 @@ export default class RedisHelper {
    * Constructor of the Redis helper class
    * Initializes the Redis client and sets up error handling
    */
-  constructor() { 
+  constructor() {
     this.redisClient = createClient({ url: process.env.REDIS_URL });
 
     this.redisClient.on('error', (error) => {
@@ -43,8 +43,7 @@ export default class RedisHelper {
   public async initialize(): Promise<void> {
     try {
       await this.redisClient.connect();
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Error connecting to redis', error);
     }
   }
@@ -52,7 +51,7 @@ export default class RedisHelper {
   /**
    * Close redis client
    */
-  public async close(): Promise<void> { 
+  public async close(): Promise<void> {
     if (this.redisClient.isOpen) {
       await this.redisClient.quit();
     }
@@ -67,35 +66,17 @@ export default class RedisHelper {
    */
   public async checkOrSetEventLock(groupHash: string, userId: string): Promise<boolean> {
     const result = await this.redisClient.set(
-      `${groupHash}:${userId}`, 
-      '1', 
-      { EX: RedisHelper.LOCK_TTL, NX: true } as const,
+      `${groupHash}:${userId}`,
+      '1',
+      {
+        EX: RedisHelper.LOCK_TTL,
+        NX: true,
+      } as const
     );
-    
+
     /**
      * Result would be null if lock already exists, false otherwise
      */
     return result === null;
-  }
-
-  /**
-   * Creates callback function for Redis operations
-   *
-   * @param resolve - callback that will be called if no errors occurred
-   * @param reject - callback that will be called any error occurred
-   */
-  private createCallback(resolve: (result: boolean) => void, reject: (reason?: unknown) => void) {
-    return (execError: Error | null, resp: string): void => {
-      if (execError) {
-        this.logger.error(execError);
-        HawkCatcher.send(execError);
-
-        reject(execError);
-
-        return;
-      }
-      this.logger.debug('Successfully saved to Redis');
-      resolve(resp !== 'OK');
-    };
   }
 }
