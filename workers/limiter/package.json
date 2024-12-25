@@ -10,8 +10,5 @@
     "workerType": "cron-tasks/limiter",
     "dependencies": {
         "axios": "^0.21.2"
-    },
-    "devDependencies": {
-        "@types/redis": "^2.8.28"
     }
 }

@@ -71,7 +71,6 @@
         "redis": "^4.7.0"
     },
     "devDependencies": {
-        "@types/redis": "^2.8.28",
         "@shelf/jest-mongodb": "^1.2.3",
         "testcontainers": "^3.0.0",
         "eslint": "^7.14.0",
