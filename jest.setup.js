@@ -27,3 +27,7 @@ const mockedAmqpConnection = {
 const mockedConnect = amqp.connect;
 
 mockedConnect.mockResolvedValue(Promise.resolve(mockedAmqpConnection));
+
+module.exports = {
+  mockedAmqpChannel,
+};

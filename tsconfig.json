@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        // "strict": true,
         /* Basic Options */
         // "incremental": true,                   /* Enable incremental compilation */
         "target": "ES2020",                       /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', or 'ESNEXT'. */
@@ -63,5 +64,15 @@
         /* Advanced Options */
         "forceConsistentCasingInFileNames": true,  /* Disallow inconsistently-cased references to the same file. */
         "resolveJsonModule": true
-    }
+    },
+    "exclude": [
+        "node_modules",
+        "dist",
+        "bin",
+        "migrations",
+        "tools",
+        "coverage",
+        "workers/sentry/playground",
+        "tests"
+    ]
 }
