@@ -1,7 +1,7 @@
 import '../../../env-test';
 import GrouperWorker from '../src';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import redis from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { Collection, MongoClient } from 'mongodb';
 import { EventAddons, EventDataAccepted } from '@hawk.so/types';
 
@@ -74,14 +74,16 @@ function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined
 }
 
 describe('GrouperWorker', () => {
-  const worker = new GrouperWorker();
   let connection: MongoClient;
   let eventsCollection: Collection;
   let dailyEventsCollection: Collection;
   let repetitionsCollection: Collection;
-  let redisClient;
+  let redisClient: RedisClientType;
+  let worker: GrouperWorker;
 
   beforeAll(async () => {
+    worker = new GrouperWorker();
+
     await worker.start();
     connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
       useNewUrlParser: true,
@@ -90,7 +92,10 @@ describe('GrouperWorker', () => {
     eventsCollection = connection.db().collection('events:' + projectIdMock);
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
-    redisClient = redis.createClient({ url: process.env.REDIS_URL });
+
+    redisClient = createClient({ url: process.env.REDIS_URL });
+    await redisClient.connect();
+
     jest.resetAllMocks();
   });
 
@@ -104,8 +109,8 @@ describe('GrouperWorker', () => {
     await repetitionsCollection.deleteMany({});
   });
 
-  afterEach((done) => {
-    redisClient.flushall(done);
+  afterEach(async () => {
+    await redisClient.flushAll();
   });
 
   describe('Saving events', () => {
@@ -299,6 +304,7 @@ describe('GrouperWorker', () => {
   });
 
   afterAll(async () => {
+    await redisClient.quit();
     await worker.finish();
     await connection.close();
   });

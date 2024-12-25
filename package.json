@@ -67,16 +67,17 @@
         "typescript": "^3.8.3",
         "uuid": "^8.3.0",
         "winston": "^3.2.1",
-        "yup": "^0.28.5"
+        "yup": "^0.28.5",
+        "redis": "^4.7.0"
     },
     "devDependencies": {
         "@shelf/jest-mongodb": "^1.2.3",
+        "testcontainers": "^3.0.0",
         "eslint": "^7.14.0",
         "eslint-config-codex": "^1.6.1",
         "jest": "25.5.4",
         "nodemon": "^2.0.3",
         "random-words": "^1.1.1",
-        "redis-mock": "^0.56.3",
         "ts-jest": "25.4.0",
         "wait-for-expect": "^3.0.2",
         "webpack": "^4.43.0",

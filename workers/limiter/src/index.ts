@@ -81,6 +81,9 @@ export default class LimiterWorker extends Worker {
 
     this.projectsCollection = accountDbConnection.collection<ProjectDBScheme>('projects');
     this.workspacesCollection = accountDbConnection.collection<WorkspaceDBScheme>('workspaces');
+
+    await this.redis.initialize();
+
     await super.start();
   }
 
@@ -91,6 +94,7 @@ export default class LimiterWorker extends Worker {
     await super.finish();
     await this.eventsDb.close();
     await this.accountsDb.close();
+    await this.redis.close();
   }
 
   /**
