@@ -12,7 +12,8 @@ export default class RedisHelper {
   private readonly redisClient: RedisClientType;
 
   /**
-   *
+   * Constructor of the Redis helper class
+   * Initializes the Redis client and sets up error handling
    */
   constructor() {
     this.redisClient = createClient({ url: process.env.REDIS_URL });

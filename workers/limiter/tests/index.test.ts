@@ -2,7 +2,7 @@ import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import '../../../env-test';
 import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import LimiterWorker from '../src';
-import redis from 'redis';
+import { createClient } from 'redis';
 import { mockedPlans } from './plans.mock';
 import axios from 'axios';
 import { mocked } from 'ts-jest/utils';
@@ -128,7 +128,8 @@ describe('Limiter worker', () => {
     projectCollection = db.collection<ProjectDBScheme>('projects');
     workspaceCollection = db.collection<WorkspaceDBScheme>('workspaces');
     planCollection = db.collection('plans');
-    redisClient = redis.createClient({ url: process.env.REDIS_URL });
+    redisClient = createClient({ url: process.env.REDIS_URL });
+    await redisClient.connect();
 
     /**
      * Insert mocked plans for using in tests
@@ -225,11 +226,9 @@ describe('Limiter worker', () => {
        *
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-        expect(result).toContain(project._id.toString());
-        done();
-      });
+      const result = await redisClient.sMembers('DisabledProjectsSet');
+      expect(result).toContain(project._id.toString());
+      done();
     });
 
     test('Should not ban project if it does not reach the limit', async (done) => {
@@ -265,15 +264,9 @@ describe('Limiter worker', () => {
        *
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-
-        /**
-         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
-         */
-        expect(result).not.toContain(project._id.toString());
-        done();
-      });
+      const result = await redisClient.sMembers('DisabledProjectsSet');
+      expect(result).not.toContain(project._id.toString());
+      done();
     });
 
     test('Should send a report with collected data', async () => {
@@ -344,11 +337,10 @@ describe('Limiter worker', () => {
        *
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-        expect(result).toContain(project._id.toString());
-        done();
-      });
+      const result = await redisClient.sMembers('DisabledProjectsSet');
+      
+      expect(result).toContain(project._id.toString());
+      done();
     });
   });
 
@@ -405,15 +397,13 @@ describe('Limiter worker', () => {
       /**
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
+      const result = await redisClient.sMembers('DisabledProjectsSet');
 
-        /**
-         * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
-         */
-        expect(result).not.toContain(project._id.toString());
-        done();
-      });
+      /**
+       * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
+       */
+      expect(result).not.toContain(project._id.toString());
+      done();
     });
 
     test('Should block workspace if the number of events exceed the limit', async (done) => {
@@ -468,15 +458,10 @@ describe('Limiter worker', () => {
       /**
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
        */
-      redisClient.smembers('DisabledProjectsSet', (err, result) => {
-        expect(err).toBeNull();
-
-        /**
-         * Redis shouldn't contain id of the mocked project
-         */
-        expect(result).toContain(project._id.toString());
-        done();
-      });
+      
+      const result = await redisClient.sMembers('DisabledProjectsSet');
+      expect(result).toContain(project._id.toString());
+      done();
     });
 
     test('Should correctly work if projects count equals 0', async () => {
@@ -504,5 +489,6 @@ describe('Limiter worker', () => {
 
   afterAll(async () => {
     await connection.close();
+    await redisClient.quit();
   });
 });

@@ -5,7 +5,6 @@
   "license": "MIT",
   "workerType": "notifier",
   "dependencies": {
-    "@types/redis": "^2.8.28",
-    "redis": "^4.7.0"
+    "@types/redis": "^2.8.28"
 }
 }

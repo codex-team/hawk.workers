@@ -1,5 +1,5 @@
 import HawkCatcher from '@hawk.so/nodejs';
-import redis from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import createLogger from '../../../lib/logger';
 
 /**
@@ -9,7 +9,8 @@ export default class RedisHelper {
   /**
    * Redis client for making queries
    */
-  private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  // private readonly redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  private readonly redisClient: RedisClientType;
 
   /**
    * Logger instance
@@ -23,23 +24,65 @@ export default class RedisHelper {
   private readonly redisDisabledProjectsKey = 'DisabledProjectsSet';
 
   /**
+   * Constructor of the Redis helper class
+   * Initializes the Redis client and sets up error handling
+   */
+  constructor() {
+    this.redisClient = createClient({ url: process.env.REDIS_URL });
+
+    this.redisClient.on('error', (error) => {
+      this.logger.error(error);
+      HawkCatcher.send(error);
+    });
+  }
+
+  /**
+   * Connect to redis client
+   */
+  public async initialize(): Promise<void> {
+    await this.redisClient.connect();
+  }
+
+  /**
+   * Close redis client
+   */
+  public async close(): Promise<void> {
+    if (this.redisClient.isOpen) {
+      await this.redisClient.quit();
+    }
+  }
+  /**
    * Saves banned project ids to redis
    * If there is no projects, then previous data in Redis will be erased
    *
    * @param projectIdsToBan - ids to ban
    */
   public saveBannedProjectsSet(projectIdsToBan: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const callback = this.createCallback(resolve, reject);
 
       if (projectIdsToBan.length) {
-        this.redisClient.multi()
-          .del(this.redisDisabledProjectsKey)
-          .sadd(this.redisDisabledProjectsKey, projectIdsToBan)
-          .exec(callback);
+        const pipeline = this.redisClient.multi();
+        
+        pipeline.del(this.redisDisabledProjectsKey);
+
+        pipeline.sAdd(this.redisDisabledProjectsKey, projectIdsToBan);
+      
+        try {
+          await pipeline.exec();
+          callback(null);
+        } catch (err) {
+          callback(err);
+        }
       } else {
-        this.redisClient.del(this.redisDisabledProjectsKey, callback);
-      }
+        this.redisClient.del(this.redisDisabledProjectsKey)
+          .then(() => {
+            callback(null);
+          })
+          .catch((err) => {
+            callback(err);
+          });
+      }      
     });
   }
 
@@ -53,7 +96,9 @@ export default class RedisHelper {
       const callback = this.createCallback(resolve, reject);
 
       if (projectIds.length) {
-        this.redisClient.sadd(this.redisDisabledProjectsKey, projectIds, callback);
+        this.redisClient.sAdd(this.redisDisabledProjectsKey, projectIds)
+          .then(() => callback(null))
+          .catch((err) => callback(err));
       } else {
         resolve();
       }
@@ -70,7 +115,9 @@ export default class RedisHelper {
       const callback = this.createCallback(resolve, reject);
 
       if (projectIds.length) {
-        this.redisClient.srem(this.redisDisabledProjectsKey, projectIds, callback);
+        this.redisClient.sRem(this.redisDisabledProjectsKey, projectIds)
+          .then(() => callback(null))
+          .catch((err) => callback(err));
       } else {
         resolve();
       }
