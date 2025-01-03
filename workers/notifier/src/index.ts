@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { Channel, ChannelKey, SenderData } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
-import { Rule } from '../types/rule';
+import { Rule, WhatToReceive } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
 import Time from '../../../lib/utils/time';
@@ -73,13 +73,22 @@ export default class NotifierWorker extends Worker {
           return;
         }
 
-        const currentEventCount = await this.redis.computeEventCountForPeriod(rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
+        /**
+         * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
+         */
+        if (rule.whatToReceive === WhatToReceive.New) {
+          await this.sendEventsToChannels(projectId, rule, event);
+
+          return;
+        }
+
+        const currentEventCount = await this.redis.computeEventCountForPeriod(rule._id.toString(), event.groupHash, rule.thresholdPeriod);
 
         /**
          * If threshold reached, then send event to channels
          */
         if (rule.threshold === currentEventCount) {
-          await this.addEventToChannels(projectId, rule, event);
+          await this.sendEventsToChannels(projectId, rule, event);
         }
       }
     } catch (e) {
@@ -128,7 +137,7 @@ export default class NotifierWorker extends Worker {
    * @param {Rule} rule - notification rule
    * @param {NotifierEvent} event - received event
    */
-  private async addEventToChannels(projectId: string, rule: Rule, event: NotifierEvent): Promise<void> {
+  private async sendEventsToChannels(projectId: string, rule: Rule, event: NotifierEvent): Promise<void> {
     const channels: Array<[string, Channel]> = Object.entries(rule.channels as { [name: string]: Channel });
 
     for (const [name, options] of channels) {

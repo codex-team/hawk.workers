@@ -6,7 +6,7 @@ import '../../../env-test';
 describe('RuleValidator', () => {
   const ruleMock = {
     isEnabled: true,
-    whatToReceive: WhatToReceive.All,
+    whatToReceive: WhatToReceive.SeenMore,
     including: [],
     excluding: [],
   };
@@ -40,10 +40,10 @@ describe('RuleValidator', () => {
   });
 
   describe('checkWhatToReceive', () => {
-    it('should pass if what to receive is \'all\'', () => {
+    it('should pass if what to receive is \'SEEN_MORE\'', () => {
       const rule = { ...ruleMock } as any;
 
-      rule.whatToReceive = WhatToReceive.All;
+      rule.whatToReceive = WhatToReceive.SeenMore;
 
       const validator = new RuleValidator(rule, eventMock);
 
@@ -51,7 +51,7 @@ describe('RuleValidator', () => {
       expect(validator.checkWhatToReceive()).toBeInstanceOf(RuleValidator);
     });
 
-    it('should pass if what to receive is \'new\' and event is new', () => {
+    it('should pass if what to receive is \'ONLY_NEW\' and event is new', () => {
       const rule = { ...ruleMock } as any;
       const event = { ...eventMock };
 

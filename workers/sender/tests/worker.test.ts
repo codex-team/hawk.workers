@@ -22,7 +22,7 @@ const projectQueryMock = jest.fn(() => ({
       _id: new ObjectId('5e3eef0679fa3700a0198a49'),
       isEnabled: true,
       uidAdded: new ObjectId('5e3eef0679fa3700a0198a49'),
-      whatToReceive: WhatToReceive.All,
+      whatToReceive: WhatToReceive.SeenMore,
       including: [],
       excluding: [],
       channels: {

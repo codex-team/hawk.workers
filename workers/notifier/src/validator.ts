@@ -7,7 +7,7 @@ import { Rule } from '../types/rule';
  * WhatToReceive property values
  */
 export enum WhatToReceive {
-  All = 'ALL',
+  SeenMore = 'SEEN_MORE',
   New = 'ONLY_NEW',
 }
 
@@ -62,7 +62,7 @@ export default class RuleValidator {
    */
   public checkWhatToReceive(): RuleValidator {
     const { rule, event } = this;
-    const result = rule.whatToReceive === WhatToReceive.All ||
+    const result = rule.whatToReceive === WhatToReceive.SeenMore ||
       (event.isNew && rule.whatToReceive === WhatToReceive.New);
 
     if (!result) {
