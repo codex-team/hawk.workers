@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { Channel, ChannelKey, SenderData } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
-import { Rule } from '../types/rule';
+import { Rule, WhatToReceive } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
 import Time from '../../../lib/utils/time';
@@ -70,6 +70,14 @@ export default class NotifierWorker extends Worker {
          * If rule is enabled no need to store data in redis
          */
         if (rule.isEnabled === false) {
+          return;
+        }
+
+        /**
+         * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
+         */
+        if (rule.whatToReceive === WhatToReceive.New) {
+          await this.sendEventsToChannels(projectId, rule, event);
           return;
         }
 
