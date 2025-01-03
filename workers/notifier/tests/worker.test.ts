@@ -394,7 +394,7 @@ describe('NotifierWorker', () => {
       expect(RedisHelper.prototype.computeEventCountForPeriod).toHaveBeenCalledTimes(2);
     });
 
-    it('should send event to channels at most once in one threshold period for one fitted rule, no matter how much events have passed', async () => {
+    it('should send event to channels at most once in one threshold period for one fitted rule, if worker received more than threshold events', async () => {
       worker.sendEventsToChannels = jest.fn();
 
       const message = { ...messageMock };
