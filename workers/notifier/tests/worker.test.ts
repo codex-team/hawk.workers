@@ -261,7 +261,7 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).toBeCalledTimes(1);
     });
 
-    it('should send task if event threshold reached', async () => {
+    it('should add task to sender worker if event threshold reached', async () => {
       /**
        * Simulate case when we reached threshold in redis.
        */
