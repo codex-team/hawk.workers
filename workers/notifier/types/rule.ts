@@ -5,7 +5,7 @@ import { Channel, ChannelType } from './channel';
  * WhatToReceive property values
  */
 export enum WhatToReceive {
-  All = 'ALL',
+  SeenMore = 'SEEN_MORE',
   New = 'ONLY_NEW',
 }
 
