@@ -245,10 +245,10 @@ describe('NotifierWorker', () => {
   });
 
   describe('worker functionality', () => {
-    it('should send one notification if event is new and rule.whatToReceive is ONLY_NEW', async () => {
+    it('should send event to channels once if event is new and rule.whatToReceive is ONLY_NEW', async () => {
       rule.whatToReceive = WhatToReceive.New;
 
-      worker.sendToSenderWorker = jest.fn();
+      worker.sendEventsToChannels = jest.fn();
 
       const message = { ...messageMock };
       message.event.isNew = true;
@@ -258,7 +258,7 @@ describe('NotifierWorker', () => {
       message.event.isNew = false;
       await worker.handle(message);
 
-      expect(worker.sendToSenderWorker).toBeCalledTimes(1);
+      expect(worker.sendEventsToChannels).toBeCalledTimes(1);
     });
 
     it('should add task to sender worker if event threshold reached', async () => {
@@ -276,7 +276,7 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).toHaveBeenCalled();
     });
 
-    it('should not send task if event count is more than event threshold', async () => {
+    it('should not add task to sender worker if event count is more than event threshold', async () => {
       /**
        * Simulate case when threshold in redis is more than rule threshold.
        */
@@ -291,7 +291,7 @@ describe('NotifierWorker', () => {
       expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
     });
 
-    it('should not send task if event count is less than event threshold', async () => {
+    it('should not add task to sender worker if event count is less than event threshold', async () => {
       /**
        * Simulate case then threshold in redis is less than rule threshold
        */
@@ -343,6 +343,24 @@ describe('NotifierWorker', () => {
       worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
+
+      rule.channels = {
+        telegram: {
+          isEnabled: true,
+          endpoint: 'tgEndpoint',
+          minPeriod: 0.5,
+        },
+        slack: {
+          isEnabled: true,
+          endpoint: 'slackEndpoint',
+          minPeriod: 0.5,
+        },
+        email: {
+          isEnabled: false,
+          endpoint: 'emailEndpoint',
+          minPeriod: 0.5,
+        },
+      };
 
       await worker.handle(message);
 
