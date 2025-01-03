@@ -254,6 +254,9 @@ describe('NotifierWorker', () => {
       message.event.isNew = true;
 
       await worker.handle(message);
+      
+      message.event.isNew = false;
+      await worker.handle(message);
 
       expect(worker.sendToSenderWorker).toBeCalledTimes(1);
     });
