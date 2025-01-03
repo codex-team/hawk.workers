@@ -54,6 +54,25 @@ export default class RuleValidator {
   }
 
   /**
+   * Check if event fits whatToReceive rule
+   *
+   * @throws {Error} if event doesn't fit
+   *
+   * @returns {RuleValidator}
+   */
+   public checkWhatToReceive(): RuleValidator {
+    const { rule, event } = this;
+    const result = rule.whatToReceive === WhatToReceive.SeenMore ||
+      (event.isNew && rule.whatToReceive === WhatToReceive.New);
+
+    if (!result) {
+      throw Error('Event doesn\'t match `what to receive` filter');
+    }
+
+    return this;
+  }
+
+  /**
    * Check if event title includes required words
    *
    * @throws {Error} if event title doesn't include required words
@@ -113,6 +132,7 @@ export default class RuleValidator {
   public checkAll(): RuleValidator {
     return this
       .checkIfRuleIsOn()
+      .checkWhatToReceive()
       .checkIncludingWords()
       .checkExcludingWords();
   }

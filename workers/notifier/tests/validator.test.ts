@@ -39,6 +39,45 @@ describe('RuleValidator', () => {
     });
   });
 
+  describe('checkWhatToReceive', () => {
+    it('should pass if what to receive is \'SEEN_MORE\'', () => {
+      const rule = { ...ruleMock } as any;
+
+      rule.whatToReceive = WhatToReceive.SeenMore;
+
+      const validator = new RuleValidator(rule, eventMock);
+
+      expect(() => validator.checkWhatToReceive()).not.toThrowError();
+      expect(validator.checkWhatToReceive()).toBeInstanceOf(RuleValidator);
+    });
+
+    it('should pass if what to receive is \'ONLY_NEW\' and event is new', () => {
+      const rule = { ...ruleMock } as any;
+      const event = { ...eventMock };
+
+      rule.whatToReceive = WhatToReceive.New;
+      event.isNew = true;
+
+      const validator = new RuleValidator(rule, event);
+
+      expect(() => validator.checkWhatToReceive()).not.toThrowError();
+      expect(validator.checkWhatToReceive()).toBeInstanceOf(RuleValidator);
+    });
+
+    it('should fail if what to receive is \'new\' but event is not new', () => {
+      const rule = { ...ruleMock } as any;
+      const event = { ...eventMock };
+
+      rule.whatToReceive = WhatToReceive.New;
+      event.isNew = false;
+
+      const validator = new RuleValidator(rule, event);
+
+      expect(() => validator.checkWhatToReceive()).toThrowError('Event doesn\'t match `what to receive` filter');
+    });
+  });
+
+
   describe('checkIncludingWords', () => {
     it('should pass if event title includes some of the words', () => {
       const rule = { ...ruleMock } as any;
@@ -136,12 +175,14 @@ describe('RuleValidator', () => {
       const validator = new RuleValidator(rule, event);
 
       validator.checkIfRuleIsOn = jest.fn(() => validator);
+      validator.checkWhatToReceive = jest.fn(() => validator);
       validator.checkIncludingWords = jest.fn(() => validator);
       validator.checkExcludingWords = jest.fn(() => validator);
 
       validator.checkAll();
 
       expect(validator.checkIfRuleIsOn).toBeCalledTimes(1);
+      expect(validator.checkWhatToReceive).toBeCalledTimes(1);
       expect(validator.checkIncludingWords).toBeCalledTimes(1);
       expect(validator.checkExcludingWords).toBeCalledTimes(1);
     });
