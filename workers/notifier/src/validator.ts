@@ -60,7 +60,7 @@ export default class RuleValidator {
    *
    * @returns {RuleValidator}
    */
-   public checkWhatToReceive(): RuleValidator {
+  public checkWhatToReceive(): RuleValidator {
     const { rule, event } = this;
     const result = rule.whatToReceive === WhatToReceive.SeenMore ||
       (event.isNew && rule.whatToReceive === WhatToReceive.New);

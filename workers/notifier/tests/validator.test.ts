@@ -77,7 +77,6 @@ describe('RuleValidator', () => {
     });
   });
 
-
   describe('checkIncludingWords', () => {
     it('should pass if event title includes some of the words', () => {
       const rule = { ...ruleMock } as any;

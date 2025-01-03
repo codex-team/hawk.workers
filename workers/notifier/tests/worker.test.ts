@@ -70,8 +70,8 @@ const alternativeRule = {
       endpoint: 'emailEndpoint',
       minPeriod: 0.5,
     },
-  } 
-}
+  },
+};
 
 /**
  * Save originl RedisHelper prototype to restore it after each test
@@ -135,17 +135,15 @@ describe('NotifierWorker', () => {
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: MockDBController,
   }));
-  
-  /*
-   * Before all tests connect to redis client
-   */
-  beforeAll(async () => { 
-    redisClient = createClient({ url: process.env.REDIS_URL});
-    
+
+  // Before all tests connect to redis client
+  beforeAll(async () => {
+    redisClient = createClient({ url: process.env.REDIS_URL });
+
     jest.mock('../src/redisHelper');
 
     await redisClient.connect();
-  })
+  });
 
   /**
    * Before each test create an instance of the worker and start it
@@ -157,7 +155,6 @@ describe('NotifierWorker', () => {
      * Restore original RedisHelper prototype after possible changes
      */
     Object.defineProperties(RedisHelper.prototype, originalRedisHelperPrototype);
-
 
     worker = new NotifierWorker();
 
@@ -187,7 +184,7 @@ describe('NotifierWorker', () => {
 
   afterAll(async () => {
     await redisClient.quit();
-  })
+  });
 
   describe('db calls', () => {
     it('should connect to db on start', async () => {
@@ -253,7 +250,7 @@ describe('NotifierWorker', () => {
 
       worker.sendToSenderWorker = jest.fn();
 
-      const message = { ...messageMock }; 
+      const message = { ...messageMock };
 
       await worker.handle(message);
 
@@ -280,7 +277,7 @@ describe('NotifierWorker', () => {
        * Simulate case when threshold in redis is more than rule threshold.
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold + 1);
-      
+
       worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
@@ -295,7 +292,7 @@ describe('NotifierWorker', () => {
        * Simulate case then threshold in redis is less than rule threshold
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold - 1);
-      
+
       worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
@@ -307,7 +304,7 @@ describe('NotifierWorker', () => {
 
     it('should not check for event count and should not send event to sender if rule is disabled', async () => {
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
-      
+
       worker.sendToSenderWorker = jest.fn();
 
       rule.isEnabled = false;
@@ -321,7 +318,7 @@ describe('NotifierWorker', () => {
 
     it('should not check for event count and should not send event to sender if rule validation did not pass', async () => {
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
-      
+
       worker.sendToSenderWorker = jest.fn();
 
       rule.including = [ 'some string that is not in message' ];
@@ -338,7 +335,7 @@ describe('NotifierWorker', () => {
        * Simulate case when we reached threshold in redis.
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
-      
+
       worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
@@ -353,7 +350,7 @@ describe('NotifierWorker', () => {
        * Simulate case when there are two rules for the event in database.
        */
       dbQueryMock = jest.fn(() => ({
-        notifications: [ rule, alternativeRule ],
+        notifications: [rule, alternativeRule],
       })) as any;
 
       jest.mock('../../../lib/db/controller', () => ({
@@ -373,9 +370,9 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(RedisHelper.prototype.computeEventCountForPeriod).toHaveBeenCalledTimes(2);
-    })
+    });
 
-    it('should send event to channels at most once in one threshold period for one fitted rule, no matter how much events have passed', async () => {      
+    it('should send event to channels at most once in one threshold period for one fitted rule, no matter how much events have passed', async () => {
       worker.sendEventsToChannels = jest.fn();
 
       const message = { ...messageMock };

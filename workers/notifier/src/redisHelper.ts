@@ -64,7 +64,7 @@ export default class RedisHelper {
     `;
 
     const key = `${ruleId}:${groupHash}:${thresholdPeriod}`;
-    
+
     const currentTimestamp = Date.now();
 
     const currentEventCount = await this.redisClient.eval(script, {

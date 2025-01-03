@@ -78,6 +78,7 @@ export default class NotifierWorker extends Worker {
          */
         if (rule.whatToReceive === WhatToReceive.New) {
           await this.sendEventsToChannels(projectId, rule, event);
+
           return;
         }
 
@@ -146,7 +147,7 @@ export default class NotifierWorker extends Worker {
       if (!options.isEnabled) {
         return;
       }
-      
+
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
 
       await this.sendToSenderWorker(channelKey, [ {

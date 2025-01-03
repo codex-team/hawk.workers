@@ -8,14 +8,14 @@ describe('RedisHelper', () => {
 
   beforeAll(async () => {
     redisHelper = new RedisHelper();
-    redisClient = createClient({ url: process.env.REDIS_URL});
+    redisClient = createClient({ url: process.env.REDIS_URL });
     await redisClient.connect();
     redisClientMock = Reflect.get(redisHelper, 'redisClient') as jest.Mocked<ReturnType<typeof createClient>>;
   });
 
   afterAll(async () => {
     await redisClient.quit();
-  })
+  });
 
   describe('initialize', () => {
     it('should connect to redis client', async () => {
@@ -38,6 +38,7 @@ describe('RedisHelper', () => {
 
     it('should not throw error on close if client is already closed', async () => {
       const quit = jest.spyOn(redisClientMock, 'quit');
+
       quit.mockClear();
 
       await redisHelper.close();
@@ -55,7 +56,7 @@ describe('RedisHelper', () => {
 
     afterEach(async () => {
       await redisHelper.close();
-    })
+    });
 
     it('should return event count', async () => {
       const ruleId = 'ruleId';
@@ -86,7 +87,7 @@ describe('RedisHelper', () => {
       jest.spyOn(global.Date, 'now').mockImplementation(() => currentDate + 2 * thresholdPeriod + 1);
 
       const currentEventCount = await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
-      const currentlyStoredTimestamp = await redisClient.hGet(`${ruleId}:${groupHash}:${thresholdPeriod}`, "timestamp");
+      const currentlyStoredTimestamp = await redisClient.hGet(`${ruleId}:${groupHash}:${thresholdPeriod}`, 'timestamp');
 
       expect(currentEventCount).toBe(1);
       expect(currentlyStoredTimestamp).toBe(Date.now().toString());
