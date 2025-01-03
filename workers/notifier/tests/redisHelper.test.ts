@@ -13,6 +13,10 @@ describe('RedisHelper', () => {
     redisClientMock = Reflect.get(redisHelper, 'redisClient') as jest.Mocked<ReturnType<typeof createClient>>;
   });
 
+  afterAll(async () => {
+    await redisClient.quit();
+  })
+
   describe('initialize', () => {
     it('should connect to redis client', async () => {
       const connect = jest.spyOn(redisClientMock, 'connect');
@@ -85,7 +89,7 @@ describe('RedisHelper', () => {
       const currentlyStoredTimestamp = await redisClient.hGet(`${ruleId}:${groupHash}:${thresholdPeriod}`, "timestamp");
 
       expect(currentEventCount).toBe(1);
-      expect(currentlyStoredTimestamp).toBe(Date.now());
+      expect(currentlyStoredTimestamp).toBe(Date.now().toString());
     });
   });
 });

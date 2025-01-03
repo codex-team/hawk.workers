@@ -12,7 +12,7 @@ export default class RedisHelper {
   private readonly redisClient: RedisClientType;
 
   /**
-   *
+   * Create redis client and add error handler to it
    */
   constructor() {
     this.redisClient = createClient({ url: process.env.REDIS_URL });

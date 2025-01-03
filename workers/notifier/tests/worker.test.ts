@@ -137,6 +137,10 @@ describe('NotifierWorker', () => {
     await worker.finish();
   });
 
+  afterAll(async () => {
+    await redisClient.quit();
+  })
+
   describe('db calls', () => {
     it('should connect to db on start', async () => {
       expect(dbConnectMock).toBeCalled();
