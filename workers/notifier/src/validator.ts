@@ -7,7 +7,7 @@ import { Rule } from '../types/rule';
  * WhatToReceive property values
  */
 export enum WhatToReceive {
-  All = 'ALL',
+  SeenMore = 'SEEN_MORE',
   New = 'ONLY_NEW',
 }
 
@@ -48,25 +48,6 @@ export default class RuleValidator {
 
     if (!rule.isEnabled) {
       throw Error('Rule is disabled');
-    }
-
-    return this;
-  }
-
-  /**
-   * Check if event fits whatToReceive rule
-   *
-   * @throws {Error} if event doesn't fit
-   *
-   * @returns {RuleValidator}
-   */
-  public checkWhatToReceive(): RuleValidator {
-    const { rule, event } = this;
-    const result = rule.whatToReceive === WhatToReceive.All ||
-      (event.isNew && rule.whatToReceive === WhatToReceive.New);
-
-    if (!result) {
-      throw Error('Event doesn\'t match `what to receive` filter');
     }
 
     return this;
@@ -132,7 +113,6 @@ export default class RuleValidator {
   public checkAll(): RuleValidator {
     return this
       .checkIfRuleIsOn()
-      .checkWhatToReceive()
       .checkIncludingWords()
       .checkExcludingWords();
   }
