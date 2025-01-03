@@ -1,12 +1,15 @@
 import RedisHelper from '../src/redisHelper';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 
 describe('RedisHelper', () => {
   let redisHelper: RedisHelper;
   let redisClientMock: jest.Mocked<ReturnType<typeof createClient>>;
+  let redisClient: RedisClientType;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     redisHelper = new RedisHelper();
+    redisClient = createClient({ url: process.env.REDIS_URL});
+    await redisClient.connect();
     redisClientMock = Reflect.get(redisHelper, 'redisClient') as jest.Mocked<ReturnType<typeof createClient>>;
   });
 
@@ -79,8 +82,10 @@ describe('RedisHelper', () => {
       jest.spyOn(global.Date, 'now').mockImplementation(() => currentDate + 2 * thresholdPeriod + 1);
 
       const currentEventCount = await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
+      const currentlyStoredTimestamp = await redisClient.hGet(`${ruleId}:${groupHash}:${thresholdPeriod}`, "timestamp");
 
       expect(currentEventCount).toBe(1);
+      expect(currentlyStoredTimestamp).toBe(Date.now());
     });
   });
 });

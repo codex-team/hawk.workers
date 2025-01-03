@@ -3,6 +3,7 @@ import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 import '../../../env-test';
 import RedisHelper from '../src/redisHelper';
+import { createClient, RedisClientType } from 'redis';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -94,12 +95,39 @@ class MockDBController {
 describe('NotifierWorker', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
+  let redisClient: RedisClientType;
 
   let worker: typeof NotifierWorker;
 
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: MockDBController,
   }));
+  
+  /**
+   * Before all tests connect to redis client
+   */
+  beforeAll(async () => { 
+    redisClient = createClient({ url: process.env.REDIS_URL});
+    await redisClient.connect();
+  })
+
+  /**
+   * Before each test create an instance of the worker and start it
+   */
+  beforeEach(async () => {
+    jest.mock('../src/redisHelper')
+
+    worker = new NotifierWorker();
+
+    /**
+     * Reset information that could be patched by tets Arrangement
+     */
+    rule.isEnabled = true;
+    rule.including = [];
+    rule.excluding = [];
+
+    await worker.start();
+  });
 
   /**
    * Reset calls number after each test
@@ -107,15 +135,6 @@ describe('NotifierWorker', () => {
   afterEach(async () => {
     jest.clearAllMocks();
     await worker.finish();
-  });
-
-  /**
-   * Before each test create an instance of the worker and start it
-   */
-  beforeEach(async () => {
-    worker = new NotifierWorker();
-
-    await worker.start();
   });
 
   describe('db calls', () => {
@@ -178,13 +197,11 @@ describe('NotifierWorker', () => {
 
   describe('worker functionality', () => {
     it('should send task if event threshold reached', async () => {
-      jest.mock('../src/redisHelper')
       /**
-       * Mock redis helper to return threshold
+       * Simulate case when we reached threshold in redis.
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
 
-      rule.isEnabled = true;
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -195,16 +212,13 @@ describe('NotifierWorker', () => {
     });
 
     it('should not send task if event count is more than event threshold', async () => {
-      jest.mock('../src/redisHelper')
-
       /**
-       * Mock redis helper to return threshold
+       * Simulate case when threshold in redis is more than rule threshold.
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold + 1);
       
       worker.sendToSenderWorker = jest.fn();
 
-      rule.isEnabled = true;
       const message = { ...messageMock };
 
       await worker.handle(message);
@@ -213,16 +227,13 @@ describe('NotifierWorker', () => {
     });
 
     it('should not send task if event count is less than event threshold', async () => {
-      jest.mock('../src/redisHelper')
-      
       /**
-       * Mock redis helper to return threshold
+       * Simulate case then threshold in redis is less than rule threshold
        */
       RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold - 1);
       
       worker.sendToSenderWorker = jest.fn();
 
-      rule.isEnabled = true;
       const message = { ...messageMock };
 
       await worker.handle(message);
@@ -231,8 +242,6 @@ describe('NotifierWorker', () => {
     });
 
     it('should not check for event count and should not send event to sender if rule is disabled', async () => {
-      jest.mock('../src/redisHelper')
-      
       /**
        * Mock redis helper to return threshold
        */
@@ -250,8 +259,6 @@ describe('NotifierWorker', () => {
     });
 
     it('should not check for event count and should not send event to sender if rule validation did not pass', async () => {
-      jest.mock('../src/redisHelper')
-      
       /**
        * Mock redis helper to return threshold
        */
@@ -259,8 +266,6 @@ describe('NotifierWorker', () => {
       
       worker.sendToSenderWorker = jest.fn();
 
-
-      rule.isEnabled = true;
       rule.including = [ 'some string that is not in message' ];
       const message = { ...messageMock };
 
@@ -271,8 +276,6 @@ describe('NotifierWorker', () => {
     });
 
     it('should send event to all channels that are enabled in rule', async () => {
-      jest.mock('../src/redisHelper')
-      
       /**
        * Mock redis helper to return threshold
        */
@@ -280,13 +283,15 @@ describe('NotifierWorker', () => {
       
       worker.sendToSenderWorker = jest.fn();
 
-      rule.isEnabled = true;
-      rule.including = [];
       const message = { ...messageMock };
 
       await worker.handle(message);
 
       expect(worker.sendToSenderWorker).toBeCalledTimes(2);
     });
-  })
+
+    it('should update timestamp when threshold period expired', async () => {
+      
+    })
+  });
 });
