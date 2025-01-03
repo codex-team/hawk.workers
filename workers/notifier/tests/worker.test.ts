@@ -251,10 +251,11 @@ describe('NotifierWorker', () => {
       worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
+      message.event.isNew = true;
 
       await worker.handle(message);
 
-      expect(worker.sendToSenderWorker).toBeCalled();
+      expect(worker.sendToSenderWorker).toBeCalledTimes(1);
     });
 
     it('should send task if event threshold reached', async () => {
