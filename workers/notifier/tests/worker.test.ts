@@ -164,6 +164,7 @@ describe('NotifierWorker', () => {
     /**
      * Reset information that could be patched by tets Arrangement
      */
+    rule.whatToReceive = WhatToReceive.SeenMore;
     rule.isEnabled = true;
     rule.including = [];
     rule.excluding = [];
@@ -247,6 +248,18 @@ describe('NotifierWorker', () => {
   });
 
   describe('worker functionality', () => {
+    it('should send one notification if event is new and rule.whatToReceive is ONLY_NEW', async () => {
+      rule.whatToReceive = WhatToReceive.New;
+
+      worker.sendToSenderWorker = jest.fn();
+
+      const message = { ...messageMock }; 
+
+      await worker.handle(message);
+
+      expect(worker.sendToSenderWorker).toBeCalled();
+    });
+
     it('should send task if event threshold reached', async () => {
       /**
        * Simulate case when we reached threshold in redis.
