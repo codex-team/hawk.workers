@@ -52,6 +52,8 @@ export default class GrouperWorker extends Worker {
   public async start(): Promise<void> {
     await this.db.connect();
     this.prepareCache();
+    await this.redis.initialize();
+
     await super.start();
 
 
@@ -79,6 +81,7 @@ export default class GrouperWorker extends Worker {
     await super.finish();
     this.prepareCache();
     await this.db.close();
+    await this.redis.close();
   }
 
   /**
