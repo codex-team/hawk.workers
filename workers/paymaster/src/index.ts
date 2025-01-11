@@ -65,10 +65,6 @@ export default class PaymasterWorker extends Worker {
    * @param date - last charge date
    */
   private static isTimeToPay(date: Date, isDebug = false): boolean {
-
-    /**
-     * @todo store prepaid period duration days in a plan
-     */
     const expectedPayDay = new Date(date);
 
     if (isDebug) {
@@ -89,14 +85,14 @@ export default class PaymasterWorker extends Worker {
    *
    * @param date - last charge date
    */
-  private static daysBeforePayday(date: Date): number {
-    /**
-     * @todo store prepaid period duration days in a plan
-     */
-    const numberOfDays = 30;
+  private static daysBeforePayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
 
     const now = new Date().getTime();
 
@@ -110,14 +106,14 @@ export default class PaymasterWorker extends Worker {
    *
    * @param date - last charge date
    */
-  private static daysAfterPayday(date: Date): number {
-    /**
-     * @todo store prepaid period duration days in a plan
-     */
-    const numberOfDays = 30;
+  private static daysAfterPayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
 
     const now = new Date().getTime();
 
@@ -209,6 +205,7 @@ export default class PaymasterWorker extends Worker {
     /**
      * Is it time to pay
      */
+    // @ts-expect-error
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.isDebug);
 
     /**
@@ -219,7 +216,8 @@ export default class PaymasterWorker extends Worker {
     /**
      * How many days left for the expected day of payments
      */
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate);
+    // @ts-expect-error
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * Do we need to ask for money
@@ -231,10 +229,6 @@ export default class PaymasterWorker extends Worker {
      * Alerting admins to pay for the workspace
      */
     if (!isTimeToPay) {
-      // if (currentPlan.isManual) { // только для предоплаченных за неск месяцев
-      //   return [workspace, false];
-      // }
-
       /**
        * If payday is coming for the paid plans then notify admins
        *
@@ -370,20 +364,6 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for clear counter
    */
   private async clearBillingPeriodEventsCount(workspace: WorkspaceDBScheme): Promise<void> {
-    /**
-     * @todo add telegram notification
-     *
-     * "Workspace ${workspace.name}[${workspace._id}] billing period events count has been cleared. Previous value: ${workspace.billingPeriodEventsCount}"
-     */
-    const reportMessage = `
-🚽 Hawk Paymaster ${process.env.ENVIRONMENT_NAME ? `(${process.env.ENVIRONMENT_NAME})` : ''}
-
-Workspace "${workspace.name}" billing period events count has been cleared.
-Previous value: ${workspace.billingPeriodEventsCount}
-    `;
-
-    await this.sendReport(reportMessage);
-
     await this.workspaces.updateOne({
       _id: workspace._id,
     }, {
