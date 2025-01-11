@@ -63,6 +63,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
   private static isTimeToPay(date: Date, isDebug = false): boolean {
     const expectedPayDay = new Date(date);
@@ -84,6 +85,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
   private static daysBeforePayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
@@ -105,6 +107,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
   private static daysAfterPayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
@@ -205,19 +208,19 @@ export default class PaymasterWorker extends Worker {
     /**
      * Is it time to pay
      */
-    // @ts-expect-error
+    // @ts-expect-error debug
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * How many days have passed since payments the expected day of payments
      */
-    // @ts-expect-error
+    // @ts-expect-error debug
     const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * How many days left for the expected day of payments
      */
-    // @ts-expect-error
+    // @ts-expect-error debug
     const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.isDebug);
 
     /**
