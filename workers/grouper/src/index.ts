@@ -104,6 +104,8 @@ export default class GrouperWorker extends Worker {
 
     let repetitionId = null;
 
+    let incrementDailyAffectedUsers = false;
+
     /**
      * Filter sensitive information
      */
@@ -121,6 +123,11 @@ export default class GrouperWorker extends Worker {
           payload: task.event,
           usersAffected: 1,
         } as GroupedEventDBScheme);
+
+        /**
+         * Increment daily affected users for the first event
+         */
+        incrementDailyAffectedUsers = true;
       } catch (e) {
         /**
          * If we caught Database duplication error, then another worker thread has already saved it to the database
@@ -136,7 +143,9 @@ export default class GrouperWorker extends Worker {
         }
       }
     } else {
-      const incrementAffectedUsers = await this.shouldIncrementAffectedUsers(task, existedEvent);
+      const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
+
+      incrementDailyAffectedUsers = shouldIncrementDailyAffectedUsers;
 
       /**
        * Increment existed task's counter
@@ -161,6 +170,8 @@ export default class GrouperWorker extends Worker {
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
       }
 
+      incrementDailyAffectedUsers = incrementDailyAffectedUsers
+
       const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
@@ -172,7 +183,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId, incrementDailyAffectedUsers);
 
     /**
      * Add task for NotifierWorker
@@ -244,39 +255,88 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Decides whether to increase the number of affected users.
+   * Decides whether to increase the number of affected users for the repetition and the daily aggregation
    *
    * @param task - worker task to process
    * @param existedEvent - original event to get its user
+   * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
-  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEventDBScheme): Promise<boolean> {
+  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
     const eventUser = task.event.user;
 
+    // In case of no user, we don't need to increment affected users
     if (!eventUser) {
-      return false;
+      return [false, false];
     }
+
+    // Return early if user is the same as original event
     const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
-
     if (isUserFromOriginalEvent) {
-      return false;
-    } else {
-      const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
-      const repetition = await this.cache.get(repetitionCacheKey, async () => {
-        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
-          .findOne({
-            groupHash: existedEvent.groupHash,
-            'payload.user.id': eventUser.id,
-          });
-      });
-
-      if (repetition) {
-        return false;
-      }
-
-      const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
-
-      return !isLocked;
+      return [false, false];
     }
+
+    // Default to true - we'll set to false if conditions are met
+    let shouldIncrementRepetitionAffectedUsers = true;
+    let shouldIncrementDailyAffectedUsers = true;
+
+    /**
+     * Check if repetition exists for the user, if so, don't increment affected users
+     */
+    const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
+    const repetition = await this.cache.get(repetitionCacheKey, async () => {
+      return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        .findOne({
+          groupHash: existedEvent.groupHash,
+          'payload.user.id': eventUser.id,
+        });
+    });
+
+    /**
+     * Get midnight timestamps for the event and the next day
+     */
+    const eventMidnight = this.getMidnightByEventTimestamp(task.event.timestamp);
+    const eventNextMidnight = this.getMidnightByEventTimestamp(task.event.timestamp, true);
+
+    /**
+     * Check if daily repetition exists for the user, if so, don't increment affected users
+     */
+    const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
+    const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
+      return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        .findOne({
+          groupHash: existedEvent.groupHash,
+          'payload.user.id': eventUser.id,
+          'payload.timestamp': {
+            $gte: eventMidnight,
+            $lt: eventNextMidnight,
+          },
+        });
+    });
+
+    /**
+     * If repetition exists, don't increment repetition affected users
+     */
+    if (repetition) {
+      shouldIncrementRepetitionAffectedUsers = false;
+    }
+
+    /**
+     * If daily repetition exists, don't increment daily affected users  
+     */
+    if (repetitionDaily) {
+      shouldIncrementDailyAffectedUsers = false;
+    }
+
+    /**
+     * Check Redis lock - if locked, don't increment either counter
+     */
+    const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
+    if (isLocked) {
+      shouldIncrementRepetitionAffectedUsers = false;
+      shouldIncrementDailyAffectedUsers = false;
+    }
+
+    return [shouldIncrementRepetitionAffectedUsers, shouldIncrementDailyAffectedUsers];
   }
 
   /**
@@ -395,23 +455,15 @@ export default class GrouperWorker extends Worker {
     projectId: string,
     eventHash: string,
     eventTimestamp: number,
-    repetitionId: string | null
+    repetitionId: string | null,
+    shouldIncrementAffectedUsers: boolean
   ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
     }
 
     try {
-      /**
-       * Get JavaScript date from event unixtime to convert daily aggregation collection format
-       *
-       * Problem was issued due to the numerous events that could be occurred in the past
-       * but the date always was current
-       */
-      const eventDate = new Date(eventTimestamp * MS_IN_SEC);
-
-      eventDate.setUTCHours(0, 0, 0, 0); // 00:00 UTC
-      const midnight = eventDate.getTime() / MS_IN_SEC;
+      const midnight = this.getMidnightByEventTimestamp(eventTimestamp);
 
       await this.db.getConnection()
         .collection(`dailyEvents:${projectId}`)
@@ -427,11 +479,35 @@ export default class GrouperWorker extends Worker {
               lastRepetitionTime: eventTimestamp,
               lastRepetitionId: repetitionId,
             },
-            $inc: { count: 1 },
+            $inc: { count: 1, affectedUsers: shouldIncrementAffectedUsers ? 1 : 0 }
           },
           { upsert: true });
     } catch (err) {
       throw new DatabaseReadWriteError(err);
     }
+  }
+
+  /**
+   * Gets the midnight timestamp for the event date or the next day
+   * 
+   * @param eventTimestamp - Unix timestamp of the event
+   * @param getNext - If true, returns the next day's midnight timestamp
+   */
+  private getMidnightByEventTimestamp(eventTimestamp: number, getNext: boolean = false): number {
+    /**
+     * Get JavaScript date from event unixtime to convert daily aggregation collection format
+     *
+     * Problem was issued due to the numerous events that could be occurred in the past
+     * but the date always was current
+     */
+    const eventDate = new Date(eventTimestamp * MS_IN_SEC);
+
+    if (getNext) {
+      eventDate.setUTCDate(eventDate.getUTCDate() + 1);
+    }
+
+    eventDate.setUTCHours(0, 0, 0, 0);
+
+    return eventDate.getTime() / MS_IN_SEC;
   }
 }
