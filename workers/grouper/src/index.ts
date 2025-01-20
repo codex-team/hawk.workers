@@ -170,8 +170,6 @@ export default class GrouperWorker extends Worker {
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
       }
 
-      incrementDailyAffectedUsers = incrementDailyAffectedUsers
-
       const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
@@ -271,6 +269,7 @@ export default class GrouperWorker extends Worker {
 
     // Return early if user is the same as original event
     const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
+
     if (isUserFromOriginalEvent) {
       return [false, false];
     }
@@ -321,7 +320,7 @@ export default class GrouperWorker extends Worker {
     }
 
     /**
-     * If daily repetition exists, don't increment daily affected users  
+     * If daily repetition exists, don't increment daily affected users
      */
     if (repetitionDaily) {
       shouldIncrementDailyAffectedUsers = false;
@@ -331,6 +330,7 @@ export default class GrouperWorker extends Worker {
      * Check Redis lock - if locked, don't increment either counter
      */
     const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
+
     if (isLocked) {
       shouldIncrementRepetitionAffectedUsers = false;
       shouldIncrementDailyAffectedUsers = false;
@@ -449,6 +449,7 @@ export default class GrouperWorker extends Worker {
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
    * @param {string|null} repetitionId - event's last repetition id
+   * @param shouldIncrementAffectedUsers
    * @returns {Promise<void>}
    */
   private async saveDailyEvents(
@@ -479,7 +480,10 @@ export default class GrouperWorker extends Worker {
               lastRepetitionTime: eventTimestamp,
               lastRepetitionId: repetitionId,
             },
-            $inc: { count: 1, affectedUsers: shouldIncrementAffectedUsers ? 1 : 0 }
+            $inc: {
+              count: 1,
+              affectedUsers: shouldIncrementAffectedUsers ? 1 : 0,
+            },
           },
           { upsert: true });
     } catch (err) {
@@ -489,11 +493,11 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Gets the midnight timestamp for the event date or the next day
-   * 
+   *
    * @param eventTimestamp - Unix timestamp of the event
    * @param getNext - If true, returns the next day's midnight timestamp
    */
-  private getMidnightByEventTimestamp(eventTimestamp: number, getNext: boolean = false): number {
+  private getMidnightByEventTimestamp(eventTimestamp: number, getNext = false): number {
     /**
      * Get JavaScript date from event unixtime to convert daily aggregation collection format
      *
