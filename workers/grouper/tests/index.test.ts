@@ -138,6 +138,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask({ user: { id: '123' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(1);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(1);
     });
 
     test('Should increment usersAffected count if users are different', async () => {
@@ -147,6 +148,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(4);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(4);
     });
 
     test('Should not increment usersAffected count if already there is error from that user', async () => {
@@ -156,6 +158,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(2);
     });
 
     test('Should increment usersAffected count if there is no user in original event', async () => {
@@ -165,6 +168,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(3);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(3);
     });
 
     test('Should not increment usersAffected count if there is no user in processed event', async () => {
@@ -174,6 +178,7 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask({ user: { id: 'foo' } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(2);
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
