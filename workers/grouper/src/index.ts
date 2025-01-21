@@ -281,9 +281,14 @@ export default class GrouperWorker extends Worker {
     let shouldIncrementRepetitionAffectedUsers = true;
     let shouldIncrementDailyAffectedUsers = true;
 
-    // Return early if user is the same as original event
+    /**
+     * Check if user is the same as original event
+     */
     const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
 
+    /**
+     * If user is the same as original event, don't increment repetition affected users
+     */
     if (isUserFromOriginalEvent) {
       shouldIncrementRepetitionAffectedUsers = false;
     } else {
@@ -471,7 +476,7 @@ export default class GrouperWorker extends Worker {
    * @param {string} eventHash - event hash
    * @param {string} eventTimestamp - timestamp of the last event
    * @param {string|null} repetitionId - event's last repetition id
-   * @param shouldIncrementAffectedUsers
+   * @param {boolean} shouldIncrementAffectedUsers - whether to increment affected users
    * @returns {Promise<void>}
    */
   private async saveDailyEvents(
