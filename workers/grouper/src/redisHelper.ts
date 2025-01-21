@@ -81,6 +81,16 @@ export default class RedisHelper {
   }
 
   /**
+   * Unlock event lock
+   *
+   * @param groupHash - event group hash
+   * @param userId - event user id
+   */
+  public async unlockEvent(groupHash: string, userId: string): Promise<void> {
+    await this.redisClient.del(`${groupHash}:${userId}`);
+  }
+
+  /**
    * Creates callback function for Redis operations
    *
    * @param resolve - callback that will be called if no errors occurred

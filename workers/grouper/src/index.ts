@@ -145,6 +145,10 @@ export default class GrouperWorker extends Worker {
     } else {
       const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
 
+      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+        console.log(shouldIncrementDailyAffectedUsers);
+      }
+
       incrementDailyAffectedUsers = shouldIncrementDailyAffectedUsers;
 
       /**
@@ -196,6 +200,11 @@ export default class GrouperWorker extends Worker {
         },
       });
     }
+
+    /**
+     * Unlock event lock, because we've finished processing it
+     */
+    await this.redis.unlockEvent(uniqueEventHash, task.event.user?.id);
   }
 
   /**
@@ -262,33 +271,42 @@ export default class GrouperWorker extends Worker {
   private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
     const eventUser = task.event.user;
 
-    // In case of no user, we don't need to increment affected users
+    /**
+     * In case of no user, we don't need to increment affected users
+     */
     if (!eventUser) {
       return [false, false];
     }
+
+
+    /**
+     * Default to true - we'll set to false if conditions are met
+     */
+    let shouldIncrementRepetitionAffectedUsers = true;
+    let shouldIncrementDailyAffectedUsers = true;
 
     // Return early if user is the same as original event
     const isUserFromOriginalEvent = existedEvent.payload.user?.id === eventUser.id;
 
     if (isUserFromOriginalEvent) {
-      return [false, false];
+      shouldIncrementRepetitionAffectedUsers = false;
+    } else {
+      /**
+       * Check if repetition exists for the user, if so, don't increment affected users
+       */
+      const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
+      const repetition = await this.cache.get(repetitionCacheKey, async () => {
+        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+          .findOne({
+            groupHash: existedEvent.groupHash,
+            'payload.user.id': eventUser.id,
+          });
+      });
+
+      if (repetition) {
+        shouldIncrementRepetitionAffectedUsers = false;
+      }
     }
-
-    // Default to true - we'll set to false if conditions are met
-    let shouldIncrementRepetitionAffectedUsers = true;
-    let shouldIncrementDailyAffectedUsers = true;
-
-    /**
-     * Check if repetition exists for the user, if so, don't increment affected users
-     */
-    const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
-    const repetition = await this.cache.get(repetitionCacheKey, async () => {
-      return this.db.getConnection().collection(`repetitions:${task.projectId}`)
-        .findOne({
-          groupHash: existedEvent.groupHash,
-          'payload.user.id': eventUser.id,
-        });
-    });
 
     /**
      * Get midnight timestamps for the event and the next day
@@ -297,39 +315,61 @@ export default class GrouperWorker extends Worker {
     const eventNextMidnight = this.getMidnightByEventTimestamp(task.event.timestamp, true);
 
     /**
-     * Check if daily repetition exists for the user, if so, don't increment affected users
+     * If incoming event has the same day as the original event
      */
-    const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
-    const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
-      return this.db.getConnection().collection(`repetitions:${task.projectId}`)
-        .findOne({
-          groupHash: existedEvent.groupHash,
-          'payload.user.id': eventUser.id,
-          'payload.timestamp': {
-            $gte: eventMidnight,
-            $lt: eventNextMidnight,
-          },
-        });
-    });
-
-    /**
-     * If repetition exists, don't increment repetition affected users
-     */
-    if (repetition) {
-      shouldIncrementRepetitionAffectedUsers = false;
-    }
-
-    /**
-     * If daily repetition exists, don't increment daily affected users
-     */
-    if (repetitionDaily) {
+    if (existedEvent.payload.timestamp > eventMidnight && existedEvent.payload.timestamp < eventNextMidnight && existedEvent.payload.user?.id === eventUser.id) {
+      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+        console.log(new Date(existedEvent.payload.timestamp * MS_IN_SEC), new Date(eventMidnight * MS_IN_SEC), new Date(eventNextMidnight * MS_IN_SEC));
+        console.log(existedEvent);
+        console.log(task.event);
+      }
       shouldIncrementDailyAffectedUsers = false;
+    } else {
+      /**
+       * Check if daily repetition exists for the user, if so, don't increment affected users
+       */
+      const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
+      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+        console.log(repetitionDailyCacheKey);
+      }
+      const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
+        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+          .findOne({
+            groupHash: existedEvent.groupHash,
+            'payload.user.id': eventUser.id,
+            'payload.timestamp': {
+              $gte: eventMidnight,
+              $lt: eventNextMidnight,
+            },
+          });
+      });
+
+      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+        console.log(task.event.timestamp);
+        console.log(repetitionDaily);
+      }
+
+      /**
+       * If daily repetition exists, don't increment daily affected users
+       */
+      if (repetitionDaily) {
+        shouldIncrementDailyAffectedUsers = false;
+      }
     }
+
+    if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+      console.log(shouldIncrementDailyAffectedUsers);
+    }
+
 
     /**
      * Check Redis lock - if locked, don't increment either counter
      */
     const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
+
+    if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
+      console.log('isLocked', isLocked);
+    }
 
     if (isLocked) {
       shouldIncrementRepetitionAffectedUsers = false;

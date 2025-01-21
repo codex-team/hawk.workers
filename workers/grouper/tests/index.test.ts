@@ -4,6 +4,7 @@ import { GroupWorkerTask } from '../types/group-worker-task';
 import { createClient, RedisClientType } from 'redis';
 import { Collection, MongoClient } from 'mongodb';
 import { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 jest.mock('amqplib');
 
@@ -19,10 +20,10 @@ jest.mock('../../../lib/cache/controller', () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
-    public flushAll(): void {}
+    public flushAll(): void { }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
-    public set(): void {}
+    public set(): void { }
   };
 });
 
@@ -35,6 +36,11 @@ function generateRandomId(): string {
     Math.random().toString(36)
       .substring(2, 15);
 }
+
+/**
+ * Seconds in a day
+ */
+const secondsInDay = 24 * 60 * 60;
 
 /**
  * Mocked Project id used for tests
@@ -179,6 +185,56 @@ describe('GrouperWorker', () => {
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(2);
       expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(2);
+    });
+
+    test('Should increment daily affected users if affected users are the same as the previous day', async () => {
+
+      const today = (new Date()).getTime() / MS_IN_SEC;
+      const yesterday = today - secondsInDay;
+
+      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer1' } }));
+      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer2' } }));
+
+      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer1' } }));
+      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer2' } }));
+
+      const dailyEvents = await dailyEventsCollection.find({}).toArray();
+
+      expect(dailyEvents.length).toBe(2);
+      expect(dailyEvents[0].affectedUsers).toBe(2);
+      expect(dailyEvents[1].affectedUsers).toBe(2);
+    });
+
+    test('Should increment daily affected users if user is in original event, but incoming event has different day', async () => {
+      const yesterday = (new Date()).getTime() / MS_IN_SEC - secondsInDay;
+      const today = (new Date()).getTime() / MS_IN_SEC;
+
+      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer1' } }));
+      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer1' } }));
+      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer2' } }));
+
+      /**
+       * Get daily events ordered by timestamp desc
+       */
+      const dailyEvents = await dailyEventsCollection.find({
+      }).sort({ timestamp: -1 }).toArray();
+
+      expect(dailyEvents.length).toBe(2);
+      /**
+       * First event is from yesterday, so it should have 1 affected user
+       */
+      expect(dailyEvents[0].affectedUsers).toBe(1);
+      /**
+       * Second event is from today, so it should have 2 affected users
+       */
+      expect(dailyEvents[1].affectedUsers).toBe(2);
+    });
+
+    test('Should not increment daily affected users if user is empty', async () => {
+      await worker.handle(generateTask({ user: undefined }));
+      await worker.handle(generateTask({ user: undefined }));
+
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(1);
     });
 
     test('Should stringify payload`s addons and context fields', async () => {
