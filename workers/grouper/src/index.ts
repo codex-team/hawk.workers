@@ -145,10 +145,6 @@ export default class GrouperWorker extends Worker {
     } else {
       const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
 
-      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-        console.log(shouldIncrementDailyAffectedUsers);
-      }
-
       incrementDailyAffectedUsers = shouldIncrementDailyAffectedUsers;
 
       /**
@@ -315,14 +311,14 @@ export default class GrouperWorker extends Worker {
     const eventNextMidnight = this.getMidnightByEventTimestamp(task.event.timestamp, true);
 
     /**
-     * If incoming event has the same day as the original event
+     * Check if incoming event has the same day as the original event
      */
-    if (existedEvent.payload.timestamp > eventMidnight && existedEvent.payload.timestamp < eventNextMidnight && existedEvent.payload.user?.id === eventUser.id) {
-      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-        console.log(new Date(existedEvent.payload.timestamp * MS_IN_SEC), new Date(eventMidnight * MS_IN_SEC), new Date(eventNextMidnight * MS_IN_SEC));
-        console.log(existedEvent);
-        console.log(task.event);
-      }
+    const isSameDay = existedEvent.payload.timestamp > eventMidnight && existedEvent.payload.timestamp < eventNextMidnight;
+
+    /**
+     * If incoming event has the same day as the original event and the same user, don't increment daily affected users
+     */
+    if (isSameDay && existedEvent.payload.user?.id === eventUser.id) {
       shouldIncrementDailyAffectedUsers = false;
     } else {
       /**
@@ -344,11 +340,6 @@ export default class GrouperWorker extends Worker {
           });
       });
 
-      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-        console.log(task.event.timestamp);
-        console.log(repetitionDaily);
-      }
-
       /**
        * If daily repetition exists, don't increment daily affected users
        */
@@ -357,19 +348,10 @@ export default class GrouperWorker extends Worker {
       }
     }
 
-    if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-      console.log(shouldIncrementDailyAffectedUsers);
-    }
-
-
     /**
      * Check Redis lock - if locked, don't increment either counter
      */
     const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
-
-    if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-      console.log('isLocked', isLocked);
-    }
 
     if (isLocked) {
       shouldIncrementRepetitionAffectedUsers = false;
