@@ -330,9 +330,6 @@ export default class GrouperWorker extends Worker {
        * Check if daily repetition exists for the user, if so, don't increment affected users
        */
       const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
-      if (task.event.user?.id === 'customer1' || task.event.user?.id === 'customer2') {
-        console.log(repetitionDailyCacheKey);
-      }
       const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
         return this.db.getConnection().collection(`repetitions:${task.projectId}`)
           .findOne({
