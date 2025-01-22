@@ -196,11 +196,6 @@ export default class GrouperWorker extends Worker {
         },
       });
     }
-
-    /**
-     * Unlock event lock, because we've finished processing it
-     */
-    await this.redis.unlockEvent(uniqueEventHash, task.event.user?.id);
   }
 
   /**
@@ -353,12 +348,11 @@ export default class GrouperWorker extends Worker {
     /**
      * Check Redis lock - if locked, don't increment either counter
      */
-    const isLocked = await this.redis.checkOrSetEventLock(existedEvent.groupHash, eventUser.id);
+    const isEventLocked = await this.redis.checkOrSetlockEventForAffectedUsersIncrement(existedEvent.groupHash, eventUser.id);
+    const isDailyEventLocked = await this.redis.checkOrSetlockDailyEventForAffectedUsersIncrement(existedEvent.groupHash, eventUser.id, eventMidnight);
 
-    if (isLocked) {
-      shouldIncrementRepetitionAffectedUsers = false;
-      shouldIncrementDailyAffectedUsers = false;
-    }
+    shouldIncrementRepetitionAffectedUsers = isEventLocked ? false : shouldIncrementRepetitionAffectedUsers;
+    shouldIncrementDailyAffectedUsers = isDailyEventLocked ? false : shouldIncrementDailyAffectedUsers;
 
     return [shouldIncrementRepetitionAffectedUsers, shouldIncrementDailyAffectedUsers];
   }
