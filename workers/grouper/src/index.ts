@@ -210,7 +210,8 @@ export default class GrouperWorker extends Worker {
          * 
          */
 
-        // console.log('diff new', diff);
+        console.log('old diff', diff);
+        console.log('new diff', delta);
       } catch (e) {
         console.error(e);
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
@@ -218,11 +219,13 @@ export default class GrouperWorker extends Worker {
 
       const newRepetition = {
         groupHash: uniqueEventHash,
-        payload: diff,
+        // payload: diff,
+        delta,
+        // timestamp: task.event.timestamp
         /**
          * Temporarily store the whole repetition for diff/merge debugging
          */
-        __raw: JSON.stringify(task.event),
+        // __raw: JSON.stringify(task.event),
       } as RepetitionDBScheme;
 
     

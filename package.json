@@ -25,7 +25,7 @@
         "test:release": "jest workers/release",
         "test:slack": "jest workers/slack",
         "test:limiter": "jest workers/limiter",
-        "test:grouper": "jest workers/grouper --spec ",
+        "test:grouper": "jest workers/grouper",
         "test:diff": "jest ./workers/grouper/tests/diff.test.ts",
         "test:paymaster": "jest workers/paymaster",
         "test:notifier": "jest workers/notifier",
