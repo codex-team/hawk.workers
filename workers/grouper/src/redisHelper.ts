@@ -64,9 +64,33 @@ export default class RedisHelper {
    * @param groupHash - event group hash
    * @param userId - event user id
    */
-  public async checkOrSetEventLock(groupHash: string, userId: string): Promise<boolean> {
+  public async checkOrSetlockEventForAffectedUsersIncrement(groupHash: string, userId: string): Promise<boolean> {
     const result = await this.redisClient.set(
       `${groupHash}:${userId}`,
+      '1',
+      {
+        EX: RedisHelper.LOCK_TTL,
+        NX: true,
+      } as const
+    );
+
+    /**
+     * Result would be null if lock already exists, false otherwise
+     */
+    return result === null;
+  }
+
+  /**
+   * Checks if a lock exists on the given group hash, identifier and timestamp. If it does not exist, creates a lock.
+   * Returns true if lock exists
+   *
+   * @param groupHash - event group hash
+   * @param userId - event user id
+   * @param timestamp - event timestamp for daily events
+   */
+  public async checkOrSetlockDailyEventForAffectedUsersIncrement(groupHash: string, userId: string, timestamp: number): Promise<boolean> {
+    const result = await this.redisClient.set(
+      `${groupHash}:${userId}:${timestamp}`,
       '1',
       {
         EX: RedisHelper.LOCK_TTL,
