@@ -99,6 +99,11 @@ describe('GrouperWorker', () => {
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
 
+    /**
+     * Create unique index for groupHash
+     */
+    await eventsCollection.createIndex({ groupHash: 1 }, { unique: true });
+
     redisClient = createClient({ url: process.env.REDIS_URL });
     await redisClient.connect();
 
@@ -228,6 +233,17 @@ describe('GrouperWorker', () => {
        * Second event is from today, so it should have 2 affected users
        */
       expect(dailyEvents[1].affectedUsers).toBe(2);
+    });
+
+    test('Should not increment affected users when there are several simultaneous events from the same user', async () => {
+      await Promise.all([
+        worker.handle(generateTask({ user: { id: 'customer211' } })),
+        worker.handle(generateTask({ user: { id: 'customer211' } })),
+        worker.handle(generateTask({ user: { id: 'customer211' } })),
+      ]);
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(1);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(1);
     });
 
     test('Should not increment daily affected users if user is empty', async () => {
