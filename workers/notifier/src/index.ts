@@ -37,6 +37,7 @@ export default class NotifierWorker extends Worker {
   public async start(): Promise<void> {
     await this.accountsDb.connect();
     await this.redis.initialize();
+    
     await super.start();
   }
 
