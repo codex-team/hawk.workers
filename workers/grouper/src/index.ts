@@ -24,7 +24,17 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 
 /**
  * @todo encodeUnsafeFields/decodeUnsafeFields should process both "payload" and "delta" fields
- * 
+ * @todo cover repetition save with tests. Test various cases:
+ * - original event has no backtrace
+ * - original event has backtrace
+ * - repetition has no backtrace
+ * - repetition has backtrace
+ * - backtrace is different
+ * - original event has no context.somefield
+ * - original event has context.somefield
+ * - repetition has no context.somefield
+ * - repetition has context.somefield
+ * (etc)
  */
 
 /**
