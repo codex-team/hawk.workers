@@ -6,6 +6,7 @@ describe('RedisHelper', () => {
   let redisClientMock: jest.Mocked<ReturnType<typeof createClient>>;
   let redisClient: RedisClientType;
 
+
   beforeAll(async () => {
     redisHelper = new RedisHelper();
     redisClient = createClient({ url: process.env.REDIS_URL });
