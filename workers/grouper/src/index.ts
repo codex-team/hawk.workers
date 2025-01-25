@@ -166,18 +166,15 @@ export default class GrouperWorker extends Worker {
        */
       decodeUnsafeFields(existedEvent);
 
-      let diff;
       let delta;
 
       try {
         /**
          * Save event's repetitions
          */
-        diff = utils.deepDiff(existedEvent.payload, task.event);
         delta = computeDelta(existedEvent.payload, task.event);
-
-        console.log('old diff', diff);
-        console.log('new diff', delta);
+        
+        console.log('delta', delta);
       } catch (e) {
         console.error(e);
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
@@ -185,16 +182,8 @@ export default class GrouperWorker extends Worker {
 
       const newRepetition = {
         groupHash: uniqueEventHash,
-        /**
-         * @todo remove payload after migration to delta
-         */
-        payload: diff,
         delta,
         timestamp: task.event.timestamp
-        /**
-         * Temporarily store the whole repetition for diff/merge debugging
-         */
-        // __raw: JSON.stringify(task.event),
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
