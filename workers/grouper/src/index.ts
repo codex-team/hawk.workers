@@ -15,12 +15,17 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
-import { computeDelta, repetitionDiff } from './utils/repetitionDiff';
+import { computeDelta } from './utils/repetitionDiff';
 
 /**
  * Error code of MongoDB key duplication error
  */
 const DB_DUPLICATE_KEY_ERROR = '11000';
+
+/**
+ * @todo encodeUnsafeFields/decodeUnsafeFields should process both "payload" and "delta" fields
+ * 
+ */
 
 /**
  * Worker for handling Javascript events
@@ -55,23 +60,6 @@ export default class GrouperWorker extends Worker {
     await this.redis.initialize();
 
     await super.start();
-
-
-    // const a = {
-    //   user: {
-    //     id: '1',
-    //   }
-    // }
-
-    // const b = {
-    //   user: {
-    //     id: '2',
-    //   }
-    // };
-
-    // const diff = repetitionDiff(a, b);
-
-    // console.log('diff a b', diff);
   }
 
   /**
@@ -176,39 +164,7 @@ export default class GrouperWorker extends Worker {
          * Save event's repetitions
          */
         diff = utils.deepDiff(existedEvent.payload, task.event);
-
-        // console.log('diff old', diff);
-
         delta = computeDelta(existedEvent.payload, task.event);
-
-        console.log('delta', delta);
-
-        /**
-         * New repetition schema:
-         * {
-         *   _id: ObjectId,
-         *   groupHash: string,
-         *   diffAlgo: number
-         *   delta: object,
-         * }
-         * 
-         * OR 
-         * 
-         * {
-         *   _id: ObjectId,
-         *   groupHash: string,
-         *   diffAlgo: number
-         *   payload: {  
-         *     addons: addonsDelta (object),
-         *     backtrace: backtraceDelta (object),
-         *   }
-         * } — where payload contains only changed fields. 
-         *     It allows us to find another repetitions with disting values of the same field
-         *     Like: near "URL" field we can display "View 12 more"
-         * 
-         *     (but we can achieve this in the 1st varian too. Is there a way to avoid seaching over Delta format? )
-         * 
-         */
 
         console.log('old diff', diff);
         console.log('new diff', delta);
@@ -219,16 +175,18 @@ export default class GrouperWorker extends Worker {
 
       const newRepetition = {
         groupHash: uniqueEventHash,
-        // payload: diff,
+        /**
+         * @todo remove payload after migration to delta
+         */
+        payload: diff,
         delta,
-        // timestamp: task.event.timestamp
+        timestamp: task.event.timestamp
         /**
          * Temporarily store the whole repetition for diff/merge debugging
          */
         // __raw: JSON.stringify(task.event),
       } as RepetitionDBScheme;
 
-    
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
 
