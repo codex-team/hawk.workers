@@ -184,6 +184,7 @@ describe('Buffer', () => {
       const buffer = new Buffer();
 
       jest.useFakeTimers();
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
       buffer.setTimer([projectId, ruleId, channelName], 10000, jest.fn());
 
@@ -193,9 +194,10 @@ describe('Buffer', () => {
       const timer = buffer.projects[projectId][ruleId][channelName].timer;
 
       expect(timer).toBeNull();
-      expect(clearTimeout).toBeCalled();
+      expect(clearTimeoutSpy).toBeCalled();
 
       jest.useRealTimers();
+      clearTimeoutSpy.mockRestore();
     });
   });
 
