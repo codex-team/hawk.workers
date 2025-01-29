@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as rimraf from 'rimraf';
+import rimraf from 'rimraf';
 import webpack from 'webpack';
 
 /**
@@ -97,7 +97,8 @@ export default class MockBundle {
    */
   public clear(): Promise<void> {
     return new Promise((resolve) => {
-      rimraf(this.outputDir, resolve);
+      rimraf.sync(this.outputDir);
+      resolve();
     });
   }
 }

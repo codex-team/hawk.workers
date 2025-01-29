@@ -362,7 +362,7 @@ export default class ArchiverWorker extends Worker {
     );
 
     await Promise.all(filesToDelete.map(file => {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         this.gridFsBucket.delete(file._id, (err) => {
           if (err) {
             if (err.message.startsWith('FileNotFound')) {
