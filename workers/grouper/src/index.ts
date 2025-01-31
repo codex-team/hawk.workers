@@ -49,10 +49,14 @@ export default class GrouperWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
+    console.log('starting grouper worker');
+
     await this.db.connect();
     this.prepareCache();
-    await this.redis.initialize();
+    console.log('redis initializing');
 
+    await this.redis.initialize();
+    console.log('redis initialized');
     await super.start();
   }
 
