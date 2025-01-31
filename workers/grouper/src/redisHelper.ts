@@ -31,7 +31,7 @@ export default class RedisHelper {
 
     this.redisClient.on('error', (error) => {
       if (error) {
-        this.logger.error(error);
+        this.logger.error('Redis error: ', error);
         HawkCatcher.send(error);
       }
     });
