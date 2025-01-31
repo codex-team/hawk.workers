@@ -302,8 +302,8 @@ class WorkerRunner {
   }
 }
 
-// eslint-disable-next-line no-new
 try {
+  // eslint-disable-next-line no-new
   new WorkerRunner();
 } catch (error) {
   console.error('Error running worker runner', error);
