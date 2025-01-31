@@ -1,4 +1,4 @@
-import { MongoClient, ObjectId } from 'mongodb';
+import { Collection, Db, MongoClient, ObjectId } from 'mongodb';
 import { mockedDailyEvents, oldDailyEvents } from './dailyEvents.mock';
 import { mockedRepetitions } from './repetitions.mock';
 import ArchiverWorker from '../src';
@@ -27,12 +27,12 @@ const mockedProject: ProjectDBScheme = {
 };
 
 describe('Archiver worker', () => {
-  let connection;
-  let db;
-  let dailyEventsCollection;
-  let repetitionsCollection;
-  let eventsCollection;
-  let projectCollection;
+  let connection: MongoClient | undefined;
+  let db: Db | undefined;
+  let dailyEventsCollection: Collection | undefined;
+  let repetitionsCollection: Collection | undefined;
+  let eventsCollection: Collection | undefined;
+  let projectCollection: Collection | undefined;
 
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
@@ -128,7 +128,11 @@ describe('Archiver worker', () => {
   });
 
   afterAll(async () => {
+    await db.dropCollection('releases');
+    await db.dropCollection('projects');
+    await db.dropCollection(`dailyEvents:${mockedProject._id.toString()}`);
+    await db.dropCollection(`repetitions:${mockedProject._id.toString()}`);
+    await db.dropCollection(`events:${mockedProject._id.toString()}`);
     await connection.close();
-    await db.close();
   });
 });

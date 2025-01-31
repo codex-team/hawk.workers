@@ -301,7 +301,7 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
       await worker.handle(message);
 
-      await new Promise((resolve) => setTimeout(() => {
+      await new Promise<void>((resolve) => setTimeout(() => {
         expect(worker.sendEvents).toBeCalledTimes(2);
         expect(worker.buffer.flush).toBeCalledTimes(2);
 
