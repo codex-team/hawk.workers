@@ -166,7 +166,13 @@ class WorkerRunner {
    */
   private constructWorkers(workerConstructors: WorkerConstructor[]): void {
     return workerConstructors.forEach((WorkerClass) => {
-      this.workers.push(new WorkerClass());
+      try {
+        const worker = new WorkerClass();
+
+        this.workers.push(worker);
+      } catch (error) {
+        console.error('Error constructing worker', error);
+      }
     });
   }
 
@@ -296,5 +302,9 @@ class WorkerRunner {
   }
 }
 
-// eslint-disable-next-line no-new
-new WorkerRunner();
+try {
+  // eslint-disable-next-line no-new
+  new WorkerRunner();
+} catch (error) {
+  console.error('Error running worker runner', error);
+}
