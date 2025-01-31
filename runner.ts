@@ -16,8 +16,6 @@ if (process.env.HAWK_CATCHER_TOKEN) {
   HawkCatcher.init(process.env.HAWK_CATCHER_TOKEN);
 }
 
-console.log('process.env', process.env);
-
 type WorkerConstructor = new () => Worker;
 
 const BEGINNING_OF_ARGS = 2;
@@ -28,8 +26,6 @@ const BEGINNING_OF_ARGS = 2;
  * @example ts-node runner.ts hawk-worker-javascript hawk-worker-nodejs
  */
 const workerNames = process.argv.slice(BEGINNING_OF_ARGS);
-
-console.log('workerNames', workerNames);
 
 /**
  * Workers dispatcher.
@@ -59,8 +55,6 @@ class WorkerRunner {
      */
     this.loadPackages()
       .then((workerConstructors) => {
-        console.log('packages loaded');
-        
         this.constructWorkers(workerConstructors);
       })
       // .then(() => {
@@ -171,12 +165,8 @@ class WorkerRunner {
    * @param workerConstructors - worker constructors to create new instances
    */
   private constructWorkers(workerConstructors: WorkerConstructor[]): void {
-    console.log('constructWorkers', workerConstructors);
-
     return workerConstructors.forEach((WorkerClass) => {
       try {
-        console.log('constructing worker', WorkerClass);
-
         const worker = new WorkerClass();
 
         this.workers.push(worker);
@@ -312,10 +302,8 @@ class WorkerRunner {
   }
 }
 
-console.log('Starting worker runner');
-
-// eslint-disable-next-line no-new
 try {
+  // eslint-disable-next-line no-new
   new WorkerRunner();
 } catch (error) {
   console.error('Error running worker runner', error);
