@@ -29,8 +29,9 @@ export default class RedisHelper {
   constructor() {
     try {
       this.redisClient = createClient({ url: process.env.REDIS_URL });
-      
       this.redisClient.on('error', (error) => {
+        console.log('redis error', error);
+        
         if (error) {
           this.logger.error('Redis error: ', error);
           HawkCatcher.send(error);
