@@ -145,7 +145,7 @@ export default class NotifierWorker extends Worker {
        * If channel is disabled by user, do not add event to it
        */
       if (!options.isEnabled) {
-        return;
+        continue;
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
