@@ -27,14 +27,20 @@ export default class RedisHelper {
    * Initializes the Redis client and sets up error handling
    */
   constructor() {
-    this.redisClient = createClient({ url: process.env.REDIS_URL });
+    try {
+      this.redisClient = createClient({ url: process.env.REDIS_URL });
+      this.redisClient.on('error', (error) => {
+        console.log('redis error', error);
+        
+        if (error) {
+          this.logger.error('Redis error: ', error);
+          HawkCatcher.send(error);
+        }
+      });
+    } catch (error) {
+      console.error('Error creating redis client', error);
+    }
 
-    this.redisClient.on('error', (error) => {
-      if (error) {
-        this.logger.error(error);
-        HawkCatcher.send(error);
-      }
-    });
   }
 
   /**
