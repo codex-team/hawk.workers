@@ -41,12 +41,18 @@ export default class RedisHelper {
   /**
    * Method that updates the event count respectfully to the threshold reset period
    *
+   * @param projectId - id of the project used as a part of structure key
    * @param ruleId - id of the rule used as a part of structure key
    * @param groupHash - event group hash used as a part of structure key
    * @param thresholdPeriod - period of time used to reset the event count
    * @returns {number} current event count
    */
-  public async computeEventCountForPeriod(ruleId: string, groupHash: NotifierEvent['groupHash'], thresholdPeriod: Rule['eventThresholdPeriod']): Promise<number> {
+  public async computeEventCountForPeriod(
+      projectId: string, 
+      ruleId: string, 
+      groupHash: NotifierEvent['groupHash'], 
+      thresholdPeriod: Rule['eventThresholdPeriod']
+    ): Promise<number> {
     const script = `
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])
@@ -63,13 +69,13 @@ export default class RedisHelper {
     return newCounter
     `;
 
-    const key = `${ruleId}:${groupHash}:${thresholdPeriod}:times`;
+    const key = `${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}:times`;
 
     const currentTimestamp = Date.now();
 
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
-      arguments: [currentTimestamp.toString(), (currentTimestamp + thresholdPeriod).toString()],
+      arguments: [currentTimestamp.toString(), (thresholdPeriod).toString()],
     }) as number;
 
     return (currentEventCount !== null) ? currentEventCount : 0;
