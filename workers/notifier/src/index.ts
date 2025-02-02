@@ -131,7 +131,7 @@ export default class NotifierWorker extends Worker {
   }
 
   /**
-   * Send event to sender worker for each channel key
+   * Send events to sender for each enabled channel in rule
    *
    * @param {string} projectId - project id event is related to
    * @param {Rule} rule - notification rule
