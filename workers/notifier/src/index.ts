@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { Channel, ChannelKey, SenderData } from '../types/channel';
 import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
-import { Rule } from '../types/rule';
+import { Rule, WhatToReceive } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
 import Time from '../../../lib/utils/time';
@@ -73,7 +73,16 @@ export default class NotifierWorker extends Worker {
           return;
         }
 
-        const currentEventCount = await this.redis.computeEventCountForPeriod(projectId, rule._id.toString(), event.groupHash, rule.eventThresholdPeriod);
+        /**
+         * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
+         */
+        if (rule.whatToReceive === WhatToReceive.New) {
+          await this.sendEventsToChannels(projectId, rule, event);
+
+          return;
+        }
+
+        const currentEventCount = await this.redis.computeEventCountForPeriod(projectId, rule._id.toString(), event.groupHash, rule.thresholdPeriod);
 
         /**
          * If threshold reached, then send event to channels
@@ -136,11 +145,11 @@ export default class NotifierWorker extends Worker {
        * If channel is disabled by user, do not add event to it
        */
       if (!options.isEnabled) {
-        return;
+        continue;
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-
+      
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,

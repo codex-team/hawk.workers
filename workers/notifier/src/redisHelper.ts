@@ -12,7 +12,7 @@ export default class RedisHelper {
   private readonly redisClient: RedisClientType;
 
   /**
-   *
+   * Create redis client and add error handler to it
    */
   constructor() {
     this.redisClient = createClient({ url: process.env.REDIS_URL });
@@ -48,19 +48,19 @@ export default class RedisHelper {
    * @returns {number} current event count
    */
   public async computeEventCountForPeriod(
-      projectId: string, 
-      ruleId: string, 
-      groupHash: NotifierEvent['groupHash'], 
-      thresholdPeriod: Rule['eventThresholdPeriod']
+      projectId: string,
+      ruleId: string,
+      groupHash: NotifierEvent['groupHash'],
+      thresholdPeriod: Rule['thresholdPeriod']
     ): Promise<number> {
     const script = `
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])
-    local thresholdExpirationPeriod = tonumber(ARGV[2])
+    local thresholdPeriod = tonumber(ARGV[2])
 
     local startPeriodTimestamp = tonumber(redis.call("HGET", key, "timestamp"))
 
-    if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdExpirationPeriod)) then
+    if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdPeriod)) then
         redis.call("HSET", key, "timestamp", currentTimestamp)
         redis.call("HSET", key, "eventsCount", 0)
     end
@@ -75,7 +75,7 @@ export default class RedisHelper {
 
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
-      arguments: [currentTimestamp.toString(), (thresholdPeriod).toString()],
+      arguments: [currentTimestamp.toString(), thresholdPeriod.toString()],
     }) as number;
 
     return (currentEventCount !== null) ? currentEventCount : 0;
