@@ -89,7 +89,7 @@ describe('RedisHelper', () => {
       jest.spyOn(global.Date, 'now').mockImplementation(() => currentDate + 2 * thresholdPeriod + 1);
 
       const currentEventCount = await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
-      const currentlyStoredTimestamp = await redisClient.hGet(`${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}`, 'timestamp');
+      const currentlyStoredTimestamp = await redisClient.hGet(`${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}:times`, 'timestamp');
 
       expect(currentEventCount).toBe(1);
       expect(currentlyStoredTimestamp).toBe(Date.now().toString());
