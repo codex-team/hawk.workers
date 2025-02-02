@@ -67,7 +67,7 @@ export default class NotifierWorker extends Worker {
 
       for (const rule of rules) {
         /**
-         * If rule is enabled no need to store data in redis
+         * If rule is disabled no need to store data in redis
          */
         if (rule.isEnabled === false) {
           return;
