@@ -149,7 +149,7 @@ export default class NotifierWorker extends Worker {
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-
+      
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
