@@ -5,7 +5,7 @@ import LimiterWorker from '../src';
 import { createClient } from 'redis';
 import { mockedPlans } from './plans.mock';
 import axios from 'axios';
-import { mocked } from 'ts-jest/utils';
+import { mocked } from 'jest-mock';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import { RegularWorkspacesCheckEvent } from '../types/eventTypes';
 
@@ -193,7 +193,7 @@ describe('Limiter worker', () => {
       expect(workspaceInDatabase.billingPeriodEventsCount).toEqual(repetitionsCount + eventsCount);
     });
 
-    test('Should ban projects that have exceeded the plan limit and add their ids to redis', async (done) => {
+    test('Should ban projects that have exceeded the plan limit and add their ids to redis', async () => {
       /**
        * Arrange
        */
@@ -229,10 +229,9 @@ describe('Limiter worker', () => {
       const result = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(result).toContain(project._id.toString());
-      done();
     });
 
-    test('Should not ban project if it does not reach the limit', async (done) => {
+    test('Should not ban project if it does not reach the limit', async () => {
       /**
        * Arrange
        */
@@ -268,7 +267,6 @@ describe('Limiter worker', () => {
       const result = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(result).not.toContain(project._id.toString());
-      done();
     });
 
     test('Should send a report with collected data', async () => {
@@ -305,7 +303,7 @@ describe('Limiter worker', () => {
       });
     });
 
-    test(`Should block projects if workspace has been blocked by Paymaster-worker (isBlocked field is presented with value 'true')`, async (done) => {
+    test(`Should block projects if workspace has been blocked by Paymaster-worker (isBlocked field is presented with value 'true')`, async () => {
       /**
        * Arrange
        */
@@ -342,12 +340,11 @@ describe('Limiter worker', () => {
       const result = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(result).toContain(project._id.toString());
-      done();
     });
   });
 
   describe('check-single-workspace', () => {
-    test('Should unblock workspace if the number of events does not exceed the limit', async (done) => {
+    test('Should unblock workspace if the number of events does not exceed the limit', async () => {
       /**
        * Arrange
        *
@@ -405,10 +402,9 @@ describe('Limiter worker', () => {
        * Redis shouldn't contain id of project 'Test project #2' from 'Test workspace #2'
        */
       expect(result).not.toContain(project._id.toString());
-      done();
     });
 
-    test('Should block workspace if the number of events exceed the limit', async (done) => {
+    test('Should block workspace if the number of events exceed the limit', async () => {
       /**
        * Arrange
        *
@@ -464,7 +460,6 @@ describe('Limiter worker', () => {
       const result = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(result).toContain(project._id.toString());
-      done();
     });
 
     test('Should correctly work if projects count equals 0', async () => {

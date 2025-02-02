@@ -63,12 +63,16 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
-  private static isTimeToPay(date: Date): boolean {
-    const numberOfDays = 30;
+  private static isTimeToPay(date: Date, isDebug = false): boolean {
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
 
     const now = new Date().getTime();
 
@@ -81,12 +85,16 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
-  private static daysBeforePayday(date: Date): number {
-    const numberOfDays = 30;
+  private static daysBeforePayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
 
     const now = new Date().getTime();
 
@@ -99,12 +107,16 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param isDebug
    */
-  private static daysAfterPayday(date: Date): number {
-    const numberOfDays = 30;
+  private static daysAfterPayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
 
-    expectedPayDay.setDate(date.getDate() + numberOfDays);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
 
     const now = new Date().getTime();
 
@@ -196,17 +208,20 @@ export default class PaymasterWorker extends Worker {
     /**
      * Is it time to pay
      */
-    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate);
+    // @ts-expect-error debug
+    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * How many days have passed since payments the expected day of payments
      */
-    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate);
+    // @ts-expect-error debug
+    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * How many days left for the expected day of payments
      */
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate);
+    // @ts-expect-error debug
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * Do we need to ask for money
@@ -215,6 +230,7 @@ export default class PaymasterWorker extends Worker {
 
     /**
      * Today is not payday for workspace
+     * Alerting admins to pay for the workspace
      */
     if (!isTimeToPay) {
       /**
