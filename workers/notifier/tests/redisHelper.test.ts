@@ -61,9 +61,10 @@ describe('RedisHelper', () => {
     it('should return event count', async () => {
       const ruleId = 'ruleId';
       const groupHash = 'groupHash';
+      const projectId = 'projectId';
       const thresholdPeriod = 1000;
 
-      const currentEventCount = await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
+      const currentEventCount = await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
 
       expect(currentEventCount).toBe(1);
     });
@@ -72,21 +73,22 @@ describe('RedisHelper', () => {
       const ruleId = 'ruleId';
       const currentDate = Date.now();
       const groupHash = 'groupHash';
+      const projectId = 'projectId';
       const thresholdPeriod = 1000;
 
       /**
        * Send several events to increment counter
        */
-      await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
-      await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
-      await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
+      await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
+      await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
+      await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
 
       /**
        * Update current date for threshold period expiration
        */
       jest.spyOn(global.Date, 'now').mockImplementation(() => currentDate + 2 * thresholdPeriod + 1);
 
-      const currentEventCount = await redisHelper.computeEventCountForPeriod(ruleId, groupHash, thresholdPeriod);
+      const currentEventCount = await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
       const currentlyStoredTimestamp = await redisClient.hGet(`${ruleId}:${groupHash}:${thresholdPeriod}`, 'timestamp');
 
       expect(currentEventCount).toBe(1);
