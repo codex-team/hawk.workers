@@ -67,7 +67,7 @@ export default class NotifierWorker extends Worker {
 
       for (const rule of rules) {
         /**
-         * If rule is enabled no need to store data in redis
+         * If rule is disabled no need to store data in redis
          */
         if (rule.isEnabled === false) {
           return;
@@ -131,7 +131,7 @@ export default class NotifierWorker extends Worker {
   }
 
   /**
-   * Add event to channel's buffer or set timer if it doesn't exist
+   * Send event to sender worker for each channel key
    *
    * @param {string} projectId - project id event is related to
    * @param {Rule} rule - notification rule
