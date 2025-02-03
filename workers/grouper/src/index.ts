@@ -49,10 +49,14 @@ export default class GrouperWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
+    console.log('starting grouper worker');
+
     await this.db.connect();
     this.prepareCache();
-    await this.redis.initialize();
+    console.log('redis initializing');
 
+    await this.redis.initialize();
+    console.log('redis initialized');
     await super.start();
   }
 
@@ -136,6 +140,8 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          console.log('DB_DUPLICATE_KEY_ERROR');
+          
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
 
