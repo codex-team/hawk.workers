@@ -1,5 +1,5 @@
 import { WorkerTask } from '../../../../lib/types/worker-task';
-import { BufferData } from 'hawk-worker-notifier/src/buffer';
+import { SenderData } from 'hawk-worker-notifier/types/channel';
 
 export interface SenderWorkerEventPayload {
   /**
@@ -15,7 +15,7 @@ export interface SenderWorkerEventPayload {
   /**
    * Array contains events' group hashes and number of repetition for the last minPeriod
    */
-  events: BufferData[];
+  events: SenderData[];
 }
 
 /**

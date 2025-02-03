@@ -31,6 +31,7 @@ const createPlanMock = (parameters: {
     monthlyCharge: parameters.monthlyCharge,
     eventsLimit: 10,
     isDefault: parameters.isDefault,
+    monthlyChargeCurrency: 'RUB',
   };
 };
 

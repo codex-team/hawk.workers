@@ -2,15 +2,28 @@ import { ObjectID } from 'mongodb';
 import { WhatToReceive } from '../src/validator';
 import * as messageMock from './mock.json';
 import '../../../env-test';
-import waitForExpect from 'wait-for-expect';
+import RedisHelper from '../src/redisHelper';
+import { createClient, RedisClientType } from 'redis';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/**
+ * Determine the threshold for the rule
+ */
+const threshold = 100;
+
+/**
+ * Determine the threshold period for the rule
+ */
+const thresholdPeriod = 60 * 1000;
 
 const rule = {
   _id: 'ruleid',
   isEnabled: true,
   uidAdded: 'userid',
-  whatToReceive: WhatToReceive.All,
+  whatToReceive: WhatToReceive.SeenMore,
+  threshold: threshold,
+  thresholdPeriod: thresholdPeriod,
   including: [],
   excluding: [],
   channels: {
@@ -31,6 +44,39 @@ const rule = {
     },
   },
 } as any;
+
+const alternativeRule = {
+  _id: 'alternativeRuleId',
+  isEnabled: true,
+  uidAdded: 'userid',
+  whatToReceive: WhatToReceive.SeenMore,
+  threshold: threshold * 2,
+  thresholdPeriod: thresholdPeriod * 2,
+  including: [],
+  excluding: [],
+  channels: {
+    telegram: {
+      isEnabled: true,
+      endpoint: 'telegramEndpoint',
+      minPeriod: 0.5,
+    },
+    slack: {
+      isEnabled: false,
+      endpoint: 'slackEndpoint',
+      minPeriod: 0.5,
+    },
+    email: {
+      isEnabled: false,
+      endpoint: 'emailEndpoint',
+      minPeriod: 0.5,
+    },
+  },
+};
+
+/**
+ * Save originl RedisHelper prototype to restore it after each test
+ */
+const originalRedisHelperPrototype = Object.getOwnPropertyDescriptors(RedisHelper.prototype);
 
 let dbQueryMock = jest.fn(() => ({
   notifications: [ rule ],
@@ -80,49 +126,72 @@ class MockDBController {
 }
 
 describe('NotifierWorker', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const NotifierWorker = require('../src').default;
+  let redisClient: RedisClientType;
+
+  let worker: typeof NotifierWorker;
+
   jest.mock('../../../lib/db/controller', () => ({
     DatabaseController: MockDBController,
   }));
 
+  // Before all tests connect to redis client
+  beforeAll(async () => {
+    redisClient = createClient({ url: process.env.REDIS_URL });
+
+    jest.mock('../src/redisHelper');
+
+    await redisClient.connect();
+  });
+
+  /**
+   * Before each test create an instance of the worker and start it
+   */
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    /**
+     * Restore original RedisHelper prototype after possible changes
+     */
+    Object.defineProperties(RedisHelper.prototype, originalRedisHelperPrototype);
+
+    worker = new NotifierWorker();
+
+    /**
+     * Reset information that could be patched by tets Arrangement
+     */
+    rule.whatToReceive = WhatToReceive.SeenMore;
+    rule.isEnabled = true;
+    rule.including = [];
+    rule.excluding = [];
+
+    dbQueryMock = jest.fn(() => ({
+      notifications: [ rule ],
+    })) as any;
+
+    await redisClient.flushAll();
+
+    await worker.start();
+  });
+
   /**
    * Reset calls number after each test
    */
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const NotifierWorker = require('../src').default;
-
-  it('should have correct worker type', () => {
-    const worker = new NotifierWorker();
-
-    expect(worker.type).toEqual('notifier');
-  });
-
-  it('should start and finish without errors', async () => {
-    const worker = new NotifierWorker();
-
-    await worker.start();
+  afterEach(async () => {
     await worker.finish();
+  });
+
+  afterAll(async () => {
+    await redisClient.quit();
   });
 
   describe('db calls', () => {
     it('should connect to db on start', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       expect(dbConnectMock).toBeCalled();
-
-      await worker.finish();
     });
 
     it('should get db connection on message handle', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -130,15 +199,9 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(dbConnectionMock).toBeCalled();
-
-      await worker.finish();
     });
 
     it('should get db connection on message handle and cache result', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
@@ -150,250 +213,197 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
 
       expect(dbConnectionMock).toBeCalledTimes(1);
-
-      await worker.finish();
     });
 
     it('should query correct collection on message handle', async () => {
-      const worker = new NotifierWorker();
       const message = { ...messageMock };
-
-      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbCollectionMock).toBeCalledWith('projects');
-
-      await worker.finish();
     });
 
     it('should query correct project on message handle', async () => {
-      const worker = new NotifierWorker();
       const message = { ...messageMock };
-
-      await worker.start();
 
       worker.sendToSenderWorker = jest.fn();
 
       await worker.handle(message);
 
       expect(dbQueryMock).toBeCalledWith({ _id: new ObjectID(message.projectId) });
-
-      await worker.finish();
     });
 
     it('should close db connection on finish', async () => {
-      const worker = new NotifierWorker();
-
-      await worker.start();
-
       worker.sendToSenderWorker = jest.fn();
 
       await worker.finish();
 
       expect(dbCloseMock).toBeCalled();
-
-      await worker.finish();
     });
   });
 
-  describe('handling', () => {
-    it('should correctly handle first message', async () => {
-      const worker = new NotifierWorker();
+  describe('worker functionality', () => {
+    it('should send event to channels once if event is new and rule.whatToReceive is ONLY_NEW', async () => {
+      rule.whatToReceive = WhatToReceive.New;
 
-      await worker.start();
-
-      worker.sendToSenderWorker = jest.fn();
-
-      worker.buffer.push = jest.fn();
-      worker.buffer.setTimer = jest.fn();
+      worker.sendEventsToChannels = jest.fn();
 
       const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-      const events = [ {
-        key: message.event.groupHash,
-        count: 1,
-      } ];
+      message.event.isNew = true;
 
       await worker.handle(message);
+      
+      message.event.isNew = false;
+      await worker.handle(message);
 
-      expect(worker.buffer.setTimer).toBeCalledTimes(2);
-      expect(worker.buffer.push).not.toBeCalled();
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.setTimer).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel],
-          rule.channels[channel].minPeriod * 1000,
-          worker.sendEvents
-        );
-        expect(worker.sendToSenderWorker).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channels[i]],
-          events
-        );
-      });
-
-      await worker.finish();
+      expect(worker.sendEventsToChannels).toBeCalledTimes(1);
     });
 
-    it('should correctly handle messages after first one', async () => {
-      const worker = new NotifierWorker();
+    it('should add task to sender worker if event threshold reached', async () => {
+      /**
+       * Simulate case when we reached threshold in redis.
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
 
-      await worker.start();
+      const message = { ...messageMock };
 
       worker.sendToSenderWorker = jest.fn();
 
-      jest.useFakeTimers();
+      await worker.handle(message);
 
-      const realGetTimer = worker.buffer.getTimer;
-      const realSetTimer = worker.buffer.setTimer;
+      expect(worker.sendToSenderWorker).toHaveBeenCalled();
+    });
 
-      worker.buffer.getTimer = jest.fn((...args) => realGetTimer.apply(worker.buffer, args));
-      worker.buffer.setTimer = jest.fn((...args) => realSetTimer.apply(worker.buffer, args));
-      worker.buffer.push = jest.fn();
+    it('should not add task to sender worker if event count is more than event threshold', async () => {
+      /**
+       * Simulate case when threshold in redis is more than rule threshold.
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold + 1);
+
+      worker.sendToSenderWorker = jest.fn();
 
       const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
 
       await worker.handle(message);
+
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should not add task to sender worker if event count is less than event threshold', async () => {
+      /**
+       * Simulate case then threshold in redis is less than rule threshold
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold - 1);
+
+      worker.sendToSenderWorker = jest.fn();
+
+      const message = { ...messageMock };
+
       await worker.handle(message);
 
-      expect(worker.buffer.getTimer).toBeCalledTimes(4);
-      expect(worker.buffer.push).toBeCalledTimes(2);
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should not check for event count and should not send event to sender if rule is disabled', async () => {
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
+
+      worker.sendToSenderWorker = jest.fn();
+
+      rule.isEnabled = false;
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should not check for event count and should not send event to sender if rule validation did not pass', async () => {
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
+
+      worker.sendToSenderWorker = jest.fn();
+
+      rule.including = [ 'some string that is not in message' ];
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+      expect(worker.sendToSenderWorker).not.toHaveBeenCalled();
+    });
+
+    it('should send event to all channels that are enabled in rule', async () => {
+      /**
+       * Simulate case when we reached threshold in redis.
+       */
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+
+      worker.sendToSenderWorker = jest.fn();
+
+      const message = { ...messageMock };
+
+      rule.channels = {
+        telegram: {
+          isEnabled: true,
+          endpoint: 'tgEndpoint',
+          minPeriod: 0.5,
+        },
+        slack: {
+          isEnabled: true,
+          endpoint: 'slackEndpoint',
+          minPeriod: 0.5,
+        },
+        email: {
+          isEnabled: false,
+          endpoint: 'emailEndpoint',
+          minPeriod: 0.5,
+        },
+      };
+
+      await worker.handle(message);
+
       expect(worker.sendToSenderWorker).toBeCalledTimes(2);
-
-      channels.forEach((channel, i) => {
-        expect(worker.buffer.push).toHaveBeenNthCalledWith(
-          i + 1,
-          [...channelKeyPart, channel, messageMock.event.groupHash]
-        );
-      });
-
-      jest.useRealTimers();
-
-      await worker.finish();
     });
 
-    it('should send events after timeout', async () => {
-      const worker = new NotifierWorker();
+    it('should compute event count for period for each fitted rule', async () => {
+      /**
+       * Simulate case when there are two rules for the event in database.
+       */
+      dbQueryMock = jest.fn(() => ({
+        notifications: [rule, alternativeRule],
+      })) as any;
 
-      await worker.start();
+      jest.mock('../../../lib/db/controller', () => ({
+        DatabaseController: MockDBController,
+      }));
 
-      worker.sendToSenderWorker = jest.fn();
-
-      const realSendEvents = worker.sendEvents;
-
-      worker.sendEvents = jest.fn((...args) => realSendEvents.apply(worker, args));
-
-      const realFlush = worker.buffer.flush;
-
-      worker.buffer.flush = jest.fn((...args) => realFlush.apply(worker.buffer, args));
-
-      const message = { ...messageMock };
-      const channels = ['telegram', 'slack'];
-      const channelKeyPart = [message.projectId, rule._id];
-
-      await worker.handle(message);
-      await worker.handle(message);
-
-      await new Promise<void>((resolve) => setTimeout(() => {
-        expect(worker.sendEvents).toBeCalledTimes(2);
-        expect(worker.buffer.flush).toBeCalledTimes(2);
-
-        channels.forEach((channel, i) => {
-          expect(worker.buffer.flush).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-          expect(worker.sendEvents).toHaveBeenNthCalledWith(
-            i + 1,
-            [...channelKeyPart, channel]
-          );
-        });
-
-        resolve();
-      }, 1000));
-
+      /**
+       * Since we mocked database in test, we need to restart worker, for it to use new database mock
+       */
       await worker.finish();
-    });
-
-    it('should do nothing if project doesn\'t exist', async () => {
-      const worker = new NotifierWorker();
-
       await worker.start();
 
-      worker.addEventsToChannels = jest.fn();
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn();
 
       const message = { ...messageMock };
 
-      const oldMock = dbQueryMock;
-
-      dbQueryMock = jest.fn(() => null);
-
       await worker.handle(message);
 
-      expect(worker.addEventsToChannels).not.toBeCalled();
-
-      dbQueryMock = oldMock;
-
-      await worker.finish();
+      expect(RedisHelper.prototype.computeEventCountForPeriod).toHaveBeenCalledTimes(2);
     });
-  });
 
-  it('should send task to sender workers', async () => {
-    const worker = new NotifierWorker();
+    it('should send event to channels at most once in one threshold period for one fitted rule, if worker received more than threshold events', async () => {
+      worker.sendEventsToChannels = jest.fn();
 
-    await worker.start();
+      const message = { ...messageMock };
 
-    await worker.start();
+      for (let i = 0; i < 1_000; i++) {
+        await worker.handle(message);
+      }
 
-    worker.addTask = jest.fn();
-
-    const message = { ...messageMock };
-
-    await worker.handle(message);
-
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        1,
-        `sender/telegram`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
-
-    await waitForExpect(() => {
-      expect(worker.addTask).toHaveBeenNthCalledWith(
-        2,
-        `sender/slack`,
-        {
-          type: 'event',
-          payload: {
-            projectId: message.projectId,
-            ruleId: rule._id,
-            events: [ {
-              key: message.event.groupHash,
-              count: 1,
-            } ],
-          },
-        }
-      );
-    }, 2000);
-
-    await worker.finish();
+      expect(worker.sendEventsToChannels).toBeCalledTimes(1);
+    });
   });
 });
