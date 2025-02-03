@@ -113,6 +113,8 @@ export default class GrouperWorker extends Worker {
 
     if (isFirstOccurrence) {
       try {
+        const incrementAffectedUsers = task.event.user ? true : false;
+
         /**
          * Insert new event
          */
@@ -121,13 +123,13 @@ export default class GrouperWorker extends Worker {
           totalCount: 1,
           catcherType: task.catcherType,
           payload: task.event,
-          usersAffected: 1,
+          usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
         /**
          * Increment daily affected users for the first event
          */
-        incrementDailyAffectedUsers = true;
+        incrementDailyAffectedUsers = incrementAffectedUsers;
       } catch (e) {
         /**
          * If we caught Database duplication error, then another worker thread has already saved it to the database
