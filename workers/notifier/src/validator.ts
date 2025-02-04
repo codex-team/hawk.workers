@@ -1,6 +1,5 @@
 'use strict';
 
-import logger from '../../../lib/logger';
 import { NotifierEvent } from '../types/notifier-task';
 import { Rule } from '../types/rule';
 
