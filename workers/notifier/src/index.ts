@@ -65,18 +65,9 @@ export default class NotifierWorker extends Worker {
        */
       const rules = await this.getFittedRules(projectId, event);
 
-      this.logger.info(`Found ${rules} fitted rules for the event for event ${event.groupHash}`);
-
+      this.logger.info(`Found ${rules.length} fitted rules for the event ${event.groupHash}`);
+      
       for (const rule of rules) {
-        /**
-         * If rule is disabled no need to store data in redis
-         */
-        if (rule.isEnabled === false) {
-          this.logger.info(`Rule ${rule._id} is disabled, skipping`);
-          
-          continue;
-        }
-
         /**
          * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
          */
@@ -133,6 +124,8 @@ export default class NotifierWorker extends Worker {
         try {
           new RuleValidator(rule, event).checkAll();
         } catch (e) {
+          this.logger.info(`Rule ${rule._id} does not match becasue of ${e}, skipping...`);
+
           return false;
         }
 
