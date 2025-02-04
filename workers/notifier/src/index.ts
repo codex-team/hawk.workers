@@ -65,21 +65,27 @@ export default class NotifierWorker extends Worker {
        */
       const rules = await this.getFittedRules(projectId, event);
 
+      this.logger.info(`Found ${rules} fitted rules for the event for event ${event.groupHash}`);
+
       for (const rule of rules) {
         /**
          * If rule is disabled no need to store data in redis
          */
         if (rule.isEnabled === false) {
-          return;
+          this.logger.info(`Rule ${rule._id} is disabled, skipping`);
+          
+          continue;
         }
 
         /**
          * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
          */
         if (rule.whatToReceive === WhatToReceive.New) {
+          this.logger.info(`Rule ${rule._id} is new, sending to channels`);
+          
           await this.sendEventsToChannels(projectId, rule, event);
 
-          return;
+          continue;
         }
 
         const currentEventCount = await this.redis.computeEventCountForPeriod(projectId, rule._id.toString(), event.groupHash, rule.thresholdPeriod);
@@ -88,7 +94,11 @@ export default class NotifierWorker extends Worker {
          * If threshold reached, then send event to channels
          */
         if (rule.threshold === currentEventCount) {
+          this.logger.info(`Rule ${rule._id} threshold reached, sending to channels`);
+
           await this.sendEventsToChannels(projectId, rule, event);
+        } else {
+          this.logger.info(`Rule ${rule._id} threshold not reached, event count: ${currentEventCount}, threshold: ${rule.threshold}`);
         }
       }
     } catch (e) {
