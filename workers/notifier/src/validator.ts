@@ -47,7 +47,7 @@ export default class RuleValidator {
     const { rule } = this;
 
     if (!rule.isEnabled) {
-      throw Error('Rule is disabled');
+      throw Error('rule is disabled');
     }
 
     return this;
@@ -66,7 +66,7 @@ export default class RuleValidator {
       (event.isNew && rule.whatToReceive === WhatToReceive.New);
 
     if (!result) {
-      throw Error('Event doesn\'t match `what to receive` filter');
+      throw Error('event doesn\'t match `what to receive` filter');
     }
 
     return this;
@@ -91,7 +91,7 @@ export default class RuleValidator {
     }
 
     if (!result) {
-      throw Error('Event title doesn\'t include required words');
+      throw Error('event title doesn\'t include required words');
     }
 
     return this;
@@ -116,7 +116,7 @@ export default class RuleValidator {
     }
 
     if (!result) {
-      throw Error('Event title includes unwanted words');
+      throw Error('event title includes unwanted words');
     }
 
     return this;

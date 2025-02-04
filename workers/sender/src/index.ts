@@ -186,6 +186,8 @@ export default abstract class SenderWorker extends Worker {
       notificationType = 'several-events';
     }
 
+    this.logger.info(`Sending ${notificationType} notification to ${channel.endpoint}`);
+
     this.provider.send(channel.endpoint, {
       type: notificationType,
       payload: {
