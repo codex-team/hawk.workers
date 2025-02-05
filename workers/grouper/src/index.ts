@@ -15,7 +15,7 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
-import Time from '../../../lib/utils/time';
+import TimeMs from '../../../lib/utils/time';
 
 /**
  * Error code of MongoDB key duplication error
@@ -258,10 +258,10 @@ export default class GrouperWorker extends Worker {
         .toArray();
     },  
     /**
-     * Time class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
+     * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
      */
     /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-    Time.MINUTE / 1000);
+    TimeMs.MINUTE / 1000);
   }
 
   /**
