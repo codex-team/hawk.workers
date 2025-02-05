@@ -250,7 +250,14 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask({ user: undefined }));
       await worker.handle(generateTask({ user: undefined }));
 
-      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(1);
+      expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(0);
+    });
+
+    test('Should not increment daily affected users if user is not provided', async () => {
+      await worker.handle(generateTask({ user: undefined }));
+      await worker.handle(generateTask({ user: undefined }));
+
+      expect((await eventsCollection.findOne({})).usersAffected).toBe(0);
     });
 
     test('Should stringify payload`s addons and context fields', async () => {

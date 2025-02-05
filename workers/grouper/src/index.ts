@@ -16,6 +16,7 @@ import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
 import { computeDelta } from './utils/repetitionDiff';
+import TimeMs from '../../../lib/utils/time';
 
 /**
  * Error code of MongoDB key duplication error
@@ -65,10 +66,14 @@ export default class GrouperWorker extends Worker {
    * Start consuming messages
    */
   public async start(): Promise<void> {
+    console.log('starting grouper worker');
+
     await this.db.connect();
     this.prepareCache();
-    await this.redis.initialize();
+    console.log('redis initializing');
 
+    await this.redis.initialize();
+    console.log('redis initialized');
     await super.start();
   }
 
@@ -129,6 +134,8 @@ export default class GrouperWorker extends Worker {
 
     if (isFirstOccurrence) {
       try {
+        const incrementAffectedUsers = task.event.user ? true : false;
+
         /**
          * Insert new event
          */
@@ -137,19 +144,21 @@ export default class GrouperWorker extends Worker {
           totalCount: 1,
           catcherType: task.catcherType,
           payload: task.event,
-          usersAffected: 1,
+          usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
         /**
          * Increment daily affected users for the first event
          */
-        incrementDailyAffectedUsers = true;
+        incrementDailyAffectedUsers = incrementAffectedUsers;
       } catch (e) {
         /**
          * If we caught Database duplication error, then another worker thread has already saved it to the database
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          console.log('DB_DUPLICATE_KEY_ERROR');
+          
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
 
@@ -257,8 +266,6 @@ export default class GrouperWorker extends Worker {
    * @param count - how many events to return
    */
   private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
-    const msInOneMinute = 60000;
-
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
@@ -268,7 +275,12 @@ export default class GrouperWorker extends Worker {
         })
         .limit(count)
         .toArray();
-    }, msInOneMinute);
+    },  
+    /**
+     * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
+     */
+    /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+    TimeMs.MINUTE / 1000);
   }
 
   /**

@@ -6,7 +6,7 @@ import '../../../env-test';
 describe('RuleValidator', () => {
   const ruleMock = {
     isEnabled: true,
-    whatToReceive: WhatToReceive.All,
+    whatToReceive: WhatToReceive.SeenMore,
     including: [],
     excluding: [],
   };
@@ -35,15 +35,15 @@ describe('RuleValidator', () => {
 
       const validator = new RuleValidator(rule, eventMock);
 
-      expect(() => validator.checkIfRuleIsOn()).toThrowError('Rule is disabled');
+      expect(() => validator.checkIfRuleIsOn()).toThrowError('rule is disabled');
     });
   });
 
   describe('checkWhatToReceive', () => {
-    it('should pass if what to receive is \'all\'', () => {
+    it('should pass if what to receive is \'SEEN_MORE\'', () => {
       const rule = { ...ruleMock } as any;
 
-      rule.whatToReceive = WhatToReceive.All;
+      rule.whatToReceive = WhatToReceive.SeenMore;
 
       const validator = new RuleValidator(rule, eventMock);
 
@@ -51,7 +51,7 @@ describe('RuleValidator', () => {
       expect(validator.checkWhatToReceive()).toBeInstanceOf(RuleValidator);
     });
 
-    it('should pass if what to receive is \'new\' and event is new', () => {
+    it('should pass if what to receive is \'ONLY_NEW\' and event is new', () => {
       const rule = { ...ruleMock } as any;
       const event = { ...eventMock };
 
@@ -73,7 +73,7 @@ describe('RuleValidator', () => {
 
       const validator = new RuleValidator(rule, event);
 
-      expect(() => validator.checkWhatToReceive()).toThrowError('Event doesn\'t match `what to receive` filter');
+      expect(() => validator.checkWhatToReceive()).toThrowError('event doesn\'t match `what to receive` filter');
     });
   });
 
@@ -113,7 +113,7 @@ describe('RuleValidator', () => {
 
       const validator = new RuleValidator(rule, event);
 
-      expect(() => validator.checkIncludingWords()).toThrowError('Event title doesn\'t include required words');
+      expect(() => validator.checkIncludingWords()).toThrowError('event title doesn\'t include required words');
     });
   });
 
@@ -140,7 +140,7 @@ describe('RuleValidator', () => {
 
       const validator = new RuleValidator(rule, event);
 
-      expect(() => validator.checkExcludingWords()).toThrowError('Event title includes unwanted words');
+      expect(() => validator.checkExcludingWords()).toThrowError('event title includes unwanted words');
     });
 
     it('should pass if words list is empty', () => {

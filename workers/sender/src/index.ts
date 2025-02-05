@@ -12,7 +12,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
-import Time from '../../../lib/utils/time';
+import TimeMs from '../../../lib/utils/time';
 
 import { PasswordResetNotification, PaymentSuccessNotification, TemplateEventData, WorkspaceInviteNotification } from '../types/template-variables/';
 import NotificationsProvider from './provider';
@@ -186,6 +186,8 @@ export default abstract class SenderWorker extends Worker {
       notificationType = 'several-events';
     }
 
+    this.logger.info(`Sending ${notificationType} notification to ${channel.endpoint}`);
+
     this.provider.send(channel.endpoint, {
       type: notificationType,
       payload: {
@@ -305,7 +307,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Send message not often than once per day
      */
-    const throttleInterval = Time.DAY;
+    const throttleInterval = TimeMs.DAY;
 
     const { workspaceId, daysLeft } = task.payload;
 
@@ -373,7 +375,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Send message not often than once per day
      */
-    const throttleInterval = Time.DAY;
+    const throttleInterval = TimeMs.DAY;
 
     const { workspaceId, eventsCount, eventsLimit } = task.payload;
 

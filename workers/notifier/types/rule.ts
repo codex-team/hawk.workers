@@ -5,7 +5,7 @@ import { Channel, ChannelType } from './channel';
  * WhatToReceive property values
  */
 export enum WhatToReceive {
-  All = 'ALL',
+  SeenMore = 'SEEN_MORE',
   New = 'ONLY_NEW',
 }
 
@@ -41,6 +41,16 @@ export interface Rule {
    * Words event title must include
    */
   readonly including: string[];
+
+  /**
+   * If this number of events is reached in the eventThresholdPeriod, the rule will be triggered
+   */
+  readonly threshold: number;
+
+  /**
+   * Size of period (in milliseconds) to count events to compare to rule threshold
+   */
+  readonly thresholdPeriod: number;
 
   /**
    * Words event title must not include
