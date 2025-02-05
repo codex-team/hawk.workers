@@ -114,7 +114,7 @@ export default class NotifierWorker extends Worker {
           return this.getProjectNotificationRules(projectId);
         },
         /**
-         * Time class stored time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
+         * Time class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
          */
         Time.MINUTE / 1000
       );
