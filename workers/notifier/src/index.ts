@@ -9,7 +9,7 @@ import { NotifierEvent, NotifierWorkerTask } from '../types/notifier-task';
 import { Rule, WhatToReceive } from '../types/rule';
 import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
-import TimeMs from '../../../lib/utils/time';
+import Time from '../../../lib/utils/time';
 import RedisHelper from './redisHelper';
 
 /**
@@ -113,11 +113,7 @@ export default class NotifierWorker extends Worker {
         () => {
           return this.getProjectNotificationRules(projectId);
         },
-        /**
-         * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
-         */
-        /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-        TimeMs.MINUTE / 1000
+        Time.MINUTE
       );
     } catch (e) {
       this.logger.warn('Failed to get project notification rules because ', e);

@@ -15,7 +15,6 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
-import TimeMs from '../../../lib/utils/time';
 
 /**
  * Error code of MongoDB key duplication error
@@ -247,6 +246,8 @@ export default class GrouperWorker extends Worker {
    * @param count - how many events to return
    */
   private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
+    const msInOneMinute = 60000;
+
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
@@ -256,12 +257,7 @@ export default class GrouperWorker extends Worker {
         })
         .limit(count)
         .toArray();
-    },  
-    /**
-     * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
-     */
-    /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-    TimeMs.MINUTE / 1000);
+    }, msInOneMinute);
   }
 
   /**
