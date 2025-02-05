@@ -113,7 +113,10 @@ export default class NotifierWorker extends Worker {
         () => {
           return this.getProjectNotificationRules(projectId);
         },
-        Time.MINUTE
+        /**
+         * Time class stored time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
+         */
+        Time.MINUTE / 1000
       );
     } catch (e) {
       this.logger.warn('Failed to get project notification rules because ', e);
