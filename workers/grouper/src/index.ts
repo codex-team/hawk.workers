@@ -260,6 +260,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Time class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
      */
+    /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
     Time.MINUTE / 1000);
   }
 
