@@ -314,6 +314,8 @@ export default class JavascriptEventWorker extends EventWorker {
       this.logger.verbose(`Got release record`, {
         message: releaseRecord,
       });
+
+      return releaseRecord;
     } catch (err) {
       this.logger.error('Error while getting release record', err);
       throw new DatabaseReadWriteError(err);
