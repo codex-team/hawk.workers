@@ -64,13 +64,13 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
-    this.logger.info(`handle: ${event}`);
-
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
+
+    this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${event.payload.backtrace}`);
   
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
@@ -106,7 +106,9 @@ export default class JavascriptEventWorker extends EventWorker {
       return event.payload.backtrace;
     }
 
-    this.logger.info(`beautifyBacktrace: release record found: ${releaseRecord}`);
+    this.logger.verbose(`beautifyBacktrace: release record found`, { 
+      message: releaseRecord 
+    });
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
@@ -134,7 +136,9 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       );
 
-      this.logger.info(`beautifyBacktrace: result of beatify: ${result}`);
+      this.logger.verbose(`beautifyBacktrace: result of beatify`, {
+        message: result,
+      });
 
       return result;
     }));
@@ -297,7 +301,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
     try {
-      return await this.releasesDbCollection
+      const releaseRecord = await this.releasesDbCollection
         .findOne({
           projectId,
           release,
@@ -306,7 +310,14 @@ export default class JavascriptEventWorker extends EventWorker {
             _id: -1,
           },
         });
+
+      this.logger.verbose(`Got release record`, {
+        message: releaseRecord,
+      });
+
+      return releaseRecord;
     } catch (err) {
+      this.logger.error('Error while getting release record', err);
       throw new DatabaseReadWriteError(err);
     }
   }
