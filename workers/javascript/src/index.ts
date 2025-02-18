@@ -64,10 +64,14 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+    this.logger.info(`handle: ${event}`);
+
     if (event.payload.release && event.payload.backtrace) {
+      this.logger.info('beautifyBacktrace called');
+
       event.payload.backtrace = await this.beautifyBacktrace(event);
     }
-
+  
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
@@ -98,8 +102,11 @@ export default class JavascriptEventWorker extends EventWorker {
     );
 
     if (!releaseRecord) {
+      this.logger.info('beautifyBacktrace: no releaseRecord found');
       return event.payload.backtrace;
     }
+
+    this.logger.info(`beautifyBacktrace: release record found: ${releaseRecord}`);
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
@@ -108,7 +115,7 @@ export default class JavascriptEventWorker extends EventWorker {
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
-      return this.cache.get(
+      const result = await this.cache.get(
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
@@ -126,6 +133,10 @@ export default class JavascriptEventWorker extends EventWorker {
             });
         }
       );
+
+      this.logger.info(`beautifyBacktrace: result of beatify: ${result}`);
+
+      return result;
     }));
   }
 
