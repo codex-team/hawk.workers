@@ -60,6 +60,7 @@ export default class ReleaseWorker extends Worker {
    * @param task - Message object from consume method
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
+    this.logger.info(`release worker handle: ${task}`);
     switch (task.type) {
       case 'add-release': await this.saveRelease(task.projectId, task.payload as ReleaseWorkerAddReleasePayload); break;
     }
@@ -72,6 +73,7 @@ export default class ReleaseWorker extends Worker {
    * @param payload - release payload
    */
   private async saveRelease(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+    this.logger.info(`saveRelease: save release for project: ${projectId}, release: ${payload.release}`);
     try {
       const commits = payload.commits;
 
@@ -169,7 +171,7 @@ export default class ReleaseWorker extends Worker {
 
           return map;
         } catch (error) {
-          console.log(`Map ${map.mapFileName} was not saved: `, error);
+          this.logger.error(`Map ${map.mapFileName} was not saved: ${error}`);
         }
       }));
 
@@ -191,6 +193,7 @@ export default class ReleaseWorker extends Worker {
        * - update previous record with adding new saved maps
        */
       if (!existedRelease) {
+        this.logger.info('inserted new release')
         await this.releasesCollection.insertOne({
           projectId: projectId,
           release: payload.release,
