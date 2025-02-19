@@ -67,7 +67,12 @@ export default class JavascriptEventWorker extends EventWorker {
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
-      event.payload.backtrace = await this.beautifyBacktrace(event);
+      try {
+        event.payload.backtrace = await this.beautifyBacktrace(event);
+      } catch (err) {
+        this.logger.error('Error while beautifing backtrace', err)
+      }
+
     }
 
     this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${event.payload.backtrace}`);
@@ -106,9 +111,7 @@ export default class JavascriptEventWorker extends EventWorker {
       return event.payload.backtrace;
     }
 
-    this.logger.verbose(`beautifyBacktrace: release record found`, { 
-      message: releaseRecord 
-    });
+    this.logger.info(`beautifyBacktrace: release record found: ${releaseRecord.toString()}`);
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
@@ -136,9 +139,7 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       );
 
-      this.logger.verbose(`beautifyBacktrace: result of beatify`, {
-        message: result,
-      });
+      this.logger.info(`beautifyBacktrace: result of beatify: \n${result.toString()}`);
 
       return result;
     }));
@@ -311,9 +312,7 @@ export default class JavascriptEventWorker extends EventWorker {
           },
         });
 
-      this.logger.verbose(`Got release record`, {
-        message: releaseRecord,
-      });
+      this.logger.info(`Got release record: \n${releaseRecord.toString()}`);
 
       return releaseRecord;
     } catch (err) {
