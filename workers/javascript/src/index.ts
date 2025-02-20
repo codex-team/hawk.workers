@@ -207,6 +207,8 @@ export default class JavascriptEventWorker extends EventWorker {
       column: stackFrame.column,
     });
 
+    this.logger.info(`consumeBacktraceFrame: ${originalLocation}`)
+
     /**
      * Source code lines
      */
