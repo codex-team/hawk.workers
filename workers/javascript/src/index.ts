@@ -121,7 +121,6 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get cached (or set if the value is missing) real backtrace frame
        */
       const result = await this.cache.get(
-        // might be event.payload.release.toString() is zalupa
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
