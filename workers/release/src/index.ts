@@ -60,7 +60,6 @@ export default class ReleaseWorker extends Worker {
    * @param task - Message object from consume method
    */
   public async handle(task: ReleaseWorkerTask): Promise<void> {
-    this.logger.info(`release worker handle: ${task}`);
     switch (task.type) {
       case 'add-release': await this.saveRelease(task.projectId, task.payload as ReleaseWorkerAddReleasePayload); break;
     }
