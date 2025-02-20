@@ -121,7 +121,6 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get cached (or set if the value is missing) real backtrace frame
        */
       const result = await this.cache.get(
-        // might be event.payload.release.toString() is zalupa
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
@@ -158,12 +157,13 @@ export default class JavascriptEventWorker extends EventWorker {
      * Sometimes catcher can't extract file from the backtrace
      */
     if (!stackFrame.file) {
+      this.logger.info(`consumeBacktraceFrame: No stack frame file found`)
       return stackFrame;
     }
 
     /**
      * One releaseRecord can contain several source maps for different chunks,
-     * so find a map by for current stack-frame file
+     * so find a map for current stack-frame file
      */
     const mapForFrame: SourceMapDataExtended = releaseRecord.files.find((mapFileName: SourceMapDataExtended) => {
       /**
@@ -182,6 +182,7 @@ export default class JavascriptEventWorker extends EventWorker {
     });
 
     if (!mapForFrame) {
+      this.logger.info(`consumeBacktraceFrame: No map file found for the frame: ${JSON.stringify(stackFrame)}`)
       return stackFrame;
     }
 
@@ -191,6 +192,7 @@ export default class JavascriptEventWorker extends EventWorker {
     const mapContent = await this.loadSourceMapFile(mapForFrame);
 
     if (!mapContent) {
+      this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`)
       return stackFrame;
     }
 
@@ -315,7 +317,7 @@ export default class JavascriptEventWorker extends EventWorker {
           },
         });
 
-      this.logger.info(`Got release record: \n${releaseRecord.toString()}`);
+      this.logger.info(`Got release record: \n${JSON.stringify(releaseRecord)}`);
 
       return releaseRecord;
     } catch (err) {
