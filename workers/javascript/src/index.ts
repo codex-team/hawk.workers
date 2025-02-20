@@ -75,7 +75,7 @@ export default class JavascriptEventWorker extends EventWorker {
 
     }
 
-    this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${event.payload.backtrace}`);
+    this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${JSON.stringify(event.payload.backtrace)}`);
   
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
@@ -111,7 +111,7 @@ export default class JavascriptEventWorker extends EventWorker {
       return event.payload.backtrace;
     }
 
-    this.logger.info(`beautifyBacktrace: release record found: ${releaseRecord.toString()}`);
+    this.logger.info(`beautifyBacktrace: release record found: ${JSON.stringify(releaseRecord)}`);
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
@@ -121,6 +121,7 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get cached (or set if the value is missing) real backtrace frame
        */
       const result = await this.cache.get(
+        // might be event.payload.release.toString() is zalupa
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
@@ -139,7 +140,7 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       );
 
-      this.logger.info(`beautifyBacktrace: result of beatify: \n${result.toString()}`);
+      this.logger.info(`beautifyBacktrace: result of beatify: \n${JSON.stringify(result)}`);
 
       return result;
     }));
