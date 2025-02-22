@@ -6,7 +6,7 @@ import * as utils from '../../../lib/utils';
 import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import { GroupWorkerTask } from '../types/group-worker-task';
+import { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
 import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -184,11 +184,11 @@ export default class GrouperWorker extends Worker {
        */
       decodeUnsafeFields(existedEvent);
 
-      let delta;
+      let delta: RepetitionDelta;
 
       try {
         /**
-         * Save event's repetitions
+         * Calculate delta between original event and repetition
          */
         delta = computeDelta(existedEvent.payload, task.event);
       } catch (e) {

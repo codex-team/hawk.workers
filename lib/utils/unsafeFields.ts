@@ -14,10 +14,20 @@ export const unsafeFields = ['context', 'addons'] as const;
 export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
   unsafeFields.forEach((field) => {
     try {
-      const fieldValue = event.delta[field];
+      let fieldValue: unknown;
+
+      if ('delta' in event) {
+        fieldValue = event.delta[field];
+      } else {
+        fieldValue = event.payload[field];
+      }
 
       if (typeof fieldValue === 'string') {
-        event.delta[field] = JSON.parse(fieldValue);
+        if ('delta' in event) {
+          event.delta[field] = JSON.parse(fieldValue);
+        } else {
+          event.payload[field] = JSON.parse(fieldValue);
+        }
       }
     } catch {
       console.error(`Failed to parse field ${field} in event ${event._id}`);
@@ -32,7 +42,16 @@ export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
  */
 export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
   unsafeFields.forEach((field) => {
-    const fieldValue = event.delta[field];
+    let fieldValue: unknown;
+
+    /**
+     * Repetition includes delta field, grouped event includes payload
+     */
+    if ('delta' in event) {
+      fieldValue = event.delta[field];
+    } else {
+      fieldValue = event.payload[field];
+    }
 
     /**
      * Repetition diff can omit these fields if they are not changed
@@ -52,6 +71,14 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
       console.error(`Failed to stringify field ${field} in event ${event._id}`);
       newValue = undefined;
     }
-    event.delta[field] = newValue;
+
+    /**
+     * Repetition includes delta field, grouped event includes payload
+     */
+    if ('delta' in event) {
+      event.delta[field] = newValue;
+    } else {
+      event.payload[field] = newValue;
+    }
   });
 }
