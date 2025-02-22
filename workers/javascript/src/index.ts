@@ -65,9 +65,18 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
-      event.payload.backtrace = await this.beautifyBacktrace(event);
+      this.logger.info('beautifyBacktrace called');
+
+      try {
+        event.payload.backtrace = await this.beautifyBacktrace(event);
+      } catch (err) {
+        this.logger.error('Error while beautifing backtrace', err)
+      }
+
     }
 
+    this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${JSON.stringify(event.payload.backtrace)}`);
+  
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
@@ -98,8 +107,11 @@ export default class JavascriptEventWorker extends EventWorker {
     );
 
     if (!releaseRecord) {
+      this.logger.info('beautifyBacktrace: no releaseRecord found');
       return event.payload.backtrace;
     }
+
+    this.logger.info(`beautifyBacktrace: release record found: ${JSON.stringify(releaseRecord)}`);
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
@@ -108,7 +120,7 @@ export default class JavascriptEventWorker extends EventWorker {
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
-      return this.cache.get(
+      const result = await this.cache.get(
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
           return this.consumeBacktraceFrame(frame, releaseRecord)
@@ -126,6 +138,10 @@ export default class JavascriptEventWorker extends EventWorker {
             });
         }
       );
+
+      this.logger.info(`beautifyBacktrace: result of beatify: \n${JSON.stringify(result)}`);
+
+      return result;
     }));
   }
 
@@ -141,12 +157,13 @@ export default class JavascriptEventWorker extends EventWorker {
      * Sometimes catcher can't extract file from the backtrace
      */
     if (!stackFrame.file) {
+      this.logger.info(`consumeBacktraceFrame: No stack frame file found`)
       return stackFrame;
     }
 
     /**
      * One releaseRecord can contain several source maps for different chunks,
-     * so find a map by for current stack-frame file
+     * so find a map for current stack-frame file
      */
     const mapForFrame: SourceMapDataExtended = releaseRecord.files.find((mapFileName: SourceMapDataExtended) => {
       /**
@@ -165,6 +182,7 @@ export default class JavascriptEventWorker extends EventWorker {
     });
 
     if (!mapForFrame) {
+      this.logger.info(`consumeBacktraceFrame: No map file found for the frame: ${JSON.stringify(stackFrame)}`)
       return stackFrame;
     }
 
@@ -174,6 +192,7 @@ export default class JavascriptEventWorker extends EventWorker {
     const mapContent = await this.loadSourceMapFile(mapForFrame);
 
     if (!mapContent) {
+      this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`)
       return stackFrame;
     }
 
@@ -189,6 +208,8 @@ export default class JavascriptEventWorker extends EventWorker {
       line: stackFrame.line,
       column: stackFrame.column,
     });
+
+    this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`)
 
     /**
      * Source code lines
@@ -286,7 +307,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
     try {
-      return await this.releasesDbCollection
+      const releaseRecord = await this.releasesDbCollection
         .findOne({
           projectId,
           release,
@@ -295,7 +316,12 @@ export default class JavascriptEventWorker extends EventWorker {
             _id: -1,
           },
         });
+
+      this.logger.info(`Got release record: \n${JSON.stringify(releaseRecord)}`);
+
+      return releaseRecord;
     } catch (err) {
+      this.logger.error('Error while getting release record', err);
       throw new DatabaseReadWriteError(err);
     }
   }
