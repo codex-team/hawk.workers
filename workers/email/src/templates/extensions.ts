@@ -46,6 +46,7 @@ Twig.extendFilter('leftTrim', ((value: string, maxLen: number): string => {
   if (value.length > maxLen) {
     return '…' + value.slice(value.length - maxLen);
   }
+
   return value;
 }) as unknown as (value: any, params: false | any[]) => string); // tmp case. We need to check if TS says correct types or our implementation is correct
 

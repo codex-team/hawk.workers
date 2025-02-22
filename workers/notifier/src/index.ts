@@ -66,14 +66,14 @@ export default class NotifierWorker extends Worker {
       const rules = await this.getFittedRules(projectId, event);
 
       this.logger.info(`Found ${rules.length} fitted rules for the event ${event.groupHash}`);
-      
+
       for (const rule of rules) {
         /**
          * If validation for rule with whatToReceive.New passed, then event is new and we can send it to channels
          */
         if (rule.whatToReceive === WhatToReceive.New) {
           this.logger.info(`Rule ${rule._id} is new, sending to channels`);
-          
+
           await this.sendEventsToChannels(projectId, rule, event);
 
           continue;
@@ -156,7 +156,7 @@ export default class NotifierWorker extends Worker {
       }
 
       const channelKey: ChannelKey = [projectId, rule._id.toString(), name];
-      
+
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,

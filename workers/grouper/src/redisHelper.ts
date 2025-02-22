@@ -40,7 +40,6 @@ export default class RedisHelper {
     } catch (error) {
       console.error('Error creating redis client', error);
     }
-
   }
 
   /**
