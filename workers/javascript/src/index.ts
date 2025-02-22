@@ -74,8 +74,8 @@ export default class JavascriptEventWorker extends EventWorker {
       }
     }
 
-    this.logger.info(`beautifyBacktrace passed with release: ${event.payload.release}, backtrace: ${JSON.stringify(event.payload.backtrace)}`);
-
+    this.logger.info(`Beautify backtrace passed: ${event.payload.release && event.payload.backtrace} \nbeautified backtrace is: ${JSON.stringify(event.payload.backtrace)}`)
+  
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
@@ -234,6 +234,13 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get 5 lines above and 5 below
        */
       lines = this.readSourceLines(consumer, originalLocation);
+    }
+
+    /**
+     * Check if original function name was parsed
+     */
+    if (originalLocation.name !== null) {
+      stackFrame.function = originalLocation.name;
     }
 
     consumer.destroy();
