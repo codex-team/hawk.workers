@@ -251,10 +251,11 @@ describe('NotifierWorker', () => {
       worker.sendEventsToChannels = jest.fn();
 
       const message = { ...messageMock };
+
       message.event.isNew = true;
 
       await worker.handle(message);
-      
+
       message.event.isNew = false;
       await worker.handle(message);
 

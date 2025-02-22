@@ -70,12 +70,11 @@ export default class JavascriptEventWorker extends EventWorker {
       try {
         event.payload.backtrace = await this.beautifyBacktrace(event);
       } catch (err) {
-        this.logger.error('Error while beautifing backtrace', err)
+        this.logger.error('Error while beautifing backtrace', err);
       }
-
     }
 
-    this.logger.verbose(`Beautify backtrace passed: ${event.payload.release && event.payload.backtrace} \nbeautified backtrace is: ${JSON.stringify(event.payload.backtrace)}`)
+    this.logger.info(`Beautify backtrace passed: ${event.payload.release && event.payload.backtrace} \nbeautified backtrace is: ${JSON.stringify(event.payload.backtrace)}`)
   
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
@@ -108,6 +107,7 @@ export default class JavascriptEventWorker extends EventWorker {
 
     if (!releaseRecord) {
       this.logger.info('beautifyBacktrace: no releaseRecord found');
+
       return event.payload.backtrace;
     }
 
@@ -157,7 +157,8 @@ export default class JavascriptEventWorker extends EventWorker {
      * Sometimes catcher can't extract file from the backtrace
      */
     if (!stackFrame.file) {
-      this.logger.info(`consumeBacktraceFrame: No stack frame file found`)
+      this.logger.info(`consumeBacktraceFrame: No stack frame file found`);
+
       return stackFrame;
     }
 
@@ -182,7 +183,8 @@ export default class JavascriptEventWorker extends EventWorker {
     });
 
     if (!mapForFrame) {
-      this.logger.info(`consumeBacktraceFrame: No map file found for the frame: ${JSON.stringify(stackFrame)}`)
+      this.logger.info(`consumeBacktraceFrame: No map file found for the frame: ${JSON.stringify(stackFrame)}`);
+
       return stackFrame;
     }
 
@@ -192,7 +194,8 @@ export default class JavascriptEventWorker extends EventWorker {
     const mapContent = await this.loadSourceMapFile(mapForFrame);
 
     if (!mapContent) {
-      this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`)
+      this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`);
+
       return stackFrame;
     }
 
@@ -207,9 +210,13 @@ export default class JavascriptEventWorker extends EventWorker {
     const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
+      /**
+       * Helps to get exact position if column is not accurate enough
+       */
+      bias: SourceMapConsumer.LEAST_UPPER_BOUND,
     });
 
-    this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`)
+    this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`);
 
     /**
      * Source code lines

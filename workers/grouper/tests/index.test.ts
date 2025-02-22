@@ -193,15 +193,26 @@ describe('GrouperWorker', () => {
     });
 
     test('Should increment daily affected users if affected users are the same as the previous day', async () => {
-
       const today = (new Date()).getTime() / MS_IN_SEC;
       const yesterday = today - secondsInDay;
 
-      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer1' } }));
-      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer2' } }));
+      await worker.handle(generateTask({
+        timestamp: yesterday,
+        user: { id: 'customer1' },
+      }));
+      await worker.handle(generateTask({
+        timestamp: yesterday,
+        user: { id: 'customer2' },
+      }));
 
-      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer1' } }));
-      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer2' } }));
+      await worker.handle(generateTask({
+        timestamp: today,
+        user: { id: 'customer1' },
+      }));
+      await worker.handle(generateTask({
+        timestamp: today,
+        user: { id: 'customer2' },
+      }));
 
       const dailyEvents = await dailyEventsCollection.find({}).toArray();
 
@@ -214,15 +225,25 @@ describe('GrouperWorker', () => {
       const yesterday = (new Date()).getTime() / MS_IN_SEC - secondsInDay;
       const today = (new Date()).getTime() / MS_IN_SEC;
 
-      await worker.handle(generateTask({ timestamp: yesterday, user: { id: 'customer1' } }));
-      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer1' } }));
-      await worker.handle(generateTask({ timestamp: today, user: { id: 'customer2' } }));
+      await worker.handle(generateTask({
+        timestamp: yesterday,
+        user: { id: 'customer1' },
+      }));
+      await worker.handle(generateTask({
+        timestamp: today,
+        user: { id: 'customer1' },
+      }));
+      await worker.handle(generateTask({
+        timestamp: today,
+        user: { id: 'customer2' },
+      }));
 
       /**
        * Get daily events ordered by timestamp desc
        */
       const dailyEvents = await dailyEventsCollection.find({
-      }).sort({ timestamp: -1 }).toArray();
+      }).sort({ timestamp: -1 })
+        .toArray();
 
       expect(dailyEvents.length).toBe(2);
       /**

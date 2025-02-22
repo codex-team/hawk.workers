@@ -48,11 +48,11 @@ export default class RedisHelper {
    * @returns {number} current event count
    */
   public async computeEventCountForPeriod(
-      projectId: string,
-      ruleId: string,
-      groupHash: NotifierEvent['groupHash'],
-      thresholdPeriod: Rule['thresholdPeriod']
-    ): Promise<number> {
+    projectId: string,
+    ruleId: string,
+    groupHash: NotifierEvent['groupHash'],
+    thresholdPeriod: Rule['thresholdPeriod']
+  ): Promise<number> {
     const script = `
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])

@@ -192,7 +192,7 @@ export default class ReleaseWorker extends Worker {
        * - update previous record with adding new saved maps
        */
       if (!existedRelease) {
-        this.logger.info('inserted new release')
+        this.logger.info('inserted new release');
         await this.releasesCollection.insertOne({
           projectId: projectId,
           release: payload.release,

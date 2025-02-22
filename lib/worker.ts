@@ -327,10 +327,8 @@ export abstract class Worker {
         };
       }
 
-
       console.log('handle error');
       console.log(e);
-      
 
       HawkCatcher.send(e, context);
 

@@ -118,7 +118,7 @@ export default class GrouperWorker extends Worker {
 
     if (isFirstOccurrence) {
       try {
-        const incrementAffectedUsers = task.event.user ? true : false;
+        const incrementAffectedUsers = !!task.event.user;
 
         /**
          * Insert new event
@@ -142,7 +142,7 @@ export default class GrouperWorker extends Worker {
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
           console.log('DB_DUPLICATE_KEY_ERROR');
-          
+
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
 
@@ -182,6 +182,8 @@ export default class GrouperWorker extends Worker {
       const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
+        /* eslint-disable-next-line */
+        ORIGINAL__REPETITION: JSON.stringify(task.event),
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -256,7 +258,7 @@ export default class GrouperWorker extends Worker {
         })
         .limit(count)
         .toArray();
-    },  
+    },
     /**
      * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
      */
@@ -280,7 +282,6 @@ export default class GrouperWorker extends Worker {
     if (!eventUser) {
       return [false, false];
     }
-
 
     /**
      * Default to true - we'll set to false if conditions are met

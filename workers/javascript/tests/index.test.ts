@@ -51,9 +51,10 @@ describe('JavaScript event worker', () => {
    * Parsed backtrace frame is used for comparing with beautified backtrace
    */
   const parsedBacktraceFrame = {
-    column: 16,
+    column: 20,
     file: 'App.js',
     line: 9,
+    function: 'Error',
     sourceCode: [ {
       content: '  // throw new Error("Before render")',
       line: 4,
