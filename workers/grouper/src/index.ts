@@ -183,7 +183,7 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
         payload: diff,
         /* eslint-disable-next-line */
-        ORIGINAL__REPETITION: task.event, 
+        ORIGINAL__REPETITION: JSON.stringify(task.event),
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
