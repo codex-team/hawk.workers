@@ -207,6 +207,10 @@ export default class JavascriptEventWorker extends EventWorker {
     const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
+      /**
+       * Helps to get exact position if column is not accurate enough
+       */
+      bias: SourceMapConsumer.LEAST_UPPER_BOUND,
     });
 
     this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`)
