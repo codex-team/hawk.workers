@@ -182,6 +182,7 @@ export default class GrouperWorker extends Worker {
       const newRepetition = {
         groupHash: uniqueEventHash,
         payload: diff,
+        __ORIGINAL__REPETITION: task.event, 
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
