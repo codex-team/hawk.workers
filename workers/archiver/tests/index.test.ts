@@ -111,6 +111,20 @@ describe('Archiver worker', () => {
   test('Should remove old releases', async () => {
     await db.collection('releases').insertMany(mockedReleases);
 
+    const releaseToStay = {
+      _id: new ObjectId(),
+      projectId: '5e4ff518628a6c714515f4da',
+      release: 'releasetostay',
+      files: [ {
+        _id: new ObjectId('5eb119ec6570b9405cdc5b48')
+      } ]
+    };
+
+    /**
+     * Insert one release with object id based on current time, it should not be removed
+     */
+    await db.collection('releases').insert(releaseToStay)
+
     const worker = new ArchiverWorker();
 
     await worker.start();
@@ -122,8 +136,8 @@ describe('Archiver worker', () => {
       .find({})
       .toArray();
 
-    expect(newReleasesCollection).toEqual(mockedReleases.slice(mockedReleases.length - 3));
-    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length - 3);
+    expect(newReleasesCollection).toEqual([releaseToStay]);
+    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length);
     await worker.finish();
   });
 
