@@ -16,6 +16,7 @@
         "migrate:down": "migrate-mongo down",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "test": "jest --coverage --runInBand",
+        "test:archiver": "jest workers/archiver",
         "test:base": "jest lib/worker",
         "test:db": "jest lib/db/",
         "test:cache": "jest lib/cache",
