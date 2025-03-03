@@ -89,18 +89,18 @@ export default class GrouperWorker extends Worker {
     /**
      * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last N events
      */
-    if (!existedEvent) {
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
+    // if (!existedEvent) {
+    //   const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
 
-      if (similarEvent) {
-        /**
-         * Override group hash with found event's group hash
-         */
-        uniqueEventHash = similarEvent.groupHash;
+    //   if (similarEvent) {
+    //     /**
+    //      * Override group hash with found event's group hash
+    //      */
+    //     uniqueEventHash = similarEvent.groupHash;
 
-        existedEvent = similarEvent;
-      }
-    }
+    //     existedEvent = similarEvent;
+    //   }
+    // }
 
     /**
      * Event happened for the first time
@@ -118,7 +118,7 @@ export default class GrouperWorker extends Worker {
 
     if (isFirstOccurrence) {
       try {
-        const incrementAffectedUsers = !!task.event.user;
+        const incrementAffectedUsers = task.event.user ? true : false;
 
         /**
          * Insert new event
