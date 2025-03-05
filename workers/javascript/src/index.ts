@@ -235,12 +235,17 @@ export default class JavascriptEventWorker extends EventWorker {
      * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121
      */
     if (originalLocation.source) {
+      console.log('original location source found')
       /**
        * Get 5 lines above and 5 below
        */
       lines = this.readSourceLines(consumer, originalLocation);
 
       functionContext = this.getFunctionContext(mapContent, originalLocation.line) ?? originalLocation.name;
+
+      console.log('after getFunctionContext', functionContext, originalLocation.name);
+    } else {
+      console.log('no original location source found')
     }
 
 
@@ -288,8 +293,10 @@ export default class JavascriptEventWorker extends EventWorker {
          * It is used to get class decorator of the position, it will save class that is related to original position
          */
         ClassDeclaration(path) {
+          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
+
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            className = path.node.id?.name || null;
+            className = path.node.id.name || null;
           }
         },
         /**
@@ -297,6 +304,8 @@ export default class JavascriptEventWorker extends EventWorker {
          * It will save class and method, that are related to original position
          */
         ClassMethod(path) {
+          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
+
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             // Handle different key types
             if (path.node.key.type === 'Identifier') {
@@ -309,8 +318,10 @@ export default class JavascriptEventWorker extends EventWorker {
          * It is used to get function name that is declared out of class
          */
         FunctionDeclaration(path) {
+          console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
+          
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            functionName = path.node.id?.name || null;
+            functionName = path.node.id.name || null;
             isAsync = path.node.async;
           }
         },
@@ -318,6 +329,8 @@ export default class JavascriptEventWorker extends EventWorker {
          * It is used to get anonimous function names in function expressions or arrow function expressions
          */
         VariableDeclarator(path) {
+          console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `)
+
           if (
             path.node.init &&
             (path.node.init.type === "FunctionExpression" || path.node.init.type === "ArrowFunctionExpression") &&
@@ -326,7 +339,7 @@ export default class JavascriptEventWorker extends EventWorker {
             path.node.loc.end.line >= line
           ) {
             // Handle different id types
-            if (path.node.id?.type === 'Identifier') {
+            if (path.node.id.type === 'Identifier') {
               functionName = path.node.id.name;
             }
             isAsync = (path.node.init as any).async;
