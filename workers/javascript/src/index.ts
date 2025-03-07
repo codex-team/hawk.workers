@@ -201,7 +201,7 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * @todo cache source map consumer for file-keys
      */
-    let consumer = await this.consumeSourceMap(mapContent);
+    let consumer = this.consumeSourceMap(mapContent);
 
     /**
      * Error's original position
@@ -333,7 +333,6 @@ export default class JavascriptEventWorker extends EventWorker {
     return functionName ? `${isAsync ? "async " : ""}${className ? `${className}.` : ""}${functionName}` : null;
 }
 
-
   /**
    * Downloads source map file from Grid FS
    *
@@ -426,7 +425,13 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
-  private async consumeSourceMap(mapBody: string): Promise<SourceMapConsumer> {
-    return await new SourceMapConsumer(JSON.parse(mapBody));
+  private consumeSourceMap(mapBody: string): SourceMapConsumer {
+    try {
+      const rawSourceMap = JSON.parse(mapBody);
+
+      return new SourceMapConsumer(rawSourceMap);
+    } catch (e) {
+      this.logger.error(`Error on source-map consumer initialization: ${e}`);
+    }
   }
 }
