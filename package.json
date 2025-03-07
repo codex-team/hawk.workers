@@ -29,6 +29,7 @@
         "test:grouper": "jest workers/grouper",
         "test:paymaster": "jest workers/paymaster",
         "test:notifier": "jest workers/notifier",
+        "test:js": "jest workers/javascript",
         "test:clear": "jest --clearCache",
         "run-default": "yarn worker hawk-worker-default",
         "run-sentry": "yarn worker hawk-worker-sentry",
