@@ -1,4 +1,4 @@
-import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
+import { MappedPosition, SourceMapConsumer } from 'source-map-js';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
@@ -77,8 +77,6 @@ export default class JavascriptEventWorker extends EventWorker {
       }
     }
 
-    this.logger.info(`Beautify backtrace passed: ${event.payload.release && event.payload.backtrace} \nbeautified backtrace is: ${JSON.stringify(event.payload.backtrace)}`)
-  
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
@@ -141,8 +139,6 @@ export default class JavascriptEventWorker extends EventWorker {
             });
         }
       );
-
-      this.logger.info(`beautifyBacktrace: result of beatify: \n${JSON.stringify(result)}`);
 
       return result;
     }));
@@ -210,7 +206,7 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Error's original position
      */
-    const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
+    const originalLocation: MappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
       /**
@@ -218,8 +214,6 @@ export default class JavascriptEventWorker extends EventWorker {
        */
       bias: SourceMapConsumer.LEAST_UPPER_BOUND,
     });
-
-    this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`);
 
     /**
      * Source code lines
@@ -240,12 +234,11 @@ export default class JavascriptEventWorker extends EventWorker {
        */
       lines = this.readSourceLines(consumer, originalLocation);
 
-      functionContext = this.getFunctionContext(mapContent, originalLocation.line) ?? originalLocation.name;
+      const originalContent = consumer.sourceContentFor(originalLocation.source);
+
+      functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+
     }
-
-
-    consumer.destroy();
-    consumer = null;
 
     return Object.assign(stackFrame, {
       line: originalLocation.line,
@@ -334,7 +327,7 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       });
     } catch (e) {
-        console.error(`Failed to parse source code: ${e.message}`);
+      console.error(`Failed to parse source code: ${e}`);
     }
 
     return functionName ? `${isAsync ? "async " : ""}${className ? `${className}.` : ""}${functionName}` : null;
@@ -378,8 +371,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {SourceCodeLine[]}
    */
   private readSourceLines(
-    consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer,
-    original: NullableMappedPosition
+    consumer: SourceMapConsumer,
+    original: MappedPosition
   ): SourceCodeLine[] {
     const sourceContent = consumer.sourceContentFor(original.source, true);
 
@@ -426,18 +419,14 @@ export default class JavascriptEventWorker extends EventWorker {
       throw new DatabaseReadWriteError(err);
     }
   }
-
+  
   /**
    * Promise style decorator around source-map consuming method.
    * Source Map Consumer is an object allowed to extract original position by line and col
    *
    * @param {string} mapBody - source map content
    */
-  private async consumeSourceMap(mapBody: string): Promise<BasicSourceMapConsumer | IndexedSourceMapConsumer> {
-    return new Promise((resolve) => {
-      SourceMapConsumer.with(mapBody, null, (consumer) => {
-        resolve(consumer);
-      });
-    });
+  private async consumeSourceMap(mapBody: string): Promise<SourceMapConsumer> {
+    return await new SourceMapConsumer(JSON.parse(mapBody));
   }
 }
