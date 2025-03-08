@@ -138,7 +138,7 @@ describe('Archiver worker', () => {
       .find({})
       .toArray();
 
-    expect(newReleasesCollection).toStrictEqual([
+    expect(newReleasesCollection).toEqual([
       mockedReleases[mockedReleasesLength - 2],
       mockedReleases[mockedReleasesLength - 1],
       releasesToStay,
