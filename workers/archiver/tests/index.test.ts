@@ -138,7 +138,7 @@ describe('Archiver worker', () => {
       .find({})
       .toArray();
 
-    expect(newReleasesCollection).toEqual([
+    expect(newReleasesCollection).toStrictEqual([
       mockedReleases[mockedReleasesLength - 2],
       mockedReleases[mockedReleasesLength - 1],
       releasesToStay,
@@ -171,6 +171,7 @@ describe('Archiver worker', () => {
       mockedReleases[mockedReleasesLength - 2],
       mockedReleases[mockedReleasesLength - 1],
     ])
+    await worker.finish();
   })
 
   afterAll(async () => {
