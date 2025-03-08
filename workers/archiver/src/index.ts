@@ -348,6 +348,7 @@ export default class ArchiverWorker extends Worker {
    * @param project - project to handle
    */
   private async removeOldReleases(project: ProjectDBScheme): Promise<number> {
+    const RELEASES_COUNT_TO_STAY = 2;
     const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
     /**
      * Create timestamp for one month ago
@@ -365,6 +366,7 @@ export default class ArchiverWorker extends Worker {
         _id: { $lt: objectIdThreshold } 
       })
       .sort({ _id: -1 })
+      .skip(RELEASES_COUNT_TO_STAY)
       .toArray();
 
     const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(
