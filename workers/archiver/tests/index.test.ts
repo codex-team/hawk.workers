@@ -119,7 +119,7 @@ describe('Archiver worker', () => {
       release: 'releasetostay',
       files: [ {
         _id: new ObjectId('5eb119ec6570b9405cdc5b48'),
-      } ],,
+      } ],
     };
 
     /**
