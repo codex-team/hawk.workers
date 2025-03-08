@@ -118,8 +118,8 @@ describe('Archiver worker', () => {
       projectId: '5e4ff518628a6c714515f4da',
       release: 'releasetostay',
       files: [ {
-        _id: new ObjectId('5eb119ec6570b9405cdc5b48')
-      } ],
+        _id: new ObjectId('5eb119ec6570b9405cdc5b48'),
+      } ],,
     };
 
     /**

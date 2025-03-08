@@ -1,4 +1,4 @@
-import { BasicSourceMapConsumer, IndexedSourceMapConsumer, NullableMappedPosition, SourceMapConsumer } from 'source-map';
+import { MappedPosition, SourceMapConsumer } from 'source-map-js';
 import { DatabaseController } from '../../../lib/db/controller';
 import { EventWorker } from '../../../lib/event-worker';
 import { DatabaseReadWriteError } from '../../../lib/workerErrors';
@@ -13,6 +13,8 @@ import { rightTrim } from '../../../lib/utils/string';
 import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
+import { parse } from '@babel/parser';
+import traverse from '@babel/traverse';
 
 /**
  * Worker for handling Javascript events
@@ -74,8 +76,6 @@ export default class JavascriptEventWorker extends EventWorker {
       }
     }
 
-    this.logger.info(`Beautify backtrace passed: ${event.payload.release && event.payload.backtrace} \nbeautified backtrace is: ${JSON.stringify(event.payload.backtrace)}`)
-  
     if (event.payload.addons?.userAgent) {
       event.payload.addons.beautifiedUserAgent = beautifyUserAgent(event.payload.addons.userAgent.toString());
     }
@@ -139,8 +139,6 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       );
 
-      this.logger.info(`beautifyBacktrace: result of beatify: \n${JSON.stringify(result)}`);
-
       return result;
     }));
   }
@@ -202,12 +200,12 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * @todo cache source map consumer for file-keys
      */
-    let consumer = await this.consumeSourceMap(mapContent);
+    const consumer = this.consumeSourceMap(mapContent);
 
     /**
      * Error's original position
      */
-    const originalLocation: NullableMappedPosition = consumer.originalPositionFor({
+    const originalLocation: MappedPosition = consumer.originalPositionFor({
       line: stackFrame.line,
       column: stackFrame.column,
       /**
@@ -216,12 +214,12 @@ export default class JavascriptEventWorker extends EventWorker {
       bias: SourceMapConsumer.LEAST_UPPER_BOUND,
     });
 
-    this.logger.info(`consumeBacktraceFrame: ${JSON.stringify(originalLocation)}`);
-
     /**
      * Source code lines
      */
     let lines = [];
+
+    let functionContext = originalLocation.name;
 
     /**
      * Get source code lines above and below event line
@@ -234,24 +232,116 @@ export default class JavascriptEventWorker extends EventWorker {
        * Get 5 lines above and 5 below
        */
       lines = this.readSourceLines(consumer, originalLocation);
-    }
 
-    /**
-     * Check if original function name was parsed
-     */
-    if (originalLocation.name !== null) {
-      stackFrame.function = originalLocation.name;
-    }
+      const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    consumer.destroy();
-    consumer = null;
+      functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+    }
 
     return Object.assign(stackFrame, {
       line: originalLocation.line,
       column: originalLocation.column,
       file: originalLocation.source,
+      function: functionContext,
       sourceCode: lines,
     }) as BacktraceFrame;
+  }
+
+  /**
+   * Method that is used to parse full function context of the code position
+   *
+   * @param sourceCode - content of the source file
+   * @param line - number of the line from the stack trace
+   * @returns - string of the function context or null if it could not be parsed
+   */
+  private getFunctionContext(sourceCode: string, line: number): string | null {
+    let functionName: string | null = null;
+    let className: string | null = null;
+    let isAsync = false;
+
+    try {
+      const ast = parse(sourceCode, {
+        sourceType: 'module',
+        plugins: [
+          'typescript',
+          'jsx',
+          'classProperties',
+          'decorators',
+          'optionalChaining',
+          'nullishCoalescingOperator',
+          'dynamicImport',
+          'bigInt',
+          'topLevelAwait',
+        ],
+      });
+
+      /**
+       * Ast-tree has same Node[] structure, but types are incompatible so we need cast to any
+       */
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any*/
+      traverse(ast as any, {
+        /**
+         * It is used to get class decorator of the position, it will save class that is related to original position
+         *
+         * @param path - node of the ast tree to be checked with this handler
+         */
+        ClassDeclaration(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            className = path.node.id?.name || null;
+          }
+        },
+        /**
+         * It is used to get class and its method decorator of the position
+         * It will save class and method, that are related to original position
+         *
+         * @param path - node of the ast tree to be checked with this handler
+         */
+        ClassMethod(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            // Handle different key types
+            if (path.node.key.type === 'Identifier') {
+              functionName = path.node.key.name;
+            }
+            isAsync = path.node.async;
+          }
+        },
+        /**
+         * It is used to get function name that is declared out of class
+         *
+         * @param path - node of the ast tree to be checked with this handler
+         */
+        FunctionDeclaration(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            functionName = path.node.id?.name || null;
+            isAsync = path.node.async;
+          }
+        },
+        /**
+         * It is used to get anonimous function names in function expressions or arrow function expressions
+         *
+         * @param path - node of the ast tree to be checked with this handler
+         */
+        VariableDeclarator(path) {
+          if (
+            path.node.init &&
+            (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
+            path.node.loc &&
+            path.node.loc.start.line <= line &&
+            path.node.loc.end.line >= line
+          ) {
+            // Handle different id types
+            if (path.node.id?.type === 'Identifier') {
+              functionName = path.node.id.name;
+            }
+            isAsync = (path.node.init).async;
+          }
+        },
+      });
+    } catch (e) {
+      console.error(`Failed to parse source code: ${e}`);
+    }
+
+    return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
   }
 
   /**
@@ -286,13 +376,13 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Reads near-placed lines from the original source
    *
-   * @param {BasicSourceMapConsumer | IndexedSourceMapConsumer} consumer - consumer for course maps
-   * @param {NullableMappedPosition} original - source file's line,column,source etc
+   * @param {SourceMapConsumer} consumer - consumer for course maps
+   * @param {MappedPosition} original - source file's line,column,source etc
    * @returns {SourceCodeLine[]}
    */
   private readSourceLines(
-    consumer: BasicSourceMapConsumer | IndexedSourceMapConsumer,
-    original: NullableMappedPosition
+    consumer: SourceMapConsumer,
+    original: MappedPosition
   ): SourceCodeLine[] {
     const sourceContent = consumer.sourceContentFor(original.source, true);
 
@@ -346,11 +436,13 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
-  private async consumeSourceMap(mapBody: string): Promise<BasicSourceMapConsumer | IndexedSourceMapConsumer> {
-    return new Promise((resolve) => {
-      SourceMapConsumer.with(mapBody, null, (consumer) => {
-        resolve(consumer);
-      });
-    });
+  private consumeSourceMap(mapBody: string): SourceMapConsumer {
+    try {
+      const rawSourceMap = JSON.parse(mapBody);
+
+      return new SourceMapConsumer(rawSourceMap);
+    } catch (e) {
+      this.logger.error(`Error on source-map consumer initialization: ${e}`);
+    }
   }
 }

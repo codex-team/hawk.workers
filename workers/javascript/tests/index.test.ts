@@ -54,7 +54,7 @@ describe('JavaScript event worker', () => {
     column: 20,
     file: 'App.js',
     line: 9,
-    function: 'Error',
+    function: 'App',
     sourceCode: [ {
       content: '  // throw new Error("Before render")',
       line: 4,
