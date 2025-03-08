@@ -111,19 +111,21 @@ describe('Archiver worker', () => {
   test('Should remove old releases', async () => {
     await db.collection('releases').insertMany(mockedReleases);
 
-    const releaseToStay = {
+    const mockedReleasesLength = mockedReleases.length;
+
+    const releasesToStay = {
       _id: new ObjectId(),
       projectId: '5e4ff518628a6c714515f4da',
       release: 'releasetostay',
       files: [ {
         _id: new ObjectId('5eb119ec6570b9405cdc5b48')
-      } ]
+      } ],
     };
 
     /**
      * Insert one release with object id based on current time, it should not be removed
      */
-    await db.collection('releases').insert(releaseToStay)
+    await db.collection('releases').insert(releasesToStay)
 
     const worker = new ArchiverWorker();
 
@@ -136,10 +138,40 @@ describe('Archiver worker', () => {
       .find({})
       .toArray();
 
-    expect(newReleasesCollection).toEqual([releaseToStay]);
-    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length);
+    expect(newReleasesCollection).toEqual([
+      mockedReleases[mockedReleasesLength - 2],
+      mockedReleases[mockedReleasesLength - 1],
+      releasesToStay,
+    ]);
+
+    expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length - 2);
     await worker.finish();
   });
+
+  test('Should leave two releases if all of the releases are more than month old', async () => {
+    /**
+     * Clear collection after previous test
+     */
+    await db.collection('releases').deleteMany({});
+    await db.collection('releases').insertMany(mockedReleases);
+
+    const mockedReleasesLength = mockedReleases.length;
+
+    const worker = new ArchiverWorker();
+
+    await worker.start();
+
+    await worker['removeOldReleases'](mockedProject);
+
+    const newReleasesCollection = await db.collection('releases')
+      .find({})
+      .toArray();
+
+    expect(newReleasesCollection).toEqual([
+      mockedReleases[mockedReleasesLength - 2],
+      mockedReleases[mockedReleasesLength - 1],
+    ])
+  })
 
   afterAll(async () => {
     await db.dropCollection('releases');
