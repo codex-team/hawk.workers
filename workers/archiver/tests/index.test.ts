@@ -116,14 +116,14 @@ describe('Archiver worker', () => {
       projectId: '5e4ff518628a6c714515f4da',
       release: 'releasetostay',
       files: [ {
-        _id: new ObjectId('5eb119ec6570b9405cdc5b48')
-      } ]
+        _id: new ObjectId('5eb119ec6570b9405cdc5b48'),
+      } ],
     };
 
     /**
      * Insert one release with object id based on current time, it should not be removed
      */
-    await db.collection('releases').insert(releaseToStay)
+    await db.collection('releases').insert(releaseToStay);
 
     const worker = new ArchiverWorker();
 
@@ -136,7 +136,7 @@ describe('Archiver worker', () => {
       .find({})
       .toArray();
 
-    expect(newReleasesCollection).toEqual([releaseToStay]);
+    expect(newReleasesCollection).toEqual([ releaseToStay ]);
     expect(gridFsDeleteMock).toHaveBeenCalledTimes(mockedReleases.length);
     await worker.finish();
   });

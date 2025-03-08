@@ -362,7 +362,7 @@ export default class ArchiverWorker extends Worker {
     const releasesToRemove = await this.releasesCollection
       .find({
         projectId: project._id.toString(),
-        _id: { $lt: objectIdThreshold } 
+        _id: { $lt: objectIdThreshold },
       })
       .sort({ _id: -1 })
       .toArray();
