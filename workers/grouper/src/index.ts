@@ -128,6 +128,8 @@ export default class GrouperWorker extends Worker {
                 { "payload.title": { $regex: matchingPattern } },
                 { sort: { _id: 1 } }
             );
+
+            this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
   
             /**
              * If we found first event that satisfies eventPattern, than current event is its repetition
@@ -303,15 +305,11 @@ export default class GrouperWorker extends Worker {
    * @returns EventPatterns object with projectId and list of patterns
    */
   private async getProjectPatterns(projectId: string): Promise<EventPatternDBScheme> {
-    this.logger.info(`projectId: ${projectId}`);
-
     const patterns = await this.accountsDb.getConnection()
       .collection('patterns')
       .findOne({
         projectId: new mongodb.ObjectID(projectId),
       });
-
-    this.logger.info(`found pattern: ${JSON.stringify(patterns)}`);
 
     return patterns
   }
