@@ -2,7 +2,7 @@ import '../../../env-test';
 import GrouperWorker from '../src';
 import { GroupWorkerTask } from '../types/group-worker-task';
 import { createClient, RedisClientType } from 'redis';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, MongoClient, ObjectID } from 'mongodb';
 import { EventAddons, EventDataAccepted } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 
@@ -406,6 +406,31 @@ describe('GrouperWorker', () => {
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
     });
+
+    test('should group events with titles mathing one pattern', async () => {
+      jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue({
+        projectId: new ObjectID(projectIdMock),
+        patterns: ['New error .*'],
+      });
+
+      const findMatchingPatternSpy = jest.spyOn(GrouperWorker.prototype as any, 'findMatchingPattern');
+
+      await worker.handle(generateTask({title: 'New error 0000000000000000'}));
+      await worker.handle(generateTask({title: 'New error 1111111111111111'}));
+      await worker.handle(generateTask({title: 'New error 2222222222222222'}));
+
+      const originalEvent = await eventsCollection.findOne({});
+      
+      /**
+       * Make sure, that we searched for matching patterns for event
+       * That means, that events are not groped by Levenstein
+       */
+      expect(findMatchingPatternSpy).toHaveBeenCalledTimes(3)
+
+      expect((await repetitionsCollection.find({
+        groupHash: originalEvent.groupHash,
+      }).toArray()).length).toBe(2);
+    })
   });
 
   afterAll(async () => {
