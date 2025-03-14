@@ -7,7 +7,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme, EventPatternDBScheme } from '@hawk.so/types';
+import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -114,8 +114,8 @@ export default class GrouperWorker extends Worker {
       else {
         const patterns = await this.getProjectPatterns(task.projectId);
 
-        if (patterns !== null) {
-          const matchingPattern = await this.findMatchingPattern(patterns.patterns, task.event);
+        if (patterns) {
+          const matchingPattern = await this.findMatchingPattern(patterns, task.event);
 
           /**
            * If we found matching pattern, then find first event that matches pattern and group with it
@@ -304,14 +304,14 @@ export default class GrouperWorker extends Worker {
    * @param projectId - id of the project to find related event patterns
    * @returns EventPatterns object with projectId and list of patterns
    */
-  private async getProjectPatterns(projectId: string): Promise<EventPatternDBScheme> {
-    const patterns = await this.accountsDb.getConnection()
-      .collection('patterns')
+  private async getProjectPatterns(projectId: string): Promise<string[]> {
+    const project = await this.accountsDb.getConnection()
+      .collection('projects')
       .findOne({
         projectId: new mongodb.ObjectID(projectId),
       });
 
-    return patterns
+    return project.patterns
   }
 
 

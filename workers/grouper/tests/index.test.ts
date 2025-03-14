@@ -411,10 +411,7 @@ describe('GrouperWorker', () => {
     });
 
     test('should group events with titles mathing one pattern', async () => {
-      jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue({
-        projectId: new ObjectID(projectIdMock),
-        patterns: ['New error .*'],
-      });
+      jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue(['New error .*']);
 
       const findMatchingPatternSpy = jest.spyOn(GrouperWorker.prototype as any, 'findMatchingPattern');
 
