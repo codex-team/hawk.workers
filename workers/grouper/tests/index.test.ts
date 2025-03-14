@@ -24,6 +24,9 @@ jest.mock('../../../lib/cache/controller', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
     public set(): void { }
+    
+    // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
+    public del(): void { }
   };
 });
 
