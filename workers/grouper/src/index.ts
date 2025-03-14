@@ -172,6 +172,10 @@ export default class GrouperWorker extends Worker {
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
+        this.cache.del(`${task.projectId}:${JSON.stringify({
+          groupHash: uniqueEventHash,
+        })}`)
+
         /**
          * Increment daily affected users for the first event
          */
@@ -182,7 +186,7 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
-          console.log('DB_DUPLICATE_KEY_ERROR', e);
+          console.log('DB_DUPLICATE_KEY_ERROR');
 
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
