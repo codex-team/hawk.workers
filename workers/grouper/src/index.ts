@@ -131,6 +131,8 @@ export default class GrouperWorker extends Worker {
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
+        this.cache.del(`${task.projectId}:${JSON.stringify({ groupHash: uniqueEventHash })}`);
+
         /**
          * Increment daily affected users for the first event
          */
