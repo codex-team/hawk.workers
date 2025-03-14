@@ -7,7 +7,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import { GroupWorkerTask } from '../types/group-worker-task';
-import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
+import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme, EventPatternDBScheme } from '@hawk.so/types';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -32,9 +32,14 @@ export default class GrouperWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Database Controller
+   * Events database Controller
    */
-  private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+  private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+
+  /**
+   * Accounts database Controller
+   */
+  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI)
 
   /**
    * This class will filter sensitive information
@@ -52,7 +57,8 @@ export default class GrouperWorker extends Worker {
   public async start(): Promise<void> {
     console.log('starting grouper worker');
 
-    await this.db.connect();
+    await this.eventsDb.connect();
+    await this.accountsDb.connect();
     this.prepareCache();
     console.log('redis initializing');
 
@@ -67,7 +73,8 @@ export default class GrouperWorker extends Worker {
   public async finish(): Promise<void> {
     await super.finish();
     this.prepareCache();
-    await this.db.close();
+    await this.eventsDb.close();
+    await this.accountsDb.close();
     await this.redis.close();
   }
 
@@ -93,14 +100,48 @@ export default class GrouperWorker extends Worker {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
 
       if (similarEvent) {
+        this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`)
         /**
          * Override group hash with found event's group hash
          */
         uniqueEventHash = similarEvent.groupHash;
 
         existedEvent = similarEvent;
+      } 
+      /**
+       * If we couldn't group by Levenshtein distance, then check event grouping patterns
+       */
+      else {
+        const patterns = await this.getProjectPatterns(task.projectId);
+
+        if (patterns !== null) {
+          const matchingPattern = await this.findMatchingPattern(patterns.patterns, task.event);
+
+          /**
+           * If we found matching pattern, then find first event that matches pattern and group with it
+           * If there is no first event for pattern, then just save event as first
+           */
+          if (matchingPattern !== null) {
+            const originalEvent = await this.eventsDb.getConnection()
+              .collection(`events:${task.projectId}`)
+              .findOne(
+                { "payload.title": { $regex: matchingPattern } },
+                { sort: { _id: 1 } }
+            );
+  
+            /**
+             * If we found first event that satisfies eventPattern, than current event is its repetition
+             */
+            if (originalEvent) {
+              uniqueEventHash = originalEvent.groupHash;
+  
+              existedEvent = originalEvent;
+            }
+          }
+        }
       }
     }
+
 
     /**
      * Event happened for the first time
@@ -141,7 +182,7 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
-          console.log('DB_DUPLICATE_KEY_ERROR');
+          console.log('DB_DUPLICATE_KEY_ERROR', e);
 
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
@@ -241,6 +282,38 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Method that returns matched pattern for event, if event do not match any of patterns return null
+   * @param event - event which title would be cheched
+   */
+  private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
+    return patterns.filter(pattern => {
+      const patternRegExp = new RegExp(pattern);
+
+      return event.title.match(patternRegExp);
+    }).pop();
+  }
+
+  /**
+   * Method that gets event patterns for a project
+   * @param projectId - id of the project to find related event patterns
+   * @returns EventPatterns object with projectId and list of patterns
+   */
+  private async getProjectPatterns(projectId: string): Promise<EventPatternDBScheme> {
+    this.logger.info(`projectId: ${projectId}`);
+
+    const patterns = await this.accountsDb.getConnection()
+      .collection('patterns')
+      .findOne({
+        projectId: new mongodb.ObjectID(projectId),
+      });
+
+    this.logger.info(`found pattern: ${JSON.stringify(patterns)}`);
+
+    return patterns
+  }
+
+
+  /**
    * Returns last N unique events by a project id
    *
    * @param projectId - where to find
@@ -248,7 +321,7 @@ export default class GrouperWorker extends Worker {
    */
   private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
-      return this.db.getConnection()
+      return this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
         .find()
         .sort({
@@ -303,7 +376,7 @@ export default class GrouperWorker extends Worker {
        */
       const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
       const repetition = await this.cache.get(repetitionCacheKey, async () => {
-        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        return this.eventsDb.getConnection().collection(`repetitions:${task.projectId}`)
           .findOne({
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
@@ -337,7 +410,7 @@ export default class GrouperWorker extends Worker {
        */
       const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
       const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
-        return this.db.getConnection().collection(`repetitions:${task.projectId}`)
+        return this.eventsDb.getConnection().collection(`repetitions:${task.projectId}`)
           .findOne({
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
@@ -382,7 +455,7 @@ export default class GrouperWorker extends Worker {
     const eventCacheKey = `${projectId}:${JSON.stringify(query)}`;
 
     return this.cache.get(eventCacheKey, async () => {
-      return this.db.getConnection()
+      return this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
         .findOne(query)
         .catch((err) => {
@@ -404,7 +477,7 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    const collection = this.db.getConnection().collection(`events:${projectId}`);
+    const collection = this.eventsDb.getConnection().collection(`events:${projectId}`);
 
     encodeUnsafeFields(groupedEventData);
 
@@ -424,7 +497,7 @@ export default class GrouperWorker extends Worker {
     }
 
     try {
-      const collection = this.db.getConnection().collection(`repetitions:${projectId}`);
+      const collection = this.eventsDb.getConnection().collection(`repetitions:${projectId}`);
 
       encodeUnsafeFields(repetition);
 
@@ -463,7 +536,7 @@ export default class GrouperWorker extends Worker {
           },
         };
 
-      return (await this.db.getConnection()
+      return (await this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
         .updateOne(query, updateQuery)).modifiedCount;
     } catch (err) {
@@ -495,7 +568,7 @@ export default class GrouperWorker extends Worker {
     try {
       const midnight = this.getMidnightByEventTimestamp(eventTimestamp);
 
-      await this.db.getConnection()
+      await this.eventsDb.getConnection()
         .collection(`dailyEvents:${projectId}`)
         .updateOne(
           {
