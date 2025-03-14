@@ -131,6 +131,9 @@ export default class GrouperWorker extends Worker {
 
         const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
 
+        /**
+         * If event is saved, then cached event state is no longer actual, so we should remove it
+         */
         this.cache.del(eventCacheKey);
 
         /**
