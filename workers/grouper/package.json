@@ -10,8 +10,6 @@
   "workerType": "grouper",
   "dependencies": {
     "@n1ru4l/json-patch-plus": "^0.2.0",
-    "@types/redis": "^2.8.28",
-    "js-levenshtein": "^1.1.6",
-    "redis": "^3.1.1"
+    "js-levenshtein": "^1.1.6"
   }
 }

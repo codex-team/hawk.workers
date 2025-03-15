@@ -198,7 +198,7 @@ export default class GrouperWorker extends Worker {
 
       const newRepetition = {
         groupHash: uniqueEventHash,
-        delta,
+        delta: JSON.stringify(delta),
         timestamp: task.event.timestamp,
         payload: task.event,
       } as RepetitionDBScheme;
