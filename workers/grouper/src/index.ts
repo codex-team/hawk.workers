@@ -205,7 +205,7 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
         timestamp: task.event.timestamp,
-        // payload: task.event,
+        payload: task.event,
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -270,7 +270,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param count - how many events to return
    */
-  private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
+  private findLastEvents(projectId: string, count: number): Promise<GroupedEventDBScheme[]> {
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
