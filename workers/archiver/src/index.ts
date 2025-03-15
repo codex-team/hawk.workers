@@ -2,7 +2,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import asyncForEach from '../../../lib/utils/asyncForEach';
-import { Collection, Db, GridFSBucket, ObjectId } from 'mongodb';
+import { Collection, Db, GridFSBucket, ObjectId, ObjectID } from 'mongodb';
 import axios from 'axios';
 import { ReleaseFileData, ReleaseRecord, ReportData, ReportDataByProject } from './types';
 import * as path from 'path';
@@ -348,13 +348,25 @@ export default class ArchiverWorker extends Worker {
    * @param project - project to handle
    */
   private async removeOldReleases(project: ProjectDBScheme): Promise<number> {
-    const RELEASES_COUNT_TO_REMOVE = 3;
+    const RELEASES_COUNT_TO_STAY = 2;
+    const maxDaysInSeconds = +process.env.MAX_DAYS_NUMBER * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+    /**
+     * Create timestamp for one month ago
+     */
+    const maxOldTimestamp = (new Date().getTime()) / MS_IN_SEC - maxDaysInSeconds;
+
+    /**
+     * Create mongo ObjectId for record that was inserted one month ago
+     */
+    const objectIdThreshold = ObjectID.createFromTime(maxOldTimestamp);
+
     const releasesToRemove = await this.releasesCollection
       .find({
         projectId: project._id.toString(),
+        _id: { $lt: objectIdThreshold },
       })
       .sort({ _id: -1 })
-      .skip(RELEASES_COUNT_TO_REMOVE)
+      .skip(RELEASES_COUNT_TO_STAY)
       .toArray();
 
     const filesToDelete = releasesToRemove.reduce<ReleaseFileData[]>(

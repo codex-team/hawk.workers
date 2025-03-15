@@ -98,9 +98,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Find event by group hash.
      */
-    let existedEvent = await this.getEvent(task.projectId, {
-      groupHash: uniqueEventHash,
-    });
+    let existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
 
     /**
      * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last N events
@@ -134,7 +132,7 @@ export default class GrouperWorker extends Worker {
 
     if (isFirstOccurrence) {
       try {
-        const incrementAffectedUsers = task.event.user ? true : false;
+        const incrementAffectedUsers = !!task.event.user;
 
         /**
          * Insert new event
@@ -147,6 +145,13 @@ export default class GrouperWorker extends Worker {
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
+        const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
+
+        /**
+         * If event is saved, then cached event state is no longer actual, so we should remove it
+         */
+        this.cache.del(eventCacheKey);
+
         /**
          * Increment daily affected users for the first event
          */
@@ -158,7 +163,7 @@ export default class GrouperWorker extends Worker {
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
           console.log('DB_DUPLICATE_KEY_ERROR');
-          
+
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
 
@@ -275,7 +280,7 @@ export default class GrouperWorker extends Worker {
         })
         .limit(count)
         .toArray();
-    },  
+    },
     /**
      * TimeMs class stores time intervals in milliseconds, however NodeCache ttl needs to be specified in seconds
      */
@@ -299,7 +304,6 @@ export default class GrouperWorker extends Worker {
     if (!eventUser) {
       return [false, false];
     }
-
 
     /**
      * Default to true - we'll set to false if conditions are met
@@ -392,23 +396,35 @@ export default class GrouperWorker extends Worker {
    * Returns finds event by query from project with passed ID
    *
    * @param projectId - project's identifier
-   * @param query - mongo query string
+   * @param groupHash - group hash of the event   
    */
-  private async getEvent(projectId: string, query: Record<string, unknown>): Promise<GroupedEventDBScheme> {
+  private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme> {
     if (!mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    const eventCacheKey = `${projectId}:${JSON.stringify(query)}`;
+    const eventCacheKey = await this.getEventCacheKey(projectId, groupHash);
 
     return this.cache.get(eventCacheKey, async () => {
       return this.db.getConnection()
         .collection(`events:${projectId}`)
-        .findOne(query)
+        .findOne({
+          groupHash,
+        })
         .catch((err) => {
           throw new DatabaseReadWriteError(err);
         });
     });
+  }
+
+  /**
+   * Method that returns event cache key based on projectId and groupHash
+   * @param projectId - used for cache key creation
+   * @param groupHash - used for cache key creation
+   * @returns cache key
+   */
+  private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
+    return `${projectId}:${JSON.stringify({groupHash: groupHash})}`
   }
 
   /**

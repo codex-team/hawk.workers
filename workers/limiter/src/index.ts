@@ -236,6 +236,7 @@ export default class LimiterWorker extends Worker {
    * Returns array of workspaces with their tariff plans
    */
   private async getWorkspacesWithTariffPlans(): Promise<WorkspaceWithTariffPlan[]> {
+    this.logger.info('analyzeWorkspacesLimits -> getWorkspacesWithTariffPlans');
     return this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
       {
         $lookup: {
@@ -259,6 +260,7 @@ export default class LimiterWorker extends Worker {
    * @param id - workspace id
    */
   private async getWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
+    this.logger.info('handleCheckSingleWorkspaceEvent -> getWorkspaceWithTariffPlan: ' + id);
     const workspacesArray = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>([
       {
         $match: {
