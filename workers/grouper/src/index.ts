@@ -313,13 +313,20 @@ export default class GrouperWorker extends Worker {
    * @returns EventPatterns object with projectId and list of patterns
    */
   private async getProjectPatterns(projectId: string): Promise<string[]> {
-    const project = await this.accountsDb.getConnection()
-      .collection('projects')
-      .findOne({
-        _id: new mongodb.ObjectId(projectId),
-      });
+    return this.cache.get(`project:${projectId}:patterns`, async () => {
+      const project = await this.accountsDb.getConnection()
+        .collection('projects')
+        .findOne({
+          _id: new mongodb.ObjectId(projectId),
+        });
 
-    return project.eventGroupingPatterns;
+      return project?.eventGroupingPatterns || [];
+    },
+    /**
+     * Cache project patterns for 5 minutes since they don't change frequently
+     */
+    /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
+    5 * TimeMs.MINUTE / MS_IN_SEC);
   }
 
   /**
