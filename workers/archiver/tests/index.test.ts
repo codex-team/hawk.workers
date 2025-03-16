@@ -53,7 +53,7 @@ describe('Archiver worker', () => {
 
   beforeEach(async () => {
     await db.collection('releases').deleteMany({});
-  })
+  });
 
   test('Should correctly remove old events', async () => {
     /**
@@ -129,7 +129,7 @@ describe('Archiver worker', () => {
     /**
      * Insert one release with object id based on current time, it should not be removed
      */
-    await db.collection('releases').insert(releasesToStay)
+    await db.collection('releases').insert(releasesToStay);
 
     const worker = new ArchiverWorker();
 
@@ -173,9 +173,9 @@ describe('Archiver worker', () => {
     expect(newReleasesCollection).toEqual([
       mockedReleases[mockedReleasesLength - 2],
       mockedReleases[mockedReleasesLength - 1],
-    ])
+    ]);
     await worker.finish();
-  })
+  });
 
   afterAll(async () => {
     await db.dropCollection('releases');

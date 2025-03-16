@@ -39,7 +39,7 @@ export default class GrouperWorker extends Worker {
   /**
    * Accounts database Controller
    */
-  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI)
+  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
 
   /**
    * This class will filter sensitive information
@@ -98,14 +98,14 @@ export default class GrouperWorker extends Worker {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
 
       if (similarEvent) {
-        this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`)
+        this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
         /**
          * Override group hash with found event's group hash
          */
         uniqueEventHash = similarEvent.groupHash;
 
         existedEvent = similarEvent;
-      } 
+      }
       /**
        * If we couldn't group by Levenshtein distance, then check event grouping patterns
        */
@@ -124,27 +124,26 @@ export default class GrouperWorker extends Worker {
               return await this.eventsDb.getConnection()
                 .collection(`events:${task.projectId}`)
                 .findOne(
-                  { "payload.title": { $regex: matchingPattern } },
+                  { 'payload.title': { $regex: matchingPattern } },
                   { sort: { _id: 1 } }
                 );
-              }
+            }
             );
 
             this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
-  
+
             /**
              * If we found first event that satisfies eventPattern, than current event is its repetition
              */
             if (originalEvent) {
               uniqueEventHash = originalEvent.groupHash;
-  
+
               existedEvent = originalEvent;
             }
           }
         }
       }
     }
-
 
     /**
      * Event happened for the first time
@@ -293,6 +292,8 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Method that returns matched pattern for event, if event do not match any of patterns return null
+   *
+   * @param patterns
    * @param event - event which title would be cheched
    */
   private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
@@ -305,6 +306,7 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Method that gets event patterns for a project
+   *
    * @param projectId - id of the project to find related event patterns
    * @returns EventPatterns object with projectId and list of patterns
    */
@@ -315,9 +317,8 @@ export default class GrouperWorker extends Worker {
         projectId: new mongodb.ObjectID(projectId),
       });
 
-    return project.patterns
+    return project.patterns;
   }
-
 
   /**
    * Returns last N unique events by a project id
@@ -451,7 +452,7 @@ export default class GrouperWorker extends Worker {
    * Returns finds event by query from project with passed ID
    *
    * @param projectId - project's identifier
-   * @param groupHash - group hash of the event   
+   * @param groupHash - group hash of the event
    */
   private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme> {
     if (!mongodb.ObjectID.isValid(projectId)) {
@@ -474,12 +475,13 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Method that returns event cache key based on projectId and groupHash
+   *
    * @param projectId - used for cache key creation
    * @param groupHash - used for cache key creation
    * @returns cache key
    */
   private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
-    return `${projectId}:${JSON.stringify({groupHash: groupHash})}`
+    return `${projectId}:${JSON.stringify({ groupHash: groupHash })}`;
   }
 
   /**
