@@ -291,8 +291,9 @@ export default class GrouperWorker extends Worker {
   /**
    * Method that returns matched pattern for event, if event do not match any of patterns return null
    *
-   * @param patterns
+   * @param patterns - list of the patterns of the related project
    * @param event - event which title would be cheched
+   * @returns {string | null} matched pattern or null if no match
    */
   private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
     if (!patterns || patterns.length === 0) {
@@ -301,7 +302,7 @@ export default class GrouperWorker extends Worker {
 
     return patterns.filter(pattern => {
       const patternRegExp = new RegExp(pattern);
-      
+
       return event.title.match(patternRegExp);
     }).pop() || null;
   }
@@ -310,7 +311,7 @@ export default class GrouperWorker extends Worker {
    * Method that gets event patterns for a project
    *
    * @param projectId - id of the project to find related event patterns
-   * @returns EventPatterns object with projectId and list of patterns
+   * @returns {string[]} EventPatterns object with projectId and list of patterns
    */
   private async getProjectPatterns(projectId: string): Promise<string[]> {
     return this.cache.get(`project:${projectId}:patterns`, async () => {
@@ -334,6 +335,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param projectId - where to find
    * @param count - how many events to return
+   * @returns {GroupedEventDBScheme[]} list of the last N unique events
    */
   private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
@@ -487,7 +489,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param projectId - used for cache key creation
    * @param groupHash - used for cache key creation
-   * @returns cache key
+   * @returns {string} cache key for event
    */
   private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
     return `${projectId}:${JSON.stringify({ groupHash: groupHash })}`;

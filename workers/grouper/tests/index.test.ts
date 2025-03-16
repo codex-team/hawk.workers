@@ -64,7 +64,7 @@ const projectMock = {
   },
   unreadCount: 0,
   description: 'Test project for grouper worker tests',
-  eventGroupingPatterns: ['New error .*'],
+  eventGroupingPatterns: [ 'New error .*' ],
 };
 
 /**
@@ -465,7 +465,7 @@ describe('GrouperWorker', () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
           'Database error: .*',
           'Network error: .*',
-          'New error: .*'
+          'New error: .*',
         ]);
 
         await worker.handle(generateTask({ title: 'Database error: connection failed' }));
@@ -483,7 +483,7 @@ describe('GrouperWorker', () => {
       test('should handle complex regex patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
           'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$',
-          'Warning \\d{3}: .*'
+          'Warning \\d{3}: .*',
         ]);
 
         await worker.handle(generateTask({ title: 'Error 404: Not Found in file index.js' }));
@@ -501,7 +501,7 @@ describe('GrouperWorker', () => {
       test('should maintain separate groups for different patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
           'TypeError: .*',
-          'ReferenceError: .*'
+          'ReferenceError: .*',
         ]);
 
         await worker.handle(generateTask({ title: 'TypeError: null is not an object' }));
@@ -515,7 +515,7 @@ describe('GrouperWorker', () => {
         expect(typeErrors.length).toBe(1);
         expect(referenceErrors.length).toBe(1);
         expect(await repetitionsCollection.find().count()).toBe(2);
-        
+
         // Verify that events are grouped separately
         expect(typeErrors[0].groupHash).not.toBe(referenceErrors[0].groupHash);
       });
@@ -523,7 +523,7 @@ describe('GrouperWorker', () => {
       test('should handle patterns with special regex characters', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
           'Error \\[\\d+\\]: .*',
-          'Warning \\(code=\\d+\\): .*'
+          'Warning \\(code=\\d+\\): .*',
         ]);
 
         await worker.handle(generateTask({ title: 'Error [123]: Database connection failed' }));
