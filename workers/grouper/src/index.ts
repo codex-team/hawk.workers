@@ -120,11 +120,14 @@ export default class GrouperWorker extends Worker {
            * If there is no first event for pattern, then just save event as first
            */
           if (matchingPattern !== null) {
-            const originalEvent = await this.eventsDb.getConnection()
-              .collection(`events:${task.projectId}`)
-              .findOne(
-                { "payload.title": { $regex: matchingPattern } },
-                { sort: { _id: 1 } }
+            const originalEvent = await this.cache.get(`${task.projectId}:${matchingPattern}:originalEvent`, async () => {
+              return await this.eventsDb.getConnection()
+                .collection(`events:${task.projectId}`)
+                .findOne(
+                  { "payload.title": { $regex: matchingPattern } },
+                  { sort: { _id: 1 } }
+                );
+              }
             );
 
             this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
