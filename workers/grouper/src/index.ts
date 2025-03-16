@@ -92,7 +92,7 @@ export default class GrouperWorker extends Worker {
     let existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
 
     /**
-     * If we couldn't group by group hash (title), try grouping by Levenshtein distance with last N events
+     * If we couldn't group by group hash (title), try grouping by Levenshtein distance or patterns
      */
     if (!existedEvent) {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
@@ -105,43 +105,6 @@ export default class GrouperWorker extends Worker {
         uniqueEventHash = similarEvent.groupHash;
 
         existedEvent = similarEvent;
-      }
-      /**
-       * If we couldn't group by Levenshtein distance, then check event grouping patterns
-       */
-      else {
-        const patterns = await this.getProjectPatterns(task.projectId);
-
-        if (patterns) {
-          const matchingPattern = await this.findMatchingPattern(patterns, task.event);
-
-          /**
-           * If we found matching pattern, then find first event that matches pattern and group with it
-           * If there is no first event for pattern, then just save event as first
-           */
-          if (matchingPattern !== null) {
-            const originalEvent = await this.cache.get(`${task.projectId}:${matchingPattern}:originalEvent`, async () => {
-              return await this.eventsDb.getConnection()
-                .collection(`events:${task.projectId}`)
-                .findOne(
-                  { 'payload.title': { $regex: matchingPattern } },
-                  { sort: { _id: 1 } }
-                );
-            }
-            );
-
-            this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
-
-            /**
-             * If we found first event that satisfies eventPattern, than current event is its repetition
-             */
-            if (originalEvent) {
-              uniqueEventHash = originalEvent.groupHash;
-
-              existedEvent = originalEvent;
-            }
-          }
-        }
       }
     }
 
@@ -271,7 +234,7 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Tries to find events with a small Levenshtein distance of a title
+   * Tries to find events with a small Levenshtein distance of a title or by matching grouping patterns
    *
    * @param projectId - where to find
    * @param event - event to compare
@@ -282,12 +245,47 @@ export default class GrouperWorker extends Worker {
 
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
-    return lastUniqueEvents.filter(prevEvent => {
+    /**
+     * First try to find by Levenshtein distance
+     */
+    const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
       const distance = levenshtein(event.title, prevEvent.payload.title);
       const threshold = event.title.length * diffTreshold;
 
       return distance < threshold;
     }).pop();
+
+    if (similarByLevenshtein) {
+      return similarByLevenshtein;
+    }
+
+    /**
+     * If no match by Levenshtein, try matching by patterns
+     */
+    const patterns = await this.getProjectPatterns(projectId);
+
+    if (patterns && patterns.length > 0) {
+      const matchingPattern = await this.findMatchingPattern(patterns, event);
+
+      if (matchingPattern !== null) {
+        const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
+          return await this.eventsDb.getConnection()
+            .collection(`events:${projectId}`)
+            .findOne(
+              { 'payload.title': { $regex: matchingPattern } },
+              { sort: { _id: 1 } }
+            );
+        });
+
+        this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
+
+        if (originalEvent) {
+          return originalEvent;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   /**
