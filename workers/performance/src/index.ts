@@ -19,7 +19,7 @@ export default class PerformanceWorker extends Worker {
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
-  private readonly dbCollectionName: string = 'performance';
+  private readonly dbCollectionName: string = 'performance_transactions';
   private readonly dbSpansCollectionName: string = 'performance_spans';
   /**
    * Collection to save performance data
