@@ -314,10 +314,10 @@ export default class GrouperWorker extends Worker {
     const project = await this.accountsDb.getConnection()
       .collection('projects')
       .findOne({
-        projectId: new mongodb.ObjectID(projectId),
+        _id: new mongodb.ObjectId(projectId),
       });
 
-    return project.patterns;
+    return project.eventGroupingPatterns;
   }
 
   /**
