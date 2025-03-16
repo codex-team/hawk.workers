@@ -297,11 +297,15 @@ export default class GrouperWorker extends Worker {
    * @param event - event which title would be cheched
    */
   private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
+    if (!patterns || patterns.length === 0) {
+      return null;
+    }
+
     return patterns.filter(pattern => {
       const patternRegExp = new RegExp(pattern);
-
+      
       return event.title.match(patternRegExp);
-    }).pop();
+    }).pop() || null;
   }
 
   /**
