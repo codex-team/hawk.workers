@@ -238,7 +238,7 @@ export default class PaymasterWorker extends Worker {
        *
        * @todo do not notify if card is linked?
        */
-      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan && !workspace.subscriptionId) {
         /**
          * Add task for Sender worker
          */
