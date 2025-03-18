@@ -235,10 +235,8 @@ export default class PaymasterWorker extends Worker {
     if (!isTimeToPay) {
       /**
        * If payday is coming for the paid plans then notify admins
-       *
-       * @todo do not notify if card is linked?
        */
-      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan && !workspace.subscriptionId) {
         /**
          * Add task for Sender worker
          */
