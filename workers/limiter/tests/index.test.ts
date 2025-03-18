@@ -74,6 +74,7 @@ describe('Limiter worker', () => {
       notifications: [],
       token: '',
       uidAdded: undefined,
+      eventGroupingPatterns: [],
     };
   };
 
