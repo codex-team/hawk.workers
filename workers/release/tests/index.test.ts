@@ -205,6 +205,55 @@ describe('Release Worker', () => {
     await expect(count).toEqual(1);
   });
 
+  test('should correctly handle release with multiple source maps in a single transaction', async () => {
+    const map = await mockBundle.getSourceMap();
+    
+    /**
+     * Create multiple files with the same content
+     */
+    const numberOfFiles = 10;
+    const collectedData: SourcemapCollectedData[] = Array(numberOfFiles).fill(null).map((_, index) => ({
+      name: `main${index}.js.map`,
+      payload: map,
+    }));
+
+    await worker.handle({
+      projectId,
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+        files: collectedData,
+      },
+    });
+
+    /**
+     * Check that only one release document was created
+     */
+    const releasesCount = await collection.countDocuments({
+      projectId: projectId,
+      release: releasePayload.release,
+    });
+    await expect(releasesCount).toEqual(1);
+
+    /**
+     * Check that all files were saved
+     */
+    const release = await collection.findOne({
+      projectId: projectId,
+      release: releasePayload.release,
+    });
+    await expect(release.files).toHaveLength(numberOfFiles);
+
+    /**
+     * Verify GridFS chunks were created for each file
+     */
+    const releasesChunksCount = await db.collection('releases.chunks').countDocuments();
+    const releasesFilesCount = await db.collection('releases.files').countDocuments();
+
+    await expect(releasesChunksCount).toEqual(numberOfFiles);
+    await expect(releasesFilesCount).toEqual(numberOfFiles);
+  });
+
   /**
    * @todo add test for case with several source maps in a single release
    */
