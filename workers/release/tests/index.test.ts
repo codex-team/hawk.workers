@@ -71,6 +71,13 @@ describe('Release Worker', () => {
     collection = await db.collection<ReleaseDBScheme>('releases');
 
     await mockBundle.build();
+
+    try {
+      await db.admin().command({ replSetInitiate: {} });
+      console.log('✅ Replica set initiated');
+    } catch (err) {
+      console.error('❌ Failed to initiate replica set:', err);
+    }
   });
 
   /**
