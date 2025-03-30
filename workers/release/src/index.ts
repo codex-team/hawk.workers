@@ -237,7 +237,7 @@ export default class ReleaseWorker extends Worker {
       /**
        * End transaction
        */
-      // await session.endSession();
+      await session.endSession();
     }
   }
 
