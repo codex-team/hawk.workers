@@ -71,13 +71,6 @@ describe('Release Worker', () => {
     collection = await db.collection<ReleaseDBScheme>('releases');
 
     await mockBundle.build();
-
-    try {
-      await db.admin().command({ replSetInitiate: {} });
-      console.log('✅ Replica set initiated');
-    } catch (err) {
-      console.error('❌ Failed to initiate replica set:', err);
-    }
   });
 
   /**
@@ -260,8 +253,4 @@ describe('Release Worker', () => {
     await expect(releasesChunksCount).toEqual(numberOfFiles);
     await expect(releasesFilesCount).toEqual(numberOfFiles);
   });
-
-  /**
-   * @todo add test for case with several source maps in a single release
-   */
 });
