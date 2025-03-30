@@ -82,7 +82,7 @@ describe('Release Worker', () => {
     await db.collection('releases.files').deleteMany({});
 
     await worker.finish();
-    connection.close();
+    await connection.close();
     await mockBundle.clear();
   });
 

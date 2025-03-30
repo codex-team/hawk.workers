@@ -43,3 +43,7 @@ beforeAll(async () => {
     console.error('❌ Failed to initiate replica set:', err);
   }
 }, 30000);
+
+afterAll(async () => {
+  await connection.close();
+});
