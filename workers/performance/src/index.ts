@@ -15,6 +15,11 @@ export default class PerformanceWorker extends Worker {
   public readonly type: string = pkg.workerType;
 
   /**
+   * Catcher version
+   */
+  private readonly catcherVersion: string = '1.0';
+
+  /**
    * Database Controller
    */
   private db: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -74,26 +79,30 @@ export default class PerformanceWorker extends Worker {
         throw new Error('Invalid catcher type');
       }
 
-      await Promise.all([
-        this.performanceCollection.insertOne({
-          projectId,
-          transactionId: payload.id,
-          timestamp: payload.timestamp,
-          duration: payload.duration,
-          name: payload.name,
-          catcherVersion: payload.catcherVersion,
-          tags: payload.tags,
-        }),
-        this.performanceSpansCollection.insertMany(
-          payload.spans.map(span => ({
-            projectId,
-            timestamp: payload.timestamp,
-            ...span,
-          }))
-        ),
-      ]);
+      await Promise.all(
+        payload.transactions.map(async (transaction) => {
+          await Promise.all([
+            this.performanceCollection.insertOne({
+              projectId,
+              transactionId: transaction.aggregationId,
+              timestamp: payload.timestamp,
+              duration: transaction.p95duration,
+              name: transaction.name,
+              catcherVersion: this.catcherVersion,
+            }),
+            this.performanceSpansCollection.insertMany(
+              transaction.aggregatedSpans.map(span => ({
+                projectId,
+                transactionId: transaction.aggregationId,
+                timestamp: payload.timestamp,
+                ...span,
+              }))
+            ),
+          ]);
+        })
+      );
     } catch (err) {
-      this.logger.error(`Couldn't save the release due to: ${err}`);
+      this.logger.error(`Couldn't save performance data due to: ${err}`);
       throw new DatabaseReadWriteError(err);
     }
   }

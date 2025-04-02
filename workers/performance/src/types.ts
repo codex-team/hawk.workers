@@ -1,30 +1,40 @@
 /**
- * Interface for time span
+ * Interface for aggregated span data
  */
-interface Span {
-  id: string;
+interface AggregatedSpan {
+  aggregationId: string;
   name: string;
-  duration: number;
-  startTime: number;
-  endTime: number;
-  transactionId: string;
+  minStartTime: number;
+  maxEndTime: number;
+  p50duration: number;
+  p95duration: number;
+  maxDuration: number;
+  failureRate: number;
+}
+
+/**
+ * Interface for transaction data
+ */
+interface Transaction {
+  aggregationId: string;
+  name: string;
+  avgStartTime: number;
+  minStartTime: number;
+  maxEndTime: number;
+  p50duration: number;
+  p95duration: number;
+  maxDuration: number;
+  count: number;
+  failureRate: number;
+  aggregatedSpans: AggregatedSpan[];
 }
 
 /**
  * Interface for performance data
  */
 interface PerformancePayload {
-    id: string;
-    name: string;
-    timestamp: number;
-    duration: number;
-    startTime: number;
-    endTime: number;
-    catcherVersion: string;
-    spans: Span[];
-    tags: {
-        [key: string]: string;
-    };
+  transactions: Transaction[];
+  timestamp: number;
 }
 
 /**
@@ -46,17 +56,17 @@ interface PerformanceDocument {
   duration: number;
   name: string;
   catcherVersion: string;
-  tags: Record<string, string>;
 }
 
-interface PerformanceSpansDocument extends Span {
+interface PerformanceSpansDocument extends AggregatedSpan {
   projectId: string;
   transactionId: string;
   timestamp: number;
 }
 
 export type {
-  Span,
+  AggregatedSpan,
+  Transaction,
   PerformanceRecord,
   PerformancePayload,
   PerformanceDocument,
