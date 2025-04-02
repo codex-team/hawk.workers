@@ -27,6 +27,7 @@ interface Transaction {
   count: number;
   failureRate: number;
   aggregatedSpans: AggregatedSpan[];
+  timestamp: number;
 }
 
 /**
@@ -51,24 +52,37 @@ interface PerformanceRecord {
  */
 interface PerformanceDocument {
   projectId: string;
-  transactionId: string;
-  timestamp: number;
-  duration: number;
   name: string;
-  catcherVersion: string;
+  transactions: Transaction[];
+  aggregatedData?: AggregatedTransaction[];
+  createdAt: Date;
 }
 
-interface PerformanceSpansDocument extends AggregatedSpan {
+/**
+ * Interface for aggregated transaction data
+ */
+interface AggregatedTransaction {
+  name: string;
+  minStartTime: number;
+  maxEndTime: number;
+  p50duration: number;
+  p95duration: number;
+  maxDuration: number;
+  failureRate: number;
+}
+
+interface PerformanceSpansDocument extends AggregatedTransaction {
   projectId: string;
   transactionId: string;
   timestamp: number;
 }
 
 export type {
-  AggregatedSpan,
   Transaction,
+  AggregatedSpan,
   PerformanceRecord,
   PerformancePayload,
   PerformanceDocument,
+  AggregatedTransaction,
   PerformanceSpansDocument
 };
