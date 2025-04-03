@@ -94,5 +94,37 @@ describe('RedisHelper', () => {
       expect(currentEventCount).toBe(1);
       expect(currentlyStoredTimestamp).toBe(Date.now().toString());
     });
+
+    describe('key expiration period', () => {
+      it('should expire key after ttl period', async () => {
+        const ruleId = 'ruleId';
+        const groupHash = 'groupHash';
+        const projectId = 'projectId';
+        const thresholdPeriod = 2000; // 2 seconds in milliseconds
+        const key = `${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}:times`;
+
+      /**
+       * Call computeEventCountForPeriod to set the key
+       */
+      await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
+
+        /**
+         * Verify, that key exists
+         */
+        let value = await redisClient.hGet(key, 'eventsCount');
+        expect(value).not.toBeNull();
+
+        /**
+         * Wait for the TTL to expire (slightly longer than threshold period)
+         */
+        await new Promise(resolve => setTimeout(resolve, thresholdPeriod + 500));
+
+        /**
+         * Verify, that key has expired and removed from the redis storage
+         */
+        value = await redisClient.hGet(key, 'eventsCount');
+        expect(value).toBeNull();
+      });
+    });
   });
 });

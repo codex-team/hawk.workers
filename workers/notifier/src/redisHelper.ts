@@ -1,6 +1,7 @@
 import { createClient, RedisClientType } from 'redis';
 import { Rule } from '../types/rule';
 import { NotifierEvent } from '../types/notifier-task';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Class with helper functions for working with Redis
@@ -57,12 +58,14 @@ export default class RedisHelper {
     local key = KEYS[1]
     local currentTimestamp = tonumber(ARGV[1])
     local thresholdPeriod = tonumber(ARGV[2])
+    local ttl = tonumber(ARGV[3])
 
     local startPeriodTimestamp = tonumber(redis.call("HGET", key, "timestamp"))
 
     if ((startPeriodTimestamp == nil) or (currentTimestamp >= startPeriodTimestamp + thresholdPeriod)) then
         redis.call("HSET", key, "timestamp", currentTimestamp)
         redis.call("HSET", key, "eventsCount", 0)
+        redis.call("EXPIRE", key, ttl)
     end
     
     local newCounter = redis.call("HINCRBY", key, "eventsCount", 1)
@@ -71,11 +74,16 @@ export default class RedisHelper {
 
     const key = `${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}:times`;
 
+    /**
+     * Treshold period is in milliseconds, but redis expects ttl in seconds
+     */
+    const ttl = Math.floor(thresholdPeriod / MS_IN_SEC);
+
     const currentTimestamp = Date.now();
 
     const currentEventCount = await this.redisClient.eval(script, {
       keys: [ key ],
-      arguments: [currentTimestamp.toString(), thresholdPeriod.toString()],
+      arguments: [currentTimestamp.toString(), thresholdPeriod.toString(), ttl.toString()],
     }) as number;
 
     return (currentEventCount !== null) ? currentEventCount : 0;
