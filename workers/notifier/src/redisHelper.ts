@@ -1,6 +1,7 @@
 import { createClient, RedisClientType } from 'redis';
 import { Rule } from '../types/rule';
 import { NotifierEvent } from '../types/notifier-task';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Class with helper functions for working with Redis
@@ -76,7 +77,7 @@ export default class RedisHelper {
     /**
      * Treshold period is in milliseconds, but redis expects ttl in seconds
      */
-    const ttl = Math.floor(thresholdPeriod / 1000);
+    const ttl = Math.floor(thresholdPeriod / MS_IN_SEC);
 
     const currentTimestamp = Date.now();
 
