@@ -3,6 +3,8 @@ module.exports = {
     instance: {
       port: 55010,
       dbName: 'hawk',
+      replSet: 'rs0',
+      storageEngine: 'wiredTiger',
     },
     binary: {
       version: '6.0.2',

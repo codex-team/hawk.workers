@@ -27,5 +27,5 @@ module.exports = {
 
   setupFiles: [ './jest.setup.js' ],
 
-  setupFilesAfterEnv: [ './jest.setup.redis-mock.js' ],
+  setupFilesAfterEnv: [ './jest.setup.redis-mock.js', './jest.setup.mongo-repl-set.js' ],
 };
