@@ -26,12 +26,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.base_image_name.outputs.image_name }}
+          images: ${{ env.DOCKER_REPO }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value={{sha}}-{{date 'X'}},enable=${{ startsWith(github.ref, 'refs/heads') }}
+            type=raw,value={{branch}}-{{sha}}-{{date 'X'}},enable=${{ startsWith(github.ref, 'refs/heads') }}
 
       - name: Build and push production image
         uses: docker/build-push-action@v5
