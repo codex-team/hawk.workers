@@ -248,22 +248,30 @@ export default class ReleaseWorker extends Worker {
    * @param {SourcemapCollectedData[]} sourceMaps — source maps passed from user after bundle
    */
   private extendReleaseInfo(sourceMaps: SourcemapCollectedData[]): SourceMapDataExtended[] {
-    return sourceMaps.map((file: SourcemapCollectedData) => {
+    return sourceMaps.flatMap((file: SourcemapCollectedData) => {
       /**
        * Decode base64 source map content
        */
       const buffer = Buffer.from(file.payload, 'base64');
       const mapBodyString = buffer.toString();
+
+      /**
+       * If content is empty, return nothing for this file
+       */
+      if (!mapBodyString || mapBodyString.trim().length === 0) {
+        return [];
+      }
+
       /**
        * @todo use more efficient method to extract "file" from big JSON
        */
       const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
 
-      return {
+      return [{
         mapFileName: file.name,
         originFileName: mapContent.file,
         content: mapBodyString,
-      };
+      }];
     });
   }
 
