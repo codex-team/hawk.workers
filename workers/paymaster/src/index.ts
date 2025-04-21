@@ -87,8 +87,8 @@ export default class PaymasterWorker extends Worker {
    * @param date - last charge date
    * @param isDebug
    */
-  private static daysBeforePayday(date: Date, isDebug = false): number {
-    const expectedPayDay = new Date(date);
+  private static daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
@@ -221,7 +221,7 @@ export default class PaymasterWorker extends Worker {
      * How many days left for the expected day of payments
      */
     // @ts-expect-error debug
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.isDebug);
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil,workspace.isDebug);
 
     /**
      * Do we need to ask for money
