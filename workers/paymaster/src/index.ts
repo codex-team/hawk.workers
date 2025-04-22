@@ -65,12 +65,12 @@ export default class PaymasterWorker extends Worker {
    * @param date - last charge date
    * @param isDebug - flag for debug purposes
    */
-  private static isTimeToPay(date: Date, isDebug = false): boolean {
-    const expectedPayDay = new Date(date);
+  private static isTimeToPay(date: Date, paidUntil: Date, isDebug = false): boolean {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -82,7 +82,7 @@ export default class PaymasterWorker extends Worker {
   /**
    * Returns difference between now and payday in days
    *
-   * Pay day is calculated by formula: last charge date + 30 days
+   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
    *
    * @param date - last charge date
    * @param paidUntil - paid until date
@@ -93,7 +93,7 @@ export default class PaymasterWorker extends Worker {
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -105,17 +105,18 @@ export default class PaymasterWorker extends Worker {
   /**
    * Returns difference between payday and now in days
    *
-   * Pay day is calculated by formula: last charge date + 30 days
+   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
    *
    * @param date - last charge date
+   * @param paidUntil - paid until date
    * @param isDebug - flag for debug purposes
    */
-  private static daysAfterPayday(date: Date, isDebug = false): number {
-    const expectedPayDay = new Date(date);
+  private static daysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -210,13 +211,13 @@ export default class PaymasterWorker extends Worker {
      * Is it time to pay
      */
     // @ts-expect-error debug
-    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.isDebug);
+    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * How many days have passed since payments the expected day of payments
      */
     // @ts-expect-error debug
-    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.isDebug);
+    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * How many days left for the expected day of payments
