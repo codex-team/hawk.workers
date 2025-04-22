@@ -294,8 +294,6 @@ describe('PaymasterWorker', () => {
       plan,
     });
 
-    const updatedWorkspacee = await workspacesCollection.findOne({ _id: workspace._id });
-
     MockDate.set(currentDate);
 
     /**
@@ -465,6 +463,7 @@ describe('PaymasterWorker', () => {
      */
     const currentDate = new Date();
     const paidUntil = new Date(currentDate.getTime());
+
     paidUntil.setDate(paidUntil.getDate() + 1);
 
     const plan = createPlanMock({

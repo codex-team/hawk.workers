@@ -63,6 +63,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param paidUntil - paid until date
    * @param isDebug - flag for debug purposes
    */
   private static isTimeToPay(date: Date, paidUntil: Date, isDebug = false): boolean {
