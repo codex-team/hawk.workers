@@ -63,7 +63,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
-   * @param isDebug
+   * @param isDebug - flag for debug purposes
    */
   private static isTimeToPay(date: Date, isDebug = false): boolean {
     const expectedPayDay = new Date(date);
@@ -85,8 +85,8 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
-   * @param paidUntil
-   * @param isDebug
+   * @param paidUntil - paid until date
+   * @param isDebug - flag for debug purposes
    */
   private static daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
     const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
@@ -108,7 +108,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
-   * @param isDebug
+   * @param isDebug - flag for debug purposes
    */
   private static daysAfterPayday(date: Date, isDebug = false): number {
     const expectedPayDay = new Date(date);
