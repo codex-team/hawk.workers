@@ -267,11 +267,11 @@ export default class ReleaseWorker extends Worker {
        */
       const mapContent = JSON.parse(mapBodyString) as RawSourceMap;
 
-      return [{
+      return [ {
         mapFileName: file.name,
         originFileName: mapContent.file,
         content: mapBodyString,
-      }];
+      } ];
     });
   }
 

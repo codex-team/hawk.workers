@@ -59,7 +59,7 @@ const createWorkspaceMock = (parameters: {
     balance: 0,
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
-  }
+  };
 
   if (parameters.paidUntil) {
     workspace.paidUntil = parameters.paidUntil;
@@ -416,6 +416,7 @@ describe('PaymasterWorker', () => {
      */
     const currentDate = new Date();
     const paidUntil = new Date(currentDate.getTime());
+
     paidUntil.setMonth(paidUntil.getMonth() + 3);
 
     const plan = createPlanMock({
@@ -454,7 +455,7 @@ describe('PaymasterWorker', () => {
      */
     expect(addTaskSpy).not.toHaveBeenCalled();
     MockDate.reset();
-  })
+  });
 
   afterAll(async () => {
     await connection.close();

@@ -4,7 +4,7 @@ let admin;
 let connection;
 
 beforeAll(async () => {
-  connection = await MongoClient.connect("mongodb://127.0.0.1:55010/hawk?", {
+  connection = await MongoClient.connect('mongodb://127.0.0.1:55010/hawk?', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
@@ -13,11 +13,12 @@ beforeAll(async () => {
 
   try {
     let status = await admin.command({ replSetGetStatus: 1 }).catch(() => null);
+
     if (status && status.ok) {
-      console.log("✅ Replica set already initialized");
+      console.log('✅ Replica set already initialized');
     } else {
       await admin.command({ replSetInitiate: {} });
-      console.log("✅ Replica set initiated");
+      console.log('✅ Replica set initiated');
     }
 
     const startTime = Date.now();
@@ -30,15 +31,15 @@ beforeAll(async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       status = await admin.command({ replSetGetStatus: 1 });
 
-      const primary = status.members.find(member => member.stateStr === "PRIMARY");
-      const secondary = status.members.find(member => member.stateStr === "SECONDARY");
+      const primary = status.members.find(member => member.stateStr === 'PRIMARY');
+      const secondary = status.members.find(member => member.stateStr === 'SECONDARY');
 
-      if (primary && secondary) break;
+      if (primary && secondary) {
+        break;
+      }
     } while (Date.now() - startTime < timeout);
 
-
-    console.log("✅ Replica set is stable");
-
+    console.log('✅ Replica set is stable');
   } catch (err) {
     console.error('❌ Failed to initiate replica set:', err);
   }

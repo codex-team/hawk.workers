@@ -85,6 +85,7 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
+   * @param paidUntil
    * @param isDebug
    */
   private static daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
@@ -221,7 +222,7 @@ export default class PaymasterWorker extends Worker {
      * How many days left for the expected day of payments
      */
     // @ts-expect-error debug
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil,workspace.isDebug);
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * Do we need to ask for money
