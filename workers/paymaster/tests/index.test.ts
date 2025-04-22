@@ -46,8 +46,9 @@ const createWorkspaceMock = (parameters: {
   lastChargeDate: Date | undefined;
   subscriptionId: string;
   isBlocked: boolean;
+  paidUntil?: Date;
 }): WorkspaceDBScheme => {
-  return {
+  const workspace: WorkspaceDBScheme = {
     _id: new ObjectId(),
     name: 'Mocked workspace',
     inviteHash: '',
@@ -58,7 +59,13 @@ const createWorkspaceMock = (parameters: {
     balance: 0,
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
-  };
+  }
+
+  if (parameters.paidUntil) {
+    workspace.paidUntil = parameters.paidUntil;
+  }
+
+  return workspace;
 };
 
 describe('PaymasterWorker', () => {
@@ -286,6 +293,10 @@ describe('PaymasterWorker', () => {
       plan,
     });
 
+    const updatedWorkspacee = await workspacesCollection.findOne({ _id: workspace._id });
+
+    console.log('updatedWorkspaceeeeeeee', updatedWorkspacee);
+
     MockDate.set(currentDate);
 
     /**
@@ -301,6 +312,8 @@ describe('PaymasterWorker', () => {
      * Assert
      */
     const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    console.log('updatedWorkspace', updatedWorkspace);
 
     expect(updatedWorkspace).toEqual(workspace);
     MockDate.reset();
@@ -396,6 +409,52 @@ describe('PaymasterWorker', () => {
       data: expect.any(String),
     });
   });
+
+  test('Should not send notification if paidUntil is set to the several months in the future', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date();
+    const paidUntil = new Date(currentDate.getTime());
+    paidUntil.setMonth(paidUntil.getMonth() + 3);
+
+    const plan = createPlanMock({
+      monthlyCharge: 0,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+      paidUntil,
+    });
+
+    const addTaskSpy = jest.spyOn(PaymasterWorker.prototype, 'addTask');
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    expect(addTaskSpy).not.toHaveBeenCalled();
+    MockDate.reset();
+  })
 
   afterAll(async () => {
     await connection.close();
