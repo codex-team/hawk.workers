@@ -46,8 +46,9 @@ const createWorkspaceMock = (parameters: {
   lastChargeDate: Date | undefined;
   subscriptionId: string;
   isBlocked: boolean;
+  paidUntil?: Date;
 }): WorkspaceDBScheme => {
-  return {
+  const workspace: WorkspaceDBScheme = {
     _id: new ObjectId(),
     name: 'Mocked workspace',
     inviteHash: '',
@@ -59,6 +60,12 @@ const createWorkspaceMock = (parameters: {
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
   };
+
+  if (parameters.paidUntil) {
+    workspace.paidUntil = parameters.paidUntil;
+  }
+
+  return workspace;
 };
 
 describe('PaymasterWorker', () => {
@@ -92,6 +99,7 @@ describe('PaymasterWorker', () => {
   beforeEach(async () => {
     await workspacesCollection.deleteMany({});
     await tariffCollection.deleteMany({});
+    jest.clearAllMocks();
   });
 
   test('Should block workspace if it hasn\'t subscription and it\'s time to pay', async () => {
@@ -352,7 +360,7 @@ describe('PaymasterWorker', () => {
      */
     const currentDate = new Date('2005-12-22');
     const plan = createPlanMock({
-      monthlyCharge: 0,
+      monthlyCharge: 10,
       isDefault: true,
     });
     const workspace = createWorkspaceMock({
@@ -397,8 +405,112 @@ describe('PaymasterWorker', () => {
     });
   });
 
+  test('Should not send notification if paidUntil is set to the several months in the future', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date();
+    const paidUntil = new Date(currentDate.getTime());
+
+    paidUntil.setMonth(paidUntil.getMonth() + 3);
+
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+      paidUntil,
+    });
+
+    const addTaskSpy = jest.spyOn(PaymasterWorker.prototype, 'addTask');
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    expect(addTaskSpy).not.toHaveBeenCalled();
+    MockDate.reset();
+  });
+
   afterAll(async () => {
     await connection.close();
+    MockDate.reset();
+  });
+
+  test('Should send notification if payday is coming for workspace with paidUntil value', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date();
+    const paidUntil = new Date(currentDate.getTime());
+
+    paidUntil.setDate(paidUntil.getDate() + 1);
+
+    const plan = createPlanMock({
+      monthlyCharge: 1,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+      paidUntil,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    const addTaskSpy = jest.spyOn(PaymasterWorker.prototype, 'addTask');
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    expect(addTaskSpy).toHaveBeenCalledWith(
+      'sender/email',
+      {
+        type: 'days-limit-almost-reached',
+        payload: {
+          workspaceId: workspace._id,
+          daysLeft: 1,
+        },
+      }
+    );
+
     MockDate.reset();
   });
 });
