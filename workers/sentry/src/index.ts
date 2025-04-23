@@ -4,7 +4,7 @@ import { DefaultEventWorkerTask } from '../../default/types/default-event-worker
 import WorkerNames from '../../../lib/workerNames.js';
 import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from '@sentry/core';
 import { Worker } from '../../../lib/worker';
-import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
+import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData, composeHawkRelease } from './utils/converter';
 import { b64decode } from './utils/base64';
 import { DecodedEventData, EventAddons } from '@hawk.so/types';
 import { TextDecoder } from 'util';
@@ -122,6 +122,7 @@ export default class SentryEventWorker extends Worker {
     const context = composeContext(eventPayload);
     const user = composeUserData(eventPayload);
     const addons = composeAddons(eventPayload);
+    const release = composeHawkRelease(eventPayload);
 
     const event: DecodedEventData<EventAddons> = {
       title,
@@ -144,6 +145,10 @@ export default class SentryEventWorker extends Worker {
 
     if (addons) {
       event.addons = addons;
+    }
+
+    if (release) {
+      event.release = release;
     }
 
     /**
