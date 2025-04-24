@@ -228,7 +228,7 @@ export default class JavascriptEventWorker extends EventWorker {
      * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121
      */
     if (originalLocation.source) {
-      console.log('original location source found')
+      console.log('original location source found');
       /**
        * Get 5 lines above and 5 below
        */
@@ -247,9 +247,10 @@ export default class JavascriptEventWorker extends EventWorker {
       sourceCode: lines,
     }) as BacktraceFrame;
   }
-  
+
   /**
    * Method that is used to parse full function context of the code position
+   *
    * @param sourceCode - content of the source file
    * @param line - number of the line from the stack trace
    * @returns - string of the function context or null if it could not be parsed
@@ -257,30 +258,32 @@ export default class JavascriptEventWorker extends EventWorker {
   private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
-    let isAsync: boolean = false;
+    let isAsync = false;
 
     try {
       const ast = parse(sourceCode, {
-        sourceType: "module",
+        sourceType: 'module',
         plugins: [
-          "typescript",
-          "jsx",
-          "classProperties",
-          "decorators",
-          "optionalChaining",
-          "nullishCoalescingOperator",
-          "dynamicImport",
-          "bigInt",
-          "topLevelAwait"
-        ]
+          'typescript',
+          'jsx',
+          'classProperties',
+          'decorators',
+          'optionalChaining',
+          'nullishCoalescingOperator',
+          'dynamicImport',
+          'bigInt',
+          'topLevelAwait',
+        ],
       });
 
       traverse(ast as any, {
         /**
          * It is used to get class decorator of the position, it will save class that is related to original position
+         *
+         * @param path
          */
         ClassDeclaration(path) {
-          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
+          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             className = path.node.id.name || null;
@@ -289,9 +292,11 @@ export default class JavascriptEventWorker extends EventWorker {
         /**
          * It is used to get class and its method decorator of the position
          * It will save class and method, that are related to original position
+         *
+         * @param path
          */
         ClassMethod(path) {
-          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
+          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             // Handle different key types
@@ -303,10 +308,12 @@ export default class JavascriptEventWorker extends EventWorker {
         },
         /**
          * It is used to get function name that is declared out of class
+         *
+         * @param path
          */
         FunctionDeclaration(path) {
-          console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`)
-          
+          console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             functionName = path.node.id.name || null;
             isAsync = path.node.async;
@@ -314,13 +321,15 @@ export default class JavascriptEventWorker extends EventWorker {
         },
         /**
          * It is used to get anonimous function names in function expressions or arrow function expressions
+         *
+         * @param path
          */
         VariableDeclarator(path) {
-          console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `)
+          console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
 
           if (
             path.node.init &&
-            (path.node.init.type === "FunctionExpression" || path.node.init.type === "ArrowFunctionExpression") &&
+            (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
             path.node.loc &&
             path.node.loc.start.line <= line &&
             path.node.loc.end.line >= line
@@ -331,14 +340,14 @@ export default class JavascriptEventWorker extends EventWorker {
             }
             isAsync = (path.node.init as any).async;
           }
-        }
+        },
       });
     } catch (e) {
-        console.error(`Failed to parse source code: ${e.message}`);
+      console.error(`Failed to parse source code: ${e.message}`);
     }
 
-    return functionName ? `${isAsync ? "async " : ""}${className ? `${className}.` : ""}${functionName}` : null;
-}
+    return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
+  }
 
   /**
    * Downloads source map file from Grid FS

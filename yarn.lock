@@ -354,14 +354,6 @@
     debug "^4.3.1"
     globals "^11.1.0"
 
-"@babel/types@7.26.9", "@babel/types@^7.26.9":
-  version "7.26.9"
-  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.26.9.tgz#08b43dec79ee8e682c2ac631c010bdcac54a21ce"
-  integrity sha512-Y3IR1cRnOxOCDvMmNiym7XpXQ93iGDDPHx+Zj+NM+rg0fBaShfQLkg+hKPaZCEvg5N/LeCo4+Rj/i3FuJsIQaw==
-  dependencies:
-    "@babel/helper-string-parser" "^7.25.9"
-    "@babel/helper-validator-identifier" "^7.25.9"
-
 "@babel/types@^7.0.0", "@babel/types@^7.15.4", "@babel/types@^7.3.0", "@babel/types@^7.3.3":
   version "7.15.6"
   resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.15.6.tgz#99abdc48218b2881c058dd0a7ab05b99c9be758f"
@@ -436,10 +428,10 @@
   dependencies:
     "@types/mongodb" "^3.5.34"
 
-"@hawk.so/types@^0.1.28":
-  version "0.1.28"
-  resolved "https://registry.yarnpkg.com/@hawk.so/types/-/types-0.1.28.tgz#a479f411a4ae1855a6661084fa4396c7f323b170"
-  integrity sha512-W8xNlbkQuffwhVn/ja5Bo4EglN0waSM0Rx3R+jGmcrbYi1a4g6kGPQFYkMSd0WadikOH1nd9NrfmyJB9cVOBWA==
+"@hawk.so/types@^0.1.29":
+  version "0.1.29"
+  resolved "https://registry.yarnpkg.com/@hawk.so/types/-/types-0.1.29.tgz#95b32d2a9ea7771ecceede50e419741f2fc0746a"
+  integrity sha512-skPS8ypvlR0hAMDxxJ6Yx96EhssLuOSrNm6lZS08FZESA/crldxK4D7OHV/EPxJccmEJLegXq3PEk4zJfC76YA==
   dependencies:
     "@types/mongodb" "^3.5.34"
 

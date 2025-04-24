@@ -207,15 +207,16 @@ describe('Release Worker', () => {
 
   test('should correctly handle release with multiple source maps in a single transaction', async () => {
     const map = await mockBundle.getSourceMap();
-    
+
     /**
      * Create multiple files with the same content
      */
     const numberOfFiles = 10;
-    const collectedData: SourcemapCollectedData[] = Array(numberOfFiles).fill(null).map((_, index) => ({
-      name: `main${index}.js.map`,
-      payload: map,
-    }));
+    const collectedData: SourcemapCollectedData[] = Array(numberOfFiles).fill(null)
+      .map((_, index) => ({
+        name: `main${index}.js.map`,
+        payload: map,
+      }));
 
     await worker.handle({
       projectId,
@@ -233,6 +234,7 @@ describe('Release Worker', () => {
       projectId: projectId,
       release: releasePayload.release,
     });
+
     await expect(releasesCount).toEqual(1);
 
     /**
@@ -242,6 +244,7 @@ describe('Release Worker', () => {
       projectId: projectId,
       release: releasePayload.release,
     });
+
     await expect(release.files).toHaveLength(numberOfFiles);
 
     /**

@@ -103,15 +103,16 @@ describe('RedisHelper', () => {
         const thresholdPeriod = 2000; // 2 seconds in milliseconds
         const key = `${projectId}:${ruleId}:${groupHash}:${thresholdPeriod}:times`;
 
-      /**
-       * Call computeEventCountForPeriod to set the key
-       */
-      await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
+        /**
+         * Call computeEventCountForPeriod to set the key
+         */
+        await redisHelper.computeEventCountForPeriod(projectId, ruleId, groupHash, thresholdPeriod);
 
         /**
          * Verify, that key exists
          */
         let value = await redisClient.hGet(key, 'eventsCount');
+
         expect(value).not.toBeNull();
 
         /**
