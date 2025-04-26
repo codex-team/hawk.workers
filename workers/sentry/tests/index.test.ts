@@ -583,12 +583,12 @@ describe('SentryEventWorker', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         },
         [
-          [ 
-            { type: 'event' }, 
-            { 
+          [
+            { type: 'event' },
+            {
               sdk: { name: 'browser' },
-              release: '1.0.0'
-            } 
+              release: '1.0.0',
+            },
           ],
         ],
       ];
@@ -605,8 +605,8 @@ describe('SentryEventWorker', () => {
         catcherType: 'external/sentry',
         projectId: '123',
         payload: expect.objectContaining({
-          release: '1.0.0'
-        })
+          release: '1.0.0',
+        }),
       }));
     });
 
@@ -619,12 +619,12 @@ describe('SentryEventWorker', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         },
         [
-          [ 
-            { type: 'event' }, 
-            { 
+          [
+            { type: 'event' },
+            {
               sdk: { name: 'python' },
-              release: '1.0.0'
-            } 
+              release: '1.0.0',
+            },
           ],
         ],
       ];
@@ -641,8 +641,8 @@ describe('SentryEventWorker', () => {
         catcherType: 'external/sentry',
         projectId: '123',
         payload: expect.objectContaining({
-          release: '1.0.0'
-        })
+          release: '1.0.0',
+        }),
       }));
     });
 
@@ -655,11 +655,11 @@ describe('SentryEventWorker', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         },
         [
-          [ 
-            { type: 'event' }, 
-            { 
-              sdk: { name: 'browser' }
-            } 
+          [
+            { type: 'event' },
+            {
+              sdk: { name: 'browser' },
+            },
           ],
         ],
       ];
@@ -676,8 +676,8 @@ describe('SentryEventWorker', () => {
         catcherType: 'external/sentry',
         projectId: '123',
         payload: expect.not.objectContaining({
-          release: expect.any(String)
-        })
+          release: expect.any(String),
+        }),
       }));
     });
   });
