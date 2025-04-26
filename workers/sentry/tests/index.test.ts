@@ -568,6 +568,120 @@ describe('SentryEventWorker', () => {
       });
     });
   });
+
+  describe('SDK validation and release handling', () => {
+    beforeEach(() => {
+      jest.spyOn(worker, 'addTask');
+    });
+
+    it('should route to JavaScript worker when SDK is in sentryJsSDK list and release is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ 
+            { type: 'event' }, 
+            { 
+              sdk: { name: 'browser' },
+              release: '1.0.0'
+            } 
+          ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      expect(worker.addTask).toHaveBeenCalledWith('errors/javascript', expect.objectContaining({
+        catcherType: 'external/sentry',
+        projectId: '123',
+        payload: expect.objectContaining({
+          release: '1.0.0'
+        })
+      }));
+    });
+
+    it('should route to Default worker when SDK is not in sentryJsSDK list', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ 
+            { type: 'event' }, 
+            { 
+              sdk: { name: 'python' },
+              release: '1.0.0'
+            } 
+          ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      expect(worker.addTask).toHaveBeenCalledWith('errors/default', expect.objectContaining({
+        catcherType: 'external/sentry',
+        projectId: '123',
+        payload: expect.objectContaining({
+          release: '1.0.0'
+        })
+      }));
+    });
+
+    it('should route to Default worker when SDK is in sentryJsSDK list but release is missing', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ 
+            { type: 'event' }, 
+            { 
+              sdk: { name: 'browser' }
+            } 
+          ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      expect(worker.addTask).toHaveBeenCalledWith('errors/default', expect.objectContaining({
+        catcherType: 'external/sentry',
+        projectId: '123',
+        payload: expect.not.objectContaining({
+          release: expect.any(String)
+        })
+      }));
+    });
+  });
+
   describe('(real-data tests)', () => {
     it('should process real-world python error', async () => {
       const event = {

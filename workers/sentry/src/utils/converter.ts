@@ -159,22 +159,3 @@ export function composeUserData(eventPayload: SentryEvent): EventData<DefaultAdd
 
   return undefined;
 }
-
-/**
- * Compose hawk release from Sentry event payload contexts
- *
- * @param eventPayload - Sentry event payload
- */
-export function composeHawkRelease(eventPayload: SentryEvent): string | undefined {
-  if (!eventPayload.contexts) {
-    return undefined;
-  }
-
-  const release = eventPayload.contexts['hawkRelease'];
-
-  if (release && typeof release === 'string') {
-    return release;
-  }
-
-  return undefined;
-}

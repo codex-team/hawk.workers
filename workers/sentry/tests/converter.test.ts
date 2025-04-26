@@ -1,5 +1,5 @@
 import { Event as SentryEvent } from '@sentry/core';
-import { composeTitle, composeBacktrace, composeContext, composeAddons, composeUserData, composeHawkRelease } from '../src/utils/converter';
+import { composeTitle, composeBacktrace, composeContext, composeAddons, composeUserData } from '../src/utils/converter';
 
 describe('converter utils', () => {
   describe('composeTitle()', () => {
@@ -139,38 +139,6 @@ describe('converter utils', () => {
       const event: SentryEvent = {};
 
       expect(composeContext(event)).toBeUndefined();
-    });
-  });
-
-  describe('composeHawkRelease()', () => {
-    it('should compose hawk release from event payload contexts', () => {
-      /**
-       * Sentry allows any custom context to be added to an event, but it could be done with setContext method
-       * Otherwise it will be added, but will raise type error like in hawkRelease case
-       */
-      /** @ts-expect-error */
-      const event: SentryEvent = { contexts: { hawkRelease: '1.0.0' } };
-
-      expect(composeHawkRelease(event)).toBe('1.0.0');
-    });
-
-    it('should return undefined if no contexts', () => {
-      const event: SentryEvent = {};
-
-      expect(composeHawkRelease(event)).toBeUndefined();
-    });
-
-    it('should return undefined if hawkRelease is not a string', () => {
-      /** @ts-expect-error */
-      const event: SentryEvent = { contexts: { hawkRelease: 1 } };
-
-      expect(composeHawkRelease(event)).toBeUndefined();
-    });
-
-    it('should return undefined if hawkRelease is not specified', () => {
-      const event: SentryEvent = { contexts: {} };
-
-      expect(composeHawkRelease(event)).toBeUndefined();
     });
   });
 
