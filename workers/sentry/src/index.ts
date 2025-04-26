@@ -26,8 +26,6 @@ export default class SentryEventWorker extends Worker {
   public async handle(event: SentryEventWorkerTask): Promise<void> {
     /**
      * Define  event type
-     *
-     * @todo Rename to external/sentry because it is not a Hawk event
      */
     this.type = 'external/sentry';
 
