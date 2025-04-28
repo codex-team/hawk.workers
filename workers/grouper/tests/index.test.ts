@@ -5,6 +5,7 @@ import { createClient, RedisClientType } from 'redis';
 import { Collection, MongoClient } from 'mongodb';
 import { EventAddons, EventDataAccepted } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import * as mongodb from 'mongodb';
 
 jest.mock('amqplib');
 
@@ -24,7 +25,7 @@ jest.mock('../../../lib/cache/controller', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
     public set(): void { }
-    
+
     // eslint-disable-next-line @typescript-eslint/no-empty-function, jsdoc/require-jsdoc
     public del(): void { }
   };
@@ -49,6 +50,22 @@ const secondsInDay = 24 * 60 * 60;
  * Mocked Project id used for tests
  */
 const projectIdMock = '5d206f7f9aaf7c0071d64596';
+
+/**
+ * Mock project data
+ */
+const projectMock = {
+  _id: new mongodb.ObjectId(projectIdMock),
+  id: projectIdMock,
+  name: 'Test Project',
+  token: 'test-token',
+  uidAdded: {
+    id: 'test-user-id',
+  },
+  unreadCount: 0,
+  description: 'Test project for grouper worker tests',
+  eventGroupingPatterns: [ 'New error .*' ],
+};
 
 /**
  * Generates task for testing
@@ -84,9 +101,11 @@ function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined
 
 describe('GrouperWorker', () => {
   let connection: MongoClient;
+  let accountsConnection: MongoClient;
   let eventsCollection: Collection;
   let dailyEventsCollection: Collection;
   let repetitionsCollection: Collection;
+  let projectsCollection: Collection;
   let redisClient: RedisClientType;
   let worker: GrouperWorker;
 
@@ -98,14 +117,25 @@ describe('GrouperWorker', () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
+    accountsConnection = await MongoClient.connect(process.env.MONGO_ACCOUNTS_DATABASE_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
     eventsCollection = connection.db().collection('events:' + projectIdMock);
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
+    projectsCollection = accountsConnection.db().collection('projects');
 
     /**
      * Create unique index for groupHash
      */
     await eventsCollection.createIndex({ groupHash: 1 }, { unique: true });
+
+    /**
+     * Insert mock project into accounts database
+     */
+    await projectsCollection.insertOne(projectMock);
 
     redisClient = createClient({ url: process.env.REDIS_URL });
     await redisClient.connect();
@@ -426,11 +456,112 @@ describe('GrouperWorker', () => {
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
     });
+
+    describe('Pattern matching', () => {
+      beforeEach(() => {
+        jest.clearAllMocks();
+      });
+
+      test('should group events with titles matching one pattern', async () => {
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([ 'New error .*' ]);
+        const findMatchingPatternSpy = jest.spyOn(GrouperWorker.prototype as any, 'findMatchingPattern');
+
+        await worker.handle(generateTask({ title: 'New error 0000000000000000' }));
+        await worker.handle(generateTask({ title: 'New error 1111111111111111' }));
+        await worker.handle(generateTask({ title: 'New error 2222222222222222' }));
+
+        const originalEvent = await eventsCollection.findOne({});
+
+        expect(findMatchingPatternSpy).toHaveBeenCalledTimes(3);
+        expect((await repetitionsCollection.find({
+          groupHash: originalEvent.groupHash,
+        }).toArray()).length).toBe(2);
+      });
+
+      test('should handle multiple patterns and match the first one that applies', async () => {
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          'Database error: .*',
+          'Network error: .*',
+          'New error: .*',
+        ]);
+
+        await worker.handle(generateTask({ title: 'Database error: connection failed' }));
+        await worker.handle(generateTask({ title: 'Database error: timeout' }));
+        await worker.handle(generateTask({ title: 'Network error: timeout' }));
+
+        const databaseEvents = await eventsCollection.find({ 'payload.title': /Database error.*/ }).toArray();
+        const networkEvents = await eventsCollection.find({ 'payload.title': /Network error.*/ }).toArray();
+
+        expect(databaseEvents.length).toBe(1);
+        expect(networkEvents.length).toBe(1);
+        expect(await repetitionsCollection.find().count()).toBe(1);
+      });
+
+      test('should handle complex regex patterns', async () => {
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$',
+          'Warning \\d{3}: .*',
+        ]);
+
+        await worker.handle(generateTask({ title: 'Error 404: Not Found in file index.js' }));
+        await worker.handle(generateTask({ title: 'Error 404: Missing Route in file router.js' }));
+        await worker.handle(generateTask({ title: 'Warning 301: Deprecated feature' }));
+
+        const error404Events = await eventsCollection.find({ 'payload.title': /Error 404.*/ }).toArray();
+        const warningEvents = await eventsCollection.find({ 'payload.title': /Warning.*/ }).toArray();
+
+        expect(error404Events.length).toBe(1);
+        expect(warningEvents.length).toBe(1);
+        expect(await repetitionsCollection.find().count()).toBe(1);
+      });
+
+      test('should maintain separate groups for different patterns', async () => {
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          'TypeError: .*',
+          'ReferenceError: .*',
+        ]);
+
+        await worker.handle(generateTask({ title: 'TypeError: null is not an object' }));
+        await worker.handle(generateTask({ title: 'TypeError: undefined is not a function' }));
+        await worker.handle(generateTask({ title: 'ReferenceError: x is not defined' }));
+        await worker.handle(generateTask({ title: 'ReferenceError: y is not defined' }));
+
+        const typeErrors = await eventsCollection.find({ 'payload.title': /TypeError.*/ }).toArray();
+        const referenceErrors = await eventsCollection.find({ 'payload.title': /ReferenceError.*/ }).toArray();
+
+        expect(typeErrors.length).toBe(1);
+        expect(referenceErrors.length).toBe(1);
+        expect(await repetitionsCollection.find().count()).toBe(2);
+
+        // Verify that events are grouped separately
+        expect(typeErrors[0].groupHash).not.toBe(referenceErrors[0].groupHash);
+      });
+
+      test('should handle patterns with special regex characters', async () => {
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          'Error \\[\\d+\\]: .*',
+          'Warning \\(code=\\d+\\): .*',
+        ]);
+
+        await worker.handle(generateTask({ title: 'Error [123]: Database connection failed' }));
+        await worker.handle(generateTask({ title: 'Error [123]: Query timeout' }));
+        await worker.handle(generateTask({ title: 'Warning (code=456): Cache miss' }));
+
+        const errorEvents = await eventsCollection.find({ 'payload.title': /Error \[\d+\].*/ }).toArray();
+        const warningEvents = await eventsCollection.find({ 'payload.title': /Warning \(code=\d+\).*/ }).toArray();
+
+        expect(errorEvents.length).toBe(1);
+        expect(warningEvents.length).toBe(1);
+        expect(await repetitionsCollection.find().count()).toBe(1);
+      });
+    });
   });
 
   afterAll(async () => {
     await redisClient.quit();
     await worker.finish();
+    await projectsCollection.deleteMany({});
+    await accountsConnection.close();
     await connection.close();
   });
 });

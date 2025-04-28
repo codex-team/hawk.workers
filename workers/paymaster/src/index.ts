@@ -63,14 +63,15 @@ export default class PaymasterWorker extends Worker {
    * Pay day is calculated by formula: last charge date + 30 days
    *
    * @param date - last charge date
-   * @param isDebug
+   * @param paidUntil - paid until date
+   * @param isDebug - flag for debug purposes
    */
-  private static isTimeToPay(date: Date, isDebug = false): boolean {
-    const expectedPayDay = new Date(date);
+  private static isTimeToPay(date: Date, paidUntil: Date, isDebug = false): boolean {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -82,17 +83,18 @@ export default class PaymasterWorker extends Worker {
   /**
    * Returns difference between now and payday in days
    *
-   * Pay day is calculated by formula: last charge date + 30 days
+   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
    *
    * @param date - last charge date
-   * @param isDebug
+   * @param paidUntil - paid until date
+   * @param isDebug - flag for debug purposes
    */
-  private static daysBeforePayday(date: Date, isDebug = false): number {
-    const expectedPayDay = new Date(date);
+  private static daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -104,17 +106,18 @@ export default class PaymasterWorker extends Worker {
   /**
    * Returns difference between payday and now in days
    *
-   * Pay day is calculated by formula: last charge date + 30 days
+   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
    *
    * @param date - last charge date
-   * @param isDebug
+   * @param paidUntil - paid until date
+   * @param isDebug - flag for debug purposes
    */
-  private static daysAfterPayday(date: Date, isDebug = false): number {
-    const expectedPayDay = new Date(date);
+  private static daysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
     if (isDebug) {
       expectedPayDay.setDate(date.getDate() + 1);
-    } else {
+    } else if (!paidUntil) {
       expectedPayDay.setMonth(date.getMonth() + 1);
     }
 
@@ -209,19 +212,19 @@ export default class PaymasterWorker extends Worker {
      * Is it time to pay
      */
     // @ts-expect-error debug
-    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.isDebug);
+    const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * How many days have passed since payments the expected day of payments
      */
     // @ts-expect-error debug
-    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.isDebug);
+    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * How many days left for the expected day of payments
      */
     // @ts-expect-error debug
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.isDebug);
+    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * Do we need to ask for money
@@ -235,10 +238,8 @@ export default class PaymasterWorker extends Worker {
     if (!isTimeToPay) {
       /**
        * If payday is coming for the paid plans then notify admins
-       *
-       * @todo do not notify if card is linked?
        */
-      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan) {
+      if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan && !workspace.subscriptionId) {
         /**
          * Add task for Sender worker
          */

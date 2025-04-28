@@ -18,6 +18,7 @@ process.env.MAX_DAYS_NUMBER = '30';
 
 const mockedProject: ProjectDBScheme = {
   notifications: [],
+  eventGroupingPatterns: [],
   token: '5342',
   integrationId: 'eyJpbnRlZ3JhdGlvbklkIjoiMzg3NGNkOWMtZjJiYS00ZDVkLTk5ZmQtM2UzZjYzMDcxYmJhIiwic2VjcmV0IjoiMGZhM2JkM2EtYmMyZC00YWRiLThlMWMtNjg2OGY0MzM1YjRiIn0=',
   uidAdded: new ObjectId('5e4ff518628a6c714515f4db'),
@@ -53,7 +54,7 @@ describe('Archiver worker', () => {
 
   beforeEach(async () => {
     await db.collection('releases').deleteMany({});
-  })
+  });
 
   test('Should correctly remove old events', async () => {
     /**
@@ -129,7 +130,7 @@ describe('Archiver worker', () => {
     /**
      * Insert one release with object id based on current time, it should not be removed
      */
-    await db.collection('releases').insert(releasesToStay)
+    await db.collection('releases').insert(releasesToStay);
 
     const worker = new ArchiverWorker();
 
@@ -173,9 +174,9 @@ describe('Archiver worker', () => {
     expect(newReleasesCollection).toEqual([
       mockedReleases[mockedReleasesLength - 2],
       mockedReleases[mockedReleasesLength - 1],
-    ])
+    ]);
     await worker.finish();
-  })
+  });
 
   afterAll(async () => {
     await db.dropCollection('releases');
