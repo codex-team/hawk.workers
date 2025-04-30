@@ -16,6 +16,7 @@ import RedisHelper from './redisHelper';
 import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';
 import { WorkspaceWithTariffPlan } from '../types';
 import * as WorkerNames from '../../../lib/workerNames';
+import * as telegram from '../../../lib/utils/telegram';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -117,8 +118,6 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleCheckSingleWorkspaceEvent(event: CheckSingleWorkspaceEvent): Promise<void> {
-    this.logger.info('Limiter worker started checking workspace with id ' + event.workspaceId);
-
     const workspace = await this.getWorkspaceWithTariffPlan(event.workspaceId);
 
     if (!workspace) {
@@ -130,18 +129,15 @@ export default class LimiterWorker extends Worker {
     const workspaceProjects = await this.getProjects(event.workspaceId);
     const workspaceProjectsIds = workspaceProjects.map(p => p._id.toString());
 
-    this.logger.info(`Starting analyzing for workspace with id ${event.workspaceId} and ${workspaceProjects.length} projects.`);
-
     const report = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
-    this.logger.info(`Finished analyzing for workspace with id ${event.workspaceId}`);
     await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
 
     if (report.isBlocked) {
-      this.logger.info(`Block workspace with id ${event.workspaceId}`);
+      telegram.sendMessage(`Block workspace ${workspace.name}`, telegram.TelegramBotURLs.Limiter);
       await this.redis.appendBannedProjects(workspaceProjectsIds);
     } else {
-      this.logger.info(`Unblock workspace with id ${event.workspaceId}`);
+      telegram.sendMessage(`Unblock workspace ${workspace.name}`, telegram.TelegramBotURLs.Limiter);
       await this.redis.removeBannedProjects(workspaceProjectsIds);
     }
     this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
@@ -160,6 +156,19 @@ export default class LimiterWorker extends Worker {
     this.logger.info('Limiter worker started regular check');
 
     const report = await this.analyzeWorkspacesLimits();
+    
+    report.bannedProjectIds.map(async (projectId) => {
+      /**
+       * If project is not in the set now, it would be banned
+       */
+      if (!this.redis.isProjectBanned(projectId)) {
+        const project = await this.projectsCollection.findOne({
+          '_id': projectId,
+        });
+
+        telegram.sendMessage(`Block project ${project.name}`, telegram.TelegramBotURLs.Limiter);
+      }
+    });
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
