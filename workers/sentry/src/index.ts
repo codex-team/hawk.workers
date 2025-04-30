@@ -8,6 +8,7 @@ import { composeAddons, composeBacktrace, composeContext, composeTitle, composeU
 import { b64decode } from './utils/base64';
 import { DecodedEventData, EventAddons } from '@hawk.so/types';
 import { TextDecoder } from 'util';
+import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
 /**
  * Worker for handling Sentry events
  */
@@ -25,8 +26,6 @@ export default class SentryEventWorker extends Worker {
   public async handle(event: SentryEventWorkerTask): Promise<void> {
     /**
      * Define  event type
-     *
-     * @todo Rename to external/sentry because it is not a Hawk event
      */
     this.type = 'external/sentry';
 
@@ -71,6 +70,22 @@ export default class SentryEventWorker extends Worker {
 
       const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
 
+      const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
+
+      /**
+       * @todo react-native could be added if we support source-map sending for Metro bundler
+       */
+      const sentryJsSDK = ['browser', 'react', 'vue', 'angular', 'capacirtor', 'electron'];
+
+      /**
+       * If we have release attached to the event
+       */
+      if (payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name) && hawkEvent.payload.release !== undefined) {
+        await this.addTask(WorkerNames.JAVASCRIPT, hawkEvent as JavaScriptEventWorkerTask);
+
+        return;
+      }
+
       await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
@@ -91,7 +106,7 @@ export default class SentryEventWorker extends Worker {
     envelopeHeader: EventEnvelope[0],
     eventItem: EventItem,
     projectId: string
-  ): DefaultEventWorkerTask {
+  ): DefaultEventWorkerTask | JavaScriptEventWorkerTask {
     /* eslint-disable @typescript-eslint/naming-convention */
     const { sent_at, trace } = envelopeHeader;
 
