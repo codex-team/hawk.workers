@@ -9,6 +9,7 @@
   "private": true,
   "workerType": "grouper",
   "dependencies": {
+    "@types/redis": "^2.8.28",
     "@n1ru4l/json-patch-plus": "^0.2.0",
     "js-levenshtein": "^1.1.6"
   }

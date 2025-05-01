@@ -2,7 +2,6 @@ import './env';
 import * as crypto from 'crypto';
 import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
-import * as utils from '../../../lib/utils';
 import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';

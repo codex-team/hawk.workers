@@ -2,7 +2,6 @@ import { GroupedEventDBScheme, RepetitionDBScheme as RepetitionDBSchemeType } fr
 
 type RepetitionDBScheme = Omit<RepetitionDBSchemeType, 'payload'> & Partial<Pick<RepetitionDBSchemeType, 'payload'>>;
 
-
 /**
  * Fields in event payload with unsafe data for encoding before saving in database
  */
@@ -62,7 +61,6 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
     if (fieldValue === undefined) {
       return;
     }
-    
 
     let newValue: string;
 
