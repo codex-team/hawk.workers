@@ -6,8 +6,8 @@ import * as utils from '../../../lib/utils';
 import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
+import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
+import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -22,21 +22,6 @@ import TimeMs from '../../../lib/utils/time';
  * Error code of MongoDB key duplication error
  */
 const DB_DUPLICATE_KEY_ERROR = '11000';
-
-/**
- * @todo encodeUnsafeFields/decodeUnsafeFields should process both "payload" and "delta" fields
- * @todo cover repetition save with tests. Test various cases:
- * - original event has no backtrace
- * - original event has backtrace
- * - repetition has no backtrace
- * - repetition has backtrace
- * - backtrace is different
- * - original event has no context.somefield
- * - original event has context.somefield
- * - repetition has no context.somefield
- * - repetition has context.somefield
- * (etc)
- */
 
 /**
  * Worker for handling Javascript events
@@ -212,7 +197,7 @@ export default class GrouperWorker extends Worker {
       const newRepetition = {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
-        timestamp: task.event.timestamp
+        timestamp: task.event.timestamp,
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -510,7 +495,7 @@ export default class GrouperWorker extends Worker {
    * @returns {string} cache key for event
    */
   private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
-    return `${projectId}:${JSON.stringify({ groupHash: groupHash })}`;
+    return `${projectId}:${JSON.stringify({ groupHash })}`;
   }
 
   /**

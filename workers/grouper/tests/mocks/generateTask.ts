@@ -1,7 +1,7 @@
-import { EventAddons, EventDataAccepted } from "@hawk.so/types";
-import { GroupWorkerTask } from "../../types/group-worker-task";
-import { projectIdMock } from "./projectId";
-import { generateEvent } from "./generateEvent";
+import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { GroupWorkerTask } from '../../types/group-worker-task';
+import { projectIdMock } from './projectId';
+import { generateEvent } from './generateEvent';
 
 /**
  * Generates task for testing
@@ -9,7 +9,7 @@ import { generateEvent } from "./generateEvent";
  * @param event - allows to override some event properties in generated task
  */
 export function generateTask(
-  event: Partial<EventDataAccepted<EventAddons>> = undefined,
+  event: Partial<EventDataAccepted<EventAddons>> = undefined
 ): GroupWorkerTask {
   return {
     projectId: projectIdMock,

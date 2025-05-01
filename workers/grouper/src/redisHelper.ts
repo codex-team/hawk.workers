@@ -1,5 +1,6 @@
 import HawkCatcher from '@hawk.so/nodejs';
-import { createClient, RedisClientType } from 'redis';
+import type { RedisClientType } from 'redis';
+import { createClient } from 'redis';
 import createLogger from '../../../lib/logger';
 
 /**
