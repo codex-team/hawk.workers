@@ -1,4 +1,7 @@
-import { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
+import { GroupedEventDBScheme, RepetitionDBScheme as RepetitionDBSchemeType } from '@hawk.so/types';
+
+type RepetitionDBScheme = Omit<RepetitionDBSchemeType, 'payload'> & Partial<Pick<RepetitionDBSchemeType, 'payload'>>;
+
 
 /**
  * Fields in event payload with unsafe data for encoding before saving in database
