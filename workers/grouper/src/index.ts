@@ -267,20 +267,23 @@ export default class GrouperWorker extends Worker {
     if (patterns && patterns.length > 0) {
       const matchingPattern = await this.findMatchingPattern(patterns, event);
 
-      if (matchingPattern !== null) {
-        const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
-          return await this.eventsDb.getConnection()
-            .collection(`events:${projectId}`)
-            .findOne(
-              { 'payload.title': { $regex: matchingPattern } },
-              { sort: { _id: 1 } }
-            );
-        });
+      if (matchingPattern !== null && matchingPattern !== undefined) {
+        try {
+          const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
+            return await this.eventsDb.getConnection()
+              .collection(`events:${projectId}`)
+              .findOne(
+                { 'payload.title': { $regex: matchingPattern } },
+                { sort: { _id: 1 } }
+              );
+          });
+          this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
 
-        this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
-
-        if (originalEvent) {
-          return originalEvent;
+          if (originalEvent) {
+            return originalEvent;
+          }
+        } catch (e) {
+          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`)
         }
       }
     }
