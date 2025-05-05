@@ -197,9 +197,6 @@ describe('converter utils', () => {
         transaction: 'test-transaction',
         modules: { key: 'value' },
         fingerprint: [ 'test-fingerprint' ],
-        breadcrumbs: [ {
-          message: 'Test breadcrumb',
-        } ],
         tags: { key: 'value' },
         extra: { key: 'value' },
       });

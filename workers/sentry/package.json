@@ -1,6 +1,6 @@
 {
   "name": "hawk-worker-sentry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Handles events in Sentry format",
   "main": "src/index.ts",
   "author": "CodeX",
