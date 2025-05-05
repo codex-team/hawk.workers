@@ -404,8 +404,6 @@ describe('GrouperWorker', () => {
       const savedDelta = savedRepetition.delta as string;
       const parsedDelta = JSON.parse(savedDelta) as RepetitionDelta;
 
-      console.log('parsedDelta', parsedDelta);
-
       expect(parsedDelta.type).toBe(undefined);
       expect(parsedDelta.backtrace).toBe(undefined);
       expect(parsedDelta.context).toBe(undefined);
