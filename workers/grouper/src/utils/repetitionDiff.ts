@@ -7,7 +7,7 @@ import type { RepetitionDelta } from '../../types/group-worker-task';
  *
  * @param originalEvent - first event
  * @param repetition - one of remaining events
- * @returns delta
+ * @returns delta {RepetitionDelta}
  */
 export function computeDelta(originalEvent: EventDataAccepted<EventAddons>, repetition: EventDataAccepted<EventAddons>): RepetitionDelta {
   const delta = diff({
