@@ -1,5 +1,6 @@
-import { EventDataAccepted, EventAddons } from '@hawk.so/types';
-import { WorkerTask } from '../../../lib/types/worker-task';
+import type { EventDataAccepted, EventAddons } from '@hawk.so/types';
+import type { WorkerTask } from '../../../lib/types/worker-task';
+import type { Delta } from '@n1ru4l/json-patch-plus';
 
 /**
  * Language-workers adds tasks for Group Worker in this format.
@@ -21,3 +22,8 @@ export interface GroupWorkerTask extends WorkerTask {
    */
   event: EventDataAccepted<EventAddons>;
 }
+
+/**
+ * Delta of the original event and the repetition
+ */
+export type RepetitionDelta = Delta;
