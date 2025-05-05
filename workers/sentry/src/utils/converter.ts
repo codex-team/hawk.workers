@@ -129,7 +129,6 @@ export function composeAddons(eventPayload: SentryEvent): EventData<DefaultAddon
     'transaction',
     'modules',
     'fingerprint',
-    'breadcrumbs',
     'tags',
     'extra',
   ];

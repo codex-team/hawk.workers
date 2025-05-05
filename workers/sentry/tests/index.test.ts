@@ -775,9 +775,6 @@ describe('SentryEventWorker', () => {
             },
           },
           addons: {
-            breadcrumbs: {
-              values: [],
-            },
             environment: 'production',
             platform: 'python',
             extra: {
