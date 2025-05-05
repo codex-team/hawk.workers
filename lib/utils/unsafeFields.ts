@@ -1,4 +1,6 @@
-import { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
+import { GroupedEventDBScheme, RepetitionDBScheme as RepetitionDBSchemeType } from '@hawk.so/types';
+
+type RepetitionDBScheme = Omit<RepetitionDBSchemeType, 'payload'> & Partial<Pick<RepetitionDBSchemeType, 'payload'>>;
 
 /**
  * Fields in event payload with unsafe data for encoding before saving in database
@@ -14,12 +16,24 @@ export const unsafeFields = ['context', 'addons'] as const;
 export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
   unsafeFields.forEach((field) => {
     try {
-      const fieldValue = event.payload[field];
+      let fieldValue: unknown;
+
+      if ('delta' in event) {
+        fieldValue = event.delta[field];
+      } else {
+        fieldValue = event.payload[field];
+      }
 
       if (typeof fieldValue === 'string') {
-        event.payload[field] = JSON.parse(fieldValue);
+        if ('delta' in event) {
+          event.delta[field] = JSON.parse(fieldValue);
+        } else {
+          event.payload[field] = JSON.parse(fieldValue);
+        }
       }
-    } catch { /* ignore if caught */ }
+    } catch {
+      console.error(`Failed to parse field ${field} in event ${event._id}`);
+    }
   });
 }
 
@@ -30,7 +44,24 @@ export function decodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
  */
 export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBScheme): void {
   unsafeFields.forEach((field) => {
-    const fieldValue = event.payload[field];
+    let fieldValue: unknown;
+
+    /**
+     * Repetition includes delta field, grouped event includes payload
+     */
+    if ('delta' in event) {
+      fieldValue = event.delta[field];
+    } else {
+      fieldValue = event.payload[field];
+    }
+
+    /**
+     * Repetition diff can omit these fields if they are not changed
+     */
+    if (fieldValue === undefined) {
+      return;
+    }
+
     let newValue: string;
 
     try {
@@ -38,8 +69,17 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
         newValue = JSON.stringify(fieldValue);
       }
     } catch {
+      console.error(`Failed to stringify field ${field} in event ${event._id}`);
       newValue = undefined;
     }
-    event.payload[field] = newValue;
+
+    /**
+     * Repetition includes delta field, grouped event includes payload
+     */
+    if ('delta' in event) {
+      event.delta[field] = newValue;
+    } else {
+      event.payload[field] = newValue;
+    }
   });
 }
