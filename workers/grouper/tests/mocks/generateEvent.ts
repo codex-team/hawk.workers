@@ -7,8 +7,9 @@ import { generateRandomId } from './randomId';
 const userIdMock = generateRandomId();
 
 /**
+ * Generate mocked event
  *
- * @param event
+ * @param event - Partial event data to override default values
  */
 export function generateEvent(event: Partial<EventDataAccepted<EventAddons>> = undefined): EventDataAccepted<EventAddons> {
   return {
