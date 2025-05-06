@@ -134,17 +134,48 @@ export default class LimiterWorker extends Worker {
     await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
 
     if (report.isBlocked) {
-      telegram.sendMessage(`Block workspace ${workspace.name}`, telegram.TelegramBotURLs.Limiter);
+      const bannedProjectNames: string[] = [];
+
+      workspaceProjects.forEach(project => {
+        /**
+         * If project is not banned yet
+         */
+        if (!this.redis.isProjectBanned(project._id)) {
+          bannedProjectNames.push(project.name)
+        }
+      })
+
+      const message = `🔓 [ Limiter / Single ] Blocked workspace "${workspace.name}"\nBlocked projects: ` + JSON.stringify(bannedProjectNames)
+
       await this.redis.appendBannedProjects(workspaceProjectsIds);
+
+      telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
     } else {
-      telegram.sendMessage(`Unblock workspace ${workspace.name}`, telegram.TelegramBotURLs.Limiter);
+      const unbannedProjectNames: string[] = [];
+
+      workspaceProjects.forEach(project => {
+        /**
+         * If project is not banned yet
+         */
+        if (this.redis.isProjectBanned(project._id)) {
+          unbannedProjectNames.push(project.name)
+        }
+      })
+
+      const message = `🔑 [ Limiter / Single ] Unblocked workspace "${workspace.name}"\nUnblocked projects: ` + JSON.stringify(unbannedProjectNames)
+
+      await this.redis.appendBannedProjects(workspaceProjectsIds);
+
       await this.redis.removeBannedProjects(workspaceProjectsIds);
+
+      telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
     }
+
     this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
 
     await this.sendSingleWorkspacesCheckReport(report);
     this.logger.info(
-      `Limiter worker finished workspace checking. Workspace with id ${event.workspaceId} was ${report.isBlocked ? 'banned' : 'unbanned'}`
+      `Limiter worker finished workspace checking. Workspace with id "${event.workspaceId}" was ${report.isBlocked ? 'banned' : 'unbanned'}`
     );
   }
 
@@ -156,22 +187,43 @@ export default class LimiterWorker extends Worker {
     this.logger.info('Limiter worker started regular check');
 
     const report = await this.analyzeWorkspacesLimits();
-    
+
+    const findProject = async (projectId) => {
+      return await this.projectsCollection.findOne({
+        '_id': projectId,
+      });
+    }
+
+    const currentlyBannedProjectIds = await this.redis.getBannedProjectIds();
+
+    const unblockedProjectNames: string[] = [];    
+    const blockedProjectNames: string[] = []; 
+
+    /**
+     * Find all the projects that would be unbanned
+     * And accumulate all of the unbanned project names
+     */
+    currentlyBannedProjectIds.map(async (projectId) => {
+      if (!(projectId in report.bannedProjectIds)) {
+        unblockedProjectNames.push((await findProject(projectId)).name);
+      }
+    })
+
     report.bannedProjectIds.map(async (projectId) => {
       /**
        * If project is not in the set now, it would be banned
        */
       if (!this.redis.isProjectBanned(projectId)) {
-        const project = await this.projectsCollection.findOne({
-          '_id': projectId,
-        });
-
-        telegram.sendMessage(`Block project ${project.name}`, telegram.TelegramBotURLs.Limiter);
+        blockedProjectNames.push((await findProject(projectId)).name);
       }
     });
 
+    const message = `🔑 [ Limiter / Regular ] Unblocked projects ${JSON.stringify(unblockedProjectNames)}\nBlocked projects: ` + JSON.stringify(blockedProjectNames)
+
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
+
+    telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
 
     this.logger.info('Limiter worker finished task');
   }

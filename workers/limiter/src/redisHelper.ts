@@ -96,6 +96,13 @@ export default class RedisHelper {
   }
 
   /**
+   * Method that returns list of disabled project ids
+   */
+  public getBannedProjectIds(): Promise<string[]> {
+    return this.redisClient.sMembers(this.redisDisabledProjectsKey);
+  }
+
+  /**
    * Add new banned projects to the set
    *
    * @param projectIds - project ids to append
