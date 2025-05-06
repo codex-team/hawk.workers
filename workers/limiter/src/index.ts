@@ -140,7 +140,7 @@ export default class LimiterWorker extends Worker {
         /**
          * If project is not banned yet
          */
-        if (!this.redis.isProjectBanned(project._id)) {
+        if (!this.redis.isProjectBanned(project._id.toString())) {
           bannedProjectNames.push(project.name);
         }
       });
@@ -157,7 +157,7 @@ export default class LimiterWorker extends Worker {
         /**
          * If project is not banned yet
          */
-        if (this.redis.isProjectBanned(project._id)) {
+        if (this.redis.isProjectBanned(project._id.toString())) {
           unbannedProjectNames.push(project.name);
         }
       });
@@ -205,7 +205,7 @@ export default class LimiterWorker extends Worker {
      */
     currentlyBannedProjectIds.map(async (projectId) => {
       if (!(projectId in report.bannedProjectIds)) {
-        unblockedProjectNames.push((await findProject(projectId)).name);
+        unblockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
 
@@ -214,7 +214,7 @@ export default class LimiterWorker extends Worker {
        * If project is not in the set now, it would be banned
        */
       if (!this.redis.isProjectBanned(projectId)) {
-        blockedProjectNames.push((await findProject(projectId)).name);
+        blockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
 
