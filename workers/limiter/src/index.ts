@@ -141,11 +141,11 @@ export default class LimiterWorker extends Worker {
          * If project is not banned yet
          */
         if (!this.redis.isProjectBanned(project._id)) {
-          bannedProjectNames.push(project.name)
+          bannedProjectNames.push(project.name);
         }
-      })
+      });
 
-      const message = `🔓 [ Limiter / Single ] Blocked workspace "${workspace.name}"\nBlocked projects: ` + JSON.stringify(bannedProjectNames)
+      const message = `🔓 [ Limiter / Single ] Blocked workspace "${workspace.name}"\nBlocked projects: ` + JSON.stringify(bannedProjectNames);
 
       await this.redis.appendBannedProjects(workspaceProjectsIds);
 
@@ -158,11 +158,11 @@ export default class LimiterWorker extends Worker {
          * If project is not banned yet
          */
         if (this.redis.isProjectBanned(project._id)) {
-          unbannedProjectNames.push(project.name)
+          unbannedProjectNames.push(project.name);
         }
-      })
+      });
 
-      const message = `🔑 [ Limiter / Single ] Unblocked workspace "${workspace.name}"\nUnblocked projects: ` + JSON.stringify(unbannedProjectNames)
+      const message = `🔑 [ Limiter / Single ] Unblocked workspace "${workspace.name}"\nUnblocked projects: ` + JSON.stringify(unbannedProjectNames);
 
       await this.redis.appendBannedProjects(workspaceProjectsIds);
 
@@ -188,16 +188,16 @@ export default class LimiterWorker extends Worker {
 
     const report = await this.analyzeWorkspacesLimits();
 
-    const findProject = async (projectId) => {
+    const findProject = async (projectId): Promise<ProjectDBScheme> => {
       return await this.projectsCollection.findOne({
-        '_id': projectId,
+        _id: projectId,
       });
-    }
+    };
 
     const currentlyBannedProjectIds = await this.redis.getBannedProjectIds();
 
-    const unblockedProjectNames: string[] = [];    
-    const blockedProjectNames: string[] = []; 
+    const unblockedProjectNames: string[] = [];
+    const blockedProjectNames: string[] = [];
 
     /**
      * Find all the projects that would be unbanned
@@ -207,7 +207,7 @@ export default class LimiterWorker extends Worker {
       if (!(projectId in report.bannedProjectIds)) {
         unblockedProjectNames.push((await findProject(projectId)).name);
       }
-    })
+    });
 
     report.bannedProjectIds.map(async (projectId) => {
       /**
@@ -218,7 +218,7 @@ export default class LimiterWorker extends Worker {
       }
     });
 
-    const message = `🔑 [ Limiter / Regular ] Unblocked projects ${JSON.stringify(unblockedProjectNames)}\nBlocked projects: ` + JSON.stringify(blockedProjectNames)
+    const message = `🔑 [ Limiter / Regular ] Unblocked projects ${JSON.stringify(unblockedProjectNames)}\nBlocked projects: ` + JSON.stringify(blockedProjectNames);
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
