@@ -203,7 +203,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
      * And accumulate all of the unbanned project names
      */
     currentlyBannedProjectIds.map(async (projectId) => {
-      if (!(projectId in report.bannedProjectIds)) {
+      if (!(report.bannedProjectIds.includes(projectId))) {
         unblockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
@@ -212,7 +212,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
       /**
        * If project is not in the set now, it would be banned
        */
-      if (!this.redis.isProjectBanned(projectId)) {
+      if (!(await this.redis.isProjectBanned(projectId))) {
         blockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
