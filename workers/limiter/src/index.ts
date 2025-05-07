@@ -134,14 +134,14 @@ export default class LimiterWorker extends Worker {
     if (report.isBlocked) {
       const blockedProjectNames: string[] = [];
 
-      workspaceProjects.forEach(project => {
+      Promise.all(workspaceProjects.map(async (project) => {
         /**
          * If project is not banned yet
          */
-        if (!this.redis.isProjectBanned(project._id.toString())) {
+        if (!(await this.redis.isProjectBanned(project._id.toString()))) {
           blockedProjectNames.push(project.name);
         }
-      });
+      }));
 
       await this.redis.appendBannedProjects(workspaceProjectsIds);
 
@@ -149,14 +149,14 @@ export default class LimiterWorker extends Worker {
     } else {
       const unblockedProjectNames: string[] = [];
 
-      workspaceProjects.forEach(project => {
+      Promise.all(workspaceProjects.map(async (project) => {
         /**
          * If project is not banned yet
          */
-        if (this.redis.isProjectBanned(project._id.toString())) {
+        if (await this.redis.isProjectBanned(project._id.toString())) {
           unblockedProjectNames.push(project.name);
         }
-      });
+      }));
 
       await this.redis.removeBannedProjects(workspaceProjectsIds);
 
@@ -181,7 +181,7 @@ export default class LimiterWorker extends Worker {
 
     const findProject = async (projectId): Promise<ProjectDBScheme> => {
       return await this.projectsCollection.findOne({
-        _id: projectId,
+        _id: ObjectId(projectId),
       });
     };
 
@@ -191,23 +191,29 @@ export default class LimiterWorker extends Worker {
     const blockedProjectNames: string[] = [];
 
     /**
-     * Find all the projects that would be unbanned
-     * And accumulate all of the unbanned project names
+     * Find all the projects that would be unblocked
+     * And accumulate all of the unblocked project names
      */
     Promise.all(currentlyBannedProjectIds.map(async (projectId) => {
       if (!(report.bannedProjectIds.includes(projectId))) {
         const project = await findProject(projectId);
 
-        unblockedProjectNames.push(project.name);
+        unblockedProjectNames.push(project?.name);
       }
     }));
 
+    /**
+     * Find all the projects that would be blocked
+     * And accumulate all of the blocked project names
+     */
     Promise.all(report.bannedProjectIds.map(async (projectId) => {
       /**
        * If project is not in the set now, it would be blocked
        */
       if (!(await this.redis.isProjectBanned(projectId))) {
-        blockedProjectNames.push((await findProject(projectId))?.name);
+        const project = await findProject(projectId);
+
+        blockedProjectNames.push(project?.name);
       }
     }));
 
@@ -491,6 +497,10 @@ export default class LimiterWorker extends Worker {
    * @param type - workspace was blocked or unblocked
    */
   private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked'): void {
+    if (projects.length === 0) {
+      return;
+    }
+
     const message = this.formatProjectList(`${type} workspaces`, projects);
 
     telegram.sendMessage(`🔐 <b>[ Limiter / Single ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
@@ -503,14 +513,14 @@ export default class LimiterWorker extends Worker {
    * @param unblockedProjects - names of unblocked projects
    */
   private sendRegularReport(blockedProjects: string[], unblockedProjects: string[]): void {
-    const message = `🔐 <b>[ Limiter / Regular ]</b>\n` +
-    this.formatProjectList('Blocked projects', blockedProjects) + "\n\n" +
-    this.formatProjectList('Unblocked projects', unblockedProjects)
-
-    if (blockedProjects.length > 0 || unblockedProjects.length > 0) {
-      telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
+    if (blockedProjects.length === 0 || unblockedProjects.length === 0) {
+      return;
     }
 
-    return;
+    const message = `🔐 <b>[ Limiter / Regular ]</b>\n` +
+    this.formatProjectList('Blocked projects', blockedProjects) + '\n\n' +
+    this.formatProjectList('Unblocked projects', unblockedProjects);
+
+    telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
   }
 }
