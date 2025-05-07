@@ -504,10 +504,13 @@ export default class LimiterWorker extends Worker {
    */
   private sendRegularReport(blockedProjects: string[], unblockedProjects: string[]): void {
     const message = `🔐 <b>[ Limiter / Regular ]</b>\n` +
-    this.formatProjectList('Blocked projects', blockedProjects) + '\n\n';
+    this.formatProjectList('Blocked projects', blockedProjects) + "\n\n" +
+    this.formatProjectList('Unblocked projects', unblockedProjects)
 
-    this.formatProjectList('Unblocked projects', unblockedProjects);
+    if (blockedProjects.length > 0 || unblockedProjects.length > 0) {
+      telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
+    }
 
-    telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
+    return;
   }
 }
