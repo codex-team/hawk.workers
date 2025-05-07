@@ -88,6 +88,22 @@ export default class RedisHelper {
   }
 
   /**
+   * Method that checks if project is in banned projects set
+   *
+   * @param projectId - id of the project to be checked
+   */
+  public async isProjectBanned(projectId: string): Promise<boolean> {
+    return await this.redisClient.sIsMember(this.redisDisabledProjectsKey, projectId);
+  }
+
+  /**
+   * Method that returns list of disabled project ids
+   */
+  public async getBannedProjectIds(): Promise<string[]> {
+    return await this.redisClient.sMembers(this.redisDisabledProjectsKey);
+  }
+
+  /**
    * Add new banned projects to the set
    *
    * @param projectIds - project ids to append

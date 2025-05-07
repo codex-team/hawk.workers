@@ -7,8 +7,6 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import HawkCatcher from '@hawk.so/nodejs';
-import axios from 'axios';
-import shortNumber from 'short-number';
 import { CriticalError } from '../../../lib/workerErrors';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
@@ -16,6 +14,7 @@ import RedisHelper from './redisHelper';
 import { MultiplyWorkspacesAnalyzeReport, SingleWorkspaceAnalyzeReport } from '../types/reportData';
 import { WorkspaceWithTariffPlan } from '../types';
 import * as WorkerNames from '../../../lib/workerNames';
+import * as telegram from '../../../lib/utils/telegram';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -117,8 +116,6 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleCheckSingleWorkspaceEvent(event: CheckSingleWorkspaceEvent): Promise<void> {
-    this.logger.info('Limiter worker started checking workspace with id ' + event.workspaceId);
-
     const workspace = await this.getWorkspaceWithTariffPlan(event.workspaceId);
 
     if (!workspace) {
@@ -130,25 +127,46 @@ export default class LimiterWorker extends Worker {
     const workspaceProjects = await this.getProjects(event.workspaceId);
     const workspaceProjectsIds = workspaceProjects.map(p => p._id.toString());
 
-    this.logger.info(`Starting analyzing for workspace with id ${event.workspaceId} and ${workspaceProjects.length} projects.`);
-
     const report = await this.analyzeWorkspaceData(workspace, workspaceProjects);
 
-    this.logger.info(`Finished analyzing for workspace with id ${event.workspaceId}`);
     await this.updateWorkspacesEventsCount([ report.updatedWorkspace ]);
 
     if (report.isBlocked) {
-      this.logger.info(`Block workspace with id ${event.workspaceId}`);
+      const blockedProjectNames: string[] = [];
+
+      Promise.all(workspaceProjects.map(async (project) => {
+        /**
+         * If project is not banned yet
+         */
+        if (!(await this.redis.isProjectBanned(project._id.toString()))) {
+          blockedProjectNames.push(project.name);
+        }
+      }));
+
       await this.redis.appendBannedProjects(workspaceProjectsIds);
+
+      this.sendSingleWorkspaceReport(blockedProjectNames, 'Blocked');
     } else {
-      this.logger.info(`Unblock workspace with id ${event.workspaceId}`);
+      const unblockedProjectNames: string[] = [];
+
+      Promise.all(workspaceProjects.map(async (project) => {
+        /**
+         * If project is not banned yet
+         */
+        if (await this.redis.isProjectBanned(project._id.toString())) {
+          unblockedProjectNames.push(project.name);
+        }
+      }));
+
       await this.redis.removeBannedProjects(workspaceProjectsIds);
+
+      this.sendSingleWorkspaceReport(unblockedProjectNames, 'Unblocked');
     }
+
     this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
 
-    await this.sendSingleWorkspacesCheckReport(report);
     this.logger.info(
-      `Limiter worker finished workspace checking. Workspace with id ${event.workspaceId} was ${report.isBlocked ? 'banned' : 'unbanned'}`
+      `Limiter worker finished workspace checking. Workspace with id "${event.workspaceId}" was ${report.isBlocked ? 'banned' : 'unbanned'}`
     );
   }
 
@@ -161,8 +179,48 @@ export default class LimiterWorker extends Worker {
 
     const report = await this.analyzeWorkspacesLimits();
 
+    const findProject = async (projectId): Promise<ProjectDBScheme> => {
+      return await this.projectsCollection.findOne({
+        _id: ObjectId(projectId),
+      });
+    };
+
+    const currentlyBannedProjectIds = await this.redis.getBannedProjectIds();
+
+    const unblockedProjectNames: string[] = [];
+    const blockedProjectNames: string[] = [];
+
+    /**
+     * Find all the projects that would be unblocked
+     * And accumulate all of the unblocked project names
+     */
+    Promise.all(currentlyBannedProjectIds.map(async (projectId) => {
+      if (!(report.bannedProjectIds.includes(projectId))) {
+        const project = await findProject(projectId);
+
+        unblockedProjectNames.push(project?.name);
+      }
+    }));
+
+    /**
+     * Find all the projects that would be blocked
+     * And accumulate all of the blocked project names
+     */
+    Promise.all(report.bannedProjectIds.map(async (projectId) => {
+      /**
+       * If project is not in the set now, it would be blocked
+       */
+      if (!(await this.redis.isProjectBanned(projectId))) {
+        const project = await findProject(projectId);
+
+        blockedProjectNames.push(project?.name);
+      }
+    }));
+
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
+
+    this.sendRegularReport(blockedProjectNames, unblockedProjectNames);
 
     this.logger.info('Limiter worker finished task');
   }
@@ -296,7 +354,6 @@ export default class LimiterWorker extends Worker {
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
-    this.logger.info(`Processing project with id ${project._id}`);
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
 
@@ -367,8 +424,6 @@ export default class LimiterWorker extends Worker {
           workspaceId: workspace._id,
         },
       });
-
-      await this.sendWorkspaceBlockedReport(workspace);
     } else if (quotaNotification) {
       /**
        * Add task for Sender worker
@@ -421,61 +476,51 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Send a notification to the reports chat about banned workspace
+   * Method that formats project list to html used in report messages
    *
-   * @param {WorkspaceDBScheme} workspace - workspace to be reported
-   * @returns {Promise<void>}
-   * @private
+   * @param title - title of the section (blocked or unblockes projects)
+   * @param projectNames - names of the projects
+   * @returns {string} formatted html string
    */
-  private async sendWorkspaceBlockedReport(workspace: WorkspaceDBScheme): Promise<void> {
-    const reportMessage = `
-🚧 Hawk Limiter ${process.env.ENVIRONMENT_NAME ? `(${process.env.ENVIRONMENT_NAME})` : ''}
+  private formatProjectList(title: string, projectNames: string[]): string {
+    if (projectNames.length === 0) {
+      return `<b>${title}</b>\n<code>(none)</code>`;
+    }
 
-Workspace "${workspace.name}" has been blocked.
-    `;
-
-    await this.sendReport(reportMessage);
+    return `<b>${title}</b>\n${projectNames.map(name => `• ${name}`).join('\n')}`;
   }
 
   /**
-   * Sends notification to the chat about result of the workspace checking
+   * Method that sends singele workspace check report ti tg chat with telegram util
    *
-   * @param reportData - report data for generating notification
+   * @param projects - names of blocked or unblocked projects
+   * @param type - workspace was blocked or unblocked
    */
-  private async sendSingleWorkspacesCheckReport(reportData: SingleWorkspaceAnalyzeReport): Promise<void> {
-    const workspace = reportData.updatedWorkspace;
-
-    const reportString = `
-Hawk Limiter ${process.env.ENVIRONMENT_NAME ? `(${process.env.ENVIRONMENT_NAME})` : ''} 🚧
-
-${encodeURIComponent(workspace.name)} wants to be unblocked
-
-It has ${shortNumber(workspace.billingPeriodEventsCount)} events of ${workspace.tariffPlan.eventsLimit}. Last charge date: ${workspace.lastChargeDate.toISOString()}
-
-${reportData.isBlocked ? 'Blocked ❌' : 'Unblocked ✅'}
-`;
-
-    await this.sendReport(reportString);
-  }
-
-  /**
-   * Sends notify to the chat
-   *
-   * @param reportData - report notify in HTML markup to send
-   */
-  private async sendReport(reportData: string): Promise<void> {
-    if (!process.env.REPORT_NOTIFY_URL) {
-      this.logger.error('Can\'t send report because REPORT_NOTIFY_URL not provided');
-
+  private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked'): void {
+    if (projects.length === 0) {
       return;
     }
-    this.logger.debug('Sending report...');
 
-    await axios({
-      method: 'post',
-      url: process.env.REPORT_NOTIFY_URL,
-      data: 'message=' + reportData + '&parse_mode=HTML',
-    });
-    this.logger.debug('Report was sent');
+    const message = this.formatProjectList(`${type} workspaces`, projects);
+
+    telegram.sendMessage(`🔐 <b>[ Limiter / Single ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
+  }
+
+  /**
+   * Method that sends regular workspace check report ti tg chat with telegram util
+   *
+   * @param blockedProjects - names of blocked projects
+   * @param unblockedProjects - names of unblocked projects
+   */
+  private sendRegularReport(blockedProjects: string[], unblockedProjects: string[]): void {
+    if (blockedProjects.length === 0 || unblockedProjects.length === 0) {
+      return;
+    }
+
+    const message = `🔐 <b>[ Limiter / Regular ]</b>\n` +
+    this.formatProjectList('Blocked projects', blockedProjects) + '\n\n' +
+    this.formatProjectList('Unblocked projects', unblockedProjects);
+
+    telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
   }
 }

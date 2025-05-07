@@ -4,15 +4,20 @@ import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme 
 import LimiterWorker from '../src';
 import { createClient } from 'redis';
 import { mockedPlans } from './plans.mock';
-import axios from 'axios';
-import { mocked } from 'jest-mock';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import { RegularWorkspacesCheckEvent } from '../types/eventTypes';
+import * as telegram from '../../../lib/utils/telegram';
 
 /**
- * Mock axios for testing report sends
+ * Mock axios and telegram for testing report sends
  */
 jest.mock('axios');
+jest.mock('../../../lib/utils/telegram', () => ({
+  TelegramBotURLs: {
+    Limiter: 'limiter',
+  },
+  sendMessage: jest.fn(),
+}));
 
 const REGULAR_WORKSPACES_CHECK_EVENT: RegularWorkspacesCheckEvent = {
   type: 'regular-workspaces-check',
@@ -136,6 +141,10 @@ describe('Limiter worker', () => {
      * Insert mocked plans for using in tests
      */
     await planCollection.insertMany(Object.values(mockedPlans));
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('regular-workspaces-check', () => {
@@ -270,25 +279,43 @@ describe('Limiter worker', () => {
       expect(result).not.toContain(project._id.toString());
     });
 
-    test('Should send a report with collected data', async () => {
+    test('Should send a report with blocked and unblocked projects', async () => {
       /**
        * Arrange
-       *
-       * Worker initialization
        */
-      const worker = new LimiterWorker();
-
-      mocked(axios).mockResolvedValue({
-        data: {},
-        status: 200,
-        statusText: 'OK',
-        config: {},
-        headers: {},
+      const workspace1 = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
       });
+      const workspace2 = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project1 = createProjectMock({ workspaceId: workspace1._id });
+      const project2 = createProjectMock({ workspaceId: workspace2._id });
+
+      await fillDatabaseWithMockedData({
+        workspace: workspace1,
+        project: project1,
+        eventsToMock: 15, // Exceeds limit
+      });
+
+      await fillDatabaseWithMockedData({
+        workspace: workspace2,
+        project: project2,
+        eventsToMock: 100, // Within limit
+      });
+
+      // Mock project as already banned in Redis
+      await redisClient.sAdd('DisabledProjectsSet', project2._id.toString());
 
       /**
        * Act
        */
+      const worker = new LimiterWorker();
+
       await worker.start();
       await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
       await worker.finish();
@@ -296,12 +323,51 @@ describe('Limiter worker', () => {
       /**
        * Assert
        */
-      expect(axios).toHaveBeenCalled();
-      expect(axios).toHaveBeenCalledWith({
-        method: 'post',
-        url: process.env.REPORT_NOTIFY_URL,
-        data: expect.any(String),
+      expect(telegram.sendMessage).toHaveBeenCalled();
+      expect(telegram.sendMessage).toHaveBeenCalledWith(
+        expect.stringContaining('🔐 <b>[ Limiter / Regular ]</b>'),
+        telegram.TelegramBotURLs.Limiter
+      );
+
+      // Verify the report contains both blocked and unblocked projects
+      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+      expect(reportMessage).toContain('Blocked projects');
+      expect(reportMessage).toContain('Unblocked projects');
+      expect(reportMessage).toContain(project1.name);
+      expect(reportMessage).toContain(project2.name);
+    });
+
+    test('Should not send a report when no projects are blocked or unblocked', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
       });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 100, // Within limit
+      });
+
+      /**
+       * Act
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(telegram.sendMessage).not.toHaveBeenCalled();
     });
 
     test(`Should block projects if workspace has been blocked by Paymaster-worker (isBlocked field is presented with value 'true')`, async () => {
@@ -366,14 +432,6 @@ describe('Limiter worker', () => {
         eventsToMock: 100,
       });
 
-      mocked(axios).mockResolvedValue({
-        data: {},
-        status: 200,
-        statusText: 'OK',
-        config: {},
-        headers: {},
-      });
-
       /**
        * Act
        */
@@ -383,16 +441,6 @@ describe('Limiter worker', () => {
         workspaceId: workspace._id.toString(),
       });
       await worker.finish();
-
-      /**
-       * Assert
-       */
-      expect(axios).toHaveBeenCalled();
-      expect(axios).toHaveBeenCalledWith({
-        method: 'post',
-        url: process.env.REPORT_NOTIFY_URL,
-        data: expect.any(String),
-      });
 
       /**
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
@@ -426,14 +474,6 @@ describe('Limiter worker', () => {
         eventsToMock: 100,
       });
 
-      mocked(axios).mockResolvedValue({
-        data: {},
-        status: 200,
-        statusText: 'OK',
-        config: {},
-        headers: {},
-      });
-
       /**
        * Act
        */
@@ -443,16 +483,6 @@ describe('Limiter worker', () => {
         workspaceId: workspace._id.toString(),
       });
       await worker.finish();
-
-      /**
-       * Assert
-       */
-      expect(axios).toHaveBeenCalled();
-      expect(axios).toHaveBeenCalledWith({
-        method: 'post',
-        url: process.env.REPORT_NOTIFY_URL,
-        data: expect.any(String),
-      });
 
       /**
        * Gets all members of set with key 'DisabledProjectsSet' from Redis
@@ -483,6 +513,99 @@ describe('Limiter worker', () => {
         workspaceId: workspace._id.toString(),
       });
       await worker.finish();
+    });
+
+    test('Should send a report when workspace is blocked', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 15, // Exceeds limit
+      });
+
+      /**
+       * Act
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(telegram.sendMessage).toHaveBeenCalled();
+      expect(telegram.sendMessage).toHaveBeenCalledWith(
+        expect.stringContaining('🔐 <b>[ Limiter / Single ]</b>'),
+        telegram.TelegramBotURLs.Limiter
+      );
+
+      // Verify the report contains the blocked project
+      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+      expect(reportMessage).toContain('Blocked workspaces');
+      expect(reportMessage).toContain(project.name);
+    });
+
+    test('Should send a report when workspace is unblocked', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 100, // Within limit
+      });
+
+      // Mock project as already banned in Redis
+      await redisClient.sAdd('DisabledProjectsSet', project._id.toString());
+
+      /**
+       * Act
+       */
+      const worker = new LimiterWorker();
+
+      await worker.start();
+      await worker.handle({
+        type: 'check-single-workspace',
+        workspaceId: workspace._id.toString(),
+      });
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(telegram.sendMessage).toHaveBeenCalled();
+      expect(telegram.sendMessage).toHaveBeenCalledWith(
+        expect.stringContaining('🔐 <b>[ Limiter / Single ]</b>'),
+        telegram.TelegramBotURLs.Limiter
+      );
+
+      // Verify the report contains the unblocked project
+      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+      expect(reportMessage).toContain('Unblocked workspaces');
+      expect(reportMessage).toContain(project.name);
     });
   });
 
