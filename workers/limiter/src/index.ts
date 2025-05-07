@@ -187,9 +187,9 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
 
     const report = await this.analyzeWorkspacesLimits();
 
-    const findProject = async (projectId): Promise<ProjectDBScheme> => {
+    const findProject = async (projectId: string): Promise<ProjectDBScheme> => {
       return await this.projectsCollection.findOne({
-        _id: projectId,
+        _id: ObjectId(projectId),
       });
     };
 
