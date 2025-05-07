@@ -7,8 +7,6 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import HawkCatcher from '@hawk.so/nodejs';
-import axios from 'axios';
-import shortNumber from 'short-number';
 import { CriticalError } from '../../../lib/workerErrors';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { CheckSingleWorkspaceEvent } from '../types/eventTypes';
@@ -147,7 +145,7 @@ export default class LimiterWorker extends Worker {
 
       await this.redis.appendBannedProjects(workspaceProjectsIds);
 
-      this.sendSingleWorkspaceReport(blockedProjectNames, 'Blocked')
+      this.sendSingleWorkspaceReport(blockedProjectNames, 'Blocked');
     } else {
       const unblockedProjectNames: string[] = [];
 
@@ -162,7 +160,7 @@ export default class LimiterWorker extends Worker {
 
       await this.redis.removeBannedProjects(workspaceProjectsIds);
 
-      this.sendSingleWorkspaceReport(unblockedProjectNames, 'Unblocked')
+      this.sendSingleWorkspaceReport(unblockedProjectNames, 'Unblocked');
     }
 
     this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
@@ -199,6 +197,7 @@ export default class LimiterWorker extends Worker {
     Promise.all(currentlyBannedProjectIds.map(async (projectId) => {
       if (!(report.bannedProjectIds.includes(projectId))) {
         const project = await findProject(projectId);
+
         unblockedProjectNames.push(project.name);
       }
     }));
@@ -211,10 +210,6 @@ export default class LimiterWorker extends Worker {
         blockedProjectNames.push((await findProject(projectId))?.name);
       }
     }));
-
-    const message = `🔐 [ Limiter / Regular ] Updated workspaces eventLimits and isBlocked states
-    \nUnblocked projects ${JSON.stringify(unblockedProjectNames)}
-    \nBlocked projects: ` + JSON.stringify(blockedProjectNames);
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
@@ -476,41 +471,43 @@ export default class LimiterWorker extends Worker {
 
   /**
    * Method that formats project list to html used in report messages
+   *
    * @param title - title of the section (blocked or unblockes projects)
    * @param projectNames - names of the projects
-   * @returns formatted html string
+   * @returns {string} formatted html string
    */
   private formatProjectList(title: string, projectNames: string[]): string {
-    if (projectNames.length === 0) return `<b>${title}</b>\n<code>(none)</code>`;
+    if (projectNames.length === 0) {
+      return `<b>${title}</b>\n<code>(none)</code>`;
+    }
+
     return `<b>${title}</b>\n${projectNames.map(name => `• ${name}`).join('\n')}`;
-  };
-  
+  }
 
   /**
    * Method that sends singele workspace check report ti tg chat with telegram util
+   *
    * @param projects - names of blocked or unblocked projects
    * @param type - workspace was blocked or unblocked
    */
-  private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked'): Promise<void> {
+  private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked'): void {
     const message = this.formatProjectList(`${type} workspaces`, projects);
 
     telegram.sendMessage(`🔐 <b>[ Limiter / Single ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
-
-    return;
   }
 
   /**
    * Method that sends regular workspace check report ti tg chat with telegram util
+   *
    * @param blockedProjects - names of blocked projects
    * @param unblockedProjects - names of unblocked projects
    */
-  private async sendRegularReport(blockedProjects: string[], unblockedProjects: string[]): Promise<void> {
+  private sendRegularReport(blockedProjects: string[], unblockedProjects: string[]): void {
     const message = `🔐 <b>[ Limiter / Regular ]</b>\n` +
-    this.formatProjectList('Blocked projects', blockedProjects) + "\n\n" 
-    this.formatProjectList('Unblocked projects', unblockedProjects)
+    this.formatProjectList('Blocked projects', blockedProjects) + '\n\n';
+
+    this.formatProjectList('Unblocked projects', unblockedProjects);
 
     telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
-
-    return;
   }
 }
