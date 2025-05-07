@@ -202,22 +202,24 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
      * Find all the projects that would be unbanned
      * And accumulate all of the unbanned project names
      */
-    currentlyBannedProjectIds.map(async (projectId) => {
+    await Promise.all(currentlyBannedProjectIds.map(async (projectId) => {
       if (!(report.bannedProjectIds.includes(projectId))) {
+        const project = await findProject(projectId);
         this.logger.info(`project wouldbe banned projectId: ${projectId}: ${JSON.stringify(await findProject(projectId))}`);
-        unblockedProjectNames.push((await findProject(projectId))?.name);
+        unblockedProjectNames.push(project.name);
       }
-    });
+    }));
 
-    report.bannedProjectIds.map(async (projectId) => {
+    await Promise.all(report.bannedProjectIds.map(async (projectId) => {
       /**
        * If project is not in the set now, it would be banned
        */
       if (!(await this.redis.isProjectBanned(projectId))) {
+        const project = await findProject(projectId);
         this.logger.info(`project wouldbe unbanned projectId: ${projectId}: ${JSON.stringify(await findProject(projectId))}`);
-        blockedProjectNames.push((await findProject(projectId))?.name);
+        blockedProjectNames.push(project.name);
       }
-    });
+    }));
 
     const message = `🔐 [ Limiter / Regular ] Updated workspaces eventLimits and isBlocked states
     \nUnblocked projects ${JSON.stringify(unblockedProjectNames)}
