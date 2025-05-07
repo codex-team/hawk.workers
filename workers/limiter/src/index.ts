@@ -162,9 +162,8 @@ export default class LimiterWorker extends Worker {
         }
       });
 
-      const message = `🔑 [ Limiter / Single ] Unblocked workspace "${workspace.name}"\nUnblocked projects: ` + JSON.stringify(unbannedProjectNames);
-
-      await this.redis.appendBannedProjects(workspaceProjectsIds);
+      const message = `🔑 [ Limiter / Single ] Unblocked workspace "${workspace.name}"
+Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
 
       await this.redis.removeBannedProjects(workspaceProjectsIds);
 
@@ -218,12 +217,19 @@ export default class LimiterWorker extends Worker {
       }
     });
 
-    const message = `🔑 [ Limiter / Regular ] Unblocked projects ${JSON.stringify(unblockedProjectNames)}\nBlocked projects: ` + JSON.stringify(blockedProjectNames);
+    const message = `🔐 [ Limiter / Regular ] Updated workspaces eventLimits and isBlocked states
+    \nUnblocked projects ${JSON.stringify(unblockedProjectNames)}
+    \nBlocked projects: ` + JSON.stringify(blockedProjectNames);
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
 
-    telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
+    /**
+     * Check that at least one project was blocked or unblocked
+     */
+    if (blockedProjectNames.length > 0 || blockedProjectNames.length > 0) {
+      telegram.sendMessage(message, telegram.TelegramBotURLs.Limiter);
+    }
 
     this.logger.info('Limiter worker finished task');
   }
@@ -357,7 +363,6 @@ export default class LimiterWorker extends Worker {
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
-    this.logger.info(`Processing project with id ${project._id}`);
     const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
     const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
 
