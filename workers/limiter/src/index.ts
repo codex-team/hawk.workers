@@ -204,6 +204,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
      */
     currentlyBannedProjectIds.map(async (projectId) => {
       if (!(report.bannedProjectIds.includes(projectId))) {
+        this.logger.info(`project wouldbe banned projectId: ${projectId}: ${JSON.stringify(await findProject(projectId))}`);
         unblockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
@@ -213,6 +214,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
        * If project is not in the set now, it would be banned
        */
       if (!(await this.redis.isProjectBanned(projectId))) {
+        this.logger.info(`project wouldbe unbanned projectId: ${projectId}: ${JSON.stringify(await findProject(projectId))}`);
         blockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
@@ -223,6 +225,8 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
 
     await this.updateWorkspacesEventsCount(report.updatedWorkspaces);
     await this.redis.saveBannedProjectsSet(report.bannedProjectIds);
+
+    this.logger.info(`${JSON.stringify(blockedProjectNames)}\n ${JSON.stringify(unblockedProjectNames)}`)
 
     /**
      * Check that at least one project was blocked or unblocked
