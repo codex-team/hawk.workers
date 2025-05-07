@@ -198,7 +198,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
     const unblockedProjectNames: string[] = [];
     const blockedProjectNames: string[] = [];
 
-    this.logger.info(`Banned projects in report: ${JSON.stringify(report.bannedProjectIds)}`)
+    this.logger.info(`Banned projects in report: ${JSON.stringify(report.bannedProjectIds)}`);
     this.logger.info(`Banned projects in redis: ${JSON.stringify(currentlyBannedProjectIds)}`);
     
     /**
@@ -207,6 +207,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
      */
     currentlyBannedProjectIds.map(async (projectId) => {
       if (!(projectId in report.bannedProjectIds)) {
+        this.logger.info(`Project with id ${projectId} would be banned`);
         unblockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
@@ -216,6 +217,7 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
        * If project is not in the set now, it would be banned
        */
       if (!this.redis.isProjectBanned(projectId)) {
+        this.logger.info(`Project with id ${projectId} would be unbanned`);
         blockedProjectNames.push((await findProject(projectId))?.name);
       }
     });
