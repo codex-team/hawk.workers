@@ -198,6 +198,9 @@ Unblocked projects: ` + JSON.stringify(unbannedProjectNames);
     const unblockedProjectNames: string[] = [];
     const blockedProjectNames: string[] = [];
 
+    this.logger.info(`Banned projects in report: ${JSON.stringify(report.bannedProjectIds)}`)
+    this.logger.info(`Banned projects in redis: ${JSON.stringify(currentlyBannedProjectIds)}`);
+    
     /**
      * Find all the projects that would be unbanned
      * And accumulate all of the unbanned project names
