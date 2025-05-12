@@ -145,7 +145,7 @@ export default class LimiterWorker extends Worker {
 
       await this.redis.appendBannedProjects(workspaceProjectsIds);
 
-      this.sendSingleWorkspaceReport(blockedProjectNames, 'Blocked');
+      this.sendSingleWorkspaceReport(blockedProjectNames, 'Blocked', workspace.name);
     } else {
       const unblockedProjectNames: string[] = [];
 
@@ -160,7 +160,7 @@ export default class LimiterWorker extends Worker {
 
       await this.redis.removeBannedProjects(workspaceProjectsIds);
 
-      this.sendSingleWorkspaceReport(unblockedProjectNames, 'Unblocked');
+      this.sendSingleWorkspaceReport(unblockedProjectNames, 'Unblocked', workspace.name);
     }
 
     this.logger.debug(`Block status for workspace ${event.workspaceId} was successfully saved to Redis`);
@@ -495,13 +495,16 @@ export default class LimiterWorker extends Worker {
    *
    * @param projects - names of blocked or unblocked projects
    * @param type - workspace was blocked or unblocked
+   * @param workspaceName - name of the blocked or unblocked workspace
    */
-  private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked'): void {
+  private sendSingleWorkspaceReport(projects: string[], type: 'Blocked' | 'Unblocked', workspaceName: string): void {
     if (projects.length === 0) {
       return;
     }
 
-    const message = this.formatProjectList(`${type} workspaces`, projects);
+    const message = projects.length
+      ? this.formatProjectList(`${type} projects of the workspace ${workspaceName}`, projects)
+      : `${type} workspace ${workspaceName} projects already stored in redis`;
 
     telegram.sendMessage(`🔐 <b>[ Limiter / Single ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
   }

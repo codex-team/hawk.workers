@@ -556,7 +556,8 @@ describe('Limiter worker', () => {
       // Verify the report contains the blocked project
       const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
 
-      expect(reportMessage).toContain('Blocked workspaces');
+      expect(reportMessage).toContain('Blocked projects of the workspace');
+      expect(reportMessage).toContain(workspace.name);
       expect(reportMessage).toContain(project.name);
     });
 
@@ -604,7 +605,8 @@ describe('Limiter worker', () => {
       // Verify the report contains the unblocked project
       const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
 
-      expect(reportMessage).toContain('Unblocked workspaces');
+      expect(reportMessage).toContain('Unblocked projects of the workspace');
+      expect(reportMessage).toContain(workspace.name);
       expect(reportMessage).toContain(project.name);
     });
   });
