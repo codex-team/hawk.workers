@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const limiterBotUrl = process.env.TELEGRAM_LIMITER_CHAT_URL || 'https://notify.bot.codex.so/u/W7KXWYU9KK8Y';
+const limiterBotUrl = process.env.TELEGRAM_LIMITER_CHAT_URL;
 
 /**
  * Telegram bot URLs
