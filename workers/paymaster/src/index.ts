@@ -327,11 +327,10 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for block
    */
   private async blockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
-    await this.workspaces.updateOne({
-      _id: workspace._id,
-    }, {
-      $set: {
-        isBlocked: true,
+    await this.addTask(WorkerNames.LIMITER, {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id,
       },
     });
 
@@ -354,11 +353,10 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for block
    */
   private async unblockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
-    await this.workspaces.updateOne({
-      _id: workspace._id,
-    }, {
-      $set: {
-        isBlocked: false,
+    await this.addTask(WorkerNames.EMAIL, {
+      type: 'unblock-workspace',
+      payload: {
+        workspaceId: workspace._id,
       },
     });
   }
