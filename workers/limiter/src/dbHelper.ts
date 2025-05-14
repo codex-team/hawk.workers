@@ -1,0 +1,180 @@
+import { DatabaseController } from "../../../lib/db/controller";
+import { Collection, Db, ObjectId } from 'mongodb';
+import { ProjectDBScheme, WorkspaceDBScheme } from "@hawk.so/types";
+import { WorkspaceWithTariffPlan } from "../types";
+import HawkCatcher from '@hawk.so/nodejs';
+import { CriticalError } from '../../../lib/workerErrors';
+
+export class DbHelper {
+  /**
+   * Connection to events DB
+   */
+  private eventsDbConnection!: Db;
+
+  /**
+   * Collection with projects
+   */
+  private projectsCollection!: Collection<ProjectDBScheme>;
+
+  /**
+   * Collection with workspaces
+   */
+  private workspacesCollection!: Collection<WorkspaceDBScheme>;
+
+  constructor(projects: Collection<ProjectDBScheme>, workspaces: Collection<WorkspaceDBScheme>, eventsDbConnection: Db) {
+    this.eventsDbConnection = eventsDbConnection;
+    this.projectsCollection = projects;
+    this.workspacesCollection = workspaces;
+  }
+
+  /**
+  * @overload
+  * @returns {Promise<WorkspaceWithTariffPlan[]>} - all workspaces with their tariff plans
+  */
+  public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
+  /**
+    * @overload
+    * @param id - id of the workspace to fetch
+    * @returns {Promise<WorkspaceWithTariffPlan>} - workspace with its tariff plan 
+    */
+  public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
+  /**
+    * Returns workspace with its tariff plan by its id
+    *
+    * @param id - workspace id
+    */
+  public async getWorkspacesWithTariffPlans(id?: string):Promise<WorkspaceWithTariffPlan[] | WorkspaceWithTariffPlan> {   
+    /* eslint-disable-next-line */
+    const queue: any[] = [
+      {
+        $lookup: {
+          from: 'plans',
+          localField: 'tariffPlanId',
+          foreignField: '_id',
+          as: 'tariffPlan',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tariffPlan',
+        },
+      },
+    ];
+
+    if (id !== undefined) {
+      queue.unshift({
+        $match: {
+          _id: new ObjectId(id),
+        },
+      });
+    }
+
+    const workspacesArray = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(queue).toArray();
+
+    return (id !== undefined) ? workspacesArray[0] : workspacesArray;
+  }
+
+   /**
+   * Updates workspaces data in Database
+   * @param workspacesToUpdate - array of workspaces to be updated
+   */
+  public async updateWorkspaces(workspacesToUpdate: WorkspaceWithTariffPlan[]): Promise<void> {
+    if (workspacesToUpdate.length === 0) {
+      return;
+    }
+
+    const operations = workspacesToUpdate.map(workspace => {
+      return {
+        updateOne: {
+          filter: {
+            _id: workspace._id,
+          },
+          update: {
+            $set: {
+              billingPeriodEventsCount: workspace.billingPeriodEventsCount,
+              isBlocked: workspace.isBlocked,
+            },
+          },
+        },
+      };
+    });
+
+    await this.workspacesCollection.bulkWrite(operations);
+  }   
+
+  /**
+   * Method to change workspace isBlocked state
+   * @param workspaceId - id of the workspace to be changed
+   * @param isBlocked - new isBlocked state of the workspace
+   */
+  public async changeWorkspaceBlockedState(workspaceId: string, isBlocked: boolean): Promise<void> {
+    await this.workspacesCollection.updateOne(
+      { _id: new ObjectId(workspaceId) },
+      {
+        $set: {
+          isBlocked,
+        },
+      }
+    );
+  }
+
+  /**
+   * Returns total event counts for last billing period
+   *
+   * @param project - project to check
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProject(
+    project: ProjectDBScheme,
+    since: number
+  ): Promise<number> {
+    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
+    const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
+
+    const query = {
+      'payload.timestamp': {
+        $gt: since,
+      },
+    };
+
+    try {
+      const [repetitionsCount, originalEventCount] = await Promise.all([
+        repetitionsCollection.find(query).count(),
+        eventsCollection.find(query).count(),
+      ]);
+
+      return repetitionsCount + originalEventCount;
+    } catch (e) {
+      HawkCatcher.send(e);
+      throw new CriticalError(e);
+    }
+  }
+
+  /**
+   * Calculates total events count for all provided projects since the specific date
+   *
+   * @param projects - projects to calculate for
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProjects(projects: ProjectDBScheme[], since: number): Promise<number> {
+    const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
+
+    return Promise.all(projects.map(
+      project => this.getEventsCountByProject(project, since)
+    ))
+      .then(sum);
+  }
+
+  /**
+   * Returns all projects from Database or projects of the specified workspace
+   *
+   * @param [workspaceId] - workspace ids to fetch projects that belongs that workspace
+   */
+  public getProjects(workspaceId?: string): Promise<ProjectDBScheme[]> {
+    const query = workspaceId
+      ? { workspaceId: new ObjectId(workspaceId) }
+      : {};
+
+    return this.projectsCollection.find(query).toArray();
+  }
+}
