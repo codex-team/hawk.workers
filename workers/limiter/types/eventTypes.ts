@@ -24,9 +24,33 @@ export interface RegularWorkspacesCheckEvent {
   type: 'regular-workspaces-check'
 }
 
+export interface BlockWorkspaceEvent {
+  /**
+   * Event type name
+   */
+  type: 'block-workspace'
+
+  /**
+   * Workspace id to block
+   */
+  workspaceId: string;
+}
+
+export interface UnblockWorkspaceEvent {
+  /**
+   * Event type name
+   */
+  type: 'unblock-workspace'
+
+  /**
+   * Workspace id to unblock
+   */
+  workspaceId: string;
+}
+
 /**
  * All types of events for limiter worker
  */
-type LimiterEvent = CheckSingleWorkspaceEvent | RegularWorkspacesCheckEvent;
+type LimiterEvent = CheckSingleWorkspaceEvent | RegularWorkspacesCheckEvent | BlockWorkspaceEvent | UnblockWorkspaceEvent;
 
 export default LimiterEvent;
