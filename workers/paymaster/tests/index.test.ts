@@ -76,7 +76,7 @@ describe('PaymasterWorker', () => {
   /**
    * Fills database with workspace and plan
    *
-   * @param parameters - parameters for filling database
+   * @param parameters - workspace, project and mocked events amount to be inserted
    */
   const fillDatabaseWithMockedData = async (parameters: {
     workspace: WorkspaceDBScheme,
@@ -130,6 +130,7 @@ describe('PaymasterWorker', () => {
      * Act
      */
     const worker = new PaymasterWorker();
+    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
 
     await worker.start();
     await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
@@ -138,9 +139,20 @@ describe('PaymasterWorker', () => {
     /**
      * Assert
      */
-    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+    expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(1, 'cron-tasks/limiter', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
 
-    expect(updatedWorkspace.isBlocked).toEqual(true);
+    expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(2, 'sender/email', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
+
     MockDate.reset();
   });
 
@@ -172,6 +184,7 @@ describe('PaymasterWorker', () => {
      * Act
      */
     const worker = new PaymasterWorker();
+    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
 
     await worker.start();
     await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
@@ -180,9 +193,20 @@ describe('PaymasterWorker', () => {
     /**
      * Assert
      */
-    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
-    expect(updatedWorkspace.isBlocked).toEqual(false);
+    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('limiter', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
+
+    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('email', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
     MockDate.reset();
   });
 
@@ -214,6 +238,7 @@ describe('PaymasterWorker', () => {
      * Act
      */
     const worker = new PaymasterWorker();
+    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
 
     await worker.start();
     await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
@@ -222,9 +247,19 @@ describe('PaymasterWorker', () => {
     /**
      * Assert
      */
-    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
 
-    expect(updatedWorkspace.isBlocked).toEqual(true);
+    expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(1, 'cron-tasks/limiter', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
+    expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(2, 'sender/email', {
+      type: 'block-workspace',
+      payload: {
+        workspaceId: workspace._id.toString(),
+      },
+    });
     MockDate.reset();
   });
 
@@ -505,7 +540,7 @@ describe('PaymasterWorker', () => {
       {
         type: 'days-limit-almost-reached',
         payload: {
-          workspaceId: workspace._id,
+          workspaceId: workspace._id.toString(),
           daysLeft: 1,
         },
       }

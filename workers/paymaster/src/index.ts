@@ -237,6 +237,13 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
+       * If workspace was manually unblocked in db
+       */
+      if (workspace.isBlocked) {
+        await this.unblockWorkspace(workspace);
+      }
+
+      /**
        * If payday is coming for the paid plans then notify admins
        */
       if (DAYS_LEFT_ALERT.includes(daysLeft) && !isFreePlan && !workspace.subscriptionId) {
@@ -246,7 +253,7 @@ export default class PaymasterWorker extends Worker {
         await this.addTask(WorkerNames.EMAIL, {
           type: 'days-limit-almost-reached',
           payload: {
-            workspaceId: workspace._id,
+            workspaceId: workspace._id.toString(),
             daysLeft: daysLeft,
           },
         });
@@ -330,7 +337,7 @@ export default class PaymasterWorker extends Worker {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'block-workspace',
       payload: {
-        workspaceId: workspace._id,
+        workspaceId: workspace._id.toString(),
       },
     });
 
@@ -340,7 +347,7 @@ export default class PaymasterWorker extends Worker {
     await this.addTask(WorkerNames.EMAIL, {
       type: 'block-workspace',
       payload: {
-        workspaceId: workspace._id,
+        workspaceId: workspace._id.toString(),
       },
     });
 
@@ -353,10 +360,10 @@ export default class PaymasterWorker extends Worker {
    * @param workspace - workspace for block
    */
   private async unblockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
-    await this.addTask(WorkerNames.EMAIL, {
+    await this.addTask(WorkerNames.LIMITER, {
       type: 'unblock-workspace',
       payload: {
-        workspaceId: workspace._id,
+        workspaceId: workspace._id.toString(),
       },
     });
   }

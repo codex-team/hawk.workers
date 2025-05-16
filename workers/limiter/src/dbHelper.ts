@@ -1,26 +1,33 @@
-import { DatabaseController } from "../../../lib/db/controller";
 import { Collection, Db, ObjectId } from 'mongodb';
-import { ProjectDBScheme, WorkspaceDBScheme } from "@hawk.so/types";
-import { WorkspaceWithTariffPlan } from "../types";
+import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
+import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
 import { CriticalError } from '../../../lib/workerErrors';
 
+/**
+ * Class that implements methods used for interaction between limiter and db
+ */
 export class DbHelper {
   /**
    * Connection to events DB
    */
-  private eventsDbConnection!: Db;
+  private eventsDbConnection: Db;
 
   /**
    * Collection with projects
    */
-  private projectsCollection!: Collection<ProjectDBScheme>;
+  private projectsCollection: Collection<ProjectDBScheme>;
 
   /**
    * Collection with workspaces
    */
-  private workspacesCollection!: Collection<WorkspaceDBScheme>;
+  private workspacesCollection: Collection<WorkspaceDBScheme>;
 
+  /**
+   * @param projects - projects collection
+   * @param workspaces - workspaces collection
+   * @param eventsDbConnection - connection to events DB
+   */
   constructor(projects: Collection<ProjectDBScheme>, workspaces: Collection<WorkspaceDBScheme>, eventsDbConnection: Db) {
     this.eventsDbConnection = eventsDbConnection;
     this.projectsCollection = projects;
@@ -28,22 +35,20 @@ export class DbHelper {
   }
 
   /**
-  * @overload
-  * @returns {Promise<WorkspaceWithTariffPlan[]>} - all workspaces with their tariff plans
-  */
+   * @returns {Promise<WorkspaceWithTariffPlan[]>} - all workspaces with their tariff plans
+   */
   public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
   /**
-    * @overload
-    * @param id - id of the workspace to fetch
-    * @returns {Promise<WorkspaceWithTariffPlan>} - workspace with its tariff plan 
-    */
+   * @param id - id of the workspace to fetch
+   * @returns {Promise<WorkspaceWithTariffPlan>} - workspace with its tariff plan
+   */
   public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
   /**
-    * Returns workspace with its tariff plan by its id
-    *
-    * @param id - workspace id
-    */
-  public async getWorkspacesWithTariffPlans(id?: string):Promise<WorkspaceWithTariffPlan[] | WorkspaceWithTariffPlan> {   
+   * Returns workspace with its tariff plan by its id
+   *
+   * @param id - workspace id
+   */
+  public async getWorkspacesWithTariffPlans(id?: string):Promise<WorkspaceWithTariffPlan[] | WorkspaceWithTariffPlan> {
     /* eslint-disable-next-line */
     const queue: any[] = [
       {
@@ -74,8 +79,9 @@ export class DbHelper {
     return (id !== undefined) ? workspacesArray[0] : workspacesArray;
   }
 
-   /**
+  /**
    * Updates workspaces data in Database
+   *
    * @param workspacesToUpdate - array of workspaces to be updated
    */
   public async updateWorkspaces(workspacesToUpdate: WorkspaceWithTariffPlan[]): Promise<void> {
@@ -100,10 +106,11 @@ export class DbHelper {
     });
 
     await this.workspacesCollection.bulkWrite(operations);
-  }   
+  }
 
   /**
    * Method to change workspace isBlocked state
+   *
    * @param workspaceId - id of the workspace to be changed
    * @param isBlocked - new isBlocked state of the workspace
    */

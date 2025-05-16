@@ -25,7 +25,7 @@
         "test:javascript": "jest workers/javascript",
         "test:release": "jest workers/release",
         "test:slack": "jest workers/slack",
-        "test:limiter": "jest workers/limiter",
+        "test:limiter": "jest workers/limiter --runInBand",
         "test:grouper": "jest workers/grouper",
         "test:paymaster": "jest workers/paymaster",
         "test:notifier": "jest workers/notifier",

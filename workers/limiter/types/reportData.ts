@@ -7,7 +7,7 @@ export interface SingleWorkspaceAnalyzeReport {
   /**
    * Is workspace get blocked
    */
-  shouldBeBlocked: boolean;
+  shouldBeBlockedByQuota: boolean;
 
   /**
    * Workspace with updated data (current events count)
