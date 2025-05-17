@@ -86,6 +86,7 @@ describe('DbHelper', () => {
     workspace?: WorkspaceDBScheme,
     project: ProjectDBScheme,
     eventsToMock: number
+    repetitionsToMock?: number,
   }): Promise<void> => {
     const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${parameters.project._id.toString()}`);
@@ -100,7 +101,15 @@ describe('DbHelper', () => {
       mockedEvents.push(createEventMock());
     }
     await eventsCollection.insertMany(mockedEvents);
-    await repetitionsCollection.insertMany(mockedEvents);
+
+    mockedEvents.length = 0;
+
+    if (parameters.repetitionsToMock > 0) {
+      for (let i = 0; i < parameters.repetitionsToMock; i++) {
+        mockedEvents.push(createEventMock());
+      }
+      await repetitionsCollection.insertMany(mockedEvents);
+    }
   };
 
   beforeAll(async () => {
@@ -186,7 +195,7 @@ describe('DbHelper', () => {
     });
   });
 
-  describe('updateWorkspaces', () => {
+  describe('updateWorkspacesEventsCountAndIsBlocked', () => {
     test('Should update multiple workspaces', async () => {
       /**
        * Arrange
@@ -307,6 +316,7 @@ describe('DbHelper', () => {
         workspace,
         project,
         eventsToMock: 5,
+        repetitionsToMock: 5,
       });
 
       const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
@@ -340,10 +350,12 @@ describe('DbHelper', () => {
         workspace,
         project: project1,
         eventsToMock: 5,
+        repetitionsToMock: 5,
       });
       await fillDatabaseWithMockedData({
         project: project2,
         eventsToMock: 3,
+        repetitionsToMock: 3,
       });
 
       const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
