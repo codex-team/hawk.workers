@@ -108,6 +108,9 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleBlockWorkspaceEvent(event: BlockWorkspaceEvent): Promise<void> {
+    this.logger.info(`[ Block Workspace ]: ${JSON.stringify(event)}`);
+
+
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
 
     this.logger.info(`[ Block Workspace ]: ${JSON.stringify(workspace)}`);
