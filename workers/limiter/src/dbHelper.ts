@@ -35,12 +35,13 @@ export class DbHelper {
   }
 
   /**
-   * @returns {Promise<WorkspaceWithTariffPlan[]>} - all workspaces with their tariff plans
+   * Method that returns all workspaces with their tariff plans
    */
   public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
   /**
+   * Method that returns workspace with its tariff plan by its id
+   * 
    * @param id - id of the workspace to fetch
-   * @returns {Promise<WorkspaceWithTariffPlan>} - workspace with its tariff plan
    */
   public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
   /**
@@ -84,7 +85,7 @@ export class DbHelper {
    *
    * @param workspacesToUpdate - array of workspaces to be updated
    */
-  public async updateWorkspaces(workspacesToUpdate: WorkspaceWithTariffPlan[]): Promise<void> {
+  public async updateWorkspacesEventsCountAndIsBlocked(workspacesToUpdate: WorkspaceWithTariffPlan[]): Promise<void> {
     if (workspacesToUpdate.length === 0) {
       return;
     }

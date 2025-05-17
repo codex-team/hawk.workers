@@ -187,7 +187,7 @@ export default class LimiterWorker extends Worker {
       this.projectsToUpdate = new Map();
     }));
 
-    this.dbHelper.updateWorkspaces([ ...this.workspacesToUpdate.values() ]);
+    this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ ...this.workspacesToUpdate.values() ]);
     this.workspacesToUpdate = new Map();
 
     this.sendRegularReport(message);
