@@ -94,11 +94,11 @@ export default class LimiterWorker extends Worker {
   public async handle(event: LimiterEvent): Promise<void> {
     switch (event.type) {
       case 'regular-workspaces-check':
-        return this.handleRegularWorkspacesCheck();
+        return await this.handleRegularWorkspacesCheck();
       case 'block-workspace':
-        return this.handleBlockWorkspaceEvent(event);
+        return await this.handleBlockWorkspaceEvent(event);
       case 'unblock-workspace':
-        return this.handleUnblockWorkspaceEvent(event);
+        return await this.handleUnblockWorkspaceEvent(event);
     }
   }
 
