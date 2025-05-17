@@ -13,12 +13,12 @@ export default class TelegramSenderWorker extends SenderWorker {
   public readonly type: string = pkg.workerType;
 
   /**
-   * Email channel type
+   * Telegram channel type
    */
   protected channelType = ChannelType.Telegram;
 
   /**
-   * Email provider
+   * Telegram provider
    */
   protected provider = new TelegramProvider();
 }
