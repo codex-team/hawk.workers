@@ -8,7 +8,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { BlockWorkspaceEvent, UnblockWorkspaceEvent } from '../types/eventTypes';
 import RedisHelper from './redisHelper';
-import { SingleWorkspaceAnalyzeReport } from '../types/reportData';
+import { WorkspaceReport } from '../types/reportData';
 import { WorkspaceWithTariffPlan } from '../types';
 import * as WorkerNames from '../../../lib/workerNames';
 import { DbHelper } from './dbHelper';
@@ -58,16 +58,6 @@ export default class LimiterWorker extends Worker {
    * Redis helper instance for modifying data through redis
    */
   private redis = new RedisHelper();
-
-  /**
-   * Accumulator for workspaces that need to be updated in db
-   */
-  private workspacesToUpdate: Map<string, WorkspaceWithTariffPlan> = new Map();
-
-  /**
-   * Accumulator for projects that need to be updated in redis
-   */
-  private projectsToUpdate: Map<string, ProjectDBScheme> = new Map();
 
   /**
    * Start consuming messages
@@ -153,12 +143,9 @@ export default class LimiterWorker extends Worker {
     /**
      * If workspace should be blocked by quota - then do not unblock it
      */
-    const shouldBeBlockedByQuota = await this.analyseWorkspace(workspace, workspaceProjects);
+    const { shouldBeBlockedByQuota } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
     if (shouldBeBlockedByQuota) {
-      this.projectsToUpdate = new Map();
-      this.workspacesToUpdate = new Map();
-
       return;
     }
 
@@ -175,61 +162,36 @@ export default class LimiterWorker extends Worker {
     let message = '';
 
     const workspaces = await this.dbHelper.getWorkspacesWithTariffPlans();
+    const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
 
     await Promise.all(workspaces.map(async (workspace) => {
       const workspaceProjects = await this.dbHelper.getProjects(workspace._id.toString());
 
-      const shouldBlock = await this.analyseWorkspace(workspace, workspaceProjects);
-
+      const { shouldBeBlockedByQuota, updatedWorkspace, projectsToUpdate } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
+      
+      updatedWorkspaces.push(updatedWorkspace)
+      
       /**
        * If there are no projects to update - move on to next workspace
        */
-      if (this.projectsToUpdate.size === 0) {
+      if (projectsToUpdate.length === 0) {
         return;
       }
 
       /**
        * If workspace is not blocked yet and it should be blocked by quota - then block it
        */
-      if (!workspace.isBlocked && shouldBlock) {
-        this.redis.appendBannedProjects([ ...this.projectsToUpdate.keys() ]);
-        message += this.formSingleWorkspaceMessage(workspace, [ ...this.projectsToUpdate.values() ], 'Blocked');
-      }
+      if (!workspace.isBlocked && shouldBeBlockedByQuota) {
+        const projectIds = projectsToUpdate.map(project => project._id.toString());
 
-      this.projectsToUpdate = new Map();
+        this.redis.appendBannedProjects(projectIds);
+        message += this.formSingleWorkspaceMessage(workspace, projectsToUpdate, 'Blocked');
+      }
     }));
 
-    this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ ...this.workspacesToUpdate.values() ]);
-    this.workspacesToUpdate = new Map();
+    this.dbHelper.updateWorkspacesEventsCountAndIsBlocked(updatedWorkspaces);
 
     this.sendRegularReport(message);
-  }
-
-  /**
-   * Method that compares workspace current state with report state
-   * If states are different - then stacks projects to update list
-   *
-   * @param workspace - workspace to check
-   * @param projects - projects to check
-   * @returns {Promise<boolean>} - true is workspace should be blocked by quota
-   */
-  private async analyseWorkspace(workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]): Promise<boolean> {
-    const { shouldBeBlockedByQuota, updatedWorkspace } = await this.getUpdatedWorkspace(workspace, projects);
-
-    this.workspacesToUpdate.set(updatedWorkspace._id.toString(), updatedWorkspace);
-
-    /**
-     * Workspace could not be unblocked if quota is reached
-     */
-    if (!shouldBeBlockedByQuota) {
-      return false;
-    }
-
-    projects.forEach(project => {
-      this.projectsToUpdate.set(project._id.toString(), project);
-    });
-
-    return true;
   }
 
   /**
@@ -238,11 +200,11 @@ export default class LimiterWorker extends Worker {
    * @param workspace - workspace data to check
    * @param projects - workspaces projects
    *
-   * @returns {SingleWorkspaceAnalyzeReport}
+   * @returns {WorkspaceReport}
    */
-  private async getUpdatedWorkspace(
+  private async prepareWorkspaceUsageUpdate(
     workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]
-  ): Promise<SingleWorkspaceAnalyzeReport> {
+  ): Promise<WorkspaceReport> {
     /**
      * If last charge date is not specified, then we skip checking it
      * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
@@ -303,6 +265,7 @@ export default class LimiterWorker extends Worker {
     return {
       shouldBeBlockedByQuota,
       updatedWorkspace,
+      projectsToUpdate: projects,
     };
   }
 

@@ -103,6 +103,7 @@ describe('Limiter worker', () => {
     workspace: WorkspaceDBScheme,
     project: ProjectDBScheme,
     eventsToMock: number
+    repetitionsToMock?: number,
   }): Promise<void> => {
     const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${parameters.project._id.toString()}`);
@@ -115,6 +116,14 @@ describe('Limiter worker', () => {
       mockedEvents.push(createEventMock());
     }
     await eventsCollection.insertMany(mockedEvents);
+
+    mockedEvents.length = 0;
+
+    parameters.repetitionsToMock = parameters.repetitionsToMock || 0;
+
+    for (let i = 0; i < parameters.repetitionsToMock; i++) {
+      mockedEvents.push(createEventMock());
+    }
     await repetitionsCollection.insertMany(mockedEvents);
   };
 
@@ -160,6 +169,7 @@ describe('Limiter worker', () => {
         workspace,
         project,
         eventsToMock: 5,
+        repetitionsToMock: 5
       });
 
       /**

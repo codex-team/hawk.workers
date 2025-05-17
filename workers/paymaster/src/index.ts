@@ -237,7 +237,7 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
-       * If workspace was manually unblocked in db
+       * If workspace was manually unblocked (reset of billingPeriodEventsCount and lastChargeDate) in db
        */
       if (workspace.isBlocked) {
         await this.unblockWorkspace(workspace);
