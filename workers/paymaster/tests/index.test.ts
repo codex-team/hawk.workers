@@ -194,14 +194,14 @@ describe('PaymasterWorker', () => {
      * Assert
      */
 
-    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('limiter', {
+    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('cron-tasks/limiter', {
       type: 'block-workspace',
       payload: {
         workspaceId: workspace._id.toString(),
       },
     });
 
-    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('email', {
+    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('sender/email', {
       type: 'block-workspace',
       payload: {
         workspaceId: workspace._id.toString(),
