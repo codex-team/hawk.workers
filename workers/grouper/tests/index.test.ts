@@ -1,11 +1,14 @@
 import '../../../env-test';
 import GrouperWorker from '../src';
-import { GroupWorkerTask } from '../types/group-worker-task';
-import { createClient, RedisClientType } from 'redis';
-import { Collection, MongoClient } from 'mongodb';
-import { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
+import type { RedisClientType } from 'redis';
+import { createClient } from 'redis';
+import type { Collection } from 'mongodb';
+import { MongoClient } from 'mongodb';
+import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
+import { patch } from '@n1ru4l/json-patch-plus';
 
 jest.mock('amqplib');
 
@@ -186,10 +189,10 @@ describe('GrouperWorker', () => {
     });
 
     test('Should increment usersAffected count if users are different', async () => {
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
+      await worker.handle(generateTask({ user: { id: generateRandomId() } }));
 
       expect((await eventsCollection.findOne({})).usersAffected).toBe(4);
       expect((await dailyEventsCollection.findOne({})).affectedUsers).toBe(4);
@@ -317,8 +320,10 @@ describe('GrouperWorker', () => {
     test('Should stringify payload`s addons and context fields', async () => {
       await worker.handle(generateTask());
 
-      expect(typeof (await eventsCollection.findOne({})).payload.addons).toBe('string');
-      expect(typeof (await eventsCollection.findOne({})).payload.context).toBe('string');
+      const savedEvent = await eventsCollection.findOne({});
+
+      expect(typeof savedEvent.payload.addons).toBe('string');
+      expect(typeof savedEvent.payload.context).toBe('string');
     });
 
     test('Should save event even if its context is type of string', async () => {
@@ -372,7 +377,7 @@ describe('GrouperWorker', () => {
       }).toArray()).length).toBe(2);
     });
 
-    test('Should stringify payload`s addons and context fields', async () => {
+    test('Should stringify delta', async () => {
       const generatedTask = generateTask();
 
       await worker.handle(generateTask());
@@ -381,29 +386,43 @@ describe('GrouperWorker', () => {
         event: {
           ...generatedTask.event,
           addons: { test: '8fred' },
+          context: { test: '8fred' },
         },
       });
 
       const savedRepetition = await repetitionsCollection.findOne({});
 
-      expect(typeof savedRepetition.payload.addons).toBe('string');
-      expect(typeof savedRepetition.payload.context).toBe('string');
+      expect(typeof savedRepetition.delta).toBe('string');
     });
 
     test('Should correctly calculate diff after encoding original event when they are the same', async () => {
-      await worker.handle(generateTask());
-      await worker.handle(generateTask());
+      await worker.handle(generateTask({ user: { id: '123' } }));
+      await worker.handle(generateTask({ user: { id: '123' } }));
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{}');
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      const savedDelta = savedRepetition.delta as string;
+      const parsedDelta = JSON.parse(savedDelta) as RepetitionDelta;
+
+      expect(parsedDelta.type).toBe(undefined);
+      expect(parsedDelta.backtrace).toBe(undefined);
+      expect(parsedDelta.context).toBe(undefined);
+      expect(parsedDelta.addons).toBe(undefined);
+      expect(parsedDelta.release).toBe(undefined);
+      expect(parsedDelta.user).toBe(undefined);
+      expect(parsedDelta.catcherVersion).toBe(undefined);
 
       /**
-       * Should to be true when bug in utils.deepDiff will be fixed
+       * Timestamp always unique, so it should be present in a stored payload diff
        */
-      // expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{}');
+      expect(parsedDelta.timestamp).not.toBe(undefined);
+      expect(typeof parsedDelta.timestamp).toBe('object');
     });
 
     test('Should correctly calculate diff after encoding original event when they are different', async () => {
-      await worker.handle(generateTask());
+      const originalGeneratedEvent = generateTask();
+
+      await worker.handle(originalGeneratedEvent);
 
       const generatedTask = generateTask();
 
@@ -422,8 +441,33 @@ describe('GrouperWorker', () => {
         },
       });
 
-      expect((await repetitionsCollection.findOne({})).payload.context).toBe('{"testField":9}');
-      expect((await repetitionsCollection.findOne({})).payload.addons).toBe('{"vue":{"props":{"test-test":true}}}');
+      const savedEvent = await eventsCollection.findOne({});
+      const savedRepetition = await repetitionsCollection.findOne({});
+      const savedDelta = savedRepetition.delta as string;
+      const parsedDelta = JSON.parse(savedDelta) as RepetitionDelta;
+
+      /**
+       * Parse context and addons from string to object
+       */
+      savedEvent.payload.context = JSON.parse(savedEvent.payload.context);
+      savedEvent.payload.addons = JSON.parse(savedEvent.payload.addons);
+
+      expect(typeof parsedDelta.context).toBe('object');
+      expect(typeof parsedDelta.addons).toBe('object');
+
+      const patched = patch({
+        left: savedEvent.payload,
+        delta: parsedDelta,
+      });
+
+      expect(patched.context).toEqual({
+        testField: 9,
+      });
+      expect(patched.addons).toEqual({
+        vue: {
+          props: { 'test-test': true },
+        },
+      });
     });
   });
 
