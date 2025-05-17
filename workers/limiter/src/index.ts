@@ -110,6 +110,8 @@ export default class LimiterWorker extends Worker {
   private async handleBlockWorkspaceEvent(event: BlockWorkspaceEvent): Promise<void> {
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
 
+    this.logger.info(`[ Block Workspace ]: ${JSON.stringify(workspace)}`);
+
     if (!workspace) {
       this.logger.error(`[ Block Workspace ]: Workspace ${event.workspaceId} not found`);
       return;
@@ -131,6 +133,8 @@ export default class LimiterWorker extends Worker {
    */
   private async handleUnblockWorkspaceEvent(event: UnblockWorkspaceEvent): Promise<void> {
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
+
+    this.logger.info(`[ Unblock Workspace ]: ${JSON.stringify(workspace)}`);
     
     if (!workspace) {
       this.logger.error(`[ Unblock Workspace ]: Workspace ${event.workspaceId} not found`);
