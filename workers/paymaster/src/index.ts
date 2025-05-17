@@ -336,9 +336,7 @@ export default class PaymasterWorker extends Worker {
   private async blockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'block-workspace',
-      payload: {
-        workspaceId: workspace._id.toString(),
-      },
+      workspaceId: workspace._id.toString(),
     });
 
     /**
@@ -362,9 +360,7 @@ export default class PaymasterWorker extends Worker {
   private async unblockWorkspace(workspace: WorkspaceDBScheme): Promise<void> {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'unblock-workspace',
-      payload: {
-        workspaceId: workspace._id.toString(),
-      },
+      workspaceId: workspace._id.toString(),
     });
   }
 
