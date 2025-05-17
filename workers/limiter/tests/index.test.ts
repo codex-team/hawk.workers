@@ -119,12 +119,12 @@ describe('Limiter worker', () => {
 
     mockedEvents.length = 0;
 
-    parameters.repetitionsToMock = parameters.repetitionsToMock || 0;
-
-    for (let i = 0; i < parameters.repetitionsToMock; i++) {
-      mockedEvents.push(createEventMock());
+    if (parameters.repetitionsToMock > 0) {
+      for (let i = 0; i < parameters.repetitionsToMock; i++) {
+        mockedEvents.push(createEventMock());
+      }
+      await repetitionsCollection.insertMany(mockedEvents);
     }
-    await repetitionsCollection.insertMany(mockedEvents);
   };
 
   beforeAll(async () => {
