@@ -244,7 +244,7 @@ export default class GrouperWorker extends Worker {
    */
   private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
     const eventsCountToCompare = 60;
-    const diffTreshold = 0.35;
+    const diffTreshold = 0.25;
 
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
