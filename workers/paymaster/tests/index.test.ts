@@ -141,9 +141,7 @@ describe('PaymasterWorker', () => {
      */
     expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(1, 'cron-tasks/limiter', {
       type: 'block-workspace',
-      payload: {
-        workspaceId: workspace._id.toString(),
-      },
+      workspaceId: workspace._id.toString(),
     });
 
     expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(2, 'sender/email', {
@@ -196,9 +194,7 @@ describe('PaymasterWorker', () => {
 
     expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('cron-tasks/limiter', {
       type: 'block-workspace',
-      payload: {
-        workspaceId: workspace._id.toString(),
-      },
+      workspaceId: workspace._id.toString(),
     });
 
     expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('sender/email', {
@@ -250,9 +246,7 @@ describe('PaymasterWorker', () => {
 
     expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(1, 'cron-tasks/limiter', {
       type: 'block-workspace',
-      payload: {
-        workspaceId: workspace._id.toString(),
-      },
+      workspaceId: workspace._id.toString(),
     });
     expect(blockWorkspaceSpy).toHaveBeenNthCalledWith(2, 'sender/email', {
       type: 'block-workspace',

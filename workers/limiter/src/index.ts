@@ -115,13 +115,20 @@ export default class LimiterWorker extends Worker {
       return;
     }
 
+    /**
+     * If workspace is already blocked - do nothing
+     */
+    if (workspace.isBlocked) {
+      return;
+    }
+
     const workspaceProjects = await this.dbHelper.getProjects(event.workspaceId);
     const projectIds = workspaceProjects.map(project => project._id.toString());
 
     await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, true);
     await this.redis.appendBannedProjects(projectIds);
 
-    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'Blocked');
+    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'blocked');
   }
 
   /**
@@ -134,6 +141,13 @@ export default class LimiterWorker extends Worker {
     
     if (!workspace) {
       this.logger.error(`[ Unblock Workspace ]: Workspace ${event.workspaceId} not found`);
+      return;
+    }
+
+    /**
+     * If workspace is already unblocked - do nothing
+     */
+    if (workspace.isBlocked === false) {
       return;
     }
 
@@ -152,7 +166,7 @@ export default class LimiterWorker extends Worker {
     await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, false);
     await this.redis.removeBannedProjects(projectIds);
 
-    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'Unblocked');
+    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'unblocked');
   }
 
   /**
@@ -185,7 +199,7 @@ export default class LimiterWorker extends Worker {
         const projectIds = projectsToUpdate.map(project => project._id.toString());
 
         this.redis.appendBannedProjects(projectIds);
-        message += this.formSingleWorkspaceMessage(workspace, projectsToUpdate, 'Blocked');
+        message += this.formSingleWorkspaceMessage(workspace, projectsToUpdate, 'blocked');
       }
     }));
 
@@ -277,16 +291,17 @@ export default class LimiterWorker extends Worker {
    * @param type - workspace was blocked or unblocked
    * @returns {string} formatted html string
    */
-  private formSingleWorkspaceMessage(workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[], type: 'Blocked' | 'Unblocked'): string {
-    let message = `<b>${type} ${workspace.name} (id: ${workspace._id}) 
-        quota: ${workspace.billingPeriodEventsCount} of ${workspace.tariffPlan.eventsLimit}</b>\n`;
+  private formSingleWorkspaceMessage(workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[], type: 'blocked' | 'unblocked'): string {
+    const statusEmoji = type === 'blocked' ? '⛔️' : '✅';
+
+    let message = `${statusEmoji} Workspace <b>${workspace.name}</b> ${type} <b>(id: <code>${workspace._id}</code>)</b>\n\n\
+Quota: ${workspace.billingPeriodEventsCount} of ${workspace.tariffPlan.eventsLimit}</b>\n\n`;
 
     if (projects.length === 0) {
-      message += `<code>none, projects are already stored in redis</code>`;
-
       return message;
     }
 
+    message += `Project ids ${type === 'blocked' ? 'added' : 'removed'} from Redis:\n`;
     message += `${projects.map(project => `• ${project.name} (id: <code>${project._id}</code>)`).join('\n')}`;
 
     return message;
@@ -299,10 +314,10 @@ export default class LimiterWorker extends Worker {
    * @param workspace - blocked or unblocked workspace
    * @param type - workspace was blocked or unblocked
    */
-  private sendSingleWorkspaceReport(projects: ProjectDBScheme[], workspace: WorkspaceWithTariffPlan, type: 'Blocked' | 'Unblocked'): void {
+  private sendSingleWorkspaceReport(projects: ProjectDBScheme[], workspace: WorkspaceWithTariffPlan, type: 'blocked' | 'unblocked'): void {
     const message = this.formSingleWorkspaceMessage(workspace, projects, type);
 
-    telegram.sendMessage(`🔐 <b>[ Limiter / Single ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
+    telegram.sendMessage(`${message}`, telegram.TelegramBotURLs.Limiter);
   }
 
   /**
