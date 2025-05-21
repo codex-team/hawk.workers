@@ -8,5 +8,5 @@ export function generateRandomId(): string {
 
   return Math.random().toString(RADIX)
     .substring(FIRST_RANDOM_START, FIRST_RANDOM_END) + Math.random().toString(RADIX)
-      .substring(FIRST_RANDOM_START, FIRST_RANDOM_END);
+    .substring(FIRST_RANDOM_START, FIRST_RANDOM_END);
 }
