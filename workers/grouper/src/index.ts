@@ -14,7 +14,6 @@ import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
-import levenshtein from 'js-levenshtein';
 import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
 
@@ -244,7 +243,7 @@ export default class GrouperWorker extends Worker {
    */
   private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
     const eventsCountToCompare = 60;
-    const diffTreshold = 0.35;
+    // const diffTreshold = 0.35;
 
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
@@ -282,13 +281,14 @@ export default class GrouperWorker extends Worker {
                 { sort: { _id: 1 } }
               );
           });
+
           this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
 
           if (originalEvent) {
             return originalEvent;
           }
         } catch (e) {
-          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`)
+          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`);
         }
       }
     }
