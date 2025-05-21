@@ -249,17 +249,19 @@ export default class GrouperWorker extends Worker {
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
     /**
-     * First try to find by Levenshtein distance
+     * First try to find similar event by title
      */
-    const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
-      const distance = levenshtein(event.title, prevEvent.payload.title);
-      const threshold = event.title.length * diffTreshold;
+    const similarByTitle = lastUniqueEvents.filter(prevEvent => {
+      // const distance = levenshtein(event.title, prevEvent.payload.title);
 
-      return distance < threshold;
+      // const threshold = event.title.length * diffTreshold;
+
+      // return distance < threshold;
+      return event.title.toLowerCase() === prevEvent.payload.title.toLowerCase();
     }).pop();
 
-    if (similarByLevenshtein) {
-      return similarByLevenshtein;
+    if (similarByTitle) {
+      return similarByTitle;
     }
 
     /**
