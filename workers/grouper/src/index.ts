@@ -2,12 +2,12 @@ import './env';
 import * as crypto from 'crypto';
 import * as mongodb from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
-import * as utils from '../../../lib/utils';
 import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
-import { GroupWorkerTask } from '../types/group-worker-task';
-import { EventAddons, EventDataAccepted, GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
+import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
+import type { EventAddons, EventDataAccepted, GroupedEventDBScheme } from '@hawk.so/types';
+import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import HawkCatcher from '@hawk.so/nodejs';
@@ -15,6 +15,7 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
+import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
 
 /**
@@ -181,20 +182,22 @@ export default class GrouperWorker extends Worker {
        */
       decodeUnsafeFields(existedEvent);
 
-      let diff;
+      let delta: RepetitionDelta;
 
       try {
         /**
-         * Save event's repetitions
+         * Calculate delta between original event and repetition
          */
-        diff = utils.deepDiff(existedEvent.payload, task.event);
+        delta = computeDelta(existedEvent.payload, task.event);
       } catch (e) {
+        console.error(e);
         throw new DiffCalculationError(e, existedEvent.payload, task.event);
       }
 
       const newRepetition = {
         groupHash: uniqueEventHash,
-        payload: diff,
+        delta: JSON.stringify(delta),
+        timestamp: task.event.timestamp,
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -267,20 +270,23 @@ export default class GrouperWorker extends Worker {
     if (patterns && patterns.length > 0) {
       const matchingPattern = await this.findMatchingPattern(patterns, event);
 
-      if (matchingPattern !== null) {
-        const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
-          return await this.eventsDb.getConnection()
-            .collection(`events:${projectId}`)
-            .findOne(
-              { 'payload.title': { $regex: matchingPattern } },
-              { sort: { _id: 1 } }
-            );
-        });
+      if (matchingPattern !== null && matchingPattern !== undefined) {
+        try {
+          const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
+            return await this.eventsDb.getConnection()
+              .collection(`events:${projectId}`)
+              .findOne(
+                { 'payload.title': { $regex: matchingPattern } },
+                { sort: { _id: 1 } }
+              );
+          });
+          this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
 
-        this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
-
-        if (originalEvent) {
-          return originalEvent;
+          if (originalEvent) {
+            return originalEvent;
+          }
+        } catch (e) {
+          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`)
         }
       }
     }
@@ -337,7 +343,7 @@ export default class GrouperWorker extends Worker {
    * @param count - how many events to return
    * @returns {GroupedEventDBScheme[]} list of the last N unique events
    */
-  private findLastEvents(projectId: string, count): Promise<GroupedEventDBScheme[]> {
+  private findLastEvents(projectId: string, count: number): Promise<GroupedEventDBScheme[]> {
     return this.cache.get(`last:${count}:eventsOf:${projectId}`, async () => {
       return this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
@@ -492,7 +498,7 @@ export default class GrouperWorker extends Worker {
    * @returns {string} cache key for event
    */
   private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
-    return `${projectId}:${JSON.stringify({ groupHash: groupHash })}`;
+    return `${projectId}:${JSON.stringify({ groupHash })}`;
   }
 
   /**
