@@ -136,20 +136,19 @@ export class DbHelper {
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
-    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id);
-    const eventsCollection = this.eventsDbConnection.collection('events:' + project._id);
+    try { 
 
-    const query = {
-      'payload.timestamp': {
-        $gt: since,
-      },
-    };
+      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
+      const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
+  
+      const query = {
+        'timestamp': {
+          $gt: since,
+        },
+      };
 
-    try {
-      const [repetitionsCount, originalEventCount] = await Promise.all([
-        repetitionsCollection.find(query).count(),
-        eventsCollection.find(query).count(),
-      ]);
+      const repetitionsCount = await repetitionsCollection.countDocuments(query);
+      const originalEventCount = await eventsCollection.countDocuments(query);
 
       return repetitionsCount + originalEventCount;
     } catch (e) {
@@ -180,7 +179,7 @@ export class DbHelper {
    */
   public getProjects(workspaceId?: string): Promise<ProjectDBScheme[]> {
     const query = workspaceId
-      ? { workspaceId: new ObjectId(workspaceId) }
+      ? { workspaceId: workspaceId }
       : {};
 
     return this.projectsCollection.find(query).toArray();

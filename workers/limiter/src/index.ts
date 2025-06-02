@@ -176,6 +176,7 @@ export default class LimiterWorker extends Worker {
     let message = '';
 
     const workspaces = await this.dbHelper.getWorkspacesWithTariffPlans();
+
     const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
 
     await Promise.all(workspaces.map(async (workspace) => {
