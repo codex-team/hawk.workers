@@ -112,6 +112,7 @@ export default class LimiterWorker extends Worker {
 
     if (!workspace) {
       this.logger.error(`[ Block Workspace ]: Workspace ${event.workspaceId} not found`);
+
       return;
     }
 
@@ -138,9 +139,10 @@ export default class LimiterWorker extends Worker {
    */
   private async handleUnblockWorkspaceEvent(event: UnblockWorkspaceEvent): Promise<void> {
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
-    
+
     if (!workspace) {
       this.logger.error(`[ Unblock Workspace ]: Workspace ${event.workspaceId} not found`);
+
       return;
     }
 
@@ -183,9 +185,9 @@ export default class LimiterWorker extends Worker {
       const workspaceProjects = await this.dbHelper.getProjects(workspace._id.toString());
 
       const { shouldBeBlockedByQuota, updatedWorkspace, projectsToUpdate } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
-      
-      updatedWorkspaces.push(updatedWorkspace)
-      
+
+      updatedWorkspaces.push(updatedWorkspace);
+
       /**
        * If there are no projects to update - move on to next workspace
        */

@@ -40,7 +40,7 @@ export class DbHelper {
   public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
   /**
    * Method that returns workspace with its tariff plan by its id
-   * 
+   *
    * @param id - id of the workspace to fetch
    */
   public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
@@ -136,13 +136,12 @@ export class DbHelper {
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
-    try { 
-
+    try {
       const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
       const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
-  
+
       const query = {
-        'timestamp': {
+        "payload.timestamp": {
           $gt: since,
         },
       };
@@ -179,7 +178,10 @@ export class DbHelper {
    */
   public getProjects(workspaceId?: string): Promise<ProjectDBScheme[]> {
     const query = workspaceId
-      ? { workspaceId: workspaceId }
+      ? { $or: [
+          { workspaceId: workspaceId },
+          { workspaceId: new ObjectId(workspaceId) }
+        ]}
       : {};
 
     return this.projectsCollection.find(query).toArray();

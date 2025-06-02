@@ -169,7 +169,7 @@ describe('Limiter worker', () => {
         workspace,
         project,
         eventsToMock: 5,
-        repetitionsToMock: 5
+        repetitionsToMock: 5,
       });
 
       /**
