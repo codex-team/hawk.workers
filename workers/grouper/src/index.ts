@@ -167,8 +167,6 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
-          console.log('DB_DUPLICATE_KEY_ERROR');
-
           HawkCatcher.send(new Error('[Grouper] MongoError: E11000 duplicate key error collection'));
           await this.handle(task);
 
@@ -287,13 +285,18 @@ export default class GrouperWorker extends Worker {
     /**
      * Trim titles to reduce CPU usage for Levenshtein comparison
      */
-    const trimmedEventTitle = rightTrim(event.title, MAX_CODE_LINE_LENGTH);
+    const trimmedEventTitle = hasValue(event.title) ? rightTrim(event.title, MAX_CODE_LINE_LENGTH) : '';
 
     /**
      * First try to find by Levenshtein distance
      */
     const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
-      const trimmedPrevTitle = rightTrim(prevEvent.payload.title, MAX_CODE_LINE_LENGTH);
+      const trimmedPrevTitle = hasValue(prevEvent.payload.title) ? rightTrim(prevEvent.payload.title, MAX_CODE_LINE_LENGTH) : '';
+
+      if (trimmedEventTitle === '' || trimmedPrevTitle === '') {
+        return false;
+      }
+
       const distance = levenshtein(trimmedEventTitle, trimmedPrevTitle);
       const threshold = trimmedEventTitle.length * diffTreshold;
 
