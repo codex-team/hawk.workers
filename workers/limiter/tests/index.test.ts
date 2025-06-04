@@ -265,12 +265,12 @@ describe('Limiter worker', () => {
        */
       const workspace1 = createWorkspaceMock({
         plan: mockedPlans.eventsLimit10,
-        billingPeriodEventsCount: 0,
+        billingPeriodEventsCount: 15,
         lastChargeDate: LAST_CHARGE_DATE,
       });
       const workspace2 = createWorkspaceMock({
         plan: mockedPlans.eventsLimit10000,
-        billingPeriodEventsCount: 0,
+        billingPeriodEventsCount: 100,
         lastChargeDate: LAST_CHARGE_DATE,
       });
       const project1 = createProjectMock({ workspaceId: workspace1._id });
@@ -311,8 +311,8 @@ describe('Limiter worker', () => {
 
       const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
 
-      expect(reportMessage).toContain(`${workspace1.name} (id: ${workspace1._id.toString()}) 
-        quota: ${workspace1.billingPeriodEventsCount} of `);
+      expect(reportMessage).toContain(`⛔️ Workspace <b>${workspace1.name}</b> blocked <b>(id: <code>${workspace1._id}</code>)</b>`);
+      expect(reportMessage).toContain(`<b>Quota: ${workspace1.billingPeriodEventsCount} of ${mockedPlans.eventsLimit10.eventsLimit}</b>`);
       expect(reportMessage).not.toContain(workspace2._id.toString());
 
       expect(reportMessage).toContain(`${project1.name} (id: <code>${project1._id}</code>)`);
@@ -393,9 +393,16 @@ describe('Limiter worker', () => {
       expect(updatedWorkspace.isBlocked).toBe(true);
       expect(blockedProjects).toContain(project._id.toString());
       expect(telegram.sendMessage).toHaveBeenCalledWith(
-        expect.stringContaining('🔐 <b>[ Limiter / Single ]</b>'),
+        expect.stringContaining('⛔️ Workspace <b>Mocked workspace</b> blocked <b>(id: <code>'),
         telegram.TelegramBotURLs.Limiter
       );
+
+      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+      expect(reportMessage).toContain('Quota:');
+      expect(reportMessage).toContain('Last Charge Date:');
+      expect(reportMessage).toContain('Projects added to Redis:');
+      expect(reportMessage).toContain('• Mocked project (id: <code>');
     });
   });
 
@@ -444,9 +451,16 @@ describe('Limiter worker', () => {
       expect(updatedWorkspace.isBlocked).toBe(false);
       expect(blockedProjects).not.toContain(project._id.toString());
       expect(telegram.sendMessage).toHaveBeenCalledWith(
-        expect.stringContaining('🔐 <b>[ Limiter / Single ]</b>'),
+        expect.stringContaining('✅ Workspace <b>Mocked workspace</b> unblocked <b>(id: <code>'),
         telegram.TelegramBotURLs.Limiter
       );
+
+      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+      expect(reportMessage).toContain('Quota:');
+      expect(reportMessage).toContain('Last Charge Date:');
+      expect(reportMessage).toContain('Projects removed from Redis:');
+      expect(reportMessage).toContain('• Mocked project (id: <code>');
     });
 
     test('Should not unblock workspace if quota is exceeded', async () => {
