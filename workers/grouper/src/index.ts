@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventDataAccepted, GroupedEventDBScheme } from '@hawk.so/types';
+import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -17,11 +17,17 @@ import RedisHelper from './redisHelper';
 import levenshtein from 'js-levenshtein';
 import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
+import { rightTrim } from '../../../lib/utils/string';
 
 /**
  * Error code of MongoDB key duplication error
  */
 const DB_DUPLICATE_KEY_ERROR = '11000';
+
+/**
+ * Maximum length for backtrace code line or title
+ */
+const MAX_CODE_LINE_LENGTH = 140;
 
 /**
  * Worker for handling Javascript events
@@ -117,6 +123,11 @@ export default class GrouperWorker extends Worker {
     let repetitionId = null;
 
     let incrementDailyAffectedUsers = false;
+
+    /**
+     * Trim source code lines to prevent memory leaks
+     */
+    this.trimSourceCodeLines(task.event);
 
     /**
      * Filter sensitive information
@@ -224,6 +235,30 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Trims source code lines in event's backtrace to prevent memory leaks
+   *
+   * @param event - event to process
+   */
+  private trimSourceCodeLines(event: EventDataAccepted<EventAddons>): void {
+    if (!event.backtrace) {
+      return;
+    }
+
+    event.backtrace.forEach((frame: BacktraceFrame) => {
+      if (!frame.sourceCode) {
+        return;
+      }
+
+      frame.sourceCode = frame.sourceCode.map((line: SourceCodeLine) => {
+        return {
+          line: line.line,
+          content: rightTrim(line.content, MAX_CODE_LINE_LENGTH),
+        };
+      });
+    });
+  }
+
+  /**
    * Get unique hash based on event type and title
    *
    * @param task - worker task to create hash
@@ -249,11 +284,17 @@ export default class GrouperWorker extends Worker {
     const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
     /**
+     * Trim titles to reduce CPU usage for Levenshtein comparison
+     */
+    const trimmedEventTitle = rightTrim(event.title, MAX_CODE_LINE_LENGTH);
+
+    /**
      * First try to find by Levenshtein distance
      */
     const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
-      const distance = levenshtein(event.title, prevEvent.payload.title);
-      const threshold = event.title.length * diffTreshold;
+      const trimmedPrevTitle = rightTrim(prevEvent.payload.title, MAX_CODE_LINE_LENGTH);
+      const distance = levenshtein(trimmedEventTitle, trimmedPrevTitle);
+      const threshold = trimmedEventTitle.length * diffTreshold;
 
       return distance < threshold;
     }).pop();

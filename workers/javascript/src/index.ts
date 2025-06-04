@@ -9,7 +9,6 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
-import { rightTrim } from '../../../lib/utils/string';
 import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
@@ -228,7 +227,6 @@ export default class JavascriptEventWorker extends EventWorker {
      * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121
      */
     if (originalLocation.source) {
-      console.log('original location source found');
       /**
        * Get 5 lines above and 5 below
        */
@@ -402,7 +400,7 @@ export default class JavascriptEventWorker extends EventWorker {
     return focusedLines.map((line, idx) => {
       return {
         line: Math.max(original.line - margin + idx, 1),
-        content: rightTrim(line),
+        content: line,
       } as SourceCodeLine;
     });
   }
