@@ -182,6 +182,13 @@ export default class LimiterWorker extends Worker {
     const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
 
     await Promise.all(workspaces.map(async (workspace) => {
+      /**
+       * Skip if workspace is already blocked
+       */
+      if (workspace.isBlocked === true) {
+        return;
+      }
+
       const workspaceProjects = await this.dbHelper.getProjects(workspace._id.toString());
 
       const { shouldBeBlockedByQuota, updatedWorkspace, projectsToUpdate } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
