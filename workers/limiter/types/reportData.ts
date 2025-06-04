@@ -1,36 +1,22 @@
+import { ProjectDBScheme } from '@hawk.so/types';
 import { WorkspaceWithTariffPlan } from './index';
 
 /**
  * Data for sending notification after task handling
  */
-export interface SingleWorkspaceAnalyzeReport {
+export interface WorkspaceReport {
   /**
    * Is workspace get blocked
    */
-  isBlocked: boolean;
+  shouldBeBlockedByQuota: boolean;
 
   /**
    * Workspace with updated data (current events count)
    */
   updatedWorkspace: WorkspaceWithTariffPlan
-}
-
-/**
- * Data for sending notification after task handling
- */
-export interface MultiplyWorkspacesAnalyzeReport {
-  /**
-   * Banned workspaces data
-   */
-  bannedWorkspaces: WorkspaceWithTariffPlan[];
 
   /**
-   * Projects ids to ban
+   * Projects to update
    */
-  bannedProjectIds: string[];
-
-  /**
-   * Array of workspaces with updated fields
-   */
-  updatedWorkspaces: WorkspaceWithTariffPlan[]
+  projectsToUpdate: ProjectDBScheme[];
 }

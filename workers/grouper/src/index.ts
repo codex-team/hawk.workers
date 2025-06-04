@@ -280,13 +280,14 @@ export default class GrouperWorker extends Worker {
                 { sort: { _id: 1 } }
               );
           });
+
           this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
 
           if (originalEvent) {
             return originalEvent;
           }
         } catch (e) {
-          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`)
+          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`);
         }
       }
     }
