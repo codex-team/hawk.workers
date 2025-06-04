@@ -18,6 +18,7 @@ import levenshtein from 'js-levenshtein';
 import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
 import { rightTrim } from '../../../lib/utils/string';
+import { hasValue } from '../../../lib/utils/hasValue';
 
 /**
  * Error code of MongoDB key duplication error
@@ -252,7 +253,7 @@ export default class GrouperWorker extends Worker {
       frame.sourceCode = frame.sourceCode.map((line: SourceCodeLine) => {
         return {
           line: line.line,
-          content: line.content !== undefined ? rightTrim(line.content, MAX_CODE_LINE_LENGTH) : line.content,
+          content: hasValue(line.content) ? rightTrim(line.content, MAX_CODE_LINE_LENGTH) : line.content,
         };
       });
     });
