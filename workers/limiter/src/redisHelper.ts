@@ -53,41 +53,6 @@ export default class RedisHelper {
   }
 
   /**
-   * Saves banned project ids to redis
-   * If there is no projects, then previous data in Redis will be erased
-   *
-   * @param projectIdsToBan - ids to ban
-   */
-  public saveBannedProjectsSet(projectIdsToBan: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const callback = this.createCallback(resolve, reject);
-
-      if (projectIdsToBan.length) {
-        const pipeline = this.redisClient.multi();
-
-        pipeline.del(this.redisDisabledProjectsKey);
-
-        pipeline.sAdd(this.redisDisabledProjectsKey, projectIdsToBan);
-
-        try {
-          pipeline.exec();
-          callback(null);
-        } catch (err) {
-          callback(err);
-        }
-      } else {
-        this.redisClient.del(this.redisDisabledProjectsKey)
-          .then(() => {
-            callback(null);
-          })
-          .catch((err) => {
-            callback(err);
-          });
-      }
-    });
-  }
-
-  /**
    * Add new banned projects to the set
    *
    * @param projectIds - project ids to append
