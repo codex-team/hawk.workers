@@ -297,9 +297,9 @@ export default class LimiterWorker extends Worker {
   private formSingleWorkspaceMessage(workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[], type: 'blocked' | 'unblocked'): string {
     const statusEmoji = type === 'blocked' ? '⛔️' : '✅';
 
-    let message = `${statusEmoji} Workspace <b>${workspace.name}</b> ${type} <b>(id: <code>${workspace._id}</code>)</b>\n\n\
+    let message = `\n\n${statusEmoji} Workspace <b>${workspace.name}</b> ${type} <b>(id: <code>${workspace._id}</code>)</b>\n\n\
 <b>Quota: ${workspace.billingPeriodEventsCount} of ${workspace.tariffPlan.eventsLimit}</b>\n\
-<b>Last Charge Date: ${workspace.lastChargeDate}\n\n`;
+<b>Last Charge Date: ${workspace.lastChargeDate}</b>\n\n`;
 
     if (projects.length === 0) {
       return message;
@@ -337,6 +337,6 @@ export default class LimiterWorker extends Worker {
       return;
     }
 
-    telegram.sendMessage(`🔐 <b>[ Limiter / Regular ]</b>\n${message}`, telegram.TelegramBotURLs.Limiter);
+    telegram.sendMessage(`🔐 <b>[ Limiter / Regular ]</b>${message}`, telegram.TelegramBotURLs.Limiter);
   }
 }
