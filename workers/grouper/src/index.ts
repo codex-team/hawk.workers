@@ -252,7 +252,7 @@ export default class GrouperWorker extends Worker {
       frame.sourceCode = frame.sourceCode.map((line: SourceCodeLine) => {
         return {
           line: line.line,
-          content: rightTrim(line.content, MAX_CODE_LINE_LENGTH),
+          content: line.content !== undefined ? rightTrim(line.content, MAX_CODE_LINE_LENGTH) : line.content,
         };
       });
     });
