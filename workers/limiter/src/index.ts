@@ -205,7 +205,7 @@ export default class LimiterWorker extends Worker {
       /**
        * If workspace is not blocked yet and it should be blocked by quota - then block it
        */
-      if (!workspace.isBlocked && shouldBeBlockedByQuota) {
+      if (shouldBeBlockedByQuota) {
         const projectIds = projectsToUpdate.map(project => project._id.toString());
 
         this.redis.appendBannedProjects(projectIds);
