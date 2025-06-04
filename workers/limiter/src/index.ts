@@ -202,7 +202,7 @@ export default class LimiterWorker extends Worker {
         const projectIds = projectsToUpdate.map(project => project._id.toString());
 
         this.redis.appendBannedProjects(projectIds);
-        message += this.formSingleWorkspaceMessage(workspace, projectsToUpdate, 'blocked');
+        message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
       }
     }));
 
@@ -298,13 +298,14 @@ export default class LimiterWorker extends Worker {
     const statusEmoji = type === 'blocked' ? '⛔️' : '✅';
 
     let message = `${statusEmoji} Workspace <b>${workspace.name}</b> ${type} <b>(id: <code>${workspace._id}</code>)</b>\n\n\
-Quota: ${workspace.billingPeriodEventsCount} of ${workspace.tariffPlan.eventsLimit}</b>\n\n`;
+<b>Quota: ${workspace.billingPeriodEventsCount} of ${workspace.tariffPlan.eventsLimit}</b>\n\
+<b>Last Charge Date: ${workspace.lastChargeDate}\n\n`;
 
     if (projects.length === 0) {
       return message;
     }
 
-    message += `Project ids ${type === 'blocked' ? 'added' : 'removed'} from Redis:\n`;
+    message += `Projects ${type === 'blocked' ? 'added to' : 'removed from'} Redis:\n`;
     message += `${projects.map(project => `• ${project.name} (id: <code>${project._id}</code>)`).join('\n')}`;
 
     return message;

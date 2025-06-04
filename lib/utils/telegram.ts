@@ -31,7 +31,16 @@ export async function sendMessage(message: string, chat = TelegramBotURLs.Limite
   }
 
   try {
-    await axios.post(botUrl, `message=${encodeURIComponent(message)}&parse_mode=HTML`);
+    await axios.post(
+      botUrl,
+      `message=${encodeURIComponent(message)}&parse_mode=HTML`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+    ;
   } catch (err) {
     console.log('Couldn\'t send a message to Telegram', err);
   }
