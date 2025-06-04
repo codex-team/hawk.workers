@@ -141,16 +141,16 @@ export class DbHelper {
       const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
 
       const query = {
-        $or: [{
+        $or: [ {
           timestamp: {
             $gt: since,
           },
         },
         {
-          "payload.timestamp": {
+          'payload.timestamp': {
             $gt: since,
           },
-        }],
+        } ],
       };
 
       const repetitionsCount = await repetitionsCollection.countDocuments(query);
@@ -185,10 +185,12 @@ export class DbHelper {
    */
   public getProjects(workspaceId?: string): Promise<ProjectDBScheme[]> {
     const query = workspaceId
-      ? { $or: [
+      ? {
+        $or: [
           { workspaceId: workspaceId },
-          { workspaceId: new ObjectId(workspaceId) }
-        ]}
+          { workspaceId: new ObjectId(workspaceId) },
+        ],
+      }
       : {};
 
     return this.projectsCollection.find(query).toArray();

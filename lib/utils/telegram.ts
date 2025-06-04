@@ -40,7 +40,6 @@ export async function sendMessage(message: string, chat = TelegramBotURLs.Limite
         },
       }
     );
-    ;
   } catch (err) {
     console.log('Couldn\'t send a message to Telegram', err);
   }
