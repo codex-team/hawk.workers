@@ -179,16 +179,22 @@ export default class ReleaseWorker extends Worker {
             const fileInfo = await this.saveFile(map);
 
             /**
-             * Remove 'content' and save id of saved file instead
+             * Save id of saved file instead
              */
             map._id = fileInfo._id;
-            delete map.content;
 
             return map;
           } catch (error) {
             this.logger.error(`Map ${map.mapFileName} was not saved: ${error}`);
           }
         }));
+
+        /**
+         * Delete file content after it is saved to the GridFS
+         */
+        savedFiles.forEach(file => {
+          delete file.content;
+        })
 
         /**
          * Filter unsaved maps
