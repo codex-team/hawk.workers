@@ -81,6 +81,22 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
+   * Method that returns date of the last charge date + 1 month
+   *
+   * It is used to recharge prepaid workspaces
+   *
+   * @param date - last charge date
+   * @returns - last charge date + 1 month
+   */
+  private static monthSinceLastChargeDate(date: Date): Date {
+    const monthSinceLastChargeDate = new Date(date.getTime());
+
+    monthSinceLastChargeDate.setMonth(monthSinceLastChargeDate.getMonth() + 1);
+
+    return monthSinceLastChargeDate;
+  }
+
+  /**
    * Returns difference between now and payday in days
    *
    * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
@@ -215,6 +231,11 @@ export default class PaymasterWorker extends Worker {
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
+     * Date one month after last charge date
+     */
+    const monthSinceLastChargeDate: Date = PaymasterWorker.monthSinceLastChargeDate(workspace.lastChargeDate);
+
+    /**
      * How many days have passed since payments the expected day of payments
      */
     // @ts-expect-error debug
@@ -237,7 +258,17 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
-       * If workspace was manually unblocked (reset of billingPeriodEventsCount and lastChargeDate) in db
+       * If month since last charge date passed, but it is still not time to pay - then workspace has prepaid period
+       * Start new month - recharge billing period events count and update last charge date
+       */
+      if (date >= monthSinceLastChargeDate) {
+        await this.updateLastChargeDate(workspace, date);
+        await this.clearBillingPeriodEventsCount(workspace);
+      }
+
+      /**
+       * If workspace is blocked, but it is not time to pay
+       * This case could be reached by prepaid workspaces and manually recharged ones
        */
       if (workspace.isBlocked) {
         await this.unblockWorkspace(workspace);
