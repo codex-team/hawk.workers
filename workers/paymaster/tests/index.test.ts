@@ -481,11 +481,6 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
-  afterAll(async () => {
-    await connection.close();
-    MockDate.reset();
-  });
-
   test('Should send notification if payday is coming for workspace with paidUntil value', async () => {
     /**
      * Arrange
@@ -540,6 +535,64 @@ describe('PaymasterWorker', () => {
       }
     );
 
+    MockDate.reset();
+  });
+
+  test('Should recharge workspace billing period when month passes since last charge date and paidUntil is set to several months in the future', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date();
+    const lastChargeDate = new Date(currentDate.getTime());
+
+    lastChargeDate.setMonth(lastChargeDate.getMonth() - 1); // Set last charge date to 1 month ago
+
+    const paidUntil = new Date(currentDate.getTime());
+
+    paidUntil.setMonth(paidUntil.getMonth() + 3); // Set paidUntil to 3 months in the future
+
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: null,
+      lastChargeDate,
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+      paidUntil,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
+    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    expect(updatedWorkspace.lastChargeDate).toEqual(currentDate);
+    expect(updatedWorkspace.billingPeriodEventsCount).toEqual(0);
+
+    MockDate.reset();
+  });
+
+  afterAll(async () => {
+    await connection.close();
     MockDate.reset();
   });
 });

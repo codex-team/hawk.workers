@@ -60,24 +60,47 @@ export default class PaymasterWorker extends Worker {
   /**
    * Check if today is a payday for passed timestamp
    *
-   * Pay day is calculated by formula: last charge date + 30 days
-   *
    * @param date - last charge date
    * @param paidUntil - paid until date
    * @param isDebug - flag for debug purposes
    */
-  private static isTimeToPay(date: Date, paidUntil: Date, isDebug = false): boolean {
-    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
+  private static isTimeToPay(date: Date, paidUntil?: Date, isDebug = false): boolean {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : this.composeBillingPeriodEndDate(date, isDebug);
+    const now = new Date();
+
+    return now >= expectedPayDay;
+  }
+
+  /**
+   * Check if today is a recharge day for passed timestamp
+   * It equals to the isTimeToPay in all cases except prePaid workspaces
+   *
+   * @param date - last charge date
+   * @param isDebug - flag for debug purposes
+   */
+  private static isTimeToRecharge(date: Date, isDebug = false): boolean {
+    const nexTimeToRecharge = this.composeBillingPeriodEndDate(date, isDebug);
+    const now = new Date();
+
+    return now >= nexTimeToRecharge;
+  }
+
+  /**
+   * Returns the date - end of the billing period
+   *
+   * @param date - last charge date
+   * @param isDebug - flag for debug workspaces
+   */
+  private static composeBillingPeriodEndDate(date: Date, isDebug = false): Date {
+    const endDate = new Date(date);
 
     if (isDebug) {
-      expectedPayDay.setDate(date.getDate() + 1);
-    } else if (!paidUntil) {
-      expectedPayDay.setMonth(date.getMonth() + 1);
+      endDate.setDate(date.getDate() + 1);
+    } else {
+      endDate.setMonth(date.getMonth() + 1);
     }
 
-    const now = new Date().getTime();
-
-    return now >= expectedPayDay.getTime();
+    return endDate;
   }
 
   /**
@@ -215,6 +238,12 @@ export default class PaymasterWorker extends Worker {
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
+     * Is it time to recharge workspace limits
+     */
+    // @ts-expect-error debug
+    const isTimeToRecharge = PaymasterWorker.isTimeToRecharge(workspace.lastChargeDate, workspace.isDebug);
+
+    /**
      * How many days have passed since payments the expected day of payments
      */
     // @ts-expect-error debug
@@ -237,7 +266,17 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
-       * If workspace was manually unblocked (reset of billingPeriodEventsCount and lastChargeDate) in db
+       * If it is time to recharge workspace limits, but not time to pay
+       * Start new month - recharge billing period events count and update last charge date
+       */
+      if (isTimeToRecharge) {
+        await this.updateLastChargeDate(workspace, date);
+        await this.clearBillingPeriodEventsCount(workspace);
+      }
+
+      /**
+       * If workspace is blocked, but it is not time to pay
+       * This case could be reached by prepaid workspaces and manually recharged ones
        */
       if (workspace.isBlocked) {
         await this.unblockWorkspace(workspace);
