@@ -239,6 +239,7 @@ export default class PaymasterWorker extends Worker {
     /**
      * Is it time to recharge workspace limits
      */
+    // @ts-expect-error debug
     const isTimeToRecharge = PaymasterWorker.isTimeToRecharge(workspace.lastChargeDate, workspace.isDebug);
 
     /**
