@@ -60,40 +60,46 @@ export default class PaymasterWorker extends Worker {
   /**
    * Check if today is a payday for passed timestamp
    *
-   * Pay day is calculated by formula: last charge date + 30 days
-   *
    * @param date - last charge date
    * @param paidUntil - paid until date
    * @param isDebug - flag for debug purposes
    */
-  private static isTimeToPay(date: Date, paidUntil: Date, isDebug = false): boolean {
-    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
+  private static isTimeToPay(date: Date, paidUntil?: Date, isDebug = false): boolean {
+    const expectedPayDay = paidUntil ? new Date(paidUntil) : this.composeBillingPeriodEndDate(date, isDebug);
+    const now = new Date();
 
-    if (isDebug) {
-      expectedPayDay.setDate(date.getDate() + 1);
-    } else if (!paidUntil) {
-      expectedPayDay.setMonth(date.getMonth() + 1);
-    }
-
-    const now = new Date().getTime();
-
-    return now >= expectedPayDay.getTime();
+    return now >= expectedPayDay;
   }
 
   /**
-   * Method that returns date of the last charge date + 1 month
-   *
-   * It is used to recharge prepaid workspaces
+   * Check if today is a recharge day for passed timestamp
    *
    * @param date - last charge date
-   * @returns - last charge date + 1 month
+   * @param isDebug - flag for debug purposes
    */
-  private static monthSinceLastChargeDate(date: Date): Date {
-    const monthSinceLastChargeDate = new Date(date.getTime());
+  private static isTimeToRecharge(date: Date, isDebug = false): boolean {
+    const nexTimeToRecharge = this.composeBillingPeriodEndDate(date, isDebug);
+    const now = new Date();
 
-    monthSinceLastChargeDate.setMonth(monthSinceLastChargeDate.getMonth() + 1);
+    return now >= nexTimeToRecharge;
+  }
 
-    return monthSinceLastChargeDate;
+  /**
+   * Returns the date - end of the billing period
+   *
+   * @param date - last charge date
+   * @param isDebug - flag for debug workspaces
+   */
+  private static composeBillingPeriodEndDate(date: Date, isDebug = false): Date {
+    const endDate = new Date(date);
+
+    if (isDebug) {
+      endDate.setDate(date.getDate() + 1);
+    } else {
+      endDate.setMonth(date.getMonth() + 1);
+    }
+
+    return endDate;
   }
 
   /**
@@ -231,9 +237,9 @@ export default class PaymasterWorker extends Worker {
     const isTimeToPay = PaymasterWorker.isTimeToPay(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
-     * Date one month after last charge date
+     * Is it time to recharge workspace limits
      */
-    const monthSinceLastChargeDate: Date = PaymasterWorker.monthSinceLastChargeDate(workspace.lastChargeDate);
+    const isTimeToRecharge = PaymasterWorker.isTimeToRecharge(workspace.lastChargeDate, workspace.isDebug);
 
     /**
      * How many days have passed since payments the expected day of payments
@@ -258,10 +264,10 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
-       * If month since last charge date passed, but it is still not time to pay - then workspace has prepaid period
+       * If it is time to recharge workspace limits, but not time to pay
        * Start new month - recharge billing period events count and update last charge date
        */
-      if (date >= monthSinceLastChargeDate) {
+      if (isTimeToRecharge) {
         await this.updateLastChargeDate(workspace, date);
         await this.clearBillingPeriodEventsCount(workspace);
       }
