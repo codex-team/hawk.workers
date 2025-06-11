@@ -73,6 +73,7 @@ export default class PaymasterWorker extends Worker {
 
   /**
    * Check if today is a recharge day for passed timestamp
+   * It equals to the isTimeToPay in all cases except prePaid workspaces
    *
    * @param date - last charge date
    * @param isDebug - flag for debug purposes
