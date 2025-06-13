@@ -164,16 +164,17 @@ export default class LimiterWorker extends Worker {
     /**
      * If workspace should be blocked by quota - then do not unblock it
      */
-    const { shouldBeBlockedByQuota } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
+    const { shouldBeBlockedByQuota, updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
     if (shouldBeBlockedByQuota) {
       return;
     }
 
     await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, false);
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
     await this.redis.removeBannedProjects(projectIds);
 
-    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'unblocked');
+    this.sendSingleWorkspaceReport(workspaceProjects, updatedWorkspace, 'unblocked');
   }
 
   /**
