@@ -128,7 +128,10 @@ export default class LimiterWorker extends Worker {
     const workspaceProjects = await this.dbHelper.getProjects(event.workspaceId);
     const projectIds = workspaceProjects.map(project => project._id.toString());
 
-    await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, true);
+    const { updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
+
+    updatedWorkspace.isBlocked = true;
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
 
     this.logger.info('workspace blocked in db ', event.workspaceId)
 
@@ -170,7 +173,8 @@ export default class LimiterWorker extends Worker {
       return;
     }
 
-    await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, false);
+    updatedWorkspace.isBlocked = false;
+
     await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
     await this.redis.removeBannedProjects(projectIds);
 

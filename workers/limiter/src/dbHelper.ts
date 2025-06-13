@@ -110,25 +110,6 @@ export class DbHelper {
   }
 
   /**
-   * Method to change workspace isBlocked state
-   *
-   * @param workspaceId - id of the workspace to be changed
-   * @param isBlocked - new isBlocked state of the workspace
-   */
-  public async changeWorkspaceBlockedState(workspaceId: string, isBlocked: boolean): Promise<void> {
-    const result = await this.workspacesCollection.updateOne(
-      { _id: new ObjectId(workspaceId) },
-      {
-        $set: {
-          isBlocked,
-        },
-      }
-    );
-
-    console.log('result of changeWorkspaceBlockedState', JSON.stringify(result));
-  }
-
-  /**
    * Returns total event counts for last billing period
    *
    * @param project - project to check

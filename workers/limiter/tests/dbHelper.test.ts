@@ -272,34 +272,6 @@ describe('DbHelper', () => {
     });
   });
 
-  describe('changeWorkspaceBlockedState', () => {
-    test('Should change workspace blocked state', async () => {
-      /**
-       * Arrange
-       */
-      const workspace = createWorkspaceMock({
-        plan: mockedPlans.eventsLimit10,
-        billingPeriodEventsCount: 0,
-        lastChargeDate: new Date(),
-        isBlocked: false,
-      });
-
-      await workspaceCollection.insertOne(workspace);
-
-      /**
-       * Act
-       */
-      await dbHelper.changeWorkspaceBlockedState(workspace._id.toString(), true);
-
-      /**
-       * Assert
-       */
-      const updatedWorkspace = await workspaceCollection.findOne({ _id: workspace._id });
-
-      expect(updatedWorkspace.isBlocked).toBe(true);
-    });
-  });
-
   describe('getEventsCountByProject', () => {
     test('Should count events and repetitions for a project', async () => {
       /**
