@@ -234,6 +234,8 @@ export default class LimiterWorker extends Worker {
   private async prepareWorkspaceUsageUpdate(
     workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]
   ): Promise<WorkspaceReport> {
+    this.logger.info('prepareWorkspaceUsageUpdate');
+
     /**
      * If last charge date is not specified, then we skip checking it
      * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
@@ -252,6 +254,9 @@ export default class LimiterWorker extends Worker {
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
     const workspaceEventsCount = await this.dbHelper.getEventsCountByProjects(projects, since);
+
+    this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
+
     const usedQuota = workspaceEventsCount / workspace.tariffPlan.eventsLimit;
     const quotaNotification = NOTIFY_ABOUT_LIMIT.reverse().find(quota => quota < usedQuota);
 
