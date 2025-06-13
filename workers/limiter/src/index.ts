@@ -108,6 +108,8 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleBlockWorkspaceEvent(event: BlockWorkspaceEvent): Promise<void> {
+    this.logger.info('handle block workspace event', event);
+
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
 
     if (!workspace) {
@@ -126,7 +128,13 @@ export default class LimiterWorker extends Worker {
     const workspaceProjects = await this.dbHelper.getProjects(event.workspaceId);
     const projectIds = workspaceProjects.map(project => project._id.toString());
 
-    await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, true);
+    const { updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
+
+    updatedWorkspace.isBlocked = true;
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
+
+    this.logger.info('workspace blocked in db ', event.workspaceId)
+
     await this.redis.appendBannedProjects(projectIds);
 
     this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'blocked');
@@ -159,16 +167,18 @@ export default class LimiterWorker extends Worker {
     /**
      * If workspace should be blocked by quota - then do not unblock it
      */
-    const { shouldBeBlockedByQuota } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
+    const { shouldBeBlockedByQuota, updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
     if (shouldBeBlockedByQuota) {
       return;
     }
 
-    await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, false);
+    updatedWorkspace.isBlocked = false;
+
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
     await this.redis.removeBannedProjects(projectIds);
 
-    this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'unblocked');
+    this.sendSingleWorkspaceReport(workspaceProjects, updatedWorkspace, 'unblocked');
   }
 
   /**
@@ -229,6 +239,8 @@ export default class LimiterWorker extends Worker {
   private async prepareWorkspaceUsageUpdate(
     workspace: WorkspaceWithTariffPlan, projects: ProjectDBScheme[]
   ): Promise<WorkspaceReport> {
+    this.logger.info('prepareWorkspaceUsageUpdate');
+
     /**
      * If last charge date is not specified, then we skip checking it
      * In the next time the Paymaster worker starts, it will set lastChargeDate for this workspace
@@ -247,6 +259,9 @@ export default class LimiterWorker extends Worker {
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
     const workspaceEventsCount = await this.dbHelper.getEventsCountByProjects(projects, since);
+
+    this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
+
     const usedQuota = workspaceEventsCount / workspace.tariffPlan.eventsLimit;
     const quotaNotification = NOTIFY_ABOUT_LIMIT.reverse().find(quota => quota < usedQuota);
 
