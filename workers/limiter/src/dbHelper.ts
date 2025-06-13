@@ -116,7 +116,7 @@ export class DbHelper {
    * @param isBlocked - new isBlocked state of the workspace
    */
   public async changeWorkspaceBlockedState(workspaceId: string, isBlocked: boolean): Promise<void> {
-    await this.workspacesCollection.updateOne(
+    const result = await this.workspacesCollection.updateOne(
       { _id: new ObjectId(workspaceId) },
       {
         $set: {
@@ -124,6 +124,8 @@ export class DbHelper {
         },
       }
     );
+
+    console.log('result of changeWorkspaceBlockedState', JSON.stringify(result));
   }
 
   /**

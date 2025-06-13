@@ -108,6 +108,8 @@ export default class LimiterWorker extends Worker {
    * @param event - event to handle
    */
   private async handleBlockWorkspaceEvent(event: BlockWorkspaceEvent): Promise<void> {
+    this.logger.info('handle block workspace event', event);
+
     const workspace = await this.dbHelper.getWorkspacesWithTariffPlans(event.workspaceId);
 
     if (!workspace) {
@@ -127,6 +129,9 @@ export default class LimiterWorker extends Worker {
     const projectIds = workspaceProjects.map(project => project._id.toString());
 
     await this.dbHelper.changeWorkspaceBlockedState(event.workspaceId, true);
+
+    this.logger.info('workspace blocked in db ', event.workspaceId)
+
     await this.redis.appendBannedProjects(projectIds);
 
     this.sendSingleWorkspaceReport(workspaceProjects, workspace, 'blocked');
