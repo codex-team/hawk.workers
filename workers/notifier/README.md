@@ -2,6 +2,11 @@
 
 Handles new events from Grouper Worker, holds it and sends to sender worlers
 
+This repository is a part of the Hawk ecosystemm. You can register [here](https://garage.hawk.so/login)
+
+![alt text](../../.github/assets/Hawk.png)
+
+
 ## How to run  
 
 1. Make sure you are in Workers root directory
@@ -12,21 +17,12 @@ Handles new events from Grouper Worker, holds it and sends to sender worlers
 ## Events handling scheme
 
 ```
-1) On task received
   -> receive task
   -> get project notification rules
   -> filter rules
-  -> check channel timer
-     a) if timer doesn't exist
-       -> send tasks to sender workers
-       -> set timeout for minPeriod
-     b) if timer exists
-       -> push event to channel's buffer
-
-2) On timeout
-  -> get events from channel's buffer
-  -> flush channel's buffer
-  -> send tasks to sender workers
+  -> update eventsCount in redis
+  -> get updated eventCount
+  -> send notification if eventCount == treshold
 ```
 
 ### Event example
