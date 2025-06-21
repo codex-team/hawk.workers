@@ -2,8 +2,7 @@
 
 Handles new events from Grouper Worker, holds it and sends to sender worlers
 
-This repository is a part of the Hawk ecosystem.
-📝 You can register [here](https://garage.hawk.so/login)
+This repository is a part of the Hawk ecosystemm. You can register [here](https://garage.hawk.so/login)
 
 ![alt text](../../.github/assets/Hawk.png)
 
