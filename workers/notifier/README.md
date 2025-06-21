@@ -17,7 +17,6 @@ This repository is a part of the Hawk ecosystem.
 ## Events handling scheme
 
 ```
-1) On task received
   -> receive task
   -> get project notification rules
   -> filter rules
