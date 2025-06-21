@@ -16,8 +16,8 @@ Handles new events from Grouper Worker, holds it and sends to sender worlers
   -> receive task
   -> get project notification rules
   -> filter rules
-  -> update redis keys
-  -> get updated eventCount based on groupHash, ruleId and projectId
+  -> update eventsCount in redis
+  -> get updated eventCount
   -> send notification if eventCount == treshold
 ```
 
