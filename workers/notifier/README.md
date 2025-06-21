@@ -16,17 +16,9 @@ Handles new events from Grouper Worker, holds it and sends to sender worlers
   -> receive task
   -> get project notification rules
   -> filter rules
-  -> check channel timer
-     a) if timer doesn't exist
-       -> send tasks to sender workers
-       -> set timeout for minPeriod
-     b) if timer exists
-       -> push event to channel's buffer
-
-2) On timeout
-  -> get events from channel's buffer
-  -> flush channel's buffer
-  -> send tasks to sender workers
+  -> update redis keys
+  -> get updated eventCount based on groupHash, ruleId and projectId
+  -> send notification if eventCount == treshold
 ```
 
 ### Event example
