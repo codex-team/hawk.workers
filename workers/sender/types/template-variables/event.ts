@@ -45,6 +45,11 @@ export interface EventsTemplateVariables extends CommonTemplateVariables {
    * Minimal pause between second notification, in seconds
    */
   period: number;
+
+  /**
+   * Id of notification rule to unsubscribe
+   */
+  notificationRuleId: string;
 }
 
 /**
