@@ -47,9 +47,10 @@ export interface EventsTemplateVariables extends CommonTemplateVariables {
   period: number;
 
   /**
-   * Id of notification rule to unsubscribe
+   * Id of notification rule to unsubscribe.
+   * Required for email notifications – to form unsubscribe link.
    */
-  notificationRuleId: string;
+  notificationRuleId?: string;
 }
 
 /**
