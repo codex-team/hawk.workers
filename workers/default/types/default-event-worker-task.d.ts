@@ -14,4 +14,9 @@ export interface DefaultEventWorkerTask extends EventWorkerTask {
    * Language-specific payload
    */
   payload: DefaultEventPayload;
+
+  /**
+   * Unix timestamp of the event
+   */
+  timestamp: number;
 }

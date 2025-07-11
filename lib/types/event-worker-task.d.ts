@@ -19,4 +19,9 @@ export interface EventWorkerTask extends WorkerTask {
    * All information about the event
    */
   payload: DecodedEventData<EventAddons>;
+
+  /**
+   * Unix timestamp of the event
+   */
+  timestamp: number;
 }

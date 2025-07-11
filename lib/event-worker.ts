@@ -26,6 +26,7 @@ export abstract class EventWorker extends Worker {
       projectId: event.projectId,
       catcherType: this.type,
       event: event.payload,
+      timestamp: event.timestamp
     } as GroupWorkerTask);
   }
 
@@ -35,7 +36,7 @@ export abstract class EventWorker extends Worker {
    * @param {EventWorkerTask} event - event to be validated
    */
   protected validate(event: EventWorkerTask): void {
-    if (!event.projectId || !event.payload) {
+    if (!event.projectId || !event.payload || !event.timestamp) {
       throw new Error('Bad data was given');
     }
   }

@@ -14,4 +14,9 @@ export interface JavaScriptEventWorkerTask extends EventWorkerTask {
    * Language-specific payload
    */
   payload: JavaScriptEventPayload;
+
+  /**
+   * Unix timestamp of the event
+   */
+  timestamp: number;
 }
