@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine } from '@hawk.so/types';
+import type { EventAddons, EventData, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -147,6 +147,7 @@ export default class GrouperWorker extends Worker {
           totalCount: 1,
           catcherType: task.catcherType,
           payload: task.event,
+          timestamp: task.timestamp,
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
@@ -207,7 +208,7 @@ export default class GrouperWorker extends Worker {
       const newRepetition = {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
-        timestamp: task.event.timestamp,
+        timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -216,7 +217,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId, incrementDailyAffectedUsers);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.timestamp, repetitionId, incrementDailyAffectedUsers);
 
     /**
      * Add task for NotifierWorker
@@ -238,7 +239,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param event - event to process
    */
-  private trimSourceCodeLines(event: EventDataAccepted<EventAddons>): void {
+  private trimSourceCodeLines(event: EventData<EventAddons>): void {
     if (!event.backtrace) {
       return;
     }
@@ -276,7 +277,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param event - event to compare
    */
-  private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
+  private async findSimilarEvent(projectId: string, event: EventData<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
     const eventsCountToCompare = 60;
     const diffTreshold = 0.35;
 
@@ -347,7 +348,7 @@ export default class GrouperWorker extends Worker {
    * @param event - event which title would be cheched
    * @returns {string | null} matched pattern or null if no match
    */
-  private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
+  private async findMatchingPattern(patterns: string[], event: EventData<EventAddons>): Promise<string | null> {
     if (!patterns || patterns.length === 0) {
       return null;
     }
@@ -461,13 +462,13 @@ export default class GrouperWorker extends Worker {
     /**
      * Get midnight timestamps for the event and the next day
      */
-    const eventMidnight = this.getMidnightByEventTimestamp(task.event.timestamp);
-    const eventNextMidnight = this.getMidnightByEventTimestamp(task.event.timestamp, true);
+    const eventMidnight = this.getMidnightByEventTimestamp(task.timestamp);
+    const eventNextMidnight = this.getMidnightByEventTimestamp(task.timestamp, true);
 
     /**
      * Check if incoming event has the same day as the original event
      */
-    const isSameDay = existedEvent.payload.timestamp > eventMidnight && existedEvent.payload.timestamp < eventNextMidnight;
+    const isSameDay = existedEvent.timestamp > eventMidnight && existedEvent.timestamp < eventNextMidnight;
 
     /**
      * If incoming event has the same day as the original event and the same user, don't increment daily affected users
@@ -484,7 +485,7 @@ export default class GrouperWorker extends Worker {
           .findOne({
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
-            'payload.timestamp': {
+            'timestamp': {
               $gte: eventMidnight,
               $lt: eventNextMidnight,
             },

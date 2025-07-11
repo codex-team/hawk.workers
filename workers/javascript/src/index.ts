@@ -83,6 +83,7 @@ export default class JavascriptEventWorker extends EventWorker {
       projectId: event.projectId,
       catcherType: this.type,
       event: event.payload,
+      timestamp: event.timestamp,
     } as GroupWorkerTask);
   }
 

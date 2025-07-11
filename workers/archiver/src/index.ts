@@ -168,7 +168,7 @@ export default class ArchiverWorker extends Worker {
     const repetitionsBulk = repetitionsCollection.initializeUnorderedBulkOp();
 
     repetitionsBulk.find({
-      'payload.timestamp': {
+      'timestamp': {
         $lt: maxOldTimestamp,
       },
     }).delete();
