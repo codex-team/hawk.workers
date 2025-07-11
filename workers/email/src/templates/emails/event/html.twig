@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block unsubscribeLink %}
-  {{ host ~ '/unsubscribe/' ~ notificationRuleId }}
+  {{ host ~ '/unsubscribe/' ~ project._id ~ '/' ~ notificationRuleId }}
 {% endblock %}
 
 {% block unsubscribeText %}
