@@ -81,6 +81,7 @@ describe('EmailProvider', () => {
         period: 60,
         host: process.env.GARAGE_URL!,
         hostOfStatic: process.env.API_STATIC_URL!,
+        notificationRuleId: '5d206f7f9aaf7c0071d64596',
         project: {
           _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
           token: 'project-token',
@@ -131,6 +132,7 @@ describe('EmailProvider', () => {
         }],
         host: process.env.GARAGE_URL!,
         hostOfStatic: process.env.API_STATIC_URL!,
+        notificationRuleId: '5d206f7f9aaf7c0071d64596',
         project: {
           _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
           token: 'project-token',

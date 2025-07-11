@@ -196,6 +196,7 @@ export default abstract class SenderWorker extends Worker {
         project,
         events: eventsData,
         period: channel.minPeriod,
+        notificationRuleId: rule._id,
       },
     } as EventNotification | SeveralEventsNotification);
   }
