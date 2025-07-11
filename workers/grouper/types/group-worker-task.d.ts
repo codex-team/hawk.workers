@@ -1,4 +1,4 @@
-import type { EventDataAccepted, EventAddons } from '@hawk.so/types';
+import type { EventAddons, EventData } from '@hawk.so/types';
 import type { WorkerTask } from '../../../lib/types/worker-task';
 import type { Delta } from '@n1ru4l/json-patch-plus';
 
@@ -20,7 +20,12 @@ export interface GroupWorkerTask extends WorkerTask {
   /**
    * Event that should be grouped
    */
-  event: EventDataAccepted<EventAddons>;
+  event: EventData<EventAddons>;
+
+  /**
+   * Unix timestamp of the event
+   */
+  timestamp: number;
 }
 
 /**
