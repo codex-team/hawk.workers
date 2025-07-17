@@ -332,7 +332,7 @@ export default class GrouperWorker extends Worker {
             return originalEvent;
           }
         } catch (e) {
-          this.logger.error(`Error while getting original event for pattern ${matchingPattern}`);
+          this.logger.error(`Error while getting original event for pattern ${matchingPattern}: ${e.message}`);
         }
       }
     }

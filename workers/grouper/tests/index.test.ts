@@ -67,7 +67,7 @@ const projectMock = {
   },
   unreadCount: 0,
   description: 'Test project for grouper worker tests',
-  eventGroupingPatterns: [ 'New error .*' ],
+  eventGroupingPatterns: [ { _id: mongodb.ObjectId(), pattern: 'New error .*' }],
 };
 
 /**
