@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine } from '@hawk.so/types';
+import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine, ProjectEventGroupingPatternsDBScheme } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -317,11 +317,11 @@ export default class GrouperWorker extends Worker {
 
       if (matchingPattern !== null && matchingPattern !== undefined) {
         try {
-          const originalEvent = await this.cache.get(`${projectId}:${matchingPattern}:originalEvent`, async () => {
+          const originalEvent = await this.cache.get(`${projectId}:${matchingPattern._id}:originalEvent`, async () => {
             return await this.eventsDb.getConnection()
               .collection(`events:${projectId}`)
               .findOne(
-                { 'payload.title': { $regex: matchingPattern } },
+                { 'payload.title': { $regex: matchingPattern.pattern } },
                 { sort: { _id: 1 } }
               );
           });
@@ -345,15 +345,18 @@ export default class GrouperWorker extends Worker {
    *
    * @param patterns - list of the patterns of the related project
    * @param event - event which title would be cheched
-   * @returns {string | null} matched pattern or null if no match
+   * @returns {ProjectEventGroupingPatternsDBScheme | null} matched pattern object or null if no match
    */
-  private async findMatchingPattern(patterns: string[], event: EventDataAccepted<EventAddons>): Promise<string | null> {
+  private async findMatchingPattern(
+    patterns: ProjectEventGroupingPatternsDBScheme[],
+    event: EventDataAccepted<EventAddons>
+  ): Promise<ProjectEventGroupingPatternsDBScheme | null> {
     if (!patterns || patterns.length === 0) {
       return null;
     }
 
     return patterns.filter(pattern => {
-      const patternRegExp = new RegExp(pattern);
+      const patternRegExp = new RegExp(pattern.pattern);
 
       return event.title.match(patternRegExp);
     }).pop() || null;
@@ -363,9 +366,9 @@ export default class GrouperWorker extends Worker {
    * Method that gets event patterns for a project
    *
    * @param projectId - id of the project to find related event patterns
-   * @returns {string[]} EventPatterns object with projectId and list of patterns
+   * @returns {ProjectEventGroupingPatternsDBScheme[]} EventPatterns object with projectId and list of patterns
    */
-  private async getProjectPatterns(projectId: string): Promise<string[]> {
+  private async getProjectPatterns(projectId: string): Promise<ProjectEventGroupingPatternsDBScheme[]> {
     return this.cache.get(`project:${projectId}:patterns`, async () => {
       const project = await this.accountsDb.getConnection()
         .collection('projects')

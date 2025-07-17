@@ -490,7 +490,9 @@ describe('GrouperWorker', () => {
       });
 
       test('should group events with titles matching one pattern', async () => {
-        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([ 'New error .*' ]);
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([ 
+          { _id: new mongodb.ObjectId, pattern: 'New error .*' }
+        ]);
         const findMatchingPatternSpy = jest.spyOn(GrouperWorker.prototype as any, 'findMatchingPattern');
 
         await worker.handle(generateTask({ title: 'New error 0000000000000000' }));
@@ -507,9 +509,9 @@ describe('GrouperWorker', () => {
 
       test('should handle multiple patterns and match the first one that applies', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          'Database error: .*',
-          'Network error: .*',
-          'New error: .*',
+          { _id: mongodb.ObjectId(), pattern: 'Database error: .*' },
+          { _id: mongodb.ObjectId(), pattern: 'Network error: .*' },
+          { _id: mongodb.ObjectId(), pattern: 'New error: .*' },
         ]);
 
         await worker.handle(generateTask({ title: 'Database error: connection failed' }));
@@ -526,8 +528,8 @@ describe('GrouperWorker', () => {
 
       test('should handle complex regex patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$',
-          'Warning \\d{3}: .*',
+          { _id: mongodb.ObjectId(), pattern: 'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$' },
+          { _id: mongodb.ObjectId(), pattern: 'Warning \\d{3}: .*' },
         ]);
 
         await worker.handle(generateTask({ title: 'Error 404: Not Found in file index.js' }));
@@ -544,8 +546,8 @@ describe('GrouperWorker', () => {
 
       test('should maintain separate groups for different patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          'TypeError: .*',
-          'ReferenceError: .*',
+          { _id: mongodb.ObjectId(), pattern: 'TypeError: .*' },
+          { _id: mongodb.ObjectId(), pattern: 'ReferenceError: .*' },
         ]);
 
         await worker.handle(generateTask({ title: 'TypeError: null is not an object' }));
@@ -566,8 +568,8 @@ describe('GrouperWorker', () => {
 
       test('should handle patterns with special regex characters', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          'Error \\[\\d+\\]: .*',
-          'Warning \\(code=\\d+\\): .*',
+          { _id: new mongodb.ObjectID(), pattern: 'Error \\[\\d+\\]: .*'} ,
+          { _id: new mongodb.ObjectID(), pattern: 'Warning \\(code=\\d+\\): .*'} ,
         ]);
 
         await worker.handle(generateTask({ title: 'Error [123]: Database connection failed' }));
