@@ -60,9 +60,9 @@ const projectQueryMock = jest.fn(() => ({
 
 const eventsQueryMock = jest.fn(() => ({
   totalCount: 10,
+  timestamp: Date.now(),
   payload: {
     title: 'New event',
-    timestamp: Date.now(),
     backtrace: [ {
       file: 'file',
       line: 1,

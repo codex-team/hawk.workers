@@ -1,4 +1,4 @@
-import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { EventAddons, EventData } from '@hawk.so/types';
 import { generateRandomId } from './randomId';
 
 /**
@@ -11,10 +11,9 @@ const userIdMock = generateRandomId();
  *
  * @param event - Partial event data to override default values
  */
-export function generateEvent(event: Partial<EventDataAccepted<EventAddons>> = undefined): EventDataAccepted<EventAddons> {
+export function generateEvent(event: Partial<EventData<EventAddons>> = undefined): EventData<EventAddons> {
   return {
     title: 'Hawk client catcher test',
-    timestamp: (new Date()).getTime(),
     backtrace: [],
     user: {
       id: userIdMock,

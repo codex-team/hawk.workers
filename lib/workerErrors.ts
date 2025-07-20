@@ -2,7 +2,7 @@
  * Class for critical errors
  * have to stop process
  */
-import { EventAddons, EventContext, EventDataAccepted } from '@hawk.so/types';
+import { EventAddons, EventContext, EventData } from '@hawk.so/types';
 
 /**
  * Error class with additional error context for debugging
@@ -71,8 +71,8 @@ export class DiffCalculationError extends NonCriticalError {
    */
   constructor(
     msg: string | Error,
-    originalEvent: EventDataAccepted<EventAddons>,
-    eventToCompare: EventDataAccepted<EventAddons>
+    originalEvent: EventData<EventAddons>,
+    eventToCompare: EventData<EventAddons>
   ) {
     super(msg);
     this.context = {

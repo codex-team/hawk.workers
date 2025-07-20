@@ -31,4 +31,4 @@ export interface GroupWorkerTask extends WorkerTask {
 /**
  * Delta of the original event and the repetition
  */
-export type RepetitionDelta = Delta;
+export type RepetitionDelta = Delta | undefined;

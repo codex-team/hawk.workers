@@ -50,6 +50,10 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
      * Repetition includes delta field, grouped event includes payload
      */
     if ('delta' in event) {
+      if (event.delta === undefined) {
+        return;
+      }
+
       fieldValue = event.delta[field];
     } else {
       fieldValue = event.payload[field];

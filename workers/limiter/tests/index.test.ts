@@ -87,9 +87,9 @@ describe('Limiter worker', () => {
       usersAffected: 0,
       visitedBy: [],
       groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+      timestamp: 1586892935,
       payload: {
         title: 'Mocked event',
-        timestamp: 1586892935,
       },
     };
   };

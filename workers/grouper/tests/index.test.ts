@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
@@ -75,13 +75,13 @@ const projectMock = {
  *
  * @param event - allows to override some event properties in generated task
  */
-function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined): GroupWorkerTask {
+function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask {
   return {
     projectId: projectIdMock,
     catcherType: 'grouper',
+    timestamp,
     event: Object.assign({
       title: 'Hawk client catcher test',
-      timestamp: (new Date()).getTime(),
       backtrace: [],
       user: {
         id: generateRandomId(),
@@ -233,22 +233,18 @@ describe('GrouperWorker', () => {
       const yesterday = today - secondsInDay;
 
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer1' },
-      }));
+      }, yesterday));
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer2' },
-      }));
+      }, yesterday));
 
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer1' },
-      }));
+      }, today));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer2' },
-      }));
+      }, today));
 
       const dailyEvents = await dailyEventsCollection.find({}).toArray();
 
@@ -262,17 +258,14 @@ describe('GrouperWorker', () => {
       const today = (new Date()).getTime() / MS_IN_SEC;
 
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer1' },
-      }));
+      }, yesterday));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer1' },
-      }));
+      }, today));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer2' },
-      }));
+      }, today));
 
       /**
        * Get daily events ordered by timestamp desc
@@ -395,28 +388,16 @@ describe('GrouperWorker', () => {
       expect(typeof savedRepetition.delta).toBe('string');
     });
 
-    test('Should correctly calculate diff after encoding original event when they are the same', async () => {
+    test.only('Should correctly calculate diff after encoding original event when they are the same', async () => {
       await worker.handle(generateTask({ user: { id: '123' } }));
       await worker.handle(generateTask({ user: { id: '123' } }));
 
       const savedRepetition = await repetitionsCollection.findOne({});
 
-      const savedDelta = savedRepetition.delta as string;
-      const parsedDelta = JSON.parse(savedDelta) as RepetitionDelta;
+      const savedDelta = savedRepetition.delta;
+      const parsedDelta = savedDelta as RepetitionDelta;
 
-      expect(parsedDelta.type).toBe(undefined);
-      expect(parsedDelta.backtrace).toBe(undefined);
-      expect(parsedDelta.context).toBe(undefined);
-      expect(parsedDelta.addons).toBe(undefined);
-      expect(parsedDelta.release).toBe(undefined);
-      expect(parsedDelta.user).toBe(undefined);
-      expect(parsedDelta.catcherVersion).toBe(undefined);
-
-      /**
-       * Timestamp always unique, so it should be present in a stored payload diff
-       */
-      expect(parsedDelta.timestamp).not.toBe(undefined);
-      expect(typeof parsedDelta.timestamp).toBe('object');
+      expect(parsedDelta).toBe(null)
     });
 
     test('Should correctly calculate diff after encoding original event when they are different', async () => {

@@ -141,7 +141,6 @@ export default class SentryEventWorker extends Worker {
     const event: DecodedEventData<EventAddons> = {
       title,
       type: eventPayload.level || 'error',
-      timestamp: sentAtUnix,
       catcherVersion: pkg.version,
     };
 
@@ -173,6 +172,7 @@ export default class SentryEventWorker extends Worker {
       projectId,
       catcherType: this.type,
       payload: event,
+      timestamp: sentAtUnix,
     };
   }
 }
