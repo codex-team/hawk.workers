@@ -131,9 +131,9 @@ export default class LimiterWorker extends Worker {
     const { updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
     updatedWorkspace.isBlocked = true;
-    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ updatedWorkspace ]);
 
-    this.logger.info('workspace blocked in db ', event.workspaceId)
+    this.logger.info('workspace blocked in db ', event.workspaceId);
 
     await this.redis.appendBannedProjects(projectIds);
 
@@ -175,7 +175,7 @@ export default class LimiterWorker extends Worker {
 
     updatedWorkspace.isBlocked = false;
 
-    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ updatedWorkspace ]);
     await this.redis.removeBannedProjects(projectIds);
 
     this.sendSingleWorkspaceReport(workspaceProjects, updatedWorkspace, 'unblocked');

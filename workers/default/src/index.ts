@@ -1,4 +1,4 @@
-import { CatcherMessageType } from '@hawk.so/types';
+import { CatcherMessageType, ErrorsCatcherType } from '@hawk.so/types';
 import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
 import { DefaultEventWorkerTask } from '../types/default-event-worker-task';
@@ -10,7 +10,7 @@ export default class DefaultEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public type: CatcherMessageType = pkg.workerType as CatcherMessageType;
+  public type: ErrorsCatcherType = pkg.workerType as ErrorsCatcherType;
 
   /**
    * Message handle function

@@ -1,7 +1,7 @@
 import { Worker } from './worker';
 import * as WorkerNames from './workerNames';
 import { GroupWorkerTask } from 'hawk-worker-grouper/types/group-worker-task';
-import { CatcherMessageType, CatcherMessagePayload, CatcherMessageAccepted, ErrorsCatcherType } from '@hawk.so/types' 
+import { CatcherMessageType, CatcherMessagePayload, CatcherMessageAccepted, ErrorsCatcherType } from '@hawk.so/types';
 
 /**
  * Defines a Worker that handles events from Catcher.
@@ -26,14 +26,14 @@ export abstract class EventWorker extends Worker {
       projectId: task.projectId,
       catcherType: this.type as CatcherMessageType,
       payload: task.payload as CatcherMessagePayload<ErrorsCatcherType>,
-      timestamp: task.timestamp
+      timestamp: task.timestamp,
     } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
   /**
    * Validate passed event data
    *
-   * @param {EventWorkerTask} task - task to be validated
+   * @param {CatcherMessageAccepted<CatcherMessageType>} task - task to be validated
    */
   protected validate(task: CatcherMessageAccepted<CatcherMessageType>): void {
     if (!task.projectId || !task.payload || !task.timestamp) {

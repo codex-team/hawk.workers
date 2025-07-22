@@ -68,14 +68,14 @@ export default class SentryEventWorker extends Worker {
         return;
       }
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
-      
+
       /**
        * @todo react-native could be added if we support source-map sending for Metro bundler
        */
       const sentryJsSDK = ['browser', 'react', 'vue', 'angular', 'capacirtor', 'electron'];
-      
-      const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name)
-      
+
+      const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name);
+
       const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
 
       /**
@@ -86,7 +86,6 @@ export default class SentryEventWorker extends Worker {
       } else {
         await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
       }
-
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
       this.logger.info('👇 Here is the problematic item:');
@@ -101,12 +100,13 @@ export default class SentryEventWorker extends Worker {
    * @param envelopeHeader - Sentry envelope header
    * @param eventItem - Sentry event item
    * @param projectId - Hawk project ID
+   * @param isJsSDK - Whether the event is from a Sentry JavaScript SDK
    */
   private transformToHawkFormat(
     envelopeHeader: EventEnvelope[0],
     eventItem: EventItem,
     projectId: string,
-    isJsSDK: boolean,
+    isJsSDK: boolean
   ): DefaultEventWorkerTask | JavaScriptEventWorkerTask {
     /* eslint-disable @typescript-eslint/naming-convention */
     const { sent_at, trace } = envelopeHeader;
@@ -169,16 +169,18 @@ export default class SentryEventWorker extends Worker {
       event.release = eventPayload.release || trace?.release;
     }
 
-    return isJsSDK ? {
-      projectId,
-      catcherType: 'errors/javascript',
-      payload: event as CatcherMessagePayload<'errors/javascript'>,
-      timestamp: sentAtUnix,
-    } : {
-      projectId,  
-      catcherType: 'errors/default',
-      payload: event as CatcherMessagePayload<'errors/default'>,
-      timestamp: sentAtUnix,
-    };
+    return isJsSDK
+      ? {
+        projectId,
+        catcherType: 'errors/javascript',
+        payload: event as CatcherMessagePayload<'errors/javascript'>,
+        timestamp: sentAtUnix,
+      }
+      : {
+        projectId,
+        catcherType: 'errors/default',
+        payload: event as CatcherMessagePayload<'errors/default'>,
+        timestamp: sentAtUnix,
+      };
   }
 }

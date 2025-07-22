@@ -12,7 +12,7 @@ export const mockedRepetitions = [
   },
   {
     groupHash: '10a964aeb1ca8daa7a041c249b1c4d9cc351afe86ee7e13c5aa441c42c3f9b12',
-    timestamp: 1586892999,  
+    timestamp: 1586892999,
   },
   {
     groupHash: '10a964aeb1ca8daa7a041c249b1c4d9cc351afe86ee7e13c5aa441c42c3f9b12',

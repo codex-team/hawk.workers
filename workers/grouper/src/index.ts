@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { 
+import type {
   EventAddons,
   EventData,
   GroupedEventDBScheme,
@@ -272,8 +272,8 @@ export default class GrouperWorker extends Worker {
    * Get unique hash based on event type and title
    *
    * @param task - worker task to create hash
-  */
-  private getUniqueEventHash<type extends ErrorsCatcherType>(task: GroupWorkerTask<type>): Promise<string> {
+   */
+  private getUniqueEventHash<Type extends ErrorsCatcherType>(task: GroupWorkerTask<Type>): Promise<string> {
     return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.payload.title}`, () => {
       return crypto.createHmac('sha256', process.env.EVENT_SECRET)
         .update(task.catcherType + task.payload.title)
@@ -428,7 +428,7 @@ export default class GrouperWorker extends Worker {
    * @param existedEvent - original event to get its user
    * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
-  private async shouldIncrementAffectedUsers<type extends ErrorsCatcherType>(task: GroupWorkerTask<type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
+  private async shouldIncrementAffectedUsers<Type extends ErrorsCatcherType>(task: GroupWorkerTask<Type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
     const eventUser = task.payload.user;
 
     /**
@@ -498,7 +498,7 @@ export default class GrouperWorker extends Worker {
           .findOne({
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
-            'timestamp': {
+            timestamp: {
               $gte: eventMidnight,
               $lt: eventNextMidnight,
             },

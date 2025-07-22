@@ -252,7 +252,7 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param sourceCode - content of the source file
    * @param line - number of the line from the stack trace
-   * @returns - string of the function context or null if it could not be parsed
+   * @returns {string | null} - string of the function context or null if it could not be parsed
    */
   private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;

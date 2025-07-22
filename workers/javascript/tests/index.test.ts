@@ -271,7 +271,7 @@ describe('JavaScript event worker', () => {
             expect.objectContaining(parsedBacktraceFrame),
           ],
         },
-      },
+      }
     );
     await worker.finish();
   });
