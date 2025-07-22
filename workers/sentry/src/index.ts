@@ -76,18 +76,17 @@ export default class SentryEventWorker extends Worker {
       
       const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name)
       
-      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
+      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
 
       /**
        * If we have release attached to the event
        */
       if (isJsSDK) {
         await this.addTask(WorkerNames.JAVASCRIPT, hawkEvent as JavaScriptEventWorkerTask);
-
-        return;
+      } else {
+        await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
       }
 
-      await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
       this.logger.info('👇 Here is the problematic item:');
@@ -170,10 +169,15 @@ export default class SentryEventWorker extends Worker {
       event.release = eventPayload.release || trace?.release;
     }
 
-    return {
+    return isJsSDK ? {
       projectId,
-      catcherType: isJsSDK ? 'errors/javascript' : 'errors/default',
-      payload: event as isJsSDK ? CatcherMessagePayload<'errors/javascript'> : CatcherMessagePayload<'errors/default'>,
+      catcherType: 'errors/javascript',
+      payload: event as CatcherMessagePayload<'errors/javascript'>,
+      timestamp: sentAtUnix,
+    } : {
+      projectId,  
+      catcherType: 'errors/default',
+      payload: event as CatcherMessagePayload<'errors/default'>,
       timestamp: sentAtUnix,
     };
   }
