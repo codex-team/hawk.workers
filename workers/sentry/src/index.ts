@@ -158,7 +158,9 @@ export default class SentryEventWorker extends Worker {
     }
 
     if (addons) {
-      event.addons.sentry = addons;
+      event.addons = {
+        sentry: addons,
+      };
     }
 
     /**

@@ -122,7 +122,6 @@ export function composeAddons(eventPayload: SentryEvent): SentryAddons {
     'level',
     'platform',
     'server_name',
-    'release',
     'dist',
     'environment',
     'request',

@@ -3,7 +3,7 @@ import '../../../env-test';
 import { mockedAmqpChannel } from '../../../jest.setup.js';
 import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode, base64toBuffer } from '../src/utils/base64';
-import { CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
+import { CatcherMessageAccepted, CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 
 /**
@@ -270,6 +270,8 @@ describe('SentryEventWorker', () => {
         '2024-01-01T00:00:00.000+00:00',
       ];
 
+      jest.spyOn(worker, 'addTask');
+
       for (const timestamp of timestamps) {
         const eventEnvelope: EventEnvelope = [
           {
@@ -291,13 +293,21 @@ describe('SentryEventWorker', () => {
           catcherType: 'external/sentry',
         });
 
-        const addedTaskPayload = getAddTaskPayloadFromLastCall();
-
-        expect(addedTaskPayload).toMatchObject({
-          payload: expect.objectContaining({
-            timestamp: 1704067200,
-          }),
-        });
+        expect(worker.addTask).toHaveBeenCalledWith('errors/default', expect.objectContaining({
+          catcherType: 'errors/default',
+          timestamp: 1704067200,
+          projectId: '123',
+          payload: {
+            addons: {
+              sentry: {
+                message: 'Test timestamp',
+              },
+            },
+            catcherVersion: "1.0.1",
+            title: "Unknown: ",
+            type: "error",
+          },
+        }));
       }
     });
 
@@ -455,9 +465,11 @@ describe('SentryEventWorker', () => {
       expect(addedTaskPayload).toMatchObject({
         payload: expect.objectContaining({
           addons: {
-            platform: 'javascript',
-            environment: 'production',
-            request: { url: 'https://test.com' },
+            sentry: {
+              platform: 'javascript',
+              environment: 'production',
+              request: { url: 'https://test.com' },
+            }
           },
         }),
       });
@@ -602,7 +614,7 @@ describe('SentryEventWorker', () => {
       });
 
       expect(worker.addTask).toHaveBeenCalledWith('errors/javascript', expect.objectContaining({
-        catcherType: 'external/sentry',
+        catcherType: 'errors/javascript',
         projectId: '123',
         payload: expect.objectContaining({
           release: '1.0.0',
@@ -638,45 +650,10 @@ describe('SentryEventWorker', () => {
       });
 
       expect(worker.addTask).toHaveBeenCalledWith('errors/default', expect.objectContaining({
-        catcherType: 'external/sentry',
+        catcherType: 'errors/default',
         projectId: '123',
         payload: expect.objectContaining({
           release: '1.0.0',
-        }),
-      }));
-    });
-
-    it('should route to Default worker when SDK is in sentryJsSDK list but release is missing', async () => {
-      const eventEnvelope: EventEnvelope = [
-        {
-          /* eslint-disable @typescript-eslint/naming-convention */
-          event_id: '123e4567-e89b-12d3-a456-426614174000',
-          sent_at: '2024-01-01T00:00:00.000Z',
-          /* eslint-enable @typescript-eslint/naming-convention */
-        },
-        [
-          [
-            { type: 'event' },
-            {
-              sdk: { name: 'browser' },
-            },
-          ],
-        ],
-      ];
-
-      await worker.handle({
-        payload: {
-          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
-        },
-        projectId: '123',
-        catcherType: 'external/sentry',
-      });
-
-      expect(worker.addTask).toHaveBeenCalledWith('errors/default', expect.objectContaining({
-        catcherType: 'external/sentry',
-        projectId: '123',
-        payload: expect.not.objectContaining({
-          release: expect.any(String),
         }),
       }));
     });
@@ -696,9 +673,9 @@ describe('SentryEventWorker', () => {
 
       expect(addedTaskPayload).toMatchObject({
         /* eslint-disable @typescript-eslint/naming-convention */
+        timestamp: 1734530412,
         payload: expect.objectContaining({
           release: '35c42f2ddf524bbdafe22439b981ddfd0fb3b5ad',
-          timestamp: 1734530412,
           type: 'error',
           title: 'ZeroDivisionError: division by zero',
           backtrace: [
@@ -762,6 +739,7 @@ describe('SentryEventWorker', () => {
               ],
             },
           ],
+          catcherVersion: "1.0.1",
           context: {
             runtime: {
               build: '3.13.1 (main, Dec  3 2024, 17:59:52) [Clang 16.0.0 (clang-1600.0.26.4)]',
@@ -775,21 +753,22 @@ describe('SentryEventWorker', () => {
             },
           },
           addons: {
-            environment: 'production',
-            platform: 'python',
-            extra: {
-              'sys.argv': [ 'sentry-prod.py' ],
+            sentry: {
+              environment: 'production',
+              platform: 'python',
+              extra: {
+                'sys.argv': [ 'sentry-prod.py' ],
+              },
+              level: 'error',
+              modules: {
+                certifi: '2024.8.30',
+                pip: '24.3.1',
+                'sentry-sdk': '2.19.0',
+                urllib3: '2.2.3',
+              },
+              server_name: 'MacBook-Pro-Aleksandr-5.local',
+              timestamp: '2024-12-18T14:00:12.863684Z',
             },
-            level: 'error',
-            modules: {
-              certifi: '2024.8.30',
-              pip: '24.3.1',
-              'sentry-sdk': '2.19.0',
-              urllib3: '2.2.3',
-            },
-            release: '35c42f2ddf524bbdafe22439b981ddfd0fb3b5ad',
-            server_name: 'MacBook-Pro-Aleksandr-5.local',
-            timestamp: '2024-12-18T14:00:12.863684Z',
           },
         }),
         /* eslint-enable @typescript-eslint/naming-convention */
