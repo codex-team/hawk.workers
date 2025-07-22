@@ -1,4 +1,4 @@
-import type { DefaultAddons, EventAddons, EventData, JavaScriptAddons } from '@hawk.so/types';
+import type { EventData, JavaScriptAddons } from '@hawk.so/types';
 import { generateRandomId } from './randomId';
 
 /**

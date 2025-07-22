@@ -1,4 +1,4 @@
-import { CatcherMessageType, ErrorsCatcherType } from '@hawk.so/types';
+import { ErrorsCatcherType } from '@hawk.so/types';
 import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
 import { DefaultEventWorkerTask } from '../types/default-event-worker-task';
