@@ -6,7 +6,7 @@ import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from 
 import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
-import { CatcherMessagePayload, ErrorsCatcherType } from '@hawk.so/types';
+import { CatcherMessagePayload } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
 /**
@@ -139,7 +139,7 @@ export default class SentryEventWorker extends Worker {
     const user = composeUserData(eventPayload);
     const addons = composeAddons(eventPayload);
 
-    const event: CatcherMessagePayload<'errors/default'> = {
+    const event: CatcherMessagePayload<'errors/default' | 'errors/javascript'> = {
       title,
       type: eventPayload.level || 'error',
       catcherVersion: pkg.version,
@@ -158,7 +158,7 @@ export default class SentryEventWorker extends Worker {
     }
 
     if (addons) {
-      event.addons = addons;
+      event.addons.sentry = addons;
     }
 
     /**

@@ -102,6 +102,10 @@ describe('Archiver worker', () => {
 
     const changedProject = await projectCollection.findOne({ _id: mockedProject._id });
 
+    // console.log('Changed project:', changedProject);
+    // console.log('repetitions: ', await repetitionsCollection.find({projectId: changedProject._id}).toArray());
+    // console.log('events: ', await eventsCollection.find({projectId: changedProject._id}).toArray());
+
     let originalEventsDeletedCount = 0;
 
     mockedEvents.forEach(event => {
@@ -109,6 +113,9 @@ describe('Archiver worker', () => {
         originalEventsDeletedCount++;
       }
     });
+
+    // console.log('originalEventsDeletedCount:', originalEventsDeletedCount);
+    // console.log('archiveEventsCount:', archiveEventsCount);
 
     expect(changedProject.archivedEventsCount).toBe(archiveEventsCount + originalEventsDeletedCount);
   });
