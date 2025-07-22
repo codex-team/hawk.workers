@@ -3,7 +3,7 @@ import '../../../env-test';
 import { mockedAmqpChannel } from '../../../jest.setup.js';
 import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode, base64toBuffer } from '../src/utils/base64';
-import { CatcherMessageAccepted, CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
+import { CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 
 /**
@@ -303,9 +303,9 @@ describe('SentryEventWorker', () => {
                 message: 'Test timestamp',
               },
             },
-            catcherVersion: "1.0.1",
-            title: "Unknown: ",
-            type: "error",
+            catcherVersion: '1.0.1',
+            title: 'Unknown: ',
+            type: 'error',
           },
         }));
       }
@@ -469,7 +469,7 @@ describe('SentryEventWorker', () => {
               platform: 'javascript',
               environment: 'production',
               request: { url: 'https://test.com' },
-            }
+            },
           },
         }),
       });
@@ -739,7 +739,7 @@ describe('SentryEventWorker', () => {
               ],
             },
           ],
-          catcherVersion: "1.0.1",
+          catcherVersion: '1.0.1',
           context: {
             runtime: {
               build: '3.13.1 (main, Dec  3 2024, 17:59:52) [Clang 16.0.0 (clang-1600.0.26.4)]',

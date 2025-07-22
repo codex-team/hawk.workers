@@ -1,4 +1,4 @@
-import type {  ErrorsCatcherType, EventData, JavaScriptAddons } from '@hawk.so/types';
+import type { ErrorsCatcherType, EventData, JavaScriptAddons } from '@hawk.so/types';
 import type { GroupWorkerTask } from '../../types/group-worker-task';
 import { projectIdMock } from './projectId';
 import { generateEvent } from './generateEvent';
