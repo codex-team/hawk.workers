@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { CatcherMessagePayload, CatcherMessageType, EventAddons, EventData } from '@hawk.so/types';
+import type { CatcherMessagePayload, ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
@@ -75,7 +75,7 @@ const projectMock = {
  *
  * @param event - allows to override some event properties in generated task
  */
-function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask<CatcherMessageType> {
+function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask<ErrorsCatcherType> {
   return {
     projectId: projectIdMock,
     catcherType: 'errors/javascript',

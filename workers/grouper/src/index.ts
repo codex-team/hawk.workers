@@ -6,7 +6,16 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventData, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine, ProjectEventGroupingPatternsDBScheme, CatcherMessageType } from '@hawk.so/types';
+import type { 
+  EventAddons,
+  EventData,
+  GroupedEventDBScheme,
+  BacktraceFrame,
+  SourceCodeLine,
+  ProjectEventGroupingPatternsDBScheme,
+  ErrorsCatcherType,
+  CatcherMessagePayload
+} from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -92,7 +101,7 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   // @todo export ErrorsCatcherType from types and use it here
-  public async handle(task: GroupWorkerTask<CatcherMessageType>): Promise<void> {
+  public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     /**
@@ -264,7 +273,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - worker task to create hash
   */
-  private getUniqueEventHash<type extends CatcherMessageType>(task: GroupWorkerTask<type>): Promise<string> {
+  private getUniqueEventHash<type extends ErrorsCatcherType>(task: GroupWorkerTask<type>): Promise<string> {
     return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.payload.title}`, () => {
       return crypto.createHmac('sha256', process.env.EVENT_SECRET)
         .update(task.catcherType + task.payload.title)
@@ -351,7 +360,7 @@ export default class GrouperWorker extends Worker {
    */
   private async findMatchingPattern(
     patterns: ProjectEventGroupingPatternsDBScheme[],
-    event: EventDataAccepted<EventAddons>
+    event: CatcherMessagePayload<ErrorsCatcherType>
   ): Promise<ProjectEventGroupingPatternsDBScheme | null> {
     if (!patterns || patterns.length === 0) {
       return null;
@@ -419,7 +428,7 @@ export default class GrouperWorker extends Worker {
    * @param existedEvent - original event to get its user
    * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
-  private async shouldIncrementAffectedUsers<type extends CatcherMessageType>(task: GroupWorkerTask<type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
+  private async shouldIncrementAffectedUsers<type extends ErrorsCatcherType>(task: GroupWorkerTask<type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
     const eventUser = task.payload.user;
 
     /**

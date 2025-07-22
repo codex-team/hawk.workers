@@ -6,7 +6,7 @@ import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from 
 import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
-import { DecodedEventData, EventAddons } from '@hawk.so/types';
+import { CatcherMessagePayload, CatcherMessageType, DecodedEventData, ErrorsCatcherType, EventAddons } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
 /**
@@ -16,7 +16,7 @@ export default class SentryEventWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public type: string = pkg.workerType;
+  public type: ErrorsCatcherType = pkg.workerType;
 
   /**
    * Message handle function
@@ -138,7 +138,7 @@ export default class SentryEventWorker extends Worker {
     const user = composeUserData(eventPayload);
     const addons = composeAddons(eventPayload);
 
-    const event: DecodedEventData<EventAddons> = {
+    const event: CatcherMessagePayload<'errors/default'> = {
       title,
       type: eventPayload.level || 'error',
       catcherVersion: pkg.version,
@@ -170,8 +170,8 @@ export default class SentryEventWorker extends Worker {
 
     return {
       projectId,
-      catcherType: this.type,
-      payload: event,
+      catcherType: this.type as 'errors/default',
+      payload: event as CatcherMessagePayload<typeof this.type>,
       timestamp: sentAtUnix,
     };
   }

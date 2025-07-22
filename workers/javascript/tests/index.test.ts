@@ -3,7 +3,7 @@ import '../../../env-test';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
-import { CatcherMessageType, ReleaseDBScheme } from '@hawk.so/types';
+import { ReleaseDBScheme } from '@hawk.so/types';
 
 describe('JavaScript event worker', () => {
   let connection: MongoClient;
@@ -97,7 +97,7 @@ describe('JavaScript event worker', () => {
    * @param withUserAgent - is event with user agent
    * @param withBacktrace - is event with backtrace
    */
-  const createEventMock = ({ withUserAgent, withBacktrace }: {withUserAgent?: boolean, withBacktrace?: boolean}): JavaScriptEventWorkerTask<'errors/javascript'> => {
+  const createEventMock = ({ withUserAgent, withBacktrace }: {withUserAgent?: boolean, withBacktrace?: boolean}): JavaScriptEventWorkerTask => {
     return {
       catcherType: 'errors/javascript',
       projectId: objectIdAsString(),

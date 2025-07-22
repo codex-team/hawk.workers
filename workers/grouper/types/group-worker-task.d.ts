@@ -1,4 +1,4 @@
-import type { CatcherMessageAccepted, CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
+import type { CatcherMessageAccepted, CatcherMessagePayload, ErrorsCatcherType } from '@hawk.so/types';
 import type { WorkerTask } from '../../../lib/types/worker-task';
 import type { Delta } from '@n1ru4l/json-patch-plus';
 
@@ -6,7 +6,7 @@ import type { Delta } from '@n1ru4l/json-patch-plus';
  * Language-workers adds tasks for Group Worker in this format.
  * Group Worker gets this tasks (events from language-workers) and saves it to the DB
  */
-export interface GroupWorkerTask<CatcherType extends CatcherMessageType> extends WorkerTask, CatcherMessageAccepted<CatcherType> {
+export interface GroupWorkerTask<CatcherType extends ErrorsCatcherType> extends WorkerTask, CatcherMessageAccepted<CatcherType> {
   /**
    * Project where error was occurred
    */

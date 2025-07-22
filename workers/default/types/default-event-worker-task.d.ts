@@ -1,19 +1,13 @@
-import { CatcherMessageAccepted, CatcherMessageType } from '@hawk.so/types';
-import { DecodedEventData, DefaultAddons } from '@hawk.so/types';
-
-/**
- * Describe a context passed from Default Catcher
- */
-interface DefaultEventPayload extends DecodedEventData<DefaultAddons> {}
+import { CatcherMessageAccepted, CatcherMessagePayload } from '@hawk.so/types';
 
 /**
  * Format of task for Default Event Worker
  */
-export interface DefaultEventWorkerTask extends CatcherMessageAccepted<CatcherMessageType> {
+export interface DefaultEventWorkerTask extends CatcherMessageAccepted<'errors/default'> {
   /**
    * Language-specific payload
    */
-  payload: DefaultEventPayload;
+  payload: CatcherMessagePayload<'errors/default'>;
 
   /**
    * Unix timestamp of the event
