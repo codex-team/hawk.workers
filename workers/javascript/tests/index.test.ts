@@ -182,7 +182,7 @@ describe('JavaScript event worker', () => {
       expect.objectContaining({
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
-        event: workerEvent.payload,
+        payload: workerEvent.payload,
       })
     );
     await worker.finish();
@@ -215,7 +215,7 @@ describe('JavaScript event worker', () => {
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
         timestamp: workerEvent.timestamp,
-        event: {
+        payload: {
           ...workerEvent.payload,
           addons: {
             ...workerEvent.payload.addons,
@@ -264,7 +264,7 @@ describe('JavaScript event worker', () => {
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
         timestamp: workerEvent.timestamp,
-        event: {
+        payload: {
           ...workerEvent.payload,
           backtrace: [
             expect.objectContaining(parsedBacktraceFrame),
