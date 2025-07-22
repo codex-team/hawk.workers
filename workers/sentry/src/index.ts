@@ -67,20 +67,21 @@ export default class SentryEventWorker extends Worker {
       if (itemHeader.type !== 'event') {
         return;
       }
-
-      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
-
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
-
+      
       /**
        * @todo react-native could be added if we support source-map sending for Metro bundler
        */
       const sentryJsSDK = ['browser', 'react', 'vue', 'angular', 'capacirtor', 'electron'];
+      
+      const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name)
+      
+      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
 
       /**
        * If we have release attached to the event
        */
-      if (payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name) && hawkEvent.payload.release !== undefined) {
+      if (isJsSDK) {
         await this.addTask(WorkerNames.JAVASCRIPT, hawkEvent as JavaScriptEventWorkerTask);
 
         return;
@@ -105,7 +106,8 @@ export default class SentryEventWorker extends Worker {
   private transformToHawkFormat(
     envelopeHeader: EventEnvelope[0],
     eventItem: EventItem,
-    projectId: string
+    projectId: string,
+    isJsSDK: boolean,
   ): DefaultEventWorkerTask | JavaScriptEventWorkerTask {
     /* eslint-disable @typescript-eslint/naming-convention */
     const { sent_at, trace } = envelopeHeader;
@@ -170,8 +172,8 @@ export default class SentryEventWorker extends Worker {
 
     return {
       projectId,
-      catcherType: this.type as 'errors/default',
-      payload: event as CatcherMessagePayload<typeof this.type>,
+      catcherType: isJsSDK ? 'errors/javascript' : 'errors/default',
+      payload: event as isJsSDK ? CatcherMessagePayload<'errors/javascript'> : CatcherMessagePayload<'errors/default'>,
       timestamp: sentAtUnix,
     };
   }
