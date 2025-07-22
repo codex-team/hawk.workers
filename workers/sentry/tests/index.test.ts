@@ -3,14 +3,14 @@ import '../../../env-test';
 import { mockedAmqpChannel } from '../../../jest.setup.js';
 import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode, base64toBuffer } from '../src/utils/base64';
-import { EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
 
 /**
  * Worker adds a task to the queue with buffered payload
  * So we need to get parse it back to compare
  */
-function getAddTaskPayloadFromLastCall(): EventWorkerTask {
+function getAddTaskPayloadFromLastCall(): CatcherMessagePayload<CatcherMessageType> {
   /**
    * Get last rabbit sendToQueue call
    */

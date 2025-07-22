@@ -9,7 +9,7 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
-import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
+import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
@@ -22,7 +22,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: string = pkg.workerType;
+  public readonly type: CatcherMessageType = pkg.workerType as CatcherMessageType;
 
   /**
    * Releases collection in database
@@ -64,7 +64,7 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param event - event to handle
    */
-  public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+  public async handle(event: JavaScriptEventWorkerTask<'errors/javascript'>): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
@@ -81,10 +81,10 @@ export default class JavascriptEventWorker extends EventWorker {
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
-      catcherType: this.type,
-      event: event.payload,
+      catcherType: this.type as CatcherMessageType,
+      payload: event.payload as CatcherMessagePayload<CatcherMessageType>,
       timestamp: event.timestamp,
-    } as GroupWorkerTask);
+    } as GroupWorkerTask<CatcherMessageType>);
   }
 
   /**
@@ -94,7 +94,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {JavaScriptEventWorkerTask} event — js error minified
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
-  private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
+  private async beautifyBacktrace(event: JavaScriptEventWorkerTask<'errors/javascript'>): Promise<BacktraceFrame[]> {
     const releaseRecord: SourceMapsRecord = await this.cache.get(
       `releaseRecord:${event.projectId}:${event.payload.release.toString()}`,
       () => {

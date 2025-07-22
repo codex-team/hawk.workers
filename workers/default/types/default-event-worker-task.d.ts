@@ -1,4 +1,4 @@
-import { EventWorkerTask } from '../../../lib/types/event-worker-task';
+import { CatcherMessageAccepted, CatcherMessageType } from '@hawk.so/types';
 import { DecodedEventData, DefaultAddons } from '@hawk.so/types';
 
 /**
@@ -9,7 +9,7 @@ interface DefaultEventPayload extends DecodedEventData<DefaultAddons> {}
 /**
  * Format of task for Default Event Worker
  */
-export interface DefaultEventWorkerTask extends EventWorkerTask {
+export interface DefaultEventWorkerTask extends CatcherMessageAccepted<CatcherMessageType> {
   /**
    * Language-specific payload
    */

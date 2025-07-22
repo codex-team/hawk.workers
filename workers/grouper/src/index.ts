@@ -6,7 +6,7 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventData, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine } from '@hawk.so/types';
+import type { EventAddons, EventData, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine, CatcherMessageType } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -91,7 +91,8 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - event to handle
    */
-  public async handle(task: GroupWorkerTask): Promise<void> {
+  // @todo export ErrorsCatcherType from types and use it here
+  public async handle(task: GroupWorkerTask<CatcherMessageType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     /**
@@ -103,7 +104,7 @@ export default class GrouperWorker extends Worker {
      * If we couldn't group by group hash (title), try grouping by Levenshtein distance or patterns
      */
     if (!existedEvent) {
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
+      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload);
 
       if (similarEvent) {
         this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
@@ -128,16 +129,16 @@ export default class GrouperWorker extends Worker {
     /**
      * Trim source code lines to prevent memory leaks
      */
-    this.trimSourceCodeLines(task.event);
+    this.trimSourceCodeLines(task.payload);
 
     /**
      * Filter sensitive information
      */
-    this.dataFilter.processEvent(task.event);
+    this.dataFilter.processEvent(task.payload);
 
     if (isFirstOccurrence) {
       try {
-        const incrementAffectedUsers = !!task.event.user;
+        const incrementAffectedUsers = !!task.payload.user;
 
         /**
          * Insert new event
@@ -146,7 +147,7 @@ export default class GrouperWorker extends Worker {
           groupHash: uniqueEventHash,
           totalCount: 1,
           catcherType: task.catcherType,
-          payload: task.event,
+          payload: task.payload,
           timestamp: task.timestamp,
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
@@ -199,10 +200,10 @@ export default class GrouperWorker extends Worker {
         /**
          * Calculate delta between original event and repetition
          */
-        delta = computeDelta(existedEvent.payload, task.event);
+        delta = computeDelta(existedEvent.payload, task.payload);
       } catch (e) {
         console.error(e);
-        throw new DiffCalculationError(e, existedEvent.payload, task.event);
+        throw new DiffCalculationError(e, existedEvent.payload, task.payload);
       }
 
       const newRepetition = {
@@ -226,7 +227,7 @@ export default class GrouperWorker extends Worker {
       await this.addTask(WorkerNames.NOTIFIER, {
         projectId: task.projectId,
         event: {
-          title: task.event.title,
+          title: task.payload.title,
           groupHash: uniqueEventHash,
           isNew: isFirstOccurrence,
         },
@@ -262,11 +263,11 @@ export default class GrouperWorker extends Worker {
    * Get unique hash based on event type and title
    *
    * @param task - worker task to create hash
-   */
-  private getUniqueEventHash(task: GroupWorkerTask): Promise<string> {
-    return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.event.title}`, () => {
+  */
+  private getUniqueEventHash<type extends CatcherMessageType>(task: GroupWorkerTask<type>): Promise<string> {
+    return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.payload.title}`, () => {
       return crypto.createHmac('sha256', process.env.EVENT_SECRET)
-        .update(task.catcherType + task.event.title)
+        .update(task.catcherType + task.payload.title)
         .digest('hex');
     });
   }
@@ -415,8 +416,8 @@ export default class GrouperWorker extends Worker {
    * @param existedEvent - original event to get its user
    * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
-  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
-    const eventUser = task.event.user;
+  private async shouldIncrementAffectedUsers<type extends CatcherMessageType>(task: GroupWorkerTask<type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
+    const eventUser = task.payload.user;
 
     /**
      * In case of no user, we don't need to increment affected users

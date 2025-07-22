@@ -50,6 +50,10 @@ export function encodeUnsafeFields(event: GroupedEventDBScheme | RepetitionDBSch
      * Repetition includes delta field, grouped event includes payload
      */
     if ('delta' in event) {
+      /**
+       * We need to check if delta field exists but with undefined value
+       * It would mean that repetition payload is same with original event paylaod
+       */
       if (event.delta === undefined) {
         return;
       }

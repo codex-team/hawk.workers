@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { EventAddons, EventData } from '@hawk.so/types';
+import type { CatcherMessagePayload, CatcherMessageType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
@@ -75,12 +75,12 @@ const projectMock = {
  *
  * @param event - allows to override some event properties in generated task
  */
-function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask {
+function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask<CatcherMessageType> {
   return {
     projectId: projectIdMock,
-    catcherType: 'grouper',
+    catcherType: 'errors/javascript',
     timestamp,
-    event: Object.assign({
+    payload: Object.assign({
       title: 'Hawk client catcher test',
       backtrace: [],
       user: {
@@ -322,7 +322,8 @@ describe('GrouperWorker', () => {
     test('Should save event even if its context is type of string', async () => {
       const task = generateTask();
 
-      task.event.context = 'string context';
+      // @todo export ErrorsCatcherType from types and use it here
+      (task.payload as CatcherMessagePayload<'errors/javascript' | 'errors/php' | 'errors/nodejs' | 'errors/go' | 'errors/python'>).context = 'string context';
       await worker.handle(task);
 
       expect((await eventsCollection.findOne({})).payload.context).toBe(null);
@@ -376,8 +377,8 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
       await worker.handle({
         ...generatedTask,
-        event: {
-          ...generatedTask.event,
+        payload: {
+          ...generatedTask.payload,
           addons: { test: '8fred' },
           context: { test: '8fred' },
         },
@@ -409,8 +410,8 @@ describe('GrouperWorker', () => {
 
       await worker.handle({
         ...generatedTask,
-        event: {
-          ...generatedTask.event,
+        payload: {
+          ...generatedTask.payload,
           context: {
             testField: 9,
           },
