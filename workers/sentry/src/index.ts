@@ -6,7 +6,7 @@ import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from 
 import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
-import { CatcherMessagePayload, CatcherMessageType, DecodedEventData, ErrorsCatcherType, EventAddons } from '@hawk.so/types';
+import { CatcherMessagePayload, ErrorsCatcherType } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
 /**
@@ -16,7 +16,7 @@ export default class SentryEventWorker extends Worker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public type: ErrorsCatcherType = pkg.workerType;
+  public type: string = pkg.workerType;
 
   /**
    * Message handle function
