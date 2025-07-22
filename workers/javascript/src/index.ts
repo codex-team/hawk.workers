@@ -22,7 +22,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: CatcherMessageType = pkg.workerType as CatcherMessageType;
+  public readonly type: ErrorsCatcherType = pkg.workerType as ErrorsCatcherType;
 
   /**
    * Releases collection in database

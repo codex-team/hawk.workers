@@ -1,7 +1,7 @@
 import { Worker } from './worker';
 import * as WorkerNames from './workerNames';
 import { GroupWorkerTask } from 'hawk-worker-grouper/types/group-worker-task';
-import { CatcherMessageType, CatcherMessagePayload, CatcherMessageAccepted } from '@hawk.so/types' 
+import { CatcherMessageType, CatcherMessagePayload, CatcherMessageAccepted, ErrorsCatcherType } from '@hawk.so/types' 
 
 /**
  * Defines a Worker that handles events from Catcher.
@@ -12,7 +12,7 @@ export abstract class EventWorker extends Worker {
    * Worker type (will pull tasks from Registry queue with the same name)
    * 'errors/nodejs' for example
    */
-  public type: CatcherMessageType;
+  public type: ErrorsCatcherType;
 
   /**
    * Message handle function
@@ -25,9 +25,9 @@ export abstract class EventWorker extends Worker {
     await this.addTask(WorkerNames.GROUPER, {
       projectId: task.projectId,
       catcherType: this.type as CatcherMessageType,
-      payload: task.payload as CatcherMessagePayload<typeof this.type>,
+      payload: task.payload as CatcherMessagePayload<ErrorsCatcherType>,
       timestamp: task.timestamp
-    } as GroupWorkerTask<typeof this.type>);
+    } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
   /**
