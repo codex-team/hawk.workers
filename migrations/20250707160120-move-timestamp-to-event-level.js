@@ -26,11 +26,11 @@ module.exports = {
         [
           {
             $set: {
-              timestamp: '$payload.timestamp',
+              timestamp: { $toDouble: "$payload.timestamp" },
             },
           },
           {
-            $unset: 'payload.timestamp',
+            $unset: "payload.timestamp",
           },
         ]
       );
@@ -38,39 +38,75 @@ module.exports = {
 
     // Step 2: Process repetition collections
     for (const collectionName of repetitionCollections) {
+      const projectId = collectionName.split(':')[1];
       const collection = db.collection(collectionName);
-      const cursor = collection.find({});
 
-      while (await cursor.hasNext()) {
-        const doc = await cursor.next();
-
-        if (doc.payload?.timestamp) {
-          // Move timestamp from payload to root
-          await collection.updateOne(
-            { _id: doc._id },
-            {
-              $set: { timestamp: doc.payload.timestamp },
-              $unset: { 'payload.timestamp': '' },
-            }
-          );
-        } else if (doc.groupHash) {
-          // Attempt to find matching event
-          let eventDoc = null;
-
-          const projectId = collectionName.split(':')[1];
-          const eventsCollectionName = `events:${projectId}`;
-
-          eventDoc = await db.collection(eventsCollectionName).findOne({ groupHash: doc.groupHash });
-
-          if (eventDoc?.timestamp) {
-            await collection.updateOne(
-              { _id: doc._id },
-              {
-                $set: { timestamp: eventDoc.timestamp },
-              }
-            );
+      // Step 2.1: First, handle documents where payload.timestamp exists
+      await collection.updateMany(
+        { 'payload.timestamp': { $exists: true } },
+        [
+          {
+            $set: {
+              timestamp: { $toDouble: "$payload.timestamp" }, // Convert payload.timestamp to number
+            },
+          },
+          {
+            $unset: "payload.timestamp", // Remove payload.timestamp
+          },
+        ]
+      );
+        
+      const pipeline = [
+        {
+          $match: {
+            $or : [
+              { "payload.timestamp": { $exists: false } },
+              { payload: { $exists: false } },
+            ],
+            timestamp: { $exists: false },
+            groupHash: { $exists: true }
+          }
+        },
+        {
+          $lookup: {
+            from: `events:${projectId}`, // dynamically referencing the events collection
+            localField: "groupHash", // field from repetitions collection
+            foreignField: "groupHash", // field in the events collection
+            as: "eventData" // alias for the matched data
+          }
+        },
+        {
+          $unwind: {
+            path: "$eventData", // we expect only one match per groupHash
+            preserveNullAndEmptyArrays: true // allow documents with no matching event
+          }
+        },
+        {
+          $match: {
+            "eventData.timestamp": { $exists: true } // only proceed if event.timestamp exists
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            eventTimestamp: { $toDouble: "$eventData.timestamp"}
           }
         }
+      ];
+      
+      const matchedDocs = await collection.aggregate(pipeline).toArray();
+
+      const bulkOps = matchedDocs.map(doc => ({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: {
+            $set: { timestamp: doc.eventTimestamp } // Set the timestamp from the event
+          }
+        }
+      }));
+      
+      if (bulkOps.length > 0) {
+        await collection.bulkWrite(bulkOps);
       }
     }
   },
@@ -100,7 +136,7 @@ module.exports = {
             },
           },
           {
-            $unset: 'timestamp',
+            $unset: { 'timestamp': "" },
           },
         ]
       );
@@ -117,7 +153,7 @@ module.exports = {
             },
           },
           {
-            $unset: 'timestamp',
+            $unset: { 'timestamp': "" },
           },
         ]
       );
