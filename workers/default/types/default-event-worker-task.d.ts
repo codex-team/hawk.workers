@@ -1,17 +1,12 @@
-import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData, DefaultAddons } from '@hawk.so/types';
+import { CatcherMessageAccepted, ErrorsCatcherType } from '@hawk.so/types';
 
 /**
- * Describe a context passed from Default Catcher
+ * Default Event Worker can process events with all types except 'errors/javascript'
+ * because it is handled by JavaScript Event Worker.
  */
-interface DefaultEventPayload extends DecodedEventData<DefaultAddons> {}
+export type DefaultCatcherMessageType = Exclude<ErrorsCatcherType, 'errors/javascript'>;
 
 /**
  * Format of task for Default Event Worker
  */
-export interface DefaultEventWorkerTask extends EventWorkerTask {
-  /**
-   * Language-specific payload
-   */
-  payload: DefaultEventPayload;
-}
+export interface DefaultEventWorkerTask extends CatcherMessageAccepted<DefaultCatcherMessageType> {}

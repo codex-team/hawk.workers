@@ -1,5 +1,5 @@
 import '../../../env-test';
-import type { EventAddons, EventDataAccepted, Json } from '@hawk.so/types';
+import type { EventAddons, EventData, Json } from '@hawk.so/types';
 import DataFilter from '../src/data-filter';
 jest.mock('amqplib');
 
@@ -14,10 +14,9 @@ jest.mock('amqplib');
  * @param [options.context] - generated event context
  * @param [options.addons] - generated event addons
  */
-function generateEvent({ context, addons }: {context?: Json, addons?: EventAddons}): EventDataAccepted<EventAddons> {
+function generateEvent({ context, addons }: {context?: Json, addons?: EventAddons}): EventData<EventAddons> {
   return {
     title: 'Event with sensitive data',
-    timestamp: (new Date()).getTime(),
     backtrace: [],
     ...(context && {
       context,

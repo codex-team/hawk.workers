@@ -6,7 +6,7 @@ import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from 
 import { Worker } from '../../../lib/worker';
 import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
-import { DecodedEventData, EventAddons } from '@hawk.so/types';
+import { CatcherMessagePayload } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
 /**
@@ -67,9 +67,6 @@ export default class SentryEventWorker extends Worker {
       if (itemHeader.type !== 'event') {
         return;
       }
-
-      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId);
-
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
 
       /**
@@ -77,16 +74,18 @@ export default class SentryEventWorker extends Worker {
        */
       const sentryJsSDK = ['browser', 'react', 'vue', 'angular', 'capacirtor', 'electron'];
 
+      const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name);
+
+      const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
+
       /**
        * If we have release attached to the event
        */
-      if (payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name) && hawkEvent.payload.release !== undefined) {
+      if (isJsSDK) {
         await this.addTask(WorkerNames.JAVASCRIPT, hawkEvent as JavaScriptEventWorkerTask);
-
-        return;
+      } else {
+        await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
       }
-
-      await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
       this.logger.info('👇 Here is the problematic item:');
@@ -101,11 +100,13 @@ export default class SentryEventWorker extends Worker {
    * @param envelopeHeader - Sentry envelope header
    * @param eventItem - Sentry event item
    * @param projectId - Hawk project ID
+   * @param isJsSDK - Whether the event is from a Sentry JavaScript-related SDK
    */
   private transformToHawkFormat(
     envelopeHeader: EventEnvelope[0],
     eventItem: EventItem,
-    projectId: string
+    projectId: string,
+    isJsSDK: boolean
   ): DefaultEventWorkerTask | JavaScriptEventWorkerTask {
     /* eslint-disable @typescript-eslint/naming-convention */
     const { sent_at, trace } = envelopeHeader;
@@ -138,10 +139,9 @@ export default class SentryEventWorker extends Worker {
     const user = composeUserData(eventPayload);
     const addons = composeAddons(eventPayload);
 
-    const event: DecodedEventData<EventAddons> = {
+    const event: CatcherMessagePayload<'errors/default' | 'errors/javascript'> = {
       title,
       type: eventPayload.level || 'error',
-      timestamp: sentAtUnix,
       catcherVersion: pkg.version,
     };
 
@@ -158,7 +158,9 @@ export default class SentryEventWorker extends Worker {
     }
 
     if (addons) {
-      event.addons = addons;
+      event.addons = {
+        sentry: addons,
+      };
     }
 
     /**
@@ -169,10 +171,18 @@ export default class SentryEventWorker extends Worker {
       event.release = eventPayload.release || trace?.release;
     }
 
-    return {
-      projectId,
-      catcherType: this.type,
-      payload: event,
-    };
+    return isJsSDK
+      ? {
+        projectId,
+        catcherType: 'errors/javascript',
+        payload: event as CatcherMessagePayload<'errors/javascript'>,
+        timestamp: sentAtUnix,
+      }
+      : {
+        projectId,
+        catcherType: 'errors/default',
+        payload: event as CatcherMessagePayload<'errors/default'>,
+        timestamp: sentAtUnix,
+      };
   }
 }

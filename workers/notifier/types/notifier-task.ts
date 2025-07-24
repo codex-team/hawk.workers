@@ -1,10 +1,10 @@
-import { EventDataAccepted, EventAddons } from '@hawk.so/types';
+import { EventAddons, EventData } from '@hawk.so/types';
 import { WorkerTask } from '../../../lib/types/worker-task';
 
 /**
  * Data needed for NotificationWorker from GrouperWorker
  */
-export type NotifierEvent = Pick<EventDataAccepted<EventAddons>, 'title'> & {
+export type NotifierEvent = Pick<EventData<EventAddons>, 'title'> & {
   /**
    * Event group hash
    */

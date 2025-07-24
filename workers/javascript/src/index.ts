@@ -9,7 +9,7 @@ import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
 import HawkCatcher from '@hawk.so/nodejs';
 import Crypto from '../../../lib/utils/crypto';
-import { BacktraceFrame, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
+import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
@@ -22,7 +22,7 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Worker type (will pull tasks from Registry queue with the same name)
    */
-  public readonly type: string = pkg.workerType;
+  public readonly type: ErrorsCatcherType = pkg.workerType as ErrorsCatcherType;
 
   /**
    * Releases collection in database
@@ -81,9 +81,10 @@ export default class JavascriptEventWorker extends EventWorker {
 
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
-      catcherType: this.type,
-      event: event.payload,
-    } as GroupWorkerTask);
+      catcherType: this.type as CatcherMessageType,
+      payload: event.payload as CatcherMessagePayload<CatcherMessageType>,
+      timestamp: event.timestamp,
+    } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
   /**
@@ -251,7 +252,7 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param sourceCode - content of the source file
    * @param line - number of the line from the stack trace
-   * @returns - string of the function context or null if it could not be parsed
+   * @returns {string | null} - string of the function context or null if it could not be parsed
    */
   private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;

@@ -194,7 +194,7 @@ export default class ReleaseWorker extends Worker {
          */
         savedFiles.forEach(file => {
           delete file.content;
-        })
+        });
 
         /**
          * Filter unsaved maps
