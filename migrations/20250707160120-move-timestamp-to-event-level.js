@@ -26,11 +26,11 @@ module.exports = {
         [
           {
             $set: {
-              timestamp: { $toDouble: "$payload.timestamp" },
+              timestamp: { $toDouble: '$payload.timestamp' },
             },
           },
           {
-            $unset: "payload.timestamp",
+            $unset: 'payload.timestamp',
           },
         ]
       );
@@ -47,64 +47,64 @@ module.exports = {
         [
           {
             $set: {
-              timestamp: { $toDouble: "$payload.timestamp" }, // Convert payload.timestamp to number
+              timestamp: { $toDouble: '$payload.timestamp' }, // Convert payload.timestamp to number
             },
           },
           {
-            $unset: "payload.timestamp", // Remove payload.timestamp
+            $unset: 'payload.timestamp', // Remove payload.timestamp
           },
         ]
       );
-        
+
       const pipeline = [
         {
           $match: {
-            $or : [
-              { "payload.timestamp": { $exists: false } },
+            $or: [
+              { 'payload.timestamp': { $exists: false } },
               { payload: { $exists: false } },
             ],
             timestamp: { $exists: false },
-            groupHash: { $exists: true }
-          }
+            groupHash: { $exists: true },
+          },
         },
         {
           $lookup: {
             from: `events:${projectId}`, // dynamically referencing the events collection
-            localField: "groupHash", // field from repetitions collection
-            foreignField: "groupHash", // field in the events collection
-            as: "eventData" // alias for the matched data
-          }
+            localField: 'groupHash', // field from repetitions collection
+            foreignField: 'groupHash', // field in the events collection
+            as: 'eventData', // alias for the matched data
+          },
         },
         {
           $unwind: {
-            path: "$eventData", // we expect only one match per groupHash
-            preserveNullAndEmptyArrays: true // allow documents with no matching event
-          }
+            path: '$eventData', // we expect only one match per groupHash
+            preserveNullAndEmptyArrays: true, // allow documents with no matching event
+          },
         },
         {
           $match: {
-            "eventData.timestamp": { $exists: true } // only proceed if event.timestamp exists
-          }
+            'eventData.timestamp': { $exists: true }, // only proceed if event.timestamp exists
+          },
         },
         {
           $project: {
             _id: 1,
-            eventTimestamp: { $toDouble: "$eventData.timestamp"}
-          }
-        }
+            eventTimestamp: { $toDouble: '$eventData.timestamp' },
+          },
+        },
       ];
-      
+
       const matchedDocs = await collection.aggregate(pipeline).toArray();
 
       const bulkOps = matchedDocs.map(doc => ({
         updateOne: {
           filter: { _id: doc._id },
           update: {
-            $set: { timestamp: doc.eventTimestamp } // Set the timestamp from the event
-          }
-        }
+            $set: { timestamp: doc.eventTimestamp }, // Set the timestamp from the event
+          },
+        },
       }));
-      
+
       if (bulkOps.length > 0) {
         await collection.bulkWrite(bulkOps);
       }
@@ -136,7 +136,7 @@ module.exports = {
             },
           },
           {
-            $unset: { 'timestamp': "" },
+            $unset: { timestamp: '' },
           },
         ]
       );
@@ -153,7 +153,7 @@ module.exports = {
             },
           },
           {
-            $unset: { 'timestamp': "" },
+            $unset: { timestamp: '' },
           },
         ]
       );

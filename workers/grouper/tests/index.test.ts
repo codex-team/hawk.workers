@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { CatcherMessagePayload, ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
+import type { ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
