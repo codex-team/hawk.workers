@@ -326,8 +326,7 @@ describe('GrouperWorker', () => {
     test('Should save event even if its context is type of string', async () => {
       const task = generateTask();
 
-      // @todo export ErrorsCatcherType from types and use it here
-      (task.payload as CatcherMessagePayload<'errors/javascript' | 'errors/php' | 'errors/nodejs' | 'errors/go' | 'errors/python'>).context = 'string context';
+      task.payload.context = 'string context';
       await worker.handle(task);
 
       expect((await eventsCollection.findOne({})).payload.context).toBe(null);
@@ -393,7 +392,7 @@ describe('GrouperWorker', () => {
       expect(typeof savedRepetition.delta).toBe('string');
     });
 
-    test.only('Should correctly calculate diff after encoding original event when they are the same', async () => {
+    test('Should correctly calculate diff after encoding original event when they are the same', async () => {
       await worker.handle(generateTask({ user: { id: '123' } }));
       await worker.handle(generateTask({ user: { id: '123' } }));
 

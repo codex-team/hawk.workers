@@ -100,7 +100,7 @@ export default class SentryEventWorker extends Worker {
    * @param envelopeHeader - Sentry envelope header
    * @param eventItem - Sentry event item
    * @param projectId - Hawk project ID
-   * @param isJsSDK - Whether the event is from a Sentry JavaScript SDK
+   * @param isJsSDK - Whether the event is from a Sentry JavaScript-related SDK
    */
   private transformToHawkFormat(
     envelopeHeader: EventEnvelope[0],

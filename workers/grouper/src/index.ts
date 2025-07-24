@@ -100,7 +100,6 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - event to handle
    */
-  // @todo export ErrorsCatcherType from types and use it here
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
