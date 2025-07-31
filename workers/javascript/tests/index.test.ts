@@ -101,10 +101,10 @@ describe('JavaScript event worker', () => {
     return {
       catcherType: 'errors/javascript',
       projectId: objectIdAsString(),
+      timestamp: Date.now(),
       payload: {
         title: 'Mocked event for JS event worker',
         type: 'Error',
-        timestamp: Date.now(),
         release: '3fa0f290c014',
         addons: {
           window: {
@@ -182,7 +182,7 @@ describe('JavaScript event worker', () => {
       expect.objectContaining({
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
-        event: workerEvent.payload,
+        payload: workerEvent.payload,
       })
     );
     await worker.finish();
@@ -214,7 +214,8 @@ describe('JavaScript event worker', () => {
       {
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
-        event: {
+        timestamp: workerEvent.timestamp,
+        payload: {
           ...workerEvent.payload,
           addons: {
             ...workerEvent.payload.addons,
@@ -262,7 +263,8 @@ describe('JavaScript event worker', () => {
       {
         projectId: workerEvent.projectId,
         catcherType: workerEvent.catcherType,
-        event: {
+        timestamp: workerEvent.timestamp,
+        payload: {
           ...workerEvent.payload,
           backtrace: [
             expect.objectContaining(parsedBacktraceFrame),

@@ -1,4 +1,4 @@
-import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { EventAddons, EventData } from '@hawk.so/types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
@@ -60,7 +60,7 @@ export default class DataFilter {
    *
    * @param event - event to process
    */
-  public processEvent(event: EventDataAccepted<EventAddons>): void {
+  public processEvent(event: EventData<EventAddons>): void {
     unsafeFields.forEach(field => {
       if (event[field]) {
         this.processField(event[field]);

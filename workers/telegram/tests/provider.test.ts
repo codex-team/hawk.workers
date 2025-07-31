@@ -22,9 +22,9 @@ describe('TelegramProvider', () => {
           events: [ {
             event: {
               totalCount: 10,
+              timestamp: Date.now(),
               payload: {
                 title: 'New event',
-                timestamp: Date.now(),
                 backtrace: [ {
                   file: 'file',
                   line: 1,
@@ -74,9 +74,9 @@ describe('TelegramProvider', () => {
           events: [ {
             event: {
               totalCount: 10,
+              timestamp: Date.now(),
               payload: {
                 title: 'New event',
-                timestamp: Date.now(),
                 backtrace: [ {
                   file: 'file',
                   line: 1,

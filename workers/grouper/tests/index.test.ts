@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
@@ -67,21 +67,25 @@ const projectMock = {
   },
   unreadCount: 0,
   description: 'Test project for grouper worker tests',
-  eventGroupingPatterns: [ { _id: mongodb.ObjectId(), pattern: 'New error .*' }],
+  eventGroupingPatterns: [ {
+    _id: mongodb.ObjectId(),
+    pattern: 'New error .*',
+  } ],
 };
 
 /**
  * Generates task for testing
  *
  * @param event - allows to override some event properties in generated task
+ * @param timestamp - timestamp of the event, defaults to current time
  */
-function generateTask(event: Partial<EventDataAccepted<EventAddons>> = undefined): GroupWorkerTask {
+function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask<ErrorsCatcherType> {
   return {
     projectId: projectIdMock,
-    catcherType: 'grouper',
-    event: Object.assign({
+    catcherType: 'errors/javascript',
+    timestamp,
+    payload: Object.assign({
       title: 'Hawk client catcher test',
-      timestamp: (new Date()).getTime(),
       backtrace: [],
       user: {
         id: generateRandomId(),
@@ -233,22 +237,18 @@ describe('GrouperWorker', () => {
       const yesterday = today - secondsInDay;
 
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer1' },
-      }));
+      }, yesterday));
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer2' },
-      }));
+      }, yesterday));
 
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer1' },
-      }));
+      }, today));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer2' },
-      }));
+      }, today));
 
       const dailyEvents = await dailyEventsCollection.find({}).toArray();
 
@@ -262,17 +262,14 @@ describe('GrouperWorker', () => {
       const today = (new Date()).getTime() / MS_IN_SEC;
 
       await worker.handle(generateTask({
-        timestamp: yesterday,
         user: { id: 'customer1' },
-      }));
+      }, yesterday));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer1' },
-      }));
+      }, today));
       await worker.handle(generateTask({
-        timestamp: today,
         user: { id: 'customer2' },
-      }));
+      }, today));
 
       /**
        * Get daily events ordered by timestamp desc
@@ -329,7 +326,7 @@ describe('GrouperWorker', () => {
     test('Should save event even if its context is type of string', async () => {
       const task = generateTask();
 
-      task.event.context = 'string context';
+      task.payload.context = 'string context';
       await worker.handle(task);
 
       expect((await eventsCollection.findOne({})).payload.context).toBe(null);
@@ -383,8 +380,8 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
       await worker.handle({
         ...generatedTask,
-        event: {
-          ...generatedTask.event,
+        payload: {
+          ...generatedTask.payload,
           addons: { test: '8fred' },
           context: { test: '8fred' },
         },
@@ -401,22 +398,10 @@ describe('GrouperWorker', () => {
 
       const savedRepetition = await repetitionsCollection.findOne({});
 
-      const savedDelta = savedRepetition.delta as string;
-      const parsedDelta = JSON.parse(savedDelta) as RepetitionDelta;
+      const savedDelta = savedRepetition.delta;
+      const parsedDelta = savedDelta as RepetitionDelta;
 
-      expect(parsedDelta.type).toBe(undefined);
-      expect(parsedDelta.backtrace).toBe(undefined);
-      expect(parsedDelta.context).toBe(undefined);
-      expect(parsedDelta.addons).toBe(undefined);
-      expect(parsedDelta.release).toBe(undefined);
-      expect(parsedDelta.user).toBe(undefined);
-      expect(parsedDelta.catcherVersion).toBe(undefined);
-
-      /**
-       * Timestamp always unique, so it should be present in a stored payload diff
-       */
-      expect(parsedDelta.timestamp).not.toBe(undefined);
-      expect(typeof parsedDelta.timestamp).toBe('object');
+      expect(parsedDelta).toBe(null);
     });
 
     test('Should correctly calculate diff after encoding original event when they are different', async () => {
@@ -428,8 +413,8 @@ describe('GrouperWorker', () => {
 
       await worker.handle({
         ...generatedTask,
-        event: {
-          ...generatedTask.event,
+        payload: {
+          ...generatedTask.payload,
           context: {
             testField: 9,
           },
@@ -490,8 +475,11 @@ describe('GrouperWorker', () => {
       });
 
       test('should group events with titles matching one pattern', async () => {
-        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([ 
-          { _id: new mongodb.ObjectId, pattern: 'New error .*' }
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          {
+            _id: new mongodb.ObjectId(),
+            pattern: 'New error .*',
+          },
         ]);
         const findMatchingPatternSpy = jest.spyOn(GrouperWorker.prototype as any, 'findMatchingPattern');
 
@@ -509,9 +497,18 @@ describe('GrouperWorker', () => {
 
       test('should handle multiple patterns and match the first one that applies', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          { _id: mongodb.ObjectId(), pattern: 'Database error: .*' },
-          { _id: mongodb.ObjectId(), pattern: 'Network error: .*' },
-          { _id: mongodb.ObjectId(), pattern: 'New error: .*' },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'Database error: .*',
+          },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'Network error: .*',
+          },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'New error: .*',
+          },
         ]);
 
         await worker.handle(generateTask({ title: 'Database error: connection failed' }));
@@ -528,8 +525,14 @@ describe('GrouperWorker', () => {
 
       test('should handle complex regex patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          { _id: mongodb.ObjectId(), pattern: 'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$' },
-          { _id: mongodb.ObjectId(), pattern: 'Warning \\d{3}: .*' },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'Error \\d{3}: [A-Za-z\\s]+ in file .*\\.js$',
+          },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'Warning \\d{3}: .*',
+          },
         ]);
 
         await worker.handle(generateTask({ title: 'Error 404: Not Found in file index.js' }));
@@ -546,8 +549,14 @@ describe('GrouperWorker', () => {
 
       test('should maintain separate groups for different patterns', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          { _id: mongodb.ObjectId(), pattern: 'TypeError: .*' },
-          { _id: mongodb.ObjectId(), pattern: 'ReferenceError: .*' },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'TypeError: .*',
+          },
+          {
+            _id: mongodb.ObjectId(),
+            pattern: 'ReferenceError: .*',
+          },
         ]);
 
         await worker.handle(generateTask({ title: 'TypeError: null is not an object' }));
@@ -568,8 +577,14 @@ describe('GrouperWorker', () => {
 
       test('should handle patterns with special regex characters', async () => {
         jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
-          { _id: new mongodb.ObjectID(), pattern: 'Error \\[\\d+\\]: .*'} ,
-          { _id: new mongodb.ObjectID(), pattern: 'Warning \\(code=\\d+\\): .*'} ,
+          {
+            _id: new mongodb.ObjectID(),
+            pattern: 'Error \\[\\d+\\]: .*',
+          },
+          {
+            _id: new mongodb.ObjectID(),
+            pattern: 'Warning \\(code=\\d+\\): .*',
+          },
         ]);
 
         await worker.handle(generateTask({ title: 'Error [123]: Database connection failed' }));
