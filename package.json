@@ -14,6 +14,7 @@
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
         "migrate:down": "migrate-mongo down",
+        "convert": "node ./convertors/move-timestamp-out-of-payload.js",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "test": "jest --coverage --runInBand",
         "test:archiver": "jest workers/archiver",
