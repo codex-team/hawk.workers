@@ -234,7 +234,7 @@ export default class ReleaseWorker extends Worker {
         }, { session });
       });
     } catch (error) {
-      this.logger.error(`Can\'t extract release info:\n${JSON.stringify(error)}`);
+      this.logger.error(`Can't extract release info:\n${JSON.stringify(error)}`);
 
       throw new NonCriticalError('Can\'t parse source-map file');
     } finally {
