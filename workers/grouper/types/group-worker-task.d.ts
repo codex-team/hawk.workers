@@ -1,4 +1,4 @@
-import type { EventDataAccepted, EventAddons } from '@hawk.so/types';
+import type { CatcherMessageAccepted, CatcherMessagePayload, ErrorsCatcherType } from '@hawk.so/types';
 import type { WorkerTask } from '../../../lib/types/worker-task';
 import type { Delta } from '@n1ru4l/json-patch-plus';
 
@@ -6,7 +6,7 @@ import type { Delta } from '@n1ru4l/json-patch-plus';
  * Language-workers adds tasks for Group Worker in this format.
  * Group Worker gets this tasks (events from language-workers) and saves it to the DB
  */
-export interface GroupWorkerTask extends WorkerTask {
+export interface GroupWorkerTask<CatcherType extends ErrorsCatcherType> extends WorkerTask, CatcherMessageAccepted<CatcherType> {
   /**
    * Project where error was occurred
    */
@@ -15,15 +15,20 @@ export interface GroupWorkerTask extends WorkerTask {
   /**
    * What type of event we've accept
    */
-  catcherType: string;
+  catcherType: CatcherType;
 
   /**
-   * Event that should be grouped
+   * Payload of the event that should be grouped
    */
-  event: EventDataAccepted<EventAddons>;
+  payload: CatcherMessagePayload<CatcherType>;
+
+  /**
+   * Unix timestamp of the event
+   */
+  timestamp: number;
 }
 
 /**
  * Delta of the original event and the repetition
  */
-export type RepetitionDelta = Delta;
+export type RepetitionDelta = Delta | undefined;

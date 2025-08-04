@@ -6,7 +6,16 @@ import { Worker } from '../../../lib/worker';
 import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
-import type { EventAddons, EventDataAccepted, GroupedEventDBScheme, BacktraceFrame, SourceCodeLine, ProjectEventGroupingPatternsDBScheme } from '@hawk.so/types';
+import type {
+  EventAddons,
+  EventData,
+  GroupedEventDBScheme,
+  BacktraceFrame,
+  SourceCodeLine,
+  ProjectEventGroupingPatternsDBScheme,
+  ErrorsCatcherType,
+  CatcherMessagePayload
+} from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
@@ -91,7 +100,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - event to handle
    */
-  public async handle(task: GroupWorkerTask): Promise<void> {
+  public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     /**
@@ -103,7 +112,7 @@ export default class GrouperWorker extends Worker {
      * If we couldn't group by group hash (title), try grouping by Levenshtein distance or patterns
      */
     if (!existedEvent) {
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.event);
+      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload);
 
       if (similarEvent) {
         this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
@@ -128,16 +137,16 @@ export default class GrouperWorker extends Worker {
     /**
      * Trim source code lines to prevent memory leaks
      */
-    this.trimSourceCodeLines(task.event);
+    this.trimSourceCodeLines(task.payload);
 
     /**
      * Filter sensitive information
      */
-    this.dataFilter.processEvent(task.event);
+    this.dataFilter.processEvent(task.payload);
 
     if (isFirstOccurrence) {
       try {
-        const incrementAffectedUsers = !!task.event.user;
+        const incrementAffectedUsers = !!task.payload.user;
 
         /**
          * Insert new event
@@ -146,7 +155,8 @@ export default class GrouperWorker extends Worker {
           groupHash: uniqueEventHash,
           totalCount: 1,
           catcherType: task.catcherType,
-          payload: task.event,
+          payload: task.payload,
+          timestamp: task.timestamp,
           usersAffected: incrementAffectedUsers ? 1 : 0,
         } as GroupedEventDBScheme);
 
@@ -198,16 +208,16 @@ export default class GrouperWorker extends Worker {
         /**
          * Calculate delta between original event and repetition
          */
-        delta = computeDelta(existedEvent.payload, task.event);
+        delta = computeDelta(existedEvent.payload, task.payload);
       } catch (e) {
         console.error(e);
-        throw new DiffCalculationError(e, existedEvent.payload, task.event);
+        throw new DiffCalculationError(e, existedEvent.payload, task.payload);
       }
 
       const newRepetition = {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
-        timestamp: task.event.timestamp,
+        timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
@@ -216,7 +226,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.event.timestamp, repetitionId, incrementDailyAffectedUsers);
+    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.timestamp, repetitionId, incrementDailyAffectedUsers);
 
     /**
      * Add task for NotifierWorker
@@ -225,7 +235,7 @@ export default class GrouperWorker extends Worker {
       await this.addTask(WorkerNames.NOTIFIER, {
         projectId: task.projectId,
         event: {
-          title: task.event.title,
+          title: task.payload.title,
           groupHash: uniqueEventHash,
           isNew: isFirstOccurrence,
         },
@@ -238,7 +248,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param event - event to process
    */
-  private trimSourceCodeLines(event: EventDataAccepted<EventAddons>): void {
+  private trimSourceCodeLines(event: EventData<EventAddons>): void {
     if (!event.backtrace) {
       return;
     }
@@ -262,10 +272,10 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - worker task to create hash
    */
-  private getUniqueEventHash(task: GroupWorkerTask): Promise<string> {
-    return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.event.title}`, () => {
+  private getUniqueEventHash<Type extends ErrorsCatcherType>(task: GroupWorkerTask<Type>): Promise<string> {
+    return this.cache.get(`groupHash:${task.projectId}:${task.catcherType}:${task.payload.title}`, () => {
       return crypto.createHmac('sha256', process.env.EVENT_SECRET)
-        .update(task.catcherType + task.event.title)
+        .update(task.catcherType + task.payload.title)
         .digest('hex');
     });
   }
@@ -276,7 +286,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param event - event to compare
    */
-  private async findSimilarEvent(projectId: string, event: EventDataAccepted<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
+  private async findSimilarEvent(projectId: string, event: EventData<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
     const eventsCountToCompare = 60;
     const diffTreshold = 0.35;
 
@@ -349,7 +359,7 @@ export default class GrouperWorker extends Worker {
    */
   private async findMatchingPattern(
     patterns: ProjectEventGroupingPatternsDBScheme[],
-    event: EventDataAccepted<EventAddons>
+    event: CatcherMessagePayload<ErrorsCatcherType>
   ): Promise<ProjectEventGroupingPatternsDBScheme | null> {
     if (!patterns || patterns.length === 0) {
       return null;
@@ -417,8 +427,8 @@ export default class GrouperWorker extends Worker {
    * @param existedEvent - original event to get its user
    * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
-  private async shouldIncrementAffectedUsers(task: GroupWorkerTask, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
-    const eventUser = task.event.user;
+  private async shouldIncrementAffectedUsers<Type extends ErrorsCatcherType>(task: GroupWorkerTask<Type>, existedEvent: GroupedEventDBScheme): Promise<[boolean, boolean]> {
+    const eventUser = task.payload.user;
 
     /**
      * In case of no user, we don't need to increment affected users
@@ -464,13 +474,13 @@ export default class GrouperWorker extends Worker {
     /**
      * Get midnight timestamps for the event and the next day
      */
-    const eventMidnight = this.getMidnightByEventTimestamp(task.event.timestamp);
-    const eventNextMidnight = this.getMidnightByEventTimestamp(task.event.timestamp, true);
+    const eventMidnight = this.getMidnightByEventTimestamp(task.timestamp);
+    const eventNextMidnight = this.getMidnightByEventTimestamp(task.timestamp, true);
 
     /**
      * Check if incoming event has the same day as the original event
      */
-    const isSameDay = existedEvent.payload.timestamp > eventMidnight && existedEvent.payload.timestamp < eventNextMidnight;
+    const isSameDay = existedEvent.timestamp > eventMidnight && existedEvent.timestamp < eventNextMidnight;
 
     /**
      * If incoming event has the same day as the original event and the same user, don't increment daily affected users
@@ -487,7 +497,7 @@ export default class GrouperWorker extends Worker {
           .findOne({
             groupHash: existedEvent.groupHash,
             'payload.user.id': eventUser.id,
-            'payload.timestamp': {
+            timestamp: {
               $gte: eventMidnight,
               $lt: eventNextMidnight,
             },

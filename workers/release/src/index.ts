@@ -194,7 +194,7 @@ export default class ReleaseWorker extends Worker {
          */
         savedFiles.forEach(file => {
           delete file.content;
-        })
+        });
 
         /**
          * Filter unsaved maps
@@ -234,9 +234,7 @@ export default class ReleaseWorker extends Worker {
         }, { session });
       });
     } catch (error) {
-      this.logger.error('Can\'t extract release info:\n', {
-        error,
-      });
+      this.logger.error(`Can't extract release info:\n${JSON.stringify(error)}`);
 
       throw new NonCriticalError('Can\'t parse source-map file');
     } finally {

@@ -190,7 +190,6 @@ describe('converter utils', () => {
         platform: 'javascript',
         // eslint-disable-next-line @typescript-eslint/naming-convention
         server_name: 'test-server',
-        release: '1.0.0',
         dist: '1.0.0',
         environment: 'production',
         request: { url: 'https://test.com' },

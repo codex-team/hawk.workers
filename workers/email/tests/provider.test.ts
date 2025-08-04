@@ -62,9 +62,9 @@ describe('EmailProvider', () => {
         events: [{
           event: {
             totalCount: 10,
+            timestamp: Date.now(),
             payload: {
               title: 'New event',
-              timestamp: Date.now(),
               backtrace: [{
                 file: 'file',
                 line: 1,
@@ -114,9 +114,9 @@ describe('EmailProvider', () => {
         events: [{
           event: {
             totalCount: 10,
+            timestamp: Date.now(),
             payload: {
               title: 'New event',
-              timestamp: Date.now(),
               backtrace: [{
                 file: 'file',
                 line: 1,
@@ -165,9 +165,9 @@ describe('EmailProvider', () => {
       const vars: AssigneeTemplateVariables = {
         event: {
           totalCount: 10,
+          timestamp: Date.now(),
           payload: {
             title: 'New event',
-            timestamp: Date.now(),
             backtrace: [{
               file: 'file',
               line: 1,

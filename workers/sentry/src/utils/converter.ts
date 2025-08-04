@@ -1,4 +1,4 @@
-import { BacktraceFrame, DefaultAddons, EventContext, EventData, Json } from '@hawk.so/types';
+import { BacktraceFrame, DefaultAddons, EventContext, EventData, Json, SentryAddons } from '@hawk.so/types';
 import { Event as SentryEvent } from '@sentry/core';
 
 /**
@@ -111,7 +111,7 @@ export function composeContext(eventPayload: SentryEvent): EventContext | undefi
  *
  * @param eventPayload - Sentry event payload
  */
-export function composeAddons(eventPayload: SentryEvent): EventData<DefaultAddons>['addons'] {
+export function composeAddons(eventPayload: SentryEvent): SentryAddons {
   const addons: Record<string, unknown> = {};
 
   const fieldsToInclude: (keyof SentryEvent)[] = [
@@ -122,7 +122,6 @@ export function composeAddons(eventPayload: SentryEvent): EventData<DefaultAddon
     'level',
     'platform',
     'server_name',
-    'release',
     'dist',
     'environment',
     'request',

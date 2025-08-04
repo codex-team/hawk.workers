@@ -124,16 +124,9 @@ export class DbHelper {
       const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
 
       const query = {
-        $or: [ {
-          timestamp: {
-            $gt: since,
-          },
+        timestamp: {
+          $gt: since,
         },
-        {
-          'payload.timestamp': {
-            $gt: since,
-          },
-        } ],
       };
 
       const repetitionsCount = await repetitionsCollection.countDocuments(query);

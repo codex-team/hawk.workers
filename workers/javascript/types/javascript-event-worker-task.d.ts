@@ -1,17 +1,6 @@
-import { EventWorkerTask } from '../../../lib/types/event-worker-task';
-import { DecodedEventData, JavaScriptAddons } from '@hawk.so/types';
-
-/**
- * Describe a context passed from JavaScript Catcher
- */
-interface JavaScriptEventPayload extends DecodedEventData<JavaScriptAddons> {}
+import { CatcherMessageAccepted } from '@hawk.so/types';
 
 /**
  * Format of task for JavaScript Event Worker
  */
-export interface JavaScriptEventWorkerTask extends EventWorkerTask {
-  /**
-   * Language-specific payload
-   */
-  payload: JavaScriptEventPayload;
-}
+export interface JavaScriptEventWorkerTask extends CatcherMessageAccepted<'errors/javascript'> {}

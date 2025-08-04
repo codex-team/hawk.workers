@@ -1,4 +1,4 @@
-import type { EventAddons, EventDataAccepted } from '@hawk.so/types';
+import type { EventData, JavaScriptAddons } from '@hawk.so/types';
 import { generateRandomId } from './randomId';
 
 /**
@@ -11,10 +11,9 @@ const userIdMock = generateRandomId();
  *
  * @param event - Partial event data to override default values
  */
-export function generateEvent(event: Partial<EventDataAccepted<EventAddons>> = undefined): EventDataAccepted<EventAddons> {
+export function generateEvent(event: Partial<EventData<JavaScriptAddons>> = undefined): EventData<JavaScriptAddons> {
   return {
     title: 'Hawk client catcher test',
-    timestamp: (new Date()).getTime(),
     backtrace: [],
     user: {
       id: userIdMock,
@@ -24,11 +23,19 @@ export function generateEvent(event: Partial<EventDataAccepted<EventAddons>> = u
       'ima$ge.jpg': 'img',
     },
     addons: {
+      window: {
+        innerWidth: 1024,
+        innerHeight: 768,
+      },
+      userAgent: 'Hawk client catcher test',
+      url: 'https://hawk.so',
       vue: {
         props: {
           'test-test': false,
           'ima$ge.jpg': 'img',
         },
+        lifecycle: 'Mounted',
+        component: 'TestComponent',
       },
     },
     ...event,
