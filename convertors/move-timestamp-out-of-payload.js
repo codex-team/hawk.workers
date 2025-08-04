@@ -2,6 +2,11 @@ require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
 /**
+ * Limit for one time documents selection, used to reduce the load on the database
+ */
+const documentsSelectionLimit = 10000;
+
+/**
  * @param db - mongo db instance
  * @param collectionName - name of the collection to be updated
  */
@@ -11,7 +16,7 @@ async function movePayloadTimestampToEventLevel(db, collectionName) {
   const docsToUpdate = collection.find(
     { timestamp: { $exists: false } },
     { projection: { _id: 1, 'payload.timestamp': 1 } }
-  ).limit(10000);
+  ).limit(documentsSelectionLimit);
 
   const batchedOps = [];
 
@@ -60,7 +65,7 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
       timestamp: { $exists: false },
     },
     { projection: { _id: 1, groupHash: 1 } }
-  ).limit(10000).toArray();
+  ).limit(documentsSelectionLimit).toArray();
 
   const groupHashList = [];
 
@@ -117,12 +122,11 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
   return processed;
 }
 
-
 /**
  * Method that runs convertor script
  */
 async function run() {
-  const fullUri = process.env.MONGO_EVENTS_DATABASE_URI;
+  const fullUri = 'mongodb://hawk_new:evieg9bauK0ahs2youhoh7aer7kohT@rc1d-2jltinutse1eadfs.mdb.yandexcloud.net:27018/hawk_events?authSource=admin&replicaSet=rs01&tls=true&tlsInsecure=true';
 
   // Parse the Mongo URL manually
   const mongoUrl = new URL(fullUri);
@@ -170,10 +174,10 @@ async function run() {
 
   // Convert events
   let i = 1;
-  let total = 1
+  let documentsUpdatedCount = 1
 
-  while (total != 0) {
-    total = 0;
+  while (documentsUpdatedCount != 0) {
+    documentsUpdatedCount = 0;
     i = 1;
     const collectionsToUpdateCount = eventCollectionsToCheck.length;
   
@@ -181,16 +185,20 @@ async function run() {
       console.log(`[${i}/${collectionsToUpdateCount}] Processing ${collectionName}`);
       const updated = await movePayloadTimestampToEventLevel(db, collectionName);
 
-      total += updated
+      if (updated === 0) {
+        eventCollectionsToCheck = eventCollectionsToCheck.filter(collection => collection !== collectionName);
+      }
+
+      documentsUpdatedCount += updated
       i++;
     }
   } 
 
   // Convert repetitions + backfill from events
-  total = 1;
+  documentsUpdatedCount = 1;
 
-  while (total != 0) {
-    total = 0;
+  while (documentsUpdatedCount != 0) {
+    documentsUpdatedCount = 0;
     i = 1;
     const collectionsToUpdateCount = repetitionCollectionsToCheck.length;
 
@@ -207,11 +215,11 @@ async function run() {
         repetitionCollectionsToCheck = repetitionCollectionsToCheck.filter(collection => collection !== collectionName);
       }
 
-      total += updated;
+      documentsUpdatedCount += updated;
       i++;
     }
 
-    console.log(`Conversion iteration complete. ${total} documents updated`);
+    console.log(`Conversion iteration complete. ${documentsUpdatedCount} documents updated`);
   }
 
   await client.close();
