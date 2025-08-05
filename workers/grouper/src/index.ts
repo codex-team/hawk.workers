@@ -109,7 +109,7 @@ export default class GrouperWorker extends Worker {
     let existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
 
     /**
-     * If we couldn't group by group hash (title), try grouping by Levenshtein distance or patterns
+     * If we couldn't group by group hash (title), try grouping by patterns
      */
     if (!existedEvent) {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.payload);
@@ -287,35 +287,35 @@ export default class GrouperWorker extends Worker {
    * @param event - event to compare
    */
   private async findSimilarEvent(projectId: string, event: EventData<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
-    const eventsCountToCompare = 60;
-    const diffTreshold = 0.35;
+    // const eventsCountToCompare = 60;
+    // const diffTreshold = 0.35;
 
-    const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
+    // const lastUniqueEvents = await this.findLastEvents(projectId, eventsCountToCompare);
 
     /**
      * Trim titles to reduce CPU usage for Levenshtein comparison
      */
-    const trimmedEventTitle = hasValue(event.title) ? rightTrim(event.title, MAX_CODE_LINE_LENGTH) : '';
+    // const trimmedEventTitle = hasValue(event.title) ? rightTrim(event.title, MAX_CODE_LINE_LENGTH) : '';
 
     /**
      * First try to find by Levenshtein distance
      */
-    const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
-      const trimmedPrevTitle = hasValue(prevEvent.payload.title) ? rightTrim(prevEvent.payload.title, MAX_CODE_LINE_LENGTH) : '';
+    // const similarByLevenshtein = lastUniqueEvents.filter(prevEvent => {
+    //   const trimmedPrevTitle = hasValue(prevEvent.payload.title) ? rightTrim(prevEvent.payload.title, MAX_CODE_LINE_LENGTH) : '';
 
-      if (trimmedEventTitle === '' || trimmedPrevTitle === '') {
-        return false;
-      }
+    //   if (trimmedEventTitle === '' || trimmedPrevTitle === '') {
+    //     return false;
+    //   }
 
-      const distance = levenshtein(trimmedEventTitle, trimmedPrevTitle);
-      const threshold = trimmedEventTitle.length * diffTreshold;
+    //   const distance = levenshtein(trimmedEventTitle, trimmedPrevTitle);
+    //   const threshold = trimmedEventTitle.length * diffTreshold;
 
-      return distance < threshold;
-    }).pop();
+    //   return distance < threshold;
+    // }).pop();
 
-    if (similarByLevenshtein) {
-      return similarByLevenshtein;
-    }
+    // if (similarByLevenshtein) {
+    //   return similarByLevenshtein;
+    // }
 
     /**
      * If no match by Levenshtein, try matching by patterns
