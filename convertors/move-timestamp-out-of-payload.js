@@ -16,7 +16,12 @@ async function movePayloadTimestampToEventLevel(db, collectionName) {
 
   const docsToUpdate = collection.find(
     { timestamp: { $exists: false } },
-    { projection: { _id: 1, 'payload.timestamp': 1 } }
+    {
+      projection: {
+        _id: 1,
+        'payload.timestamp': 1,
+      },
+    }
   ).limit(documentsSelectionLimit);
 
   const batchedOps = [];
@@ -34,11 +39,11 @@ async function movePayloadTimestampToEventLevel(db, collectionName) {
       updateOne: {
         filter: { _id: doc._id },
         update: {
-          $set: { timestamp: Number(doc.payload.timestamp)},
-          $unset: {'payload.timestamp': ''},
-        }
-      }
-    })
+          $set: { timestamp: Number(doc.payload.timestamp) },
+          $unset: { 'payload.timestamp': '' },
+        },
+      },
+    });
 
     currentCount++;
   }
@@ -47,7 +52,7 @@ async function movePayloadTimestampToEventLevel(db, collectionName) {
     await collection.bulkWrite(batchedOps);
   }
 
-  return currentCount
+  return currentCount;
 }
 /**
  * @param db - mongo db instance
@@ -58,15 +63,21 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
   const repetitions = db.collection(repetitionCollectionName);
   const events = db.collection(`events:${projectId}`);
 
-  let bulkOps = [];
+  const bulkOps = [];
   let repetitionCount = 1;
 
   const repetitionsList = await repetitions.find(
     {
       timestamp: { $exists: false },
     },
-    { projection: { _id: 1, groupHash: 1 } }
-  ).limit(documentsSelectionLimit).toArray();
+    {
+      projection: {
+        _id: 1,
+        groupHash: 1,
+      },
+    }
+  ).limit(documentsSelectionLimit)
+    .toArray();
 
   const groupHashList = [];
 
@@ -78,14 +89,19 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
 
   const relatedEvents = await events.find(
     { groupHash: { $in: groupHashList } },
-    { projection: { timestamp: 1, groupHash: 1 } }
+    {
+      projection: {
+        timestamp: 1,
+        groupHash: 1,
+      },
+    }
   ).toArray();
 
-  const relatedEventsMap = new Map()
+  const relatedEventsMap = new Map();
 
   relatedEvents.forEach(e => {
     relatedEventsMap.set(e.groupHash, e);
-  })
+  });
 
   for (const repetition of repetitionsList) {
     const relatedEvent = relatedEventsMap.get(repetition.groupHash);
@@ -93,9 +109,9 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
     if (!relatedEvent) {
       bulkOps.push({
         deleteOne: {
-          filter: { _id: repetition._id }
-        }
-      })
+          filter: { _id: repetition._id },
+        },
+      });
     } else if (relatedEvent?.timestamp !== null) {
       bulkOps.push({
         updateOne: {
@@ -112,11 +128,12 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
     const result = await repetitions.bulkWrite(bulkOps);
     const updated = result.modifiedCount;
     const deleted = result.deletedCount;
+
     processed = bulkOps.length;
     console.log(`  updates (${processed} processed, ${updated} updated, ${deleted} deleted)`);
 
     if (updated + deleted === 0) {
-      repetitionCollectionsToCheck.filter(collection => collection !== repetition)
+      repetitionCollectionsToCheck.filter(collection => collection !== repetition);
     }
   }
 
@@ -175,13 +192,13 @@ async function run() {
 
   // Convert events
   let i = 1;
-  let documentsUpdatedCount = 1
+  let documentsUpdatedCount = 1;
 
   while (documentsUpdatedCount != 0) {
     documentsUpdatedCount = 0;
     i = 1;
     const collectionsToUpdateCount = eventCollectionsToCheck.length;
-  
+
     for (const collectionName of eventCollectionsToCheck) {
       console.log(`[${i}/${collectionsToUpdateCount}] Processing ${collectionName}`);
       const updated = await movePayloadTimestampToEventLevel(db, collectionName);
@@ -190,10 +207,10 @@ async function run() {
         eventCollectionsToCheck = eventCollectionsToCheck.filter(collection => collection !== collectionName);
       }
 
-      documentsUpdatedCount += updated
+      documentsUpdatedCount += updated;
       i++;
     }
-  } 
+  }
 
   // Convert repetitions + backfill from events
   documentsUpdatedCount = 1;
