@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('process');
 const { MongoClient } = require('mongodb');
 
 /**
@@ -126,7 +127,7 @@ async function backfillTimestampsFromEvents(db, repetitionCollectionName, projec
  * Method that runs convertor script
  */
 async function run() {
-  const fullUri = 'mongodb://hawk_new:evieg9bauK0ahs2youhoh7aer7kohT@rc1d-2jltinutse1eadfs.mdb.yandexcloud.net:27018/hawk_events?authSource=admin&replicaSet=rs01&tls=true&tlsInsecure=true';
+  const fullUri = process.env.MONGO_EVENTS_DATABASE_URI;
 
   // Parse the Mongo URL manually
   const mongoUrl = new URL(fullUri);
