@@ -457,17 +457,17 @@ describe('GrouperWorker', () => {
   });
 
   describe('Grouping', () => {
-    test('should group events with partially different titles', async () => {
-      await worker.handle(generateTask({ title: 'Some error (but not filly identical) example' }));
-      await worker.handle(generateTask({ title: 'Some error (yes, it is not the identical) example' }));
-      await worker.handle(generateTask({ title: 'Some error (and it is not identical) example' }));
+    // test('should group events with partially different titles', async () => {
+    //   await worker.handle(generateTask({ title: 'Some error (but not filly identical) example' }));
+    //   await worker.handle(generateTask({ title: 'Some error (yes, it is not the identical) example' }));
+    //   await worker.handle(generateTask({ title: 'Some error (and it is not identical) example' }));
 
-      const originalEvent = await eventsCollection.findOne({});
+    //   const originalEvent = await eventsCollection.findOne({});
 
-      expect((await repetitionsCollection.find({
-        groupHash: originalEvent.groupHash,
-      }).toArray()).length).toBe(2);
-    });
+    //   expect((await repetitionsCollection.find({
+    //     groupHash: originalEvent.groupHash,
+    //   }).toArray()).length).toBe(2);
+    // });
 
     describe('Pattern matching', () => {
       beforeEach(() => {
