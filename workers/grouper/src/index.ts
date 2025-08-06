@@ -101,6 +101,20 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
+    if (!task.timestamp) {
+      HawkCatcher.send(
+        new Error('[Grouper] Timestamp is not set'),
+        {
+          projectId: task.projectId,
+          eventId: task.payload.id,
+          catcherType: task.catcherType,
+          title: task.payload.title,
+          timestamp: task.timestamp,
+          payload: task.payload,
+        }
+      );
+    }
+
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     /**
