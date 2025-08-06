@@ -14,6 +14,7 @@
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
         "migrate:down": "migrate-mongo down",
+        "convert": "node ./convertors/move-timestamp-out-of-payload.js",
         "lint": "eslint -c ./.eslintrc.js --ext .ts,.js --fix .",
         "test": "jest --coverage --runInBand",
         "test:archiver": "jest workers/archiver",
@@ -48,7 +49,7 @@
     },
     "dependencies": {
         "@hawk.so/nodejs": "^3.1.1",
-        "@hawk.so/types": "^0.1.29",
+        "@hawk.so/types": "^0.1.32",
         "@types/amqplib": "^0.8.2",
         "@types/jest": "^29.2.3",
         "@types/mongodb": "^3.5.15",
