@@ -81,6 +81,16 @@ export default class GrouperWorker extends Worker {
 
     await this.redis.initialize();
     console.log('redis initialized');
+
+    const hawkToken = process.env.HAWK_INTEGRATION_TOKEN;
+
+    if (hawkToken) {
+      HawkCatcher.init(hawkToken);
+      console.log('hawk initialized');
+    } else {
+      console.warn('HAWK_INTEGRATION_TOKEN is not set');
+    }
+
     await super.start();
   }
 
