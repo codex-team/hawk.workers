@@ -19,7 +19,6 @@ import type {
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
