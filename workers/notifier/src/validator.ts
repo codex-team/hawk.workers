@@ -112,7 +112,7 @@ export default class RuleValidator {
     if (!excluding.length) {
       result = true;
     } else {
-      result = !excluding.some((word: string) => event.title.toLowerCase().includes(word));
+      result = !excluding.some((word: string) => event.title.toLowerCase().includes(word.toLowerCase()));
     }
 
     if (!result) {
