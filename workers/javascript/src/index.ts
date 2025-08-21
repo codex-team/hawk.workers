@@ -342,7 +342,9 @@ export default class JavascriptEventWorker extends EventWorker {
         },
       });
     } catch (traverseError) {
-      console.error(`Failed to parse source code: ${traverseError}`);
+      console.error(`Failed to parse source code:`);
+      console.error(traverseError);
+
       HawkCatcher.send(traverseError);
     }
 
