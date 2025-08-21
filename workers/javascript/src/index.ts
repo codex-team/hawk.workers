@@ -12,8 +12,8 @@ import Crypto from '../../../lib/utils/crypto';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
-// import { parse } from '@babel/parser';
-// import traverse from '@babel/traverse';
+import { parse } from '@babel/parser';
+import traverse from '@babel/traverse';
 
 /**
  * Worker for handling Javascript events
@@ -233,9 +233,9 @@ export default class JavascriptEventWorker extends EventWorker {
        */
       lines = this.readSourceLines(consumer, originalLocation);
 
-    //   const originalContent = consumer.sourceContentFor(originalLocation.source);
+      const _originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    //   functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+      // functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
     }
 
     return Object.assign(stackFrame, {
@@ -254,102 +254,102 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  // private getFunctionContext(sourceCode: string, line: number): string | null {
-  //   let functionName: string | null = null;
-  //   let className: string | null = null;
-  //   let isAsync = false;
+  private _getFunctionContext(sourceCode: string, line: number): string | null {
+    let functionName: string | null = null;
+    let className: string | null = null;
+    let isAsync = false;
 
-  //   try {
-  //     // @todo choose plugins based on source code file extention (related to possible jsx parser usage in future)
-  //     const ast = parse(sourceCode, {
-  //       sourceType: 'module',
-  //       plugins: [
-  //         'typescript',
-  //         'classProperties',
-  //         'decorators',
-  //         'optionalChaining',
-  //         'nullishCoalescingOperator',
-  //         'dynamicImport',
-  //         'bigInt',
-  //         'topLevelAwait',
-  //       ],
-  //     });
+    try {
+      // @todo choose plugins based on source code file extention (related to possible jsx parser usage in future)
+      const ast = parse(sourceCode, {
+        sourceType: 'module',
+        plugins: [
+          'typescript',
+          'classProperties',
+          'decorators',
+          'optionalChaining',
+          'nullishCoalescingOperator',
+          'dynamicImport',
+          'bigInt',
+          'topLevelAwait',
+        ],
+      });
 
-  //     traverse(ast as any, {
-  //       /**
-  //        * It is used to get class decorator of the position, it will save class that is related to original position
-  //        *
-  //        * @param path
-  //        */
-  //       ClassDeclaration(path) {
-  //         if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-  //           console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+      traverse(ast as any, {
+        /**
+         * It is used to get class decorator of the position, it will save class that is related to original position
+         *
+         * @param path
+         */
+        ClassDeclaration(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
             
-  //           className = path.node.id.name || null;
-  //         }
-  //       },
-  //       /**
-  //        * It is used to get class and its method decorator of the position
-  //        * It will save class and method, that are related to original position
-  //        *
-  //        * @param path
-  //        */
-  //       ClassMethod(path) {
-  //         if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-  //           console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+            className = path.node.id.name || null;
+          }
+        },
+        /**
+         * It is used to get class and its method decorator of the position
+         * It will save class and method, that are related to original position
+         *
+         * @param path
+         */
+        ClassMethod(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
           
-  //           // Handle different key types
-  //           if (path.node.key.type === 'Identifier') {
-  //             functionName = path.node.key.name;
-  //           }
-  //           isAsync = path.node.async;
-  //         }
-  //       },
-  //       /**
-  //        * It is used to get function name that is declared out of class
-  //        *
-  //        * @param path
-  //        */
-  //       FunctionDeclaration(path) {
-  //         if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-  //           console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+            // Handle different key types
+            if (path.node.key.type === 'Identifier') {
+              functionName = path.node.key.name;
+            }
+            isAsync = path.node.async;
+          }
+        },
+        /**
+         * It is used to get function name that is declared out of class
+         *
+         * @param path
+         */
+        FunctionDeclaration(path) {
+          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
           
-  //           functionName = path.node.id.name || null;
-  //           isAsync = path.node.async;
-  //         }
-  //       },
-  //       /**
-  //        * It is used to get anonimous function names in function expressions or arrow function expressions
-  //        *
-  //        * @param path
-  //        */
-  //       VariableDeclarator(path) {
-  //         if (
-  //           path.node.init &&
-  //           (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
-  //           path.node.loc &&
-  //           path.node.loc.start.line <= line &&
-  //           path.node.loc.end.line >= line
-  //         ) {
-  //           console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
+            functionName = path.node.id.name || null;
+            isAsync = path.node.async;
+          }
+        },
+        /**
+         * It is used to get anonimous function names in function expressions or arrow function expressions
+         *
+         * @param path
+         */
+        VariableDeclarator(path) {
+          if (
+            path.node.init &&
+            (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
+            path.node.loc &&
+            path.node.loc.start.line <= line &&
+            path.node.loc.end.line >= line
+          ) {
+            console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
 
-  //           // Handle different id types
-  //           if (path.node.id.type === 'Identifier') {
-  //             functionName = path.node.id.name;
-  //           }
-  //           isAsync = (path.node.init as any).async;
-  //         }
-  //       },
-  //     });
-  //   } catch (traverseError) {
-  //     console.error(`Failed to parse source code:`);
-  //     console.error(traverseError);
+            // Handle different id types
+            if (path.node.id.type === 'Identifier') {
+              functionName = path.node.id.name;
+            }
+            isAsync = (path.node.init as any).async;
+          }
+        },
+      });
+    } catch (traverseError) {
+      console.error(`Failed to parse source code:`);
+      console.error(traverseError);
 
-  //     HawkCatcher.send(traverseError);
-  //   }
+      HawkCatcher.send(traverseError);
+    }
 
-  //   return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
-  // }
+    return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
+  }
 
   /**
    * Downloads source map file from Grid FS
