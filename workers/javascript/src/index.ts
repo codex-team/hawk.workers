@@ -282,9 +282,9 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         ClassDeclaration(path) {
-          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+            
             className = path.node.id.name || null;
           }
         },
@@ -295,9 +295,9 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         ClassMethod(path) {
-          console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          
             // Handle different key types
             if (path.node.key.type === 'Identifier') {
               functionName = path.node.key.name;
@@ -311,9 +311,9 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         FunctionDeclaration(path) {
-          console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
+            console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          
             functionName = path.node.id.name || null;
             isAsync = path.node.async;
           }
@@ -324,8 +324,6 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         VariableDeclarator(path) {
-          console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
-
           if (
             path.node.init &&
             (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
@@ -333,6 +331,8 @@ export default class JavascriptEventWorker extends EventWorker {
             path.node.loc.start.line <= line &&
             path.node.loc.end.line >= line
           ) {
+            console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
+
             // Handle different id types
             if (path.node.id.type === 'Identifier') {
               functionName = path.node.id.name;
@@ -341,8 +341,11 @@ export default class JavascriptEventWorker extends EventWorker {
           }
         },
       });
-    } catch (e) {
-      console.error(`Failed to parse source code: ${e.message}`);
+    } catch (traverseError) {
+      console.error(`Failed to parse source code:`);
+      console.error(traverseError);
+
+      HawkCatcher.send(traverseError);
     }
 
     return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
