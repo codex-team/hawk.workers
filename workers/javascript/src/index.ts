@@ -264,7 +264,6 @@ export default class JavascriptEventWorker extends EventWorker {
         sourceType: 'module',
         plugins: [
           'typescript',
-          'jsx',
           'classProperties',
           'decorators',
           'optionalChaining',
