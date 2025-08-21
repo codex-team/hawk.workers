@@ -260,6 +260,7 @@ export default class JavascriptEventWorker extends EventWorker {
     let isAsync = false;
 
     try {
+      // @todo choose plugins based on source code file extention (related to possible jsx parser usage in future)
       const ast = parse(sourceCode, {
         sourceType: 'module',
         plugins: [
