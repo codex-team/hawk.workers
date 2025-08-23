@@ -406,5 +406,49 @@ describe('NotifierWorker', () => {
 
       expect(worker.sendEventsToChannels).toBeCalledTimes(1);
     });
+
+    it('should not send notifications for ignored (muted) events', async () => {
+      // Mock isEventIgnored method to return true
+      jest.spyOn(worker, 'isEventIgnored').mockResolvedValue(true);
+
+      worker.sendEventsToChannels = jest.fn();
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(worker.sendEventsToChannels).not.toHaveBeenCalled();
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+    });
+
+    it('should send notifications for non-ignored events', async () => {
+      // Mock isEventIgnored method to return false
+      jest.spyOn(worker, 'isEventIgnored').mockResolvedValue(false);
+
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+      worker.sendEventsToChannels = jest.fn();
+
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(worker.sendEventsToChannels).toHaveBeenCalled();
+    });
+
+    it('should handle errors when checking ignored status gracefully', async () => {
+      // Mock isEventIgnored method to throw error
+      jest
+        .spyOn(worker, 'isEventIgnored')
+        .mockRejectedValue(new Error('Database connection failed'));
+
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+      worker.sendEventsToChannels = jest.fn();
+
+      const message = { ...messageMock };
+
+      // Should not throw error and should continue processing (fail-safe behavior)
+      await expect(worker.handle(message)).resolves.not.toThrow();
+    });
   });
 });
