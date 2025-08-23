@@ -24,7 +24,16 @@ export default class NotifierWorker extends Worker {
   /**
    * Database Controllers
    */
-  private accountsDb: DatabaseController = new DatabaseController(process.env.MONGO_ACCOUNTS_DATABASE_URI);
+  private accountsDb: DatabaseController = new DatabaseController(
+    process.env.MONGO_ACCOUNTS_DATABASE_URI
+  );
+
+  /**
+   * Events Database Controller
+   */
+  private eventsDb: DatabaseController = new DatabaseController(
+    process.env.MONGO_EVENTS_DATABASE_URI
+  );
 
   /**
    * Redis helper instance for modifying data through redis
@@ -36,6 +45,7 @@ export default class NotifierWorker extends Worker {
    */
   public async start(): Promise<void> {
     await this.accountsDb.connect();
+    await this.eventsDb.connect();
     await this.redis.initialize();
     await super.start();
   }
@@ -46,6 +56,7 @@ export default class NotifierWorker extends Worker {
   public async finish(): Promise<void> {
     await super.finish();
     await this.accountsDb.close();
+    await this.eventsDb.close();
     await this.redis.close();
   }
 
@@ -59,6 +70,16 @@ export default class NotifierWorker extends Worker {
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;
+
+      /**
+       * Check if the event is marked as ignored (muted)
+       * If so, skip sending notifications
+       */
+      const isEventIgnored = await this.isEventIgnored(projectId, event.groupHash);
+      if (isEventIgnored) {
+        this.logger.info(`Event ${event.groupHash} is marked as ignored, skipping notifications`);
+        return;
+      }
 
       /**
        * Get fitter rules for received event
@@ -181,6 +202,38 @@ export default class NotifierWorker extends Worker {
         events,
       },
     } as SenderWorkerTask);
+  }
+
+  /**
+   * Check if event is marked as ignored (muted)
+   * Uses cache to avoid repeated database queries for the same event
+   *
+   * @param {string} projectId - project id event is related to
+   * @param {string} groupHash - event group hash
+   * @returns {Promise<boolean>} - true if event is ignored, false otherwise
+   */
+  private async isEventIgnored(projectId: string, groupHash: string): Promise<boolean> {
+    try {
+      const cacheKey = `event:${projectId}:${groupHash}:ignored`;
+
+      return await this.cache.get(
+        cacheKey,
+        async () => {
+          const eventsCollection = this.eventsDb.getConnection().collection(`events:${projectId}`);
+
+          const event = await eventsCollection.findOne(
+            { groupHash },
+            { projection: { 'marks.ignored': 1 } }
+          );
+
+          return !!event?.marks?.ignored;
+        },
+        10
+      ); // Cache for 10 seconds - short cache since users may frequently toggle ignored status
+    } catch (e) {
+      this.logger.warn(`Failed to check if event ${groupHash} is ignored: ${e}`);
+      return false; // If we can't check, don't block notifications
+    }
   }
 
   /**
