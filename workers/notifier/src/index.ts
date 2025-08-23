@@ -13,6 +13,12 @@ import TimeMs from '../../../lib/utils/time';
 import RedisHelper from './redisHelper';
 
 /**
+ * Cache TTL for ignored status check in seconds
+ * Short cache since users may frequently toggle ignored status
+ */
+const IGNORED_STATUS_CACHE_TTL_SECONDS = 10;
+
+/**
  * Worker to buffer events before sending notifications about them
  */
 export default class NotifierWorker extends Worker {
@@ -228,8 +234,8 @@ export default class NotifierWorker extends Worker {
 
           return !!event?.marks?.ignored;
         },
-        10
-      ); // Cache for 10 seconds - short cache since users may frequently toggle ignored status
+        IGNORED_STATUS_CACHE_TTL_SECONDS
+      );
     } catch (e) {
       this.logger.warn(`Failed to check if event ${groupHash} is ignored: ${e}`);
       return false; // If we can't check, don't block notifications
