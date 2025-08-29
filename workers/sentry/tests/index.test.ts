@@ -802,8 +802,10 @@ describe('SentryEventWorker', () => {
       const envelopeLines = [
         // Envelope header
         JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
           event_id: '4c40fee730194a989439a86bf75634111',
           sent_at: '2025-08-29T10:59:29.952Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
           sdk: { name: 'sentry.javascript.react', version: '9.10.1' },
         }),
         // Event item header
@@ -813,7 +815,12 @@ describe('SentryEventWorker', () => {
         // Replay event item header - should be filtered out
         JSON.stringify({ type: 'replay_event' }),
         // Replay event item payload - should be filtered out
-        JSON.stringify({ replay_id: 'test-replay', segment_id: 1 }),
+        JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
+          replay_id: 'test-replay',
+          segment_id: 1,
+          /* eslint-enable @typescript-eslint/naming-convention */
+        }),
         // Replay recording item header - should be filtered out
         JSON.stringify({ type: 'replay_recording', length: 343 }),
         // Replay recording binary payload - should be filtered out
