@@ -66,19 +66,28 @@ export default class SentryEventWorker extends Worker {
         continue;
       }
 
-      // Skip replay headers and their binary payload
-      if (line.includes('replay_recording') || line.includes('replay_event')) {
-        // Skip this header and next line (payload)
-        i++; // Skip the binary payload line too
+      // Skip empty lines
+      if (!line.trim()) {
         continue;
       }
 
-      // Skip lines that look like binary data (start with non-JSON chars)
-      if (line.trim() && !line.trim().startsWith('{') && !line.trim().startsWith('"')) {
+      try {
+        // Try to parse as JSON to check if it's a header
+        const parsed = JSON.parse(line);
+
+        // If it's a replay header, skip this line and the next one (payload)
+        if (parsed.type === 'replay_recording' || parsed.type === 'replay_event') {
+          // Skip the next line too (which would be the payload)
+          i++;
+          continue;
+        }
+
+        // Keep valid headers and other JSON data
+        filteredLines.push(line);
+      } catch {
+        // If line doesn't parse as JSON, it might be binary data - skip it
         continue;
       }
-
-      filteredLines.push(line);
     }
 
     return filteredLines.join('\n');
