@@ -31,7 +31,11 @@ export default class SentryEventWorker extends Worker {
 
     try {
       const rawEvent = b64decode(event.payload.envelope);
-      const envelope = parseEnvelope(rawEvent);
+
+      // Filter out replay_recording items before parsing to prevent crashes
+      const filteredRawEvent = this.filterOutBinaryItems(rawEvent);
+
+      const envelope = parseEnvelope(filteredRawEvent);
 
       const [headers, items] = envelope;
 
@@ -44,6 +48,49 @@ export default class SentryEventWorker extends Worker {
       this.logger.json(event);
       throw error;
     }
+  }
+
+  /**
+   * Filter out binary items that crash parseEnvelope
+   */
+  private filterOutBinaryItems(rawEvent: string): string {
+    const lines = rawEvent.split('\n');
+    const filteredLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Keep envelope header (first line)
+      if (i === 0) {
+        filteredLines.push(line);
+        continue;
+      }
+
+      // Skip empty lines
+      if (!line.trim()) {
+        continue;
+      }
+
+      try {
+        // Try to parse as JSON to check if it's a header
+        const parsed = JSON.parse(line);
+
+        // If it's a replay header, skip this line and the next one (payload)
+        if (parsed.type === 'replay_recording' || parsed.type === 'replay_event') {
+          // Skip the next line too (which would be the payload)
+          i++;
+          continue;
+        }
+
+        // Keep valid headers and other JSON data
+        filteredLines.push(line);
+      } catch {
+        // If line doesn't parse as JSON, it might be binary data - skip it
+        continue;
+      }
+    }
+
+    return filteredLines.join('\n');
   }
 
   /**

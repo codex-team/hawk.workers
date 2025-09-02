@@ -776,6 +776,84 @@ describe('SentryEventWorker', () => {
     });
   });
 
+  describe('Binary data handling', () => {
+    it('should handle envelope with replay_recording binary data without crashing', async () => {
+      // This is the actual problematic envelope that was causing crashes
+      const problematicEvent = {
+        projectId: '621601f4a010d35c68b4625a',
+        payload: {
+          envelope:
+            'eyJldmVudF9pZCI6IjRjNDBmZWU3MzAxOTRhOTg5NDM5YTg2YmY3NTYzNDExIiwic2VudF9hdCI6IjIwMjUtMDgtMjlUMTA6NTk6MjkuOTUyWiIsInNkayI6eyJuYW1lIjoic2VudHJ5LmphdmFzY3JpcHQucmVhY3QiLCJ2ZXJzaW9uIjoiOS4xMC4xIn19CnsidHlwZSI6InJlcGxheV9ldmVudCJ9CnsidHlwZSI6InJlcGxheV9ldmVudCIsInJlcGxheV9zdGFydF90aW1lc3RhbXAiOjE3NTY0NjQ4NjguNDA0LCJ0aW1lc3RhbXAiOjE3NTY0NjUxNjkuOTQ3LCJlcnJvcl9pZHMiOltdLCJ0cmFjZV9pZHMiOlsiZjlkMGE5NjdjZjM2NDFkYzlhODE5NjVjMzY4ZDQ3MzMiXSwidXJscyI6W10sInJlcGxheV9pZCI6IjRjNDBmZWU3MzAxOTRhOTg5NDM5YTg2YmY3NTYzNDExIiwic2VnbWVudF9pZCI6MywicmVwbGF5X3R5cGUiOiJzZXNzaW9uIiwicmVxdWVzdCI6eyJ1cmwiOiJodHRwczovL3ZpZXcueXN0dXR5LnJ1L2dyb3VwIyVEMCU5QyVEMCU5Qy0yMSIsImhlYWRlcnMiOnsiUmVmZXJlciI6Imh0dHBzOi8vYXdheS52ay5jb20vIiwiVXNlci1BZ2VudCI6Ik1vemlsbGEvNS4wIChpUGhvbmU7IENQVSBpUGhvbmUgT1MgMThfNSBsaWtlIE1hYyBPUyBYKSBBcHBsZVdlYktpdC82MDUuMS4xNSAoS0hUTUwsIGxpa2UgR2Vja28pIFZlcnNpb24vMTguNSBNb2JpbGUvMTVFMTQ4IFNhZmFyaS82MDQuMSJ9fSwiZXZlbnRfaWQiOiI0YzQwZmVlNzMwMTk0YTk4OTQzOWE4NmJmNzU2MzQxMSIsImVudmlyb25tZW50IjoicHJvZHVjdGlvbiIsInNkayI6eyJpbnRlZ3JhdGlvbnMiOlsiSW5ib3VuZEZpbHRlcnMiLCJGdW5jdGlvblRvU3RyaW5nIiwiQnJvd3NlckFwaUVycm9ycyIsIkJyZWFkY3J1bWJzIiwiR2xvYmFsSGFuZGxlcnMiLCJMaW5rZWRFcnJvcnMiLCJEZWR1cGUiLCJIdHRwQ29udGV4dCIsIkJyb3dzZXJTZXNzaW9uIiwiQnJvd3NlclRyYWNpbmciLCJSZXBsYXkiXSwibmFtZSI6InNlbnRyeS5qYXZhc2NyaXB0LnJlYWN0IiwidmVyc2lvbiI6IjkuMTAuMSJ9LCJjb250ZXh0cyI6eyJyZWFjdCI6eyJ2ZXJzaW9uIjoiMTcuMC4yIn19LCJ0cmFuc2FjdGlvbiI6Ii9ncm91cCIsInBsYXRmb3JtIjoiamF2YXNjcmlwdCJ9CnsidHlwZSI6InJlcGxheV9yZWNvcmRpbmciLCJsZW5ndGgiOjM0M30KeyJzZWdtZW50X2lkIjozfQp4nJVRwWrCQBD9lzmniQlRMbe2hiJtUTQeikhYkzEJJNnt7mxLKF6JH+UndVIP0tIK3dMy896bN/M2H0CdQoiGDlDVoCHRKIj88XAUjoaDwHeDcOxALkhAxFhRQAQK9V7qRrQZrpRowQElulqKvIdIpoNGI63O0N0jZSUDcjSZrhRVsuV2SaRM5HlFcSNU5XaGLHWutp7xTFZibmv03vzLv9DSKu90PB1vAp/V2KWm5G+72Oa/dQM3HIeXZRqkUrJneIiTsyhZcy9zvkYwGDi8xKtljR5aoshRG/4eHEiZ+CXwLnRbtQWXN7BePqWrx9liEU9he2AUn0DJ1rDYf+kO3M2nL+nidrmK02T2HM/XSa/ZP+dqXv5o4k7C0c+8dprnZ9o2u+9RXRE4D+HY9sLWxLRMEBZSd1y0lburrQa2s/0EaMG6/Q==',
+        },
+        catcherType: 'external/sentry' as const,
+        timestamp: 1756465170,
+      };
+
+      // Before the fix, this would throw: SyntaxError: Unexpected token ♦ in JSON at position 0
+      // After the fix, it should handle gracefully by filtering out binary data
+      await worker.handle(problematicEvent);
+
+      // Should not crash and should not send any tasks (since no event items remain after filtering)
+      expect(mockedAmqpChannel.sendToQueue).not.toHaveBeenCalled();
+    });
+
+    it('should process mixed envelope with both event and replay_recording items', async () => {
+      // Create Sentry envelope format: each line is a separate JSON object
+      const envelopeLines = [
+        // Envelope header
+        JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '4c40fee730194a989439a86bf75634111',
+          sent_at: '2025-08-29T10:59:29.952Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+          sdk: { name: 'sentry.javascript.react', version: '9.10.1' },
+        }),
+        // Event item header
+        JSON.stringify({ type: 'event' }),
+        // Event item payload
+        JSON.stringify({ message: 'Test event', level: 'error' }),
+        // Replay event item header - should be filtered out
+        JSON.stringify({ type: 'replay_event' }),
+        // Replay event item payload - should be filtered out
+        JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
+          replay_id: 'test-replay',
+          segment_id: 1,
+          /* eslint-enable @typescript-eslint/naming-convention */
+        }),
+        // Replay recording item header - should be filtered out
+        JSON.stringify({ type: 'replay_recording', length: 343 }),
+        // Replay recording binary payload - should be filtered out
+        'binary-data-here-that-is-not-json',
+      ];
+
+      const envelopeString = envelopeLines.join('\n');
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(envelopeString),
+        },
+        projectId: '621601f4a010d35c68b4625a',
+        catcherType: 'external/sentry',
+      });
+
+      // Should only process the event item, not the replay items
+      expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          addons: {
+            sentry: {
+              message: 'Test event',
+              level: 'error',
+            },
+          },
+        }),
+      });
+    });
+  });
+
   describe('envelope parsing', () => {
     const event = {
       projectId: '67ed371b4196dcbd73537c64',
