@@ -212,7 +212,8 @@ describe('NotifierWorker', () => {
       await worker.handle(message);
       await worker.handle(message);
 
-      expect(dbConnectionMock).toBeCalledTimes(1);
+      // Now we have 2 db connections: accountsDb and eventsDb
+      expect(dbConnectionMock).toBeCalledTimes(2);
     });
 
     it('should query correct collection on message handle', async () => {
@@ -405,6 +406,63 @@ describe('NotifierWorker', () => {
       }
 
       expect(worker.sendEventsToChannels).toBeCalledTimes(1);
+    });
+
+    it('should not send notifications for ignored (muted) events', async () => {
+      // Mock isEventIgnored method to return true
+      jest.spyOn(worker, 'isEventIgnored').mockResolvedValue(true);
+
+      worker.sendEventsToChannels = jest.fn();
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(worker.sendEventsToChannels).not.toHaveBeenCalled();
+      expect(RedisHelper.prototype.computeEventCountForPeriod).not.toHaveBeenCalled();
+    });
+
+    it('should send notifications for non-ignored events', async () => {
+      // Mock isEventIgnored method to return false
+      jest.spyOn(worker, 'isEventIgnored').mockResolvedValue(false);
+
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+      worker.sendEventsToChannels = jest.fn();
+
+      const message = { ...messageMock };
+
+      await worker.handle(message);
+
+      expect(worker.sendEventsToChannels).toHaveBeenCalled();
+    });
+
+    it('should handle errors when checking ignored status gracefully and not block notifications', async () => {
+      // Mock the database connection to throw error when checking ignored status
+      const mockEventsCollection = {
+        findOne: jest.fn().mockRejectedValue(new Error('Database connection failed')),
+      };
+
+      const mockEventsDb = {
+        getConnection: jest.fn().mockReturnValue({
+          collection: jest.fn().mockReturnValue(mockEventsCollection),
+        }),
+        close: jest.fn().mockResolvedValue(undefined),
+      };
+
+      // Replace the eventsDb with our mock
+      (worker as any).eventsDb = mockEventsDb;
+
+      RedisHelper.prototype.computeEventCountForPeriod = jest.fn(async () => threshold);
+      worker.sendEventsToChannels = jest.fn();
+
+      const message = { ...messageMock };
+
+      // Should not throw error and should continue processing (fail-safe behavior)
+      await expect(worker.handle(message)).resolves.not.toThrow();
+
+      // Check that it did not block notification too - notifications should still be sent
+      expect(worker.sendEventsToChannels).toHaveBeenCalled();
     });
   });
 });
