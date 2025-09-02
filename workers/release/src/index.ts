@@ -162,7 +162,7 @@ export default class ReleaseWorker extends Worker {
         /**
          * Iterate all maps of the new release and save only new
          */
-        let savedFiles = await Promise.all(files.map(async (map: SourceMapDataExtended) => {
+        const savedFiles = await Promise.all(files.map(async (map: SourceMapDataExtended) => {
           /**
            * Skip already saved maps
            */
@@ -194,7 +194,7 @@ export default class ReleaseWorker extends Worker {
          * Filter undefined files and then prepare files that would be saved to releases table
          * we do not need their content since it would be stored in gridFS
          */
-        let savedFilesWithoutContent: Omit<SourceMapDataExtended, 'content'>[] = savedFiles.filter(file => {
+        const savedFilesWithoutContent: Omit<SourceMapDataExtended, 'content'>[] = savedFiles.filter(file => {
           return file !== undefined;
         }).map(({ content, ...rest }) => {
           return rest;

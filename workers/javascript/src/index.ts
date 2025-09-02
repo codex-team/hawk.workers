@@ -233,9 +233,9 @@ export default class JavascriptEventWorker extends EventWorker {
        */
       lines = this.readSourceLines(consumer, originalLocation);
 
-      const _originalContent = consumer.sourceContentFor(originalLocation.source);
+      const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-      // functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+      functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
     }
 
     return Object.assign(stackFrame, {
@@ -254,7 +254,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  private _getFunctionContext(sourceCode: string, line: number): string | null {
+  private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
@@ -284,7 +284,7 @@ export default class JavascriptEventWorker extends EventWorker {
         ClassDeclaration(path) {
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-            
+
             className = path.node.id.name || null;
           }
         },
@@ -297,7 +297,7 @@ export default class JavascriptEventWorker extends EventWorker {
         ClassMethod(path) {
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-          
+
             // Handle different key types
             if (path.node.key.type === 'Identifier') {
               functionName = path.node.key.name;
@@ -313,7 +313,7 @@ export default class JavascriptEventWorker extends EventWorker {
         FunctionDeclaration(path) {
           if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
             console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-          
+
             functionName = path.node.id.name || null;
             isAsync = path.node.async;
           }
