@@ -228,14 +228,20 @@ export default class JavascriptEventWorker extends EventWorker {
      * Fixes bug: https://github.com/codex-team/hawk.workers/issues/121
      */
     if (originalLocation.source) {
-      /**
-       * Get 5 lines above and 5 below
-       */
-      lines = this.readSourceLines(consumer, originalLocation);
+      try {
+        /**
+         * Get 5 lines above and 5 below
+         */
+        lines = this.readSourceLines(consumer, originalLocation);
 
-      const originalContent = consumer.sourceContentFor(originalLocation.source);
+        const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-      functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+        functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+      } catch(e) {
+        HawkCatcher.send(e);
+        this.logger.error('Can\'t get function context');
+        this.logger.error(e);
+      }
     }
 
     return Object.assign(stackFrame, {
