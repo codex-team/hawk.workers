@@ -264,6 +264,7 @@ export default class JavascriptEventWorker extends EventWorker {
       const ast = parse(sourceCode, {
         sourceType: 'module',
         plugins: [
+          'jsx',
           'typescript',
           'classProperties',
           'decorators',
