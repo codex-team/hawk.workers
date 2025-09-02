@@ -234,9 +234,9 @@ export default class JavascriptEventWorker extends EventWorker {
          */
         lines = this.readSourceLines(consumer, originalLocation);
 
-        const originalContent = consumer.sourceContentFor(originalLocation.source);
+    //     const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-        functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+    //     functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
       } catch(e) {
         HawkCatcher.send(e);
         this.logger.error('Can\'t get function context');
@@ -260,7 +260,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  private getFunctionContext(sourceCode: string, line: number): string | null {
+  private _getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
