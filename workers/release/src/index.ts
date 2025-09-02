@@ -181,30 +181,29 @@ export default class ReleaseWorker extends Worker {
             /**
              * Save id of saved file instead
              */
-            map._id = fileInfo._id;
-
-            return map;
+            return {
+              ...map,
+              _id: fileInfo._id,
+            };
           } catch (error) {
             this.logger.error(`Map ${map.mapFileName} was not saved: ${error}`);
           }
         }));
 
         /**
-         * Delete file content after it is saved to the GridFS
+         * Filter undefined files and then prepare files that would be saved to releases table
+         * we do not need their content since it would be stored in gridFS
          */
-        savedFiles.forEach(file => {
-          delete file.content;
+        let savedFilesWithoutContent: Omit<SourceMapDataExtended, 'content'>[] = savedFiles.filter(file => {
+          return file !== undefined;
+        }).map(({ content, ...rest }) => {
+          return rest;
         });
-
-        /**
-         * Filter unsaved maps
-         */
-        savedFiles = savedFiles.filter((file) => file !== undefined);
 
         /**
          * Nothing to save: maps was previously saved
          */
-        if (savedFiles.length === 0) {
+        if (savedFilesWithoutContent.length === 0) {
           return;
         }
 
@@ -218,7 +217,7 @@ export default class ReleaseWorker extends Worker {
           await this.releasesCollection.insertOne({
             projectId: projectId,
             release: payload.release,
-            files: savedFiles as SourceMapDataExtended[],
+            files: savedFilesWithoutContent,
           } as ReleaseDBScheme, { session });
         }
 
@@ -228,7 +227,7 @@ export default class ReleaseWorker extends Worker {
         }, {
           $push: {
             files: {
-              $each: savedFiles as SourceMapDataExtended[],
+              $each: savedFilesWithoutContent,
             },
           },
         }, { session });
