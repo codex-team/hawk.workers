@@ -111,6 +111,7 @@ export default class JavascriptEventWorker extends EventWorker {
       catcherType: this.type as CatcherMessageType,
       payload: event.payload as CatcherMessagePayload<CatcherMessageType> & { meta: SourceMapParseMeta },
       timestamp: event.timestamp,
+      parsingMeta: meta,
     } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
