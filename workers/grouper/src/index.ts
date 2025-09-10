@@ -217,7 +217,8 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
         timestamp: task.timestamp,
-      } as RepetitionDBScheme;
+        parsingMeta: task.parsingMeta,
+      } as RepetitionDBScheme & { parsingMeta: SourceMapParseMeta };
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
