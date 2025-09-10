@@ -253,7 +253,9 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * @todo cache source map consumer for file-keys
      */
-    const consumer = this.consumeSourceMap(mapContent);
+    const consumer = this.consumeSourceMap(mapContent, meta);
+
+    meta.stages.push('sourceMapConsumer:initialization:finished');
 
     /**
      * Error's original position
@@ -288,9 +290,9 @@ export default class JavascriptEventWorker extends EventWorker {
         lines = this.readSourceLines(consumer, originalLocation);
         meta.stages.push('consumeBacktraceFrame:readSourceLines');
 
-    //     const originalContent = consumer.sourceContentFor(originalLocation.source);
+        // const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    //     functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+        // functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
       } catch(e) {
         HawkCatcher.send(e);
         meta.stages.push('consumeBacktraceFrame:getFunctionContextFailed');
@@ -509,12 +511,15 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
-  private consumeSourceMap(mapBody: string): SourceMapConsumer {
+  private consumeSourceMap(mapBody: string, meta: SourceMapParseMeta): SourceMapConsumer {
     try {
       const rawSourceMap = JSON.parse(mapBody);
-
+      
+      meta.stages.push('sourceMapConsumer:initialization:started');
       return new SourceMapConsumer(rawSourceMap);
     } catch (e) {
+      meta.status = 'error';
+      meta.error = e.toString();
       this.logger.error(`Error on source-map consumer initialization: ${e}`);
     }
   }
