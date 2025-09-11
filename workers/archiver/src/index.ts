@@ -103,13 +103,18 @@ export default class ArchiverWorker extends Worker {
     const finishDate = new Date();
     const dbSizeOnFinish = (await this.eventsDbConnection.stats()).dataSize;
 
-    await this.sendReport({
-      dbSizeOnFinish,
-      dbSizeOnStart,
-      startDate,
-      projectsData,
-      finishDate,
-    });
+    try {
+      await this.sendReport({
+        dbSizeOnFinish,
+        dbSizeOnStart,
+        startDate,
+        projectsData,
+        finishDate,
+      });
+    } catch (error) {
+      this.logger.error('Error sending report:', error);
+    }
+
     this.logger.info(`Finish archiving at ${finishDate}.`);
     this.logger.info(`Database size on start: ${prettysize(dbSizeOnStart)}, on finish: ${prettysize(dbSizeOnFinish)}, delta: ${prettysize(dbSizeOnStart - dbSizeOnFinish)}`);
   }
@@ -148,11 +153,11 @@ export default class ArchiverWorker extends Worker {
     await this.projectCollection.updateOne({
       _id: project._id,
     },
-    {
-      $inc: {
-        archivedEventsCount: deletedCount,
-      },
-    });
+      {
+        $inc: {
+          archivedEventsCount: deletedCount,
+        },
+      });
   }
 
   /**
@@ -335,10 +340,16 @@ export default class ArchiverWorker extends Worker {
     report += `\n\n<b>${totalArchivedEventsCount}</b> events and <b>${totalRemovedReleasesCount}</b> releases archived in ${archivingTimeInMinutes.toFixed(DIGITS_AFTER_POINT)} min`;
     report += `\nDatabase size changed from ${prettysize(reportData.dbSizeOnStart)} to ${prettysize(reportData.dbSizeOnFinish)} (–${prettysize(reportData.dbSizeOnStart - reportData.dbSizeOnFinish)})`;
 
-    await axios({
+    const response = await axios({
       method: 'post',
       url: process.env.REPORT_NOTIFY_URL,
       data: 'message=' + report + '&parse_mode=HTML',
+    });
+
+    this.logger.info('Report notification response:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data
     });
   }
 
