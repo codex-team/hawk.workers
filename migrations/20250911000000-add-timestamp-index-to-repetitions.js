@@ -66,8 +66,13 @@ module.exports = {
             console.log(`${currentCollectionNumber} of ${targetCollections.length} in process.`);
 
             try {
-                await db.collection(collectionName).dropIndex(timestampIndexName);
-                console.log(`Index ${timestampIndexName} dropped for ${collectionName}`);
+                const hasIndexAlready = await db.collection(collectionName).indexExists(timestampIndexName);
+                if (hasIndexAlready) {
+                    await db.collection(collectionName).dropIndex(timestampIndexName);
+                    console.log(`Index ${timestampIndexName} dropped for ${collectionName}`);
+                } else {
+                    console.log(`Index ${timestampIndexName} does not exist for ${collectionName}, skipping drop.`);
+                }
             } catch (error) {
                 console.error(`Error dropping index from ${collectionName}:`, error);
             }
