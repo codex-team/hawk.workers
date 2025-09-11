@@ -103,13 +103,18 @@ export default class ArchiverWorker extends Worker {
     const finishDate = new Date();
     const dbSizeOnFinish = (await this.eventsDbConnection.stats()).dataSize;
 
-    await this.sendReport({
-      dbSizeOnFinish,
-      dbSizeOnStart,
-      startDate,
-      projectsData,
-      finishDate,
-    });
+    try {
+      await this.sendReport({
+        dbSizeOnFinish,
+        dbSizeOnStart,
+        startDate,
+        projectsData,
+        finishDate,
+      });
+    } catch (error) {
+      this.logger.error('Error sending report:', error);
+    }
+
     this.logger.info(`Finish archiving at ${finishDate}.`);
     this.logger.info(`Database size on start: ${prettysize(dbSizeOnStart)}, on finish: ${prettysize(dbSizeOnFinish)}, delta: ${prettysize(dbSizeOnStart - dbSizeOnFinish)}`);
   }
