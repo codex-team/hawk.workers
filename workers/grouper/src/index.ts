@@ -235,7 +235,10 @@ export default class GrouperWorker extends Worker {
      * Add task for NotifierWorker only if event is not ignored
      */
     if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
-      const isIgnored = await this.isEventIgnored(task.projectId, uniqueEventHash);
+      const isIgnored = isFirstOccurrence
+        ? false
+        : !!(existedEvent as GroupedEventDBScheme & { marks?: { ignored?: boolean } })?.marks
+            ?.ignored;
 
       if (!isIgnored) {
         await this.addTask(WorkerNames.NOTIFIER, {
@@ -663,28 +666,5 @@ export default class GrouperWorker extends Worker {
     eventDate.setUTCHours(0, 0, 0, 0);
 
     return eventDate.getTime() / MS_IN_SEC;
-  }
-
-  /**
-   * Check if event is marked as ignored
-   *
-   * @param {string} projectId - project id
-   * @param {string} groupHash - event group hash
-   * @returns {Promise<boolean>} - true if event is ignored, false otherwise
-   */
-  private async isEventIgnored(projectId: string, groupHash: string): Promise<boolean> {
-    try {
-      const eventsCollection = this.eventsDb.getConnection().collection(`events:${projectId}`);
-
-      const event = await eventsCollection.findOne(
-        { groupHash },
-        { projection: { 'marks.ignored': 1 } }
-      );
-
-      return !!event?.marks?.ignored;
-    } catch (e) {
-      this.logger.warn(`Failed to check if event ${groupHash} is ignored: ${e}`);
-      return false; // If we can't check, don't block notifications
-    }
   }
 }
