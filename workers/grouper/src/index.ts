@@ -223,20 +223,30 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.timestamp, repetitionId, incrementDailyAffectedUsers);
+    await this.saveDailyEvents(
+      task.projectId,
+      uniqueEventHash,
+      task.timestamp,
+      repetitionId,
+      incrementDailyAffectedUsers
+    );
 
     /**
-     * Add task for NotifierWorker
+     * Add task for NotifierWorker only if event is not ignored
      */
     if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
-      await this.addTask(WorkerNames.NOTIFIER, {
-        projectId: task.projectId,
-        event: {
-          title: task.payload.title,
-          groupHash: uniqueEventHash,
-          isNew: isFirstOccurrence,
-        },
-      });
+      const isIgnored = await this.isEventIgnored(task.projectId, uniqueEventHash);
+
+      if (!isIgnored) {
+        await this.addTask(WorkerNames.NOTIFIER, {
+          projectId: task.projectId,
+          event: {
+            title: task.payload.title,
+            groupHash: uniqueEventHash,
+            isNew: isFirstOccurrence,
+          },
+        });
+      }
     }
   }
 
@@ -653,5 +663,28 @@ export default class GrouperWorker extends Worker {
     eventDate.setUTCHours(0, 0, 0, 0);
 
     return eventDate.getTime() / MS_IN_SEC;
+  }
+
+  /**
+   * Check if event is marked as ignored
+   *
+   * @param {string} projectId - project id
+   * @param {string} groupHash - event group hash
+   * @returns {Promise<boolean>} - true if event is ignored, false otherwise
+   */
+  private async isEventIgnored(projectId: string, groupHash: string): Promise<boolean> {
+    try {
+      const eventsCollection = this.eventsDb.getConnection().collection(`events:${projectId}`);
+
+      const event = await eventsCollection.findOne(
+        { groupHash },
+        { projection: { 'marks.ignored': 1 } }
+      );
+
+      return !!event?.marks?.ignored;
+    } catch (e) {
+      this.logger.warn(`Failed to check if event ${groupHash} is ignored: ${e}`);
+      return false; // If we can't check, don't block notifications
+    }
   }
 }
