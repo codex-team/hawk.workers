@@ -1,7 +1,7 @@
 /**
  * This worker gets source map from the Registry and puts it to Mongo
  * to provide access for it for JS Worker
-*/
+ */
 import { RawSourceMap } from 'source-map';
 import { Readable } from 'stream';
 import { DatabaseController } from '../../../lib/db/controller';
@@ -9,12 +9,13 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, MongoClient, MongoError } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
 
 /**
  * Error code of MongoDB key duplication error
  */
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 const DB_DUPLICATE_KEY_ERROR = '11000';
 
 /**
@@ -213,7 +214,7 @@ export default class ReleaseWorker extends Worker {
        */
       if (!existedRelease) {
         this.logger.info('trying insert new release');
-  
+
         try {
           await this.releasesCollection.insertOne({
             projectId: projectId,
@@ -222,9 +223,10 @@ export default class ReleaseWorker extends Worker {
           } as ReleaseDBScheme);
           this.logger.info('inserted new release');
         } catch (err) {
-          if ((err).code === 11000) {
+          if ((err as MongoError).code.toString() === DB_DUPLICATE_KEY_ERROR) {
             this.logger.warn(`Duplicate key on insert, retrying update after small delay`);
-            await new Promise(res => setTimeout(res, 200));
+            /* eslint-disable @typescript-eslint/no-magic-numbers */
+            await new Promise(resolve => setTimeout(resolve, 200));
           } else {
             throw err;
           }
