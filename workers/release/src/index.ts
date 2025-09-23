@@ -9,8 +9,15 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, MongoClient, MongoError } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
+
+/**
+ * Error code of MongoDB key duplication error
+ */
+/* eslint-disable @typescript-eslint/no-magic-numbers */
+const DB_DUPLICATE_KEY_ERROR = '11000';
+
 /**
  * Worker to save releases
  */
@@ -142,105 +149,104 @@ export default class ReleaseWorker extends Worker {
    * @param payload - source map data
    */
   private async saveSourceMap(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
+    const files: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
+
     /**
-     * Start transaction to avoid race condition
+     * Use same transaction for read and related write operations
      */
-    const session = await this.client.startSession();
+    const existedRelease = await this.releasesCollection.findOne({
+      projectId: projectId,
+      release: payload.release,
+    });
+
+    /**
+     * Iterate all maps of the new release and save only new
+     */
+    const savedFiles = await Promise.all(files.map(async (map: SourceMapDataExtended) => {
+      /**
+       * Skip already saved maps
+       */
+      const alreadySaved = existedRelease && existedRelease.files && !!existedRelease.files.find((savedFile) => {
+        return savedFile.mapFileName === map.mapFileName;
+      });
+
+      if (alreadySaved) {
+        return;
+      }
+
+      try {
+        const fileInfo = await this.saveFile(map);
+
+        /**
+         * Save id of saved file instead
+         */
+        return {
+          ...map,
+          _id: fileInfo._id,
+        };
+      } catch (error) {
+        this.logger.error(`Map ${map.mapFileName} was not saved: ${error}`);
+      }
+    }));
+
+    /**
+     * Filter undefined files and then prepare files that would be saved to releases table
+     * we do not need their content since it would be stored in gridFS
+     */
+    const savedFilesWithoutContent: Omit<SourceMapDataExtended, 'content'>[] = savedFiles.filter(file => {
+      return file !== undefined;
+    }).map(({ content, ...rest }) => {
+      return rest;
+    });
+
+    /**
+     * Nothing to save: maps was previously saved
+     */
+    if (savedFilesWithoutContent.length === 0) {
+      return;
+    }
 
     try {
-      const files: SourceMapDataExtended[] = this.extendReleaseInfo(payload.files);
-
       /**
-       * Use same transaction for read and related write operations
+       * - insert new record with saved maps
+       * or
+       * - update previous record with adding new saved maps
        */
-      await session.withTransaction(async () => {
-        const existedRelease = await this.releasesCollection.findOne({
-          projectId: projectId,
-          release: payload.release,
-        }, { session });
+      if (!existedRelease) {
+        this.logger.info('trying insert new release');
 
-        /**
-         * Iterate all maps of the new release and save only new
-         */
-        const savedFiles = await Promise.all(files.map(async (map: SourceMapDataExtended) => {
-          /**
-           * Skip already saved maps
-           */
-
-          const alreadySaved = existedRelease && existedRelease.files && existedRelease.files.find((savedFile) => {
-            return savedFile.mapFileName === map.mapFileName;
-          });
-
-          if (alreadySaved) {
-            return;
-          }
-
-          try {
-            const fileInfo = await this.saveFile(map);
-
-            /**
-             * Save id of saved file instead
-             */
-            return {
-              ...map,
-              _id: fileInfo._id,
-            };
-          } catch (error) {
-            this.logger.error(`Map ${map.mapFileName} was not saved: ${error}`);
-          }
-        }));
-
-        /**
-         * Filter undefined files and then prepare files that would be saved to releases table
-         * we do not need their content since it would be stored in gridFS
-         */
-        const savedFilesWithoutContent: Omit<SourceMapDataExtended, 'content'>[] = savedFiles.filter(file => {
-          return file !== undefined;
-        }).map(({ content, ...rest }) => {
-          return rest;
-        });
-
-        /**
-         * Nothing to save: maps was previously saved
-         */
-        if (savedFilesWithoutContent.length === 0) {
-          return;
-        }
-
-        /**
-         * - insert new record with saved maps
-         * or
-         * - update previous record with adding new saved maps
-         */
-        if (!existedRelease) {
-          this.logger.info('inserted new release');
+        try {
           await this.releasesCollection.insertOne({
             projectId: projectId,
             release: payload.release,
             files: savedFilesWithoutContent,
-          } as ReleaseDBScheme, { session });
+          } as ReleaseDBScheme);
+          this.logger.info('inserted new release');
+        } catch (err) {
+          if ((err as MongoError).code.toString() === DB_DUPLICATE_KEY_ERROR) {
+            this.logger.warn(`Duplicate key on insert, retrying update after small delay`);
+            /* eslint-disable @typescript-eslint/no-magic-numbers */
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } else {
+            throw err;
+          }
         }
+      }
 
-        await this.releasesCollection.findOneAndUpdate({
-          projectId: projectId,
-          release: payload.release,
-        }, {
-          $push: {
-            files: {
-              $each: savedFilesWithoutContent,
-            },
+      await this.releasesCollection.findOneAndUpdate({
+        projectId: projectId,
+        release: payload.release,
+      }, {
+        $push: {
+          files: {
+            $each: savedFilesWithoutContent,
           },
-        }, { session });
+        },
       });
     } catch (error) {
       this.logger.error(`Can't extract release info:\n${JSON.stringify(error)}`);
 
       throw new NonCriticalError('Can\'t parse source-map file');
-    } finally {
-      /**
-       * End transaction
-       */
-      await session.endSession();
     }
   }
 
