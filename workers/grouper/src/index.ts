@@ -235,9 +235,7 @@ export default class GrouperWorker extends Worker {
      * Add task for NotifierWorker only if event is not ignored
      */
     if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
-      const isIgnored = isFirstOccurrence
-        ? false
-        : !!(existedEvent as GroupedEventDBScheme & { marks?: { ignored?: boolean } })?.marks?.ignored;
+      const isIgnored = isFirstOccurrence ? false : !!existedEvent?.marks?.ignored;
 
       if (!isIgnored) {
         await this.addTask(WorkerNames.NOTIFIER, {
