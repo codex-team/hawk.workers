@@ -16,6 +16,25 @@ import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
 
 /**
+ * Observability for source-map parsing of a single event
+ * Keep it intentionally simple & durable
+ */
+export interface SourceMapParseMeta {
+  /** 
+   * ok = at least one frame has been beautified; error = nothing beautified or a hard failure
+   */
+  status: 'ok' | 'error' | 'backtraceFrameConsumptionFailed';
+  /** 
+   * set only when status === 'error'
+   */
+  error?: string;
+  /** 
+   * linear, append-only “breadcrumbs” for your stages
+   */
+  stages: string[];
+}
+
+/**
  * Worker for handling Javascript events
  */
 export default class JavascriptEventWorker extends EventWorker {
@@ -65,13 +84,21 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+    const meta: SourceMapParseMeta = {
+      status: 'ok',
+      stages: [],
+    };
+
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
       try {
-        event.payload.backtrace = await this.beautifyBacktrace(event);
+        event.payload.backtrace = await this.beautifyBacktrace(event, meta);
+        meta.stages.push('beautifyBacktrace:finished');
       } catch (err) {
         this.logger.error('Error while beautifing backtrace', err);
+        meta.status = 'error';
+        meta.error = err;
       }
     }
 
@@ -82,8 +109,9 @@ export default class JavascriptEventWorker extends EventWorker {
     await this.addTask(WorkerNames.GROUPER, {
       projectId: event.projectId,
       catcherType: this.type as CatcherMessageType,
-      payload: event.payload as CatcherMessagePayload<CatcherMessageType>,
+      payload: event.payload as CatcherMessagePayload<CatcherMessageType> & { meta: SourceMapParseMeta },
       timestamp: event.timestamp,
+      parsingMeta: meta,
     } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
@@ -94,7 +122,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {JavaScriptEventWorkerTask} event — js error minified
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
-  private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
+  private async beautifyBacktrace(event: JavaScriptEventWorkerTask, meta: SourceMapParseMeta): Promise<BacktraceFrame[]> {
     const releaseRecord: SourceMapsRecord = await this.cache.get(
       `releaseRecord:${event.projectId}:${event.payload.release.toString()}`,
       () => {
@@ -108,24 +136,35 @@ export default class JavascriptEventWorker extends EventWorker {
     if (!releaseRecord) {
       this.logger.info('beautifyBacktrace: no releaseRecord found');
 
+      meta.status = 'error';
+      meta.error = 'no releaseRecord found';
+
       return event.payload.backtrace;
     }
 
+    meta.stages.push('beautifyBacktrace:releaseRecordFound');
     this.logger.info(`beautifyBacktrace: release record found: ${JSON.stringify(releaseRecord)}`);
+
+    meta.stages.push('beautifyBacktrace:consumeBacktraceFrame:started');
 
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
     return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
+      meta.stages.push(`beautifyBacktrace:consumeBacktraceFrame:${index}:started`);
+      
       /**
        * Get cached (or set if the value is missing) real backtrace frame
        */
       const result = await this.cache.get(
         `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
         () => {
-          return this.consumeBacktraceFrame(frame, releaseRecord)
+          return this.consumeBacktraceFrame(frame, releaseRecord, meta)
             .catch((error) => {
               this.logger.error('Error while consuming ' + error.stack);
+
+              meta.error = error;
+              meta.status = 'backtraceFrameConsumptionFailed';
 
               /**
                * Send error to Hawk
@@ -139,6 +178,8 @@ export default class JavascriptEventWorker extends EventWorker {
         }
       );
 
+      meta.stages.push(`beautifyBacktrace:consumeBacktraceFrame:${index}:finished`);
+
       return result;
     }));
   }
@@ -148,13 +189,19 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {BacktraceFrame} stackFrame — one line of stack
    * @param {SourceMapsRecord} releaseRecord — what we store in DB (map file name, origin file name, maps files)
+   * @param {SourceMapParseMeta} meta — observability for source-map parsing of a single event
    */
   private async consumeBacktraceFrame(stackFrame: BacktraceFrame,
-    releaseRecord: SourceMapsRecord): Promise<BacktraceFrame> {
+    releaseRecord: SourceMapsRecord,
+    meta: SourceMapParseMeta
+  ): Promise<BacktraceFrame> {
     /**
      * Sometimes catcher can't extract file from the backtrace
      */
     if (!stackFrame.file) {
+      meta.stages.push('consumeBacktraceFrame:noStackFrameFileFound');
+      meta.status = 'backtraceFrameConsumptionFailed'
+
       this.logger.info(`consumeBacktraceFrame: No stack frame file found`);
 
       return stackFrame;
@@ -183,6 +230,9 @@ export default class JavascriptEventWorker extends EventWorker {
     if (!mapForFrame) {
       this.logger.info(`consumeBacktraceFrame: No map file found for the frame: ${JSON.stringify(stackFrame)}`);
 
+      meta.stages.push('consumeBacktraceFrame:noMapFileFoundForFrame');
+      meta.status = 'backtraceFrameConsumptionFailed'
+
       return stackFrame;
     }
 
@@ -193,6 +243,9 @@ export default class JavascriptEventWorker extends EventWorker {
 
     if (!mapContent) {
       this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`);
+      
+      meta.stages.push('consumeBacktraceFrame:noMapContentLoaded');
+      meta.status = 'backtraceFrameConsumptionFailed'
 
       return stackFrame;
     }
@@ -200,7 +253,9 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * @todo cache source map consumer for file-keys
      */
-    const consumer = this.consumeSourceMap(mapContent);
+    const consumer = this.consumeSourceMap(mapContent, meta);
+
+    meta.stages.push('sourceMapConsumer:initialization:finished');
 
     /**
      * Error's original position
@@ -233,16 +288,22 @@ export default class JavascriptEventWorker extends EventWorker {
          * Get 5 lines above and 5 below
          */
         lines = this.readSourceLines(consumer, originalLocation);
+        meta.stages.push('consumeBacktraceFrame:readSourceLines');
 
-    //     const originalContent = consumer.sourceContentFor(originalLocation.source);
+        // const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    //     functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+        // functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
       } catch(e) {
         HawkCatcher.send(e);
+        meta.stages.push('consumeBacktraceFrame:getFunctionContextFailed');
+        meta.status = 'backtraceFrameConsumptionFailed'
+
         this.logger.error('Can\'t get function context');
         this.logger.error(e);
       }
     }
+
+    meta.stages.push('consumeBacktraceFrame:finished');
 
     return Object.assign(stackFrame, {
       line: originalLocation.line,
@@ -450,12 +511,15 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
-  private consumeSourceMap(mapBody: string): SourceMapConsumer {
+  private consumeSourceMap(mapBody: string, meta: SourceMapParseMeta): SourceMapConsumer {
     try {
       const rawSourceMap = JSON.parse(mapBody);
-
+      
+      meta.stages.push('sourceMapConsumer:initialization:started');
       return new SourceMapConsumer(rawSourceMap);
     } catch (e) {
+      meta.status = 'error';
+      meta.error = e.toString();
       this.logger.error(`Error on source-map consumer initialization: ${e}`);
     }
   }

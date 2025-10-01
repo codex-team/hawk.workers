@@ -26,6 +26,7 @@ import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+import { SourceMapParseMeta } from '../../javascript/src';
 
 /**
  * Error code of MongoDB key duplication error
@@ -156,7 +157,8 @@ export default class GrouperWorker extends Worker {
           payload: task.payload,
           timestamp: task.timestamp,
           usersAffected: incrementAffectedUsers ? 1 : 0,
-        } as GroupedEventDBScheme);
+          parsingMeta: task.parsingMeta,
+        } as GroupedEventDBScheme & { parsingMeta: SourceMapParseMeta });
 
         const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
 
@@ -215,7 +217,8 @@ export default class GrouperWorker extends Worker {
         groupHash: uniqueEventHash,
         delta: JSON.stringify(delta),
         timestamp: task.timestamp,
-      } as RepetitionDBScheme;
+        parsingMeta: task.parsingMeta,
+      } as RepetitionDBScheme & { parsingMeta: SourceMapParseMeta };
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
     }
