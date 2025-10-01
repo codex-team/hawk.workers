@@ -589,6 +589,78 @@ describe('GrouperWorker', () => {
     });
   });
 
+  describe('Event marks handling', () => {
+    describe('Ignored events', () => {
+      it('should not add task for NotifierWorker when event is marked as ignored', async () => {
+        const mockAddTask = jest
+          .spyOn(worker as any, 'addTask')
+          .mockImplementation(() => Promise.resolve());
+
+        // Create an event first
+        const firstTask = generateTask({ title: 'Test ignored event' });
+        await worker.handle(firstTask);
+
+        // Mark the event as ignored by updating it in database
+        const eventHash = await (worker as any).getUniqueEventHash(firstTask);
+        await eventsCollection.updateOne(
+          { groupHash: eventHash },
+          { $set: { marks: { ignored: true } } }
+        );
+
+        // Handle the same event again (repetition)
+        const secondTask = generateTask({ title: 'Test ignored event' });
+        await worker.handle(secondTask);
+
+        // Verify that addTask was called only once (for the first occurrence)
+        expect(mockAddTask).toHaveBeenCalledTimes(1);
+
+        mockAddTask.mockRestore();
+      });
+
+      it('should add task for NotifierWorker when event is not marked as ignored', async () => {
+        const mockAddTask = jest
+          .spyOn(worker as any, 'addTask')
+          .mockImplementation(() => Promise.resolve());
+
+        // Create an event first
+        const firstTask = generateTask({ title: 'Test non-ignored event' });
+        await worker.handle(firstTask);
+
+        // Handle the same event again (repetition) - without marking as ignored
+        const secondTask = generateTask({ title: 'Test non-ignored event' });
+        await worker.handle(secondTask);
+
+        // Verify that addTask was called twice (for both occurrences)
+        expect(mockAddTask).toHaveBeenCalledTimes(2);
+
+        mockAddTask.mockRestore();
+      });
+
+      it('should add task for NotifierWorker for first occurrence even if marks field is undefined', async () => {
+        const mockAddTask = jest
+          .spyOn(worker as any, 'addTask')
+          .mockImplementation(() => Promise.resolve());
+
+        // Create a new event (first occurrence)
+        const task = generateTask({ title: 'Test new event without marks' });
+        await worker.handle(task);
+
+        // Verify that addTask was called for the first occurrence
+        expect(mockAddTask).toHaveBeenCalledTimes(1);
+        expect(mockAddTask).toHaveBeenCalledWith('notifier', {
+          projectId: task.projectId,
+          event: {
+            title: task.payload.title,
+            groupHash: expect.any(String),
+            isNew: true,
+          },
+        });
+
+        mockAddTask.mockRestore();
+      });
+    });
+  });
+
   afterAll(async () => {
     await redisClient.quit();
     await worker.finish();
