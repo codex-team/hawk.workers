@@ -223,20 +223,30 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.saveDailyEvents(task.projectId, uniqueEventHash, task.timestamp, repetitionId, incrementDailyAffectedUsers);
+    await this.saveDailyEvents(
+      task.projectId,
+      uniqueEventHash,
+      task.timestamp,
+      repetitionId,
+      incrementDailyAffectedUsers
+    );
 
     /**
-     * Add task for NotifierWorker
+     * Add task for NotifierWorker only if event is not ignored
      */
     if (process.env.IS_NOTIFIER_WORKER_ENABLED) {
-      await this.addTask(WorkerNames.NOTIFIER, {
-        projectId: task.projectId,
-        event: {
-          title: task.payload.title,
-          groupHash: uniqueEventHash,
-          isNew: isFirstOccurrence,
-        },
-      });
+      const isIgnored = isFirstOccurrence ? false : !!existedEvent?.marks?.ignored;
+
+      if (!isIgnored) {
+        await this.addTask(WorkerNames.NOTIFIER, {
+          projectId: task.projectId,
+          event: {
+            title: task.payload.title,
+            groupHash: uniqueEventHash,
+            isNew: isFirstOccurrence,
+          },
+        });
+      }
     }
   }
 
