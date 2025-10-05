@@ -2,6 +2,8 @@
 
 # Hawk Workers
 
+![License](https://img.shields.io/badge/license-BSL--1.1-orange)
+
 Workers are services for processing hawk's background tasks
 
 
@@ -219,3 +221,8 @@ yarn migrate
 Refactor mongo-migrate commands to have an opportunity to create or rollback
 
 [More details](https://www.npmjs.com/package/migrate-mongo)
+
+## License
+
+Source code is available under **Business Source License 1.1 (BSL 1.1)**.
+See [`LICENSE`](./LICENSE) for terms, including:
