@@ -1,6 +1,7 @@
 import type { CatcherMessageAccepted, CatcherMessagePayload, ErrorsCatcherType } from '@hawk.so/types';
 import type { WorkerTask } from '../../../lib/types/worker-task';
 import type { Delta } from '@n1ru4l/json-patch-plus';
+import { SourceMapParseMeta } from '../../javascript/src';
 
 /**
  * Language-workers adds tasks for Group Worker in this format.
@@ -26,6 +27,11 @@ export interface GroupWorkerTask<CatcherType extends ErrorsCatcherType> extends 
    * Unix timestamp of the event
    */
   timestamp: number;
+
+  /**
+   * Observability for source-map parsing of a single event
+   */
+  parsingMeta: SourceMapParseMeta;
 }
 
 /**
