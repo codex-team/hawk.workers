@@ -62,7 +62,7 @@ export function Memoize(options: MemoizeOptions = {}): MethodDecorator {
       const cache: LRUCache<string, any> = this[cacheKey] ??= new LRUCache<string, any>({ max, ttl });
 
       const key = strategy === 'hash'
-        ? Crypto.hash(args)
+        ? Crypto.hash(args, 'blake2b512', 'base64url')
         : args.map(String).join(':');
 
       if (cache.has(key)) {
