@@ -14,6 +14,9 @@ import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
+import { Memoize } from '../../../lib/memoize';
+
+const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
 
 /**
  * Worker for handling Javascript events
@@ -234,9 +237,9 @@ export default class JavascriptEventWorker extends EventWorker {
          */
         lines = this.readSourceLines(consumer, originalLocation);
 
-    //     const originalContent = consumer.sourceContentFor(originalLocation.source);
+        const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    //     functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+        functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
       } catch(e) {
         HawkCatcher.send(e);
         this.logger.error('Can\'t get function context');
@@ -260,7 +263,8 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  private _getFunctionContext(sourceCode: string, line: number): string | null {
+  @Memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
+  private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
@@ -363,11 +367,12 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param map - saved file info without content.
    */
-  private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
+  @Memoize({ max: 50, ttl: MEMOIZATION_TTL })
+  private loadSourceMapFile(mapId: SourceMapDataExtended['_id']): Promise<string> {
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
 
-      const readstream = this.db.getBucket().openDownloadStream(map._id)
+      const readstream = this.db.getBucket().openDownloadStream(mapId)
         .on('data', (chunk) => {
           buf = Buffer.concat([buf, chunk]);
         })
@@ -450,6 +455,7 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
+  @Memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private consumeSourceMap(mapBody: string): SourceMapConsumer {
     try {
       const rawSourceMap = JSON.parse(mapBody);
