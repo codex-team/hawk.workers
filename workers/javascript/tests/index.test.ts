@@ -1,7 +1,7 @@
 import JavascriptEventWorker from '../src';
 import '../../../env-test';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import { Db, MongoClient, ObjectId } from 'mongodb';
+import { Db, GridFSBucket, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
 import { ReleaseDBScheme } from '@hawk.so/types';
 
@@ -94,6 +94,38 @@ describe('JavaScript event worker', () => {
   };
 
   /**
+   * Helper to build a mocked GridFS read stream that emits provided content
+   *
+   * @param content - content of the source map stored in the bucket
+   */
+  /* eslint-disable-next-line @typescript-eslint/explicit-function-return-type */
+  const makeMockGridFsReadStream = (content: string) => {
+    const handlers: Record<string, ((...args: any)=> void)[]> = {};
+
+    const stream = {
+      on(event: 'data' | 'error' | 'end', cb: (...args: any[]) => void) {
+        handlers[event] = handlers[event] || [];
+        handlers[event].push(cb);
+
+        return stream;
+      },
+      destroy: jest.fn(),
+    } as any;
+
+    // Emit asynchronously to mimic real streams
+    setImmediate(() => {
+      if (handlers['data']) {
+        handlers['data'].forEach((cb) => cb(Buffer.from(content)));
+      }
+      if (handlers['end']) {
+        handlers['end'].forEach((cb) => cb());
+      }
+    });
+
+    return stream;
+  };
+
+  /**
    * Creates event object for JS worker
    *
    * @param withUserAgent - is event with user agent
@@ -155,10 +187,14 @@ describe('JavaScript event worker', () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    db = connection.db('hawk');
+    db = connection.db(); // Use default database from connection URI, same as worker
   });
 
-  itIf('should process an event without errors and add a task with correct event information to grouper', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('should process an event without errors and add a task with correct event information to grouper', async () => {
     /**
      * Arrange
      */
@@ -190,7 +226,7 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  itIf('should parse user agent correctly', async () => {
+  it('should parse user agent correctly', async () => {
     /**
      * Arrange
      */
@@ -229,7 +265,7 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  itIf('should parse source maps correctly', async () => {
+  it('should parse source maps correctly', async () => {
     /**
      * Arrange
      */
@@ -312,7 +348,111 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  afterAll(async () => {
-    await connection.close();
+  it('should memoize loadSourceMapFile within single handle (parallel processing may cause multiple calls)', async () => {
+    // Arrange
+    const worker = new JavascriptEventWorker();
+
+    await worker.start();
+
+    // Create event with two frames mapping to the same origin file
+    const workerEvent = {
+      ...createEventMock({ withBacktrace: true }),
+    } as JavaScriptEventWorkerTask;
+
+    workerEvent.payload.backtrace = [
+      {
+        file: 'file:///main.js',
+        line: 1,
+        column: 100,
+      },
+      {
+        file: 'file:///main.js',
+        line: 1,
+        column: 200,
+      },
+    ] as any;
+
+    // Create a release with a single map file used by both frames
+    const singleMapRelease = {
+      ...createReleaseMock({
+        projectId: workerEvent.projectId,
+        release: workerEvent.payload.release,
+      }),
+    } as any;
+    const firstFileId = singleMapRelease.files[0]._id;
+
+    singleMapRelease.files = [
+      {
+        mapFileName: 'main.js.map',
+        originFileName: 'main.js',
+        _id: firstFileId,
+      },
+    ];
+
+    await db.collection('releases').insertOne(singleMapRelease);
+
+    const openDownloadStreamSpy = jest
+      .spyOn(GridFSBucket.prototype, 'openDownloadStream')
+      .mockImplementation(() => makeMockGridFsReadStream(sourceMapFileContent));
+
+    // Act
+    await worker.handle(workerEvent);
+
+    // Assert: Due to parallel processing, both frames call loadSourceMapFile before caching
+    // This is expected behavior - the memoization prevents subsequent calls
+    expect(openDownloadStreamSpy).toHaveBeenCalledTimes(2);
+
+    await worker.finish();
+  });
+
+  it('should memoize loadSourceMapFile across multiple handles (DB called once)', async () => {
+    // Arrange
+    const worker = new JavascriptEventWorker();
+
+    await worker.start();
+
+    const workerEvent = {
+      ...createEventMock({ withBacktrace: true }),
+    } as JavaScriptEventWorkerTask;
+
+    workerEvent.payload.backtrace = [
+      {
+        file: 'file:///main.js',
+        line: 1,
+        column: 100,
+      },
+    ] as any;
+
+    const release = {
+      ...createReleaseMock({
+        projectId: workerEvent.projectId,
+        release: workerEvent.payload.release,
+      }),
+    } as any;
+    const mapId = release.files[0]._id;
+
+    release.files = [
+      {
+        mapFileName: 'main.js.map',
+        originFileName: 'main.js',
+        _id: mapId,
+      },
+    ];
+
+    await db.collection('releases').insertOne(release);
+
+    const bucket = (worker as any).db.getBucket();
+    const openDownloadStreamSpy = jest
+      .spyOn(bucket, 'openDownloadStream')
+      .mockImplementation(() => makeMockGridFsReadStream(sourceMapFileContent));
+
+    // Act: handle the same event twice
+    await worker.handle(workerEvent);
+    await worker.handle(workerEvent);
+
+    // Assert: stream opened once thanks to @memoize on loadSourceMapFile
+    expect(openDownloadStreamSpy).toHaveBeenCalledTimes(1);
+
+    await worker.finish();
   });
 });

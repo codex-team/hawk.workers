@@ -31,13 +31,17 @@ export interface MemoizeOptions {
 /**
  * Async-only, per-method LRU-backed memoization decorator.
  * Cache persists for the lifetime of the class instance (e.g. worker).
+ *
+ * @param options
  */
-export function Memoize(options: MemoizeOptions = {}): MethodDecorator {
+export function memoize(options: MemoizeOptions = {}): MethodDecorator {
+  /* eslint-disable @typescript-eslint/no-magic-numbers */
   const {
     max = 50,
     ttl = 1000 * 60 * 30,
     strategy = 'concat',
   } = options;
+  /* eslint-enable */
 
   return function (
     _target,
@@ -59,19 +63,29 @@ export function Memoize(options: MemoizeOptions = {}): MethodDecorator {
       /**
        * Create a new cache if it does not exists yet (for certain function)
        */
-      const cache: LRUCache<string, any> = this[cacheKey] ??= new LRUCache<string, any>({ max, ttl });
+      const cache: LRUCache<string, any> = this[cacheKey] ??= new LRUCache<string, any>({
+        max,
+        ttl,
+      });
 
       const key = strategy === 'hash'
         ? Crypto.hash(args, 'blake2b512', 'base64url')
         : args.map(String).join(':');
 
-      if (cache.has(key)) {
-        return cache.get(key);
+      /**
+       * Check if we have a cached result
+       */
+      const cachedResult = cache.get(key);
+
+      if (cachedResult !== undefined) {
+        return cachedResult;
       }
 
       try {
         const result = await originalMethod.apply(this, args);
+
         cache.set(key, result);
+
         return result;
       } catch (err) {
         cache.delete(key);

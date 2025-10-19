@@ -14,8 +14,13 @@ import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
-import { Memoize } from '../../../lib/memoize';
+/* eslint-disable-next-line no-unused-vars */
+import { memoize } from '../../../lib/memoize';
 
+/**
+ * eslint does not count decorators as a variable usage
+ */
+/* eslint-disable-next-line no-unused-vars */
 const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
 
 /**
@@ -239,8 +244,8 @@ export default class JavascriptEventWorker extends EventWorker {
 
         const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-        functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
-      } catch(e) {
+        functionContext = await this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+      } catch (e) {
         HawkCatcher.send(e);
         this.logger.error('Can\'t get function context');
         this.logger.error(e);
@@ -263,7 +268,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  @Memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
+  @memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
@@ -365,9 +370,9 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Downloads source map file from Grid FS
    *
-   * @param map - saved file info without content.
+   * @param mapId - id of the map file in the bucket
    */
-  @Memoize({ max: 50, ttl: MEMOIZATION_TTL })
+  @memoize({ max: 50, ttl: MEMOIZATION_TTL })
   private loadSourceMapFile(mapId: SourceMapDataExtended['_id']): Promise<string> {
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
@@ -455,7 +460,6 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param {string} mapBody - source map content
    */
-  @Memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private consumeSourceMap(mapBody: string): SourceMapConsumer {
     try {
       const rawSourceMap = JSON.parse(mapBody);
