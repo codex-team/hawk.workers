@@ -10,7 +10,8 @@
     "@types/useragent": "^2.1.1",
     "source-map-js": "^1.2.0",
     "ts-node": "^8.3.0",
-    "typescript": "^3.5.3"
+    "typescript": "^3.5.3",
+    "lodash.clonedeep": "^4.5.0"
   },
   "dependencies": {
     "useragent": "^2.3.0"

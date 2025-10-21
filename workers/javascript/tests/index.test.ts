@@ -4,6 +4,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { Db, GridFSBucket, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
 import { ReleaseDBScheme } from '@hawk.so/types';
+import cloneDeep from 'lodash.clonedeep';
 
 const itIf = it.skip;
 
@@ -348,7 +349,7 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  it('should memoize loadSourceMapFile within single handle (parallel processing may cause multiple calls)', async () => {
+  it('should memoize beautifyBacktrace within single handle (parallel processing may cause multiple calls)', async () => {
     // Arrange
     const worker = new JavascriptEventWorker();
 
@@ -398,14 +399,15 @@ describe('JavaScript event worker', () => {
     // Act
     await worker.handle(workerEvent);
 
-    // Assert: Due to parallel processing, both frames call loadSourceMapFile before caching
-    // This is expected behavior - the memoization prevents subsequent calls
+    // Assert: Since beautifyBacktrace is now memoized, the entire method should only be called once
+    // But within that single call, loadSourceMapFile may still be called multiple times for different frames
+    // The memoization happens at the beautifyBacktrace level, not at the loadSourceMapFile level
     expect(openDownloadStreamSpy).toHaveBeenCalledTimes(2);
 
     await worker.finish();
   });
 
-  it('should memoize loadSourceMapFile across multiple handles (DB called once)', async () => {
+  it('should memoize beautifyBacktrace across multiple handles (entire method called once)', async () => {
     // Arrange
     const worker = new JavascriptEventWorker();
 
@@ -446,11 +448,13 @@ describe('JavaScript event worker', () => {
       .spyOn(bucket, 'openDownloadStream')
       .mockImplementation(() => makeMockGridFsReadStream(sourceMapFileContent));
 
+    const workerEventClone = cloneDeep(workerEvent);
+
     // Act: handle the same event twice
     await worker.handle(workerEvent);
-    await worker.handle(workerEvent);
+    await worker.handle(workerEventClone);
 
-    // Assert: stream opened once thanks to @memoize on loadSourceMapFile
+    // The stream should only be opened once since the entire beautifyBacktrace is memoized
     expect(openDownloadStreamSpy).toHaveBeenCalledTimes(1);
 
     await worker.finish();

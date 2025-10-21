@@ -4,7 +4,7 @@ import Crypto from '../utils/crypto';
 /**
  * Pick the strategy of cache key form
  * It could be concatenated list of arguments like 'projectId:eventId'
- * Or it could be hashed json object — blake2b512 algorithn
+ * Or it could be hashed json object — blake2b512 algorithm
  */
 export type MemoizeKeyStrategy = 'concat' | 'hash';
 
@@ -70,7 +70,7 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
 
       const key = strategy === 'hash'
         ? Crypto.hash(args, 'blake2b512', 'base64url')
-        : args.map(String).join(':');
+        : args.map(String).join('__ARG_JOIN__');
 
       /**
        * Check if we have a cached result

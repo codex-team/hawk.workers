@@ -1,9 +1,4 @@
-import { CatcherMessageAccepted } from '@hawk.so/types';
-
-/**
- * Format of task for JavaScript Event Worker
- */
-export interface JavaScriptEventWorkerTask extends CatcherMessageAccepted<'errors/javascript'> {}
+import { JavaScriptEventWorkerTask } from "./javascript-event-worker-task";
 
 /**
  * Type that represents the payload of the beautify backtrace method
