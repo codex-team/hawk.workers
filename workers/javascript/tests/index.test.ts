@@ -1,7 +1,7 @@
 import JavascriptEventWorker from '../src';
 import '../../../env-test';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import { Db, GridFSBucket, MongoClient, ObjectId } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as WorkerNames from '../../../lib/workerNames';
 import { ReleaseDBScheme } from '@hawk.so/types';
 import cloneDeep from 'lodash.clonedeep';
@@ -92,38 +92,6 @@ describe('JavaScript event worker', () => {
       content: '',
       line: 14,
     } ],
-  };
-
-  /**
-   * Helper to build a mocked GridFS read stream that emits provided content
-   *
-   * @param content - content of the source map stored in the bucket
-   */
-  /* eslint-disable-next-line @typescript-eslint/explicit-function-return-type */
-  const makeMockGridFsReadStream = (content: string) => {
-    const handlers: Record<string, ((...args: any)=> void)[]> = {};
-
-    const stream = {
-      on(event: 'data' | 'error' | 'end', cb: (...args: any[]) => void) {
-        handlers[event] = handlers[event] || [];
-        handlers[event].push(cb);
-
-        return stream;
-      },
-      destroy: jest.fn(),
-    } as any;
-
-    // Emit asynchronously to mimic real streams
-    setImmediate(() => {
-      if (handlers['data']) {
-        handlers['data'].forEach((cb) => cb(Buffer.from(content)));
-      }
-      if (handlers['end']) {
-        handlers['end'].forEach((cb) => cb());
-      }
-    });
-
-    return stream;
   };
 
   /**
@@ -441,7 +409,7 @@ describe('JavaScript event worker', () => {
     ];
 
     await db.collection('releases').insertOne(release);
-    
+
     /**
      * Cast prototype to any because getReleaseRecord is ts private
      */

@@ -7,7 +7,7 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapsRecord } from '../../release/types';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
-import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload'
+import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
