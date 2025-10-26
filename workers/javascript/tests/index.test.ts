@@ -392,17 +392,16 @@ describe('JavaScript event worker', () => {
 
     await db.collection('releases').insertOne(singleMapRelease);
 
-    const openDownloadStreamSpy = jest
-      .spyOn(GridFSBucket.prototype, 'openDownloadStream')
-      .mockImplementation(() => makeMockGridFsReadStream(sourceMapFileContent));
+    /**
+     * Cast prototype to any because getReleaseRecord is ts private
+     */
+    const getReleaseRecordSpy = jest.spyOn(JavascriptEventWorker.prototype as any, 'getReleaseRecord');
 
     // Act
     await worker.handle(workerEvent);
 
     // Assert: Since beautifyBacktrace is now memoized, the entire method should only be called once
-    // But within that single call, loadSourceMapFile may still be called multiple times for different frames
-    // The memoization happens at the beautifyBacktrace level, not at the loadSourceMapFile level
-    expect(openDownloadStreamSpy).toHaveBeenCalledTimes(2);
+    expect(getReleaseRecordSpy).toHaveBeenCalledTimes(1);
 
     await worker.finish();
   });
@@ -442,11 +441,11 @@ describe('JavaScript event worker', () => {
     ];
 
     await db.collection('releases').insertOne(release);
-
-    const bucket = (worker as any).db.getBucket();
-    const openDownloadStreamSpy = jest
-      .spyOn(bucket, 'openDownloadStream')
-      .mockImplementation(() => makeMockGridFsReadStream(sourceMapFileContent));
+    
+    /**
+     * Cast prototype to any because getReleaseRecord is ts private
+     */
+    const getReleaseRecordSpy = jest.spyOn(JavascriptEventWorker.prototype as any, 'getReleaseRecord');
 
     const workerEventClone = cloneDeep(workerEvent);
 
@@ -454,8 +453,8 @@ describe('JavaScript event worker', () => {
     await worker.handle(workerEvent);
     await worker.handle(workerEventClone);
 
-    // The stream should only be opened once since the entire beautifyBacktrace is memoized
-    expect(openDownloadStreamSpy).toHaveBeenCalledTimes(1);
+    // The release retirieving should only be called once since the entire beautifyBacktrace is memoized
+    expect(getReleaseRecordSpy).toHaveBeenCalledTimes(1);
 
     await worker.finish();
   });

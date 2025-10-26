@@ -108,17 +108,7 @@ export default class JavascriptEventWorker extends EventWorker {
    */
   @memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private async beautifyBacktrace({ projectId, release, backtrace }: BeautifyBacktracePayload): Promise<BacktraceFrame[]> {
-    console.log('method call?')
-
-    const releaseRecord: SourceMapsRecord = await this.cache.get(
-      `releaseRecord:${projectId}:${release}`,
-      () => {
-        return this.getReleaseRecord(
-          projectId,
-          release
-        );
-      }
-    );
+    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(projectId, release);
 
     if (!releaseRecord) {
       this.logger.info('beautifyBacktrace: no releaseRecord found');
