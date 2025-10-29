@@ -374,4 +374,72 @@ describe('JavaScript event worker', () => {
 
     await worker.finish();
   });
+
+  it('should not memoize beautifyBacktrace within several calls with different arguments', async () => {
+    // Arrange
+    const worker = new JavascriptEventWorker();
+
+    await worker.start();
+
+    // Create event with two frames mapping to the same origin file
+    const workerEvent = {
+      ...createEventMock({ withBacktrace: true }),
+    } as JavaScriptEventWorkerTask;
+
+    workerEvent.payload.backtrace = [
+      {
+        file: 'file:///main.js',
+        line: 1,
+        column: 100,
+      },
+    ] as any;
+
+    /**
+     * Worker event with different backtrace
+     */
+    const anotherWorkerEvent = {
+      ...createEventMock({ withBacktrace: true }),
+    } as JavaScriptEventWorkerTask;
+
+    anotherWorkerEvent.payload.backtrace = [
+      {
+        file: 'file:///main.js',
+        line: 10,
+        column: 14,
+      },
+    ] as any;
+
+    // Create a release with a single map file used by both frames
+    const singleMapRelease = {
+      ...createReleaseMock({
+        projectId: workerEvent.projectId,
+        release: workerEvent.payload.release,
+      }),
+    } as any;
+    const firstFileId = singleMapRelease.files[0]._id;
+
+    singleMapRelease.files = [
+      {
+        mapFileName: 'main.js.map',
+        originFileName: 'main.js',
+        _id: firstFileId,
+      },
+    ];
+
+    await db.collection('releases').insertOne(singleMapRelease);
+
+    /**
+     * Cast prototype to any because getReleaseRecord is ts private
+     */
+    const getReleaseRecordSpy = jest.spyOn(JavascriptEventWorker.prototype as any, 'getReleaseRecord');
+
+    // Act
+    await worker.handle(workerEvent);
+    await worker.handle(anotherWorkerEvent);
+
+    // Assert: Since beautifyBacktrace is now memoized, the entire method should only be called once
+    expect(getReleaseRecordSpy).toHaveBeenCalledTimes(2);
+
+    await worker.finish();
+  });
 });
