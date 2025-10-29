@@ -283,7 +283,7 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  itIf('should use cache while processing source maps', async () => {
+  it('should use cache while processing source maps', async () => {
     /**
      * Arrange
      */
@@ -317,7 +317,7 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
-  it('should memoize beautifyBacktrace within single handle (parallel processing may cause multiple calls)', async () => {
+  it('should memoize beautifyBacktrace within several handle calls', async () => {
     // Arrange
     const worker = new JavascriptEventWorker();
 
@@ -340,6 +340,8 @@ describe('JavaScript event worker', () => {
         column: 200,
       },
     ] as any;
+
+    const workerEventDuplicate = cloneDeep(workerEvent);
 
     // Create a release with a single map file used by both frames
     const singleMapRelease = {
@@ -367,6 +369,7 @@ describe('JavaScript event worker', () => {
 
     // Act
     await worker.handle(workerEvent);
+    await worker.handle(workerEventDuplicate);
 
     // Assert: Since beautifyBacktrace is now memoized, the entire method should only be called once
     expect(getReleaseRecordSpy).toHaveBeenCalledTimes(1);
