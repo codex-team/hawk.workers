@@ -106,7 +106,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {JavaScriptEventWorkerTask} event — js error minified
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
-  @memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash' })
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private async beautifyBacktrace({ projectId, release, backtrace }: BeautifyBacktracePayload): Promise<BacktraceFrame[]> {
     const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(projectId, release);
 
