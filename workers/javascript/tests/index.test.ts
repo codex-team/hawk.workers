@@ -6,8 +6,6 @@ import * as WorkerNames from '../../../lib/workerNames';
 import { ReleaseDBScheme } from '@hawk.so/types';
 import cloneDeep from 'lodash.clonedeep';
 
-const itIf = it.skip;
-
 describe('JavaScript event worker', () => {
   let connection: MongoClient;
   let db: Db;
