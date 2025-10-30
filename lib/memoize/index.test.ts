@@ -1,4 +1,14 @@
-// src/__tests__/memoize.spec.ts
+/* eslint-disable
+  no-unused-vars,
+  @typescript-eslint/explicit-function-return-type,
+  @typescript-eslint/no-unused-vars-experimental,
+  jsdoc/require-param-description
+*/
+/**
+ * Ignore eslint jsdoc rules for mocked class
+ * Ignore eslint unused vars rule for decorator
+ */
+
 import { memoize } from './index';
 import Crypto from '../utils/crypto';
 
@@ -11,10 +21,10 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should memoize return value with concat strategy across several calls', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
 
       @memoize({ strategy: 'concat', ttl: 60_000, max: 50 })
-      async run(a: number, b: string) {
+      public async run(a: number, b: string) {
         this.calls += 1;
         return `${a}-${b}`;
       }
@@ -37,10 +47,10 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should memoize return value with set of arguments with concat strategy across several calls', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
 
       @memoize({ strategy: 'concat' })
-      async run(a: unknown, b: unknown) {
+      public async run(a: unknown, b: unknown) {
         this.calls += 1;
         return `${String(a)}|${String(b)}`;
       }
@@ -73,9 +83,9 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should memoize return value for stringified objects across several calls', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize({ strategy: 'concat' })
-      async run(x: unknown, y: unknown) {
+      public async run(x: unknown, y: unknown) {
         this.calls += 1;
         return 'ok';
       }
@@ -92,9 +102,9 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should memoize return value for method with non-default arguments (NaN, Infinity, -0, Symbol, Date, RegExp) still cache same-args', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize({ strategy: 'concat' })
-      async run(...args: unknown[]) {
+      public async run(...args: unknown[]) {
         this.calls += 1;
         return args.map(String).join(',');
       }
@@ -116,9 +126,9 @@ describe('memoize decorator — per-test inline classes', () => {
     const hashSpy = jest.spyOn(Crypto, 'hash');
 
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize({ strategy: 'hash' })
-      async run(...args: unknown[]) {
+      public async run(...args: unknown[]) {
         this.calls += 1;
         return 'ok';
       }
@@ -134,9 +144,9 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should not memoize return value with hash strategy and different arguments', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize({ strategy: 'hash' })
-      async run(...args: unknown[]) {
+      public async run(...args: unknown[]) {
         this.calls += 1;
         return 'ok';
       }
@@ -152,9 +162,9 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('should memoize return value with hash strategy across several calls with same args', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize({ strategy: 'hash' })
-      async run(arg: unknown) {
+      public async run(arg: unknown) {
         this.calls += 1;
         return 'ok';
       }
@@ -175,9 +185,9 @@ describe('memoize decorator — per-test inline classes', () => {
     const { memoize: memoizeWithMockedTimers } = await import('../memoize/index');
 
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoizeWithMockedTimers({ strategy: 'concat', ttl: 1_000 })
-      async run(x: string) {
+      public async run(x: string) {
         this.calls += 1;
         return x;
       }
@@ -199,9 +209,9 @@ describe('memoize decorator — per-test inline classes', () => {
 
   it('error calls should never be momized', async () => {
     class Sample {
-      calls = 0;
+      public calls = 0;
       @memoize()
-      async run(x: number) {
+      public async run(x: number) {
         this.calls += 1;
         if (x === 1) throw new Error('boom');
         return x * 2;
