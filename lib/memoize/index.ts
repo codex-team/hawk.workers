@@ -65,12 +65,12 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
        */
       const cache: LRUCache<string, any> = this[cacheKey] ??= new LRUCache<string, any>({
         max,
-        ttl,
+        maxAge: ttl,
       });
 
       const key = strategy === 'hash'
         ? Crypto.hash(args, 'blake2b512', 'base64url')
-        : args.map(String).join('__ARG_JOIN__');
+        : args.map((arg) => JSON.stringify(arg)).join('__ARG_JOIN__');
 
       /**
        * Check if we have a cached result
@@ -88,7 +88,7 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
 
         return result;
       } catch (err) {
-        cache.delete(key);
+        cache.del(key);
         throw err;
       }
     };
