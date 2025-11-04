@@ -7,13 +7,21 @@ import { GroupWorkerTask } from '../../grouper/types/group-worker-task';
 import { SourceMapsRecord } from '../../release/types';
 import * as pkg from '../package.json';
 import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task';
+import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
-import Crypto from '../../../lib/utils/crypto';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
+/* eslint-disable-next-line no-unused-vars */
+import { memoize } from '../../../lib/memoize';
+
+/**
+ * eslint does not count decorators as a variable usage
+ */
+/* eslint-disable-next-line no-unused-vars */
+const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
 
 /**
  * Worker for handling Javascript events
@@ -69,7 +77,11 @@ export default class JavascriptEventWorker extends EventWorker {
       this.logger.info('beautifyBacktrace called');
 
       try {
-        event.payload.backtrace = await this.beautifyBacktrace(event);
+        event.payload.backtrace = await this.beautifyBacktrace({
+          projectId: event.projectId,
+          release: event.payload.release.toString(),
+          backtrace: event.payload.backtrace,
+        });
       } catch (err) {
         this.logger.error('Error while beautifing backtrace', err);
       }
@@ -94,21 +106,14 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {JavaScriptEventWorkerTask} event — js error minified
    * @returns {BacktraceFrame[]} - parsed backtrace
    */
-  private async beautifyBacktrace(event: JavaScriptEventWorkerTask): Promise<BacktraceFrame[]> {
-    const releaseRecord: SourceMapsRecord = await this.cache.get(
-      `releaseRecord:${event.projectId}:${event.payload.release.toString()}`,
-      () => {
-        return this.getReleaseRecord(
-          event.projectId,
-          event.payload.release.toString()
-        );
-      }
-    );
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash' })
+  private async beautifyBacktrace({ projectId, release, backtrace }: BeautifyBacktracePayload): Promise<BacktraceFrame[]> {
+    const releaseRecord: SourceMapsRecord = await this.getReleaseRecord(projectId, release);
 
     if (!releaseRecord) {
       this.logger.info('beautifyBacktrace: no releaseRecord found');
 
-      return event.payload.backtrace;
+      return backtrace;
     }
 
     this.logger.info(`beautifyBacktrace: release record found: ${JSON.stringify(releaseRecord)}`);
@@ -116,30 +121,23 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * If we have a source map associated with passed release, override some values in backtrace with original line/file
      */
-    return Promise.all(event.payload.backtrace.map(async (frame: BacktraceFrame, index: number) => {
+    return Promise.all(backtrace.map(async (frame: BacktraceFrame, index: number) => {
       /**
-       * Get cached (or set if the value is missing) real backtrace frame
+       * Consume rbacktrace frame and catch errors (send them to hawk)
        */
-      const result = await this.cache.get(
-        `consumeBacktraceFrame:${event.payload.release.toString()}:${Crypto.hash(frame)}:${index}`,
-        () => {
-          return this.consumeBacktraceFrame(frame, releaseRecord)
-            .catch((error) => {
-              this.logger.error('Error while consuming ' + error.stack);
+      return await this.consumeBacktraceFrame(frame, releaseRecord)
+        .catch((error) => {
+          this.logger.error('Error while consuming ' + error.stack);
 
-              /**
-               * Send error to Hawk
-               */
-              HawkCatcher.send(error, {
-                payload: event.payload as unknown as Record<string, never>,
-              });
+          /**
+           * Send error to Hawk
+           */
+          HawkCatcher.send(error, {
+            payload: backtrace as unknown as Record<string, never>,
+          });
 
-              return event.payload.backtrace[index];
-            });
-        }
-      );
-
-      return result;
+          return backtrace[index];
+        });
     }));
   }
 
@@ -189,7 +187,7 @@ export default class JavascriptEventWorker extends EventWorker {
     /**
      * Load source map content from Grid fs
      */
-    const mapContent = await this.loadSourceMapFile(mapForFrame);
+    const mapContent = await this.loadSourceMapFile(mapForFrame._id);
 
     if (!mapContent) {
       this.logger.info(`consumeBacktraceFrame: Can't load map content for ${JSON.stringify(mapForFrame)}`);
@@ -197,9 +195,6 @@ export default class JavascriptEventWorker extends EventWorker {
       return stackFrame;
     }
 
-    /**
-     * @todo cache source map consumer for file-keys
-     */
     const consumer = this.consumeSourceMap(mapContent);
 
     /**
@@ -234,10 +229,10 @@ export default class JavascriptEventWorker extends EventWorker {
          */
         lines = this.readSourceLines(consumer, originalLocation);
 
-    //     const originalContent = consumer.sourceContentFor(originalLocation.source);
+        const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-    //     functionContext = this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
-      } catch(e) {
+        functionContext = await this.getFunctionContext(originalContent, originalLocation.line) ?? originalLocation.name;
+      } catch (e) {
         HawkCatcher.send(e);
         this.logger.error('Can\'t get function context');
         this.logger.error(e);
@@ -260,7 +255,7 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param line - number of the line from the stack trace
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
-  private _getFunctionContext(sourceCode: string, line: number): string | null {
+  private getFunctionContext(sourceCode: string, line: number): string | null {
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
@@ -361,13 +356,13 @@ export default class JavascriptEventWorker extends EventWorker {
   /**
    * Downloads source map file from Grid FS
    *
-   * @param map - saved file info without content.
+   * @param mapId - id of the map file in the bucket
    */
-  private loadSourceMapFile(map: SourceMapDataExtended): Promise<string> {
+  private loadSourceMapFile(mapId: SourceMapDataExtended['_id']): Promise<string> {
     return new Promise((resolve, reject) => {
       let buf = Buffer.from('');
 
-      const readstream = this.db.getBucket().openDownloadStream(map._id)
+      const readstream = this.db.getBucket().openDownloadStream(mapId)
         .on('data', (chunk) => {
           buf = Buffer.concat([buf, chunk]);
         })
