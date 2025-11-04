@@ -28,15 +28,15 @@ beforeAll(async () => {
      * Wait for the replica set to initialize all nodes
      */
     do {
-      await new Promise(resolve => setTimeout(resolve, 1000));
       status = await admin.command({ replSetGetStatus: 1 });
 
       const primary = status.members.find(member => member.stateStr === 'PRIMARY');
-      const secondary = status.members.find(member => member.stateStr === 'SECONDARY');
 
-      if (primary && secondary) {
+      if (primary) {
         break;
       }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } while (Date.now() - startTime < timeout);
 
     console.log('✅ Replica set is stable');
