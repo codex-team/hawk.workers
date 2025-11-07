@@ -109,6 +109,15 @@ export default class GrouperWorker extends Worker {
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
+    // FIX RELEASE TYPE
+    // TODO: REMOVE AFTER 01.01.2026, after the most of the users update to new js catcher
+    if (task.payload && task.payload.release !== undefined) {
+      task.payload = {
+        ...task.payload,
+        release: String(task.payload.release)
+      }
+    }
+
     /**
      * Find event by group hash.
      */
