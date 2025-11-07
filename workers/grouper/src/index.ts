@@ -26,6 +26,14 @@ import { computeDelta } from './utils/repetitionDiff';
 import TimeMs from '../../../lib/utils/time';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+/* eslint-disable-next-line no-unused-vars */
+import { memoize } from '../../../lib/memoize';
+
+/**
+ * eslint does not count decorators as a variable usage
+ */
+/* eslint-disable-next-line no-unused-vars */
+const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
 
 /**
  * Error code of MongoDB key duplication error
@@ -110,7 +118,7 @@ export default class GrouperWorker extends Worker {
      * If we couldn't group by group hash (title), try grouping by patterns
      */
     if (!existedEvent) {
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload);
+      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
       if (similarEvent) {
         this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
@@ -288,30 +296,38 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Method that is used to retrieve first event that satisfies the grouping pattern
+   * @param pattern - event should satisfy this pattern
+   */
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat' })
+  private async findFirstEventByPattern(pattern: string, projectId: string) {
+    return await this.eventsDb.getConnection()
+      .collection(`events:${projectId}`)
+      .findOne(
+        { 'payload.title': { $regex: pattern } },
+        { sort: { _id: 1 } }
+      );
+  }
+
+
+  /**
    * Tries to find events with a small Levenshtein distance of a title or by matching grouping patterns
    *
    * @param projectId - where to find
-   * @param event - event to compare
+   * @param title - title of the event to find similar one
    */
-  private async findSimilarEvent(projectId: string, event: EventData<EventAddons>): Promise<GroupedEventDBScheme | undefined> {
+  private async findSimilarEvent(projectId: string, title: string): Promise<GroupedEventDBScheme | undefined> {
     /**
      * If no match by Levenshtein, try matching by patterns
      */
     const patterns = await this.getProjectPatterns(projectId);
 
     if (patterns && patterns.length > 0) {
-      const matchingPattern = await this.findMatchingPattern(patterns, event);
+      const matchingPattern = await this.findMatchingPattern(patterns, title);
 
       if (matchingPattern !== null && matchingPattern !== undefined) {
         try {
-          const originalEvent = await this.cache.get(`${projectId}:${matchingPattern._id}:originalEvent`, async () => {
-            return await this.eventsDb.getConnection()
-              .collection(`events:${projectId}`)
-              .findOne(
-                { 'payload.title': { $regex: matchingPattern.pattern } },
-                { sort: { _id: 1 } }
-              );
-          });
+          const originalEvent = await this.findFirstEventByPattern(matchingPattern.pattern, projectId);
 
           this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
 
@@ -331,12 +347,13 @@ export default class GrouperWorker extends Worker {
    * Method that returns matched pattern for event, if event do not match any of patterns return null
    *
    * @param patterns - list of the patterns of the related project
-   * @param event - event which title would be cheched
+   * @param title - title of the event to check for pattern match
    * @returns {ProjectEventGroupingPatternsDBScheme | null} matched pattern object or null if no match
    */
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private async findMatchingPattern(
     patterns: ProjectEventGroupingPatternsDBScheme[],
-    event: CatcherMessagePayload<ErrorsCatcherType>
+    title: string,
   ): Promise<ProjectEventGroupingPatternsDBScheme | null> {
     if (!patterns || patterns.length === 0) {
       return null;
@@ -345,7 +362,7 @@ export default class GrouperWorker extends Worker {
     return patterns.filter(pattern => {
       const patternRegExp = new RegExp(pattern.pattern);
 
-      return event.title.match(patternRegExp);
+      return title.match(patternRegExp);
     }).pop() || null;
   }
 
@@ -355,21 +372,15 @@ export default class GrouperWorker extends Worker {
    * @param projectId - id of the project to find related event patterns
    * @returns {ProjectEventGroupingPatternsDBScheme[]} EventPatterns object with projectId and list of patterns
    */
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat' })
   private async getProjectPatterns(projectId: string): Promise<ProjectEventGroupingPatternsDBScheme[]> {
-    return this.cache.get(`project:${projectId}:patterns`, async () => {
-      const project = await this.accountsDb.getConnection()
-        .collection('projects')
-        .findOne({
-          _id: new mongodb.ObjectId(projectId),
-        });
+    const project = await this.accountsDb.getConnection()
+      .collection('projects')
+      .findOne({
+        _id: new mongodb.ObjectId(projectId),
+      });
 
-      return project?.eventGroupingPatterns || [];
-    },
-    /**
-     * Cache project patterns for 5 minutes since they don't change frequently
-     */
-    /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-    5 * TimeMs.MINUTE / MS_IN_SEC);
+    return project?.eventGroupingPatterns || [];
   }
 
   /**
