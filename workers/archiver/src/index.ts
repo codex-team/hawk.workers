@@ -1,7 +1,6 @@
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
-import asyncForEach from '../../../lib/utils/asyncForEach';
 import { Collection, Db, GridFSBucket, ObjectId, ObjectID } from 'mongodb';
 import axios from 'axios';
 import { ReleaseFileData, ReleaseRecord, ReportData, ReportDataByProject } from './types';
@@ -85,10 +84,13 @@ export default class ArchiverWorker extends Worker {
 
     this.logger.info(`Start archiving at ${startDate}`);
 
-    const projects = await this.projectCollection.find({}).toArray();
+    const projects = await this.projectCollection.find({}).project({
+      _id: 1,
+      name: 1
+    });
     const projectsData: ReportDataByProject[] = [];
 
-    await asyncForEach(projects, async (project) => {
+    for await (const project of projects) {
       const archivedEventsCount = await this.archiveProjectEvents(project);
 
       const removedReleasesCount = await this.removeOldReleases(project);
@@ -98,7 +100,7 @@ export default class ArchiverWorker extends Worker {
         archivedEventsCount,
         removedReleasesCount,
       });
-    });
+    }
 
     const finishDate = new Date();
     const dbSizeOnFinish = (await this.eventsDbConnection.stats()).dataSize;
@@ -347,9 +349,9 @@ export default class ArchiverWorker extends Worker {
     });
 
     this.logger.info('Report notification response:', {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data
+      status: response?.status,
+      statusText: response?.statusText,
+      data: response?.data
     });
   }
 
