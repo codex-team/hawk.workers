@@ -294,6 +294,9 @@ export default class GrouperWorker extends Worker {
       });
     });
 
+    /**
+     * Normalize backtrace, if backtrace equals to [] it leads to visual bugs
+     */
     if (event.backtrace.length === 0) {
       event.backtrace = null;
     }

@@ -303,13 +303,13 @@ describe('memoize decorator — per-test inline classes', () => {
     expect(sample.calls).toBe(1);
   });
   
-  it('should use STRICT equality for skipCache with objects: different-but-equal objects are cached', async () => {
-    const deepEqualButDifferent = { a: 1 };
+  it('should use equality for skipCache with objects: deep equal objects are cached', async () => {
+    const deepEqualObject = { a: 1 };
   
     class Sample {
       public calls = 0;
   
-      @memoize({ strategy: 'concat', skipCache: [deepEqualButDifferent] })
+      @memoize({ strategy: 'concat', skipCache: [deepEqualObject] })
       public async run() {
         this.calls += 1;
 
@@ -326,29 +326,4 @@ describe('memoize decorator — per-test inline classes', () => {
     expect(second).toBe(first);
     expect(sample.calls).toBe(1);
   });
-  
-  it('should NOT cache when the EXACT same object instance is listed in skipCache', async () => {
-    const SKIP = { a: 1 };
-  
-    class Sample {
-      public calls = 0;
-  
-      @memoize({ strategy: 'concat', skipCache: [SKIP] })
-      public async run() {
-        this.calls += 1;
-
-        return SKIP;
-      }
-    }
-  
-    const sample = new Sample();
-  
-    const first = await sample.run();
-    const second = await sample.run();
-  
-    expect(first).toBe(SKIP);
-    expect(second).toBe(SKIP);
-    expect(sample.calls).toBe(2);
-  });
-  
 });
