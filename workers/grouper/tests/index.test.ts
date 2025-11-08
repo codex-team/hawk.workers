@@ -589,7 +589,7 @@ describe('GrouperWorker', () => {
     });
 
     describe('dynamic pattern addition', () => {
-      test('should group events firslty by pattern, secondly by grouphash', async () => {
+      test('should group events when pattern added after we receive the first event', async () => {
         /**
          * Remove all existing patterns from the project
          */
