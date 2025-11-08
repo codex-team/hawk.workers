@@ -13,7 +13,7 @@ import type {
   BacktraceFrame,
   SourceCodeLine,
   ProjectEventGroupingPatternsDBScheme,
-  ErrorsCatcherType,
+  ErrorsCatcherType
 } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
@@ -112,8 +112,8 @@ export default class GrouperWorker extends Worker {
     if (task.payload && task.payload.release !== undefined) {
       task.payload = {
         ...task.payload,
-        release: String(task.payload.release)
-      }
+        release: String(task.payload.release),
+      };
     }
 
     let existedEvent: GroupedEventDBScheme;
@@ -314,14 +314,15 @@ export default class GrouperWorker extends Worker {
 
   /**
    * Method that is used to retrieve the first original event that satisfies the grouping pattern
+   *
    * @param pattern - event should satisfy this pattern
+   * @param projectId - id of the project to find event in
    */
-  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat' })
-  private async findFirstEventByPattern(pattern: string, projectId: string) {
+  private async findFirstEventByPattern(pattern: string, projectId: string): Promise<GroupedEventDBScheme> {
     return await this.eventsDb.getConnection()
       .collection(`events:${projectId}`)
       .findOne(
-        { 'payload.title': { $regex: pattern } },
+        { 'payload.title': { $regex: pattern } }
       );
   }
 
@@ -331,6 +332,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param title - title of the event to find similar one
    */
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash', skipCache: [undefined] })
   private async findSimilarEvent(projectId: string, title: string): Promise<GroupedEventDBScheme | undefined> {
     /**
      * If no match by Levenshtein, try matching by patterns
@@ -365,10 +367,9 @@ export default class GrouperWorker extends Worker {
    * @param title - title of the event to check for pattern match
    * @returns {ProjectEventGroupingPatternsDBScheme | null} matched pattern object or null if no match
    */
-  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private async findMatchingPattern(
     patterns: ProjectEventGroupingPatternsDBScheme[],
-    title: string,
+    title: string
   ): Promise<ProjectEventGroupingPatternsDBScheme | null> {
     if (!patterns || patterns.length === 0) {
       return null;
@@ -387,7 +388,6 @@ export default class GrouperWorker extends Worker {
    * @param projectId - id of the project to find related event patterns
    * @returns {ProjectEventGroupingPatternsDBScheme[]} EventPatterns object with projectId and list of patterns
    */
-  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat' })
   private async getProjectPatterns(projectId: string): Promise<ProjectEventGroupingPatternsDBScheme[]> {
     const project = await this.accountsDb.getConnection()
       .collection('projects')

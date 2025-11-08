@@ -26,6 +26,11 @@ export interface MemoizeOptions {
    * Strategy for key generation
    */
   strategy?: MemoizeKeyStrategy;
+
+  /**
+   * It allows to skip caching for list of return values specified
+   */
+  skipCache?: any[]
 }
 
 /**
@@ -40,6 +45,7 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
     max = 50,
     ttl = 1000 * 60 * 30,
     strategy = 'concat',
+    skipCache = []
   } = options;
   /* eslint-enable */
 
@@ -84,7 +90,9 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
       try {
         const result = await originalMethod.apply(this, args);
 
-        cache.set(key, result);
+        if (!skipCache.includes(result)) {
+          cache.set(key, result);
+        }
 
         return result;
       } catch (err) {
