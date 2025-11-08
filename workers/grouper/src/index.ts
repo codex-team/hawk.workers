@@ -22,7 +22,6 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
-import TimeMs from '../../../lib/utils/time';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
 /* eslint-disable-next-line no-unused-vars */
