@@ -587,6 +587,90 @@ describe('GrouperWorker', () => {
         expect(await repetitionsCollection.find().count()).toBe(1);
       });
     });
+
+    describe('dynamic pattern addition', () => {
+      test('should group events firslty by pattern, secondly by grouphash', async () => {
+        /**
+         * Remove all existing patterns from the project
+         */
+        await projectsCollection.updateOne(
+          { _id: projectMock._id },
+          { $set: { eventGroupingPatterns: [] } }
+        );
+    
+        /**
+         * Two nearly identical titles that could be grouped by `New error .*` pattern
+         */
+        const firstTitle = 'Dynamic pattern error 1111111111111111';
+        const secondTitle = 'Dynamic pattern error 2222222222222222';
+    
+        await worker.handle(generateTask({ title: firstTitle }));
+        await worker.handle(generateTask({ title: secondTitle }));
+    
+        const originalsBefore = await eventsCollection.find().toArray();
+        expect(originalsBefore.length).toBe(2);
+
+        console.log('originals before', originalsBefore);
+    
+        const originalA = originalsBefore.find(e => e.payload.title === firstTitle)!;
+        const originalB = originalsBefore.find(e => e.payload.title === secondTitle)!;
+        expect(originalA).toBeTruthy();
+        expect(originalB).toBeTruthy();
+
+        /**
+         * Two events should be stored separately since grouping patterns of the project were empty
+         */
+        expect(originalA.groupHash).not.toBe(originalB.groupHash);
+    
+        /**
+         * Insert a pattern that matches all "New error .*" titles
+         */
+        await projectsCollection.updateOne(
+          { _id: projectMock._id },
+          {
+            $set: {
+              eventGroupingPatterns: [
+                { _id: new mongodb.ObjectId(), pattern: 'Dynamic pattern error .*' },
+              ],
+            },
+          }
+        );
+    
+        /**
+         * Second title should be grouped with first event that matches inserted grouping pattern
+         * It should not be grouped with the existing event with same item because it violates grouping pattern logic
+         */
+        await worker.handle(generateTask({ title: secondTitle }));
+    
+        const allEvents = await eventsCollection.find().toArray();
+        const allRepetitions = await repetitionsCollection.find().toArray();
+    
+        /**
+         * Should still be only 2 original event documents in the DB
+         */
+        expect(allEvents.length).toBe(2);
+    
+        const refreshedOriginalA = await eventsCollection.findOne({ _id: originalA._id });
+        const refreshedOriginalB = await eventsCollection.findOne({ _id: originalB._id });
+    
+        // totalCount: originalA should have 2 (1 original + 1 new repetition),
+        // originalB should remain 1.
+        expect(refreshedOriginalA?.totalCount).toBe(2);
+        expect(refreshedOriginalB?.totalCount).toBe(1);
+    
+        // Repetitions should be 1 and must reference originalA's groupHash
+        expect(allRepetitions.length).toBe(1);
+        allRepetitions.forEach(rep => {
+          expect(rep.groupHash).toBe(refreshedOriginalA!.groupHash);
+        });
+    
+        /**
+         * Original B should have zero repetitions despite same title with latest event passed
+         */
+        const repsForOriginalB = await repetitionsCollection.find({ groupHash: refreshedOriginalB!.groupHash }).count();
+        expect(repsForOriginalB).toBe(0);
+      });
+    });
   });
 
   describe('Event marks handling', () => {

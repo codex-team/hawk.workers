@@ -14,7 +14,6 @@ import type {
   SourceCodeLine,
   ProjectEventGroupingPatternsDBScheme,
   ErrorsCatcherType,
-  CatcherMessagePayload
 } from '@hawk.so/types';
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
@@ -118,32 +117,38 @@ export default class GrouperWorker extends Worker {
       }
     }
 
-    /**
-     * Find event by group hash.
-     */
-    let existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
+    let existedEvent: GroupedEventDBScheme;
 
     /**
-     * If we couldn't group by group hash (title), try grouping by patterns
+     * Find similar events by grouping pattern
      */
-    if (!existedEvent) {
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
+    const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
-      if (similarEvent) {
-        this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
-        /**
-         * Override group hash with found event's group hash
-         */
-        uniqueEventHash = similarEvent.groupHash;
+    if (similarEvent) {
+      this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
 
-        existedEvent = similarEvent;
-      }
+      /**
+       * Override group hash with found event's group hash
+       */
+      uniqueEventHash = similarEvent.groupHash;
+
+      existedEvent = similarEvent;
+    }
+
+    /**
+     * If we couldn't group by grouping pattern — try grouping bt hash (title)
+     */
+    else {
+      /**
+       * Find event by group hash.
+       */
+      existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
     }
 
     /**
      * Event happened for the first time
      */
-    const isFirstOccurrence = existedEvent === null;
+    const isFirstOccurrence = !existedEvent && !similarEvent;
 
     let repetitionId = null;
 
@@ -289,6 +294,10 @@ export default class GrouperWorker extends Worker {
         };
       });
     });
+
+    if (event.backtrace.length === 0) {
+      event.backtrace = null;
+    }
   }
 
   /**
@@ -305,7 +314,7 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Method that is used to retrieve first event that satisfies the grouping pattern
+   * Method that is used to retrieve the first original event that satisfies the grouping pattern
    * @param pattern - event should satisfy this pattern
    */
   @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat' })
@@ -314,10 +323,8 @@ export default class GrouperWorker extends Worker {
       .collection(`events:${projectId}`)
       .findOne(
         { 'payload.title': { $regex: pattern } },
-        { sort: { _id: 1 } }
       );
   }
-
 
   /**
    * Tries to find events with a small Levenshtein distance of a title or by matching grouping patterns
