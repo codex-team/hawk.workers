@@ -593,10 +593,7 @@ describe('GrouperWorker', () => {
         /**
          * Remove all existing patterns from the project
          */
-        await projectsCollection.updateOne(
-          { _id: projectMock._id },
-          { $set: { eventGroupingPatterns: [] } }
-        );
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([]);
     
         /**
          * Two nearly identical titles that could be grouped by `New error .*` pattern
@@ -609,8 +606,6 @@ describe('GrouperWorker', () => {
     
         const originalsBefore = await eventsCollection.find().toArray();
         expect(originalsBefore.length).toBe(2);
-
-        console.log('originals before', originalsBefore);
     
         const originalA = originalsBefore.find(e => e.payload.title === firstTitle)!;
         const originalB = originalsBefore.find(e => e.payload.title === secondTitle)!;
@@ -622,19 +617,12 @@ describe('GrouperWorker', () => {
          */
         expect(originalA.groupHash).not.toBe(originalB.groupHash);
     
-        /**
-         * Insert a pattern that matches all "New error .*" titles
-         */
-        await projectsCollection.updateOne(
-          { _id: projectMock._id },
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
           {
-            $set: {
-              eventGroupingPatterns: [
-                { _id: new mongodb.ObjectId(), pattern: 'Dynamic pattern error .*' },
-              ],
-            },
+            _id: new mongodb.ObjectId(),
+            pattern: 'Dynamic pattern error .*',
           }
-        );
+        ]);
     
         /**
          * Second title should be grouped with first event that matches inserted grouping pattern
