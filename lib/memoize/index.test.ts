@@ -26,6 +26,7 @@ describe('memoize decorator — per-test inline classes', () => {
       @memoize({ strategy: 'concat', ttl: 60_000, max: 50 })
       public async run(a: number, b: string) {
         this.calls += 1;
+
         return `${a}-${b}`;
       }
     }
@@ -37,7 +38,7 @@ describe('memoize decorator — per-test inline classes', () => {
      */
     expect(await sample.run(1, 'x')).toBe('1-x');
     /**
-     * In this case 
+     * In this case
      */
     expect(await sample.run(1, 'x')).toBe('1-x');
     expect(await sample.run(1, 'x')).toBe('1-x');
@@ -52,6 +53,7 @@ describe('memoize decorator — per-test inline classes', () => {
       @memoize({ strategy: 'concat' })
       public async run(a: unknown, b: unknown) {
         this.calls += 1;
+
         return `${String(a)}|${String(b)}`;
       }
     }
@@ -84,9 +86,11 @@ describe('memoize decorator — per-test inline classes', () => {
   it('should memoize return value for stringified objects across several calls', async () => {
     class Sample {
       public calls = 0;
+
       @memoize({ strategy: 'concat' })
       public async run(x: unknown, y: unknown) {
         this.calls += 1;
+
         return 'ok';
       }
     }
@@ -103,9 +107,11 @@ describe('memoize decorator — per-test inline classes', () => {
   it('should memoize return value for method with non-default arguments (NaN, Infinity, -0, Symbol, Date, RegExp) still cache same-args', async () => {
     class Sample {
       public calls = 0;
+
       @memoize({ strategy: 'concat' })
       public async run(...args: unknown[]) {
         this.calls += 1;
+
         return args.map(String).join(',');
       }
     }
@@ -127,27 +133,31 @@ describe('memoize decorator — per-test inline classes', () => {
 
     class Sample {
       public calls = 0;
+
       @memoize({ strategy: 'hash' })
       public async run(...args: unknown[]) {
         this.calls += 1;
+
         return 'ok';
       }
     }
     const sample = new Sample();
 
-    await sample.run({a: 1}, undefined, 0);
-    await sample.run({a: 1}, undefined, 0);
+    await sample.run({ a: 1 }, undefined, 0);
+    await sample.run({ a: 1 }, undefined, 0);
 
-    expect(hashSpy).toHaveBeenCalledWith([{a: 1}, undefined, 0], 'blake2b512', 'base64url');
+    expect(hashSpy).toHaveBeenCalledWith([ { a: 1 }, undefined, 0], 'blake2b512', 'base64url');
     expect(sample.calls).toBe(1);
   });
 
   it('should not memoize return value with hash strategy and different arguments', async () => {
     class Sample {
       public calls = 0;
+
       @memoize({ strategy: 'hash' })
       public async run(...args: unknown[]) {
         this.calls += 1;
+
         return 'ok';
       }
     }
@@ -163,9 +173,11 @@ describe('memoize decorator — per-test inline classes', () => {
   it('should memoize return value with hash strategy across several calls with same args', async () => {
     class Sample {
       public calls = 0;
+
       @memoize({ strategy: 'hash' })
       public async run(arg: unknown) {
         this.calls += 1;
+
         return 'ok';
       }
     }
@@ -186,9 +198,11 @@ describe('memoize decorator — per-test inline classes', () => {
 
     class Sample {
       public calls = 0;
+
       @memoizeWithMockedTimers({ strategy: 'concat', ttl: 1_000 })
       public async run(x: string) {
         this.calls += 1;
+
         return x;
       }
     }
@@ -204,16 +218,19 @@ describe('memoize decorator — per-test inline classes', () => {
 
     await sample.run('k1');
     expect(sample.calls).toBe(2);
-    
   });
 
   it('error calls should never be momized', async () => {
     class Sample {
       public calls = 0;
+
       @memoize()
       public async run(x: number) {
         this.calls += 1;
-        if (x === 1) throw new Error('boom');
+        if (x === 1) {
+          throw new Error('boom');
+        }
+
         return x * 2;
       }
     }
@@ -225,5 +242,88 @@ describe('memoize decorator — per-test inline classes', () => {
     await expect(sample.run(1)).rejects.toThrow('boom');
     await expect(sample.run(1)).rejects.toThrow('boom');
     expect(sample.calls).toBe(2);
+  });
+
+  it('should NOT cache results listed in skipCache (primitives)', async () => {
+    class Sample {
+      public calls = 0;
+  
+      @memoize({ strategy: 'concat', skipCache: [null, undefined, 0, false, ''] })
+      public async run(kind: 'null' | 'undef' | 'zero' | 'false' | 'empty') {
+        this.calls += 1;
+        switch (kind) {
+          case 'null': return null;
+          case 'undef': return undefined;
+          case 'zero': return 0;
+          case 'false': return false;
+          case 'empty': return '';
+        }
+      }
+    }
+  
+    const sample = new Sample();
+  
+    // Each repeated call should invoke the original again because result is in skipCache.
+    await sample.run('null');
+    await sample.run('null');
+  
+    await sample.run('undef');
+    await sample.run('undef');
+  
+    await sample.run('zero');
+    await sample.run('zero');
+  
+    await sample.run('false');
+    await sample.run('false');
+  
+    await sample.run('empty');
+    await sample.run('empty');
+  
+    // 5 kinds × 2 calls each = 10 calls, none cached
+    expect(sample.calls).toBe(10);
+  });
+  
+  it('should cache results NOT listed in skipCache', async () => {
+    class Sample {
+      public calls = 0;
+  
+      @memoize({ strategy: 'concat', skipCache: [null, undefined] })
+      public async run(x: number) {
+        this.calls += 1;
+        // returns a non-skipped primitive
+        return x * 2;
+      }
+    }
+  
+    const sample = new Sample();
+  
+    expect(await sample.run(21)).toBe(42);
+    expect(await sample.run(21)).toBe(42);
+  
+    expect(sample.calls).toBe(1);
+  });
+  
+  it('should use equality for skipCache with objects: deep equal objects are cached', async () => {
+    const deepEqualObject = { a: 1 };
+  
+    class Sample {
+      public calls = 0;
+  
+      @memoize({ strategy: 'concat', skipCache: [deepEqualObject] })
+      public async run() {
+        this.calls += 1;
+
+        return { a: 1 };
+      }
+    }
+  
+    const sample = new Sample();
+  
+    const first = await sample.run();
+    const second = await sample.run();
+  
+    expect(first).toEqual({ a: 1 });
+    expect(second).toBe(first);
+    expect(sample.calls).toBe(1);
   });
 });

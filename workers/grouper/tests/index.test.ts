@@ -587,6 +587,81 @@ describe('GrouperWorker', () => {
         expect(await repetitionsCollection.find().count()).toBe(1);
       });
     });
+
+    describe('dynamic pattern addition', () => {
+      test('should group events when pattern added after we receive the first event', async () => {
+        /**
+         * Remove all existing patterns from the project
+         */
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([]);
+
+        /**
+         * Two nearly identical titles that could be grouped by `New error .*` pattern
+         */
+        const firstTitle = 'Dynamic pattern error 1111111111111111';
+        const secondTitle = 'Dynamic pattern error 2222222222222222';
+
+        await worker.handle(generateTask({ title: firstTitle }));
+        await worker.handle(generateTask({ title: secondTitle }));
+
+        const originalsBefore = await eventsCollection.find().toArray();
+
+        expect(originalsBefore.length).toBe(2);
+
+        const originalA = originalsBefore.find(e => e.payload.title === firstTitle)!;
+        const originalB = originalsBefore.find(e => e.payload.title === secondTitle)!;
+
+        expect(originalA).toBeTruthy();
+        expect(originalB).toBeTruthy();
+
+        /**
+         * Two events should be stored separately since grouping patterns of the project were empty
+         */
+        expect(originalA.groupHash).not.toBe(originalB.groupHash);
+
+        jest.spyOn(GrouperWorker.prototype as any, 'getProjectPatterns').mockResolvedValue([
+          {
+            _id: new mongodb.ObjectId(),
+            pattern: 'Dynamic pattern error .*',
+          },
+        ]);
+
+        /**
+         * Second title should be grouped with first event that matches inserted grouping pattern
+         * It should not be grouped with the existing event with same item because it violates grouping pattern logic
+         */
+        await worker.handle(generateTask({ title: secondTitle }));
+
+        const allEvents = await eventsCollection.find().toArray();
+        const allRepetitions = await repetitionsCollection.find().toArray();
+
+        /**
+         * Should still be only 2 original event documents in the DB
+         */
+        expect(allEvents.length).toBe(2);
+
+        const refreshedOriginalA = await eventsCollection.findOne({ _id: originalA._id });
+        const refreshedOriginalB = await eventsCollection.findOne({ _id: originalB._id });
+
+        // totalCount: originalA should have 2 (1 original + 1 new repetition),
+        // originalB should remain 1.
+        expect(refreshedOriginalA?.totalCount).toBe(2);
+        expect(refreshedOriginalB?.totalCount).toBe(1);
+
+        // Repetitions should be 1 and must reference originalA's groupHash
+        expect(allRepetitions.length).toBe(1);
+        allRepetitions.forEach(rep => {
+          expect(rep.groupHash).toBe(refreshedOriginalA!.groupHash);
+        });
+
+        /**
+         * Original B should have zero repetitions despite same title with latest event passed
+         */
+        const repsForOriginalB = await repetitionsCollection.find({ groupHash: refreshedOriginalB!.groupHash }).count();
+
+        expect(repsForOriginalB).toBe(0);
+      });
+    });
   });
 
   describe('Event marks handling', () => {
@@ -598,10 +673,12 @@ describe('GrouperWorker', () => {
 
         // Create an event first
         const firstTask = generateTask({ title: 'Test ignored event' });
+
         await worker.handle(firstTask);
 
         // Mark the event as ignored by updating it in database
         const eventHash = await (worker as any).getUniqueEventHash(firstTask);
+
         await eventsCollection.updateOne(
           { groupHash: eventHash },
           { $set: { marks: { ignored: true } } }
@@ -609,6 +686,7 @@ describe('GrouperWorker', () => {
 
         // Handle the same event again (repetition)
         const secondTask = generateTask({ title: 'Test ignored event' });
+
         await worker.handle(secondTask);
 
         // Verify that addTask was called only once (for the first occurrence)
@@ -624,10 +702,12 @@ describe('GrouperWorker', () => {
 
         // Create an event first
         const firstTask = generateTask({ title: 'Test non-ignored event' });
+
         await worker.handle(firstTask);
 
         // Handle the same event again (repetition) - without marking as ignored
         const secondTask = generateTask({ title: 'Test non-ignored event' });
+
         await worker.handle(secondTask);
 
         // Verify that addTask was called twice (for both occurrences)
@@ -643,6 +723,7 @@ describe('GrouperWorker', () => {
 
         // Create a new event (first occurrence)
         const task = generateTask({ title: 'Test new event without marks' });
+
         await worker.handle(task);
 
         // Verify that addTask was called for the first occurrence
