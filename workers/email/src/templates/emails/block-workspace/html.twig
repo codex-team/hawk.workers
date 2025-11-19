@@ -14,7 +14,7 @@
     <td align="center" style="padding: 15px 0;">
       <font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
         <span style="vertical-align: middle; display: inline-block;">
-          Workspace was blocked
+          Не принимаются новые события
         </span>
       </font>
     </td>
@@ -22,13 +22,15 @@
   <tr>
     <td style="display: block; padding: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
       <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-        Your workspace "{{ workspace.name | escape }}" was blocked because the plan was not renewed or events limit has been reached. Please, check payment settings and renew the plan.
+        Воркспейс «{{ workspace.name | escape }}» больше не принимает новые события, потому что закончился лимит или срок действия тарифного плана.
+
+        Чтобы продолжить получать новые события, выберите подходящий тарифный план и продлите подписку в настройках оплаты.
       </font>
     </td>
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: 'Go to payment settings'} %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: 'Открыть настройки'} %}
     </td>
   </tr>
 {% endblock %}
