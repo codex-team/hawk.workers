@@ -3,6 +3,10 @@
  *
  * @param value - value to decl
  * @param titles - titles to decl: ['новое событие', 'новых события', 'новых событий']
+ * @example declOfNum(1, ['новое событие', 'новых события', 'новых событий']) -> 'новое событие'
+ * @example declOfNum(2, ['новое событие', 'новых события', 'новых событий']) -> 'новых события'
+ * @example declOfNum(10, ['новое событие', 'новых события', 'новых событий']) -> 'новых событий'
+ * @example declOfNum(21, ['новое событие', 'новых события', 'новых событий']) -> 'новое событие'
  * @returns decl of number
  */
 export function declOfNum(value: number, titles: string[]): string {
