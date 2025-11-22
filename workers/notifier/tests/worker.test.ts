@@ -42,6 +42,11 @@ const rule = {
       endpoint: 'emailEndpoint',
       minPeriod: 0.5,
     },
+    loop: {
+      isEnabled: true,
+      endpoint: 'loopEndpoint',
+      minPeriod: 0.5,
+    },
   },
 } as any;
 
@@ -68,6 +73,11 @@ const alternativeRule = {
     email: {
       isEnabled: false,
       endpoint: 'emailEndpoint',
+      minPeriod: 0.5,
+    },
+    loop: {
+      isEnabled: true,
+      endpoint: 'loopEndpoint',
       minPeriod: 0.5,
     },
   },
@@ -359,6 +369,11 @@ describe('NotifierWorker', () => {
         email: {
           isEnabled: false,
           endpoint: 'emailEndpoint',
+          minPeriod: 0.5,
+        },
+        loop: {
+          isEnabled: true,
+          endpoint: 'loopEndpoint',
           minPeriod: 0.5,
         },
       };
