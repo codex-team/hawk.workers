@@ -380,7 +380,7 @@ describe('NotifierWorker', () => {
 
       await worker.handle(message);
 
-      expect(worker.sendToSenderWorker).toBeCalledTimes(2);
+      expect(worker.sendToSenderWorker).toBeCalledTimes(3);
     });
 
     it('should compute event count for period for each fitted rule', async () => {
