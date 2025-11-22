@@ -5,6 +5,7 @@ export enum ChannelType {
   Email = 'email',
   Telegram = 'telegram',
   Slack = 'slack',
+  Loop = 'loop',
 }
 
 /**

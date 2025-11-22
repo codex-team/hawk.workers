@@ -42,6 +42,11 @@ const rule = {
       endpoint: 'emailEndpoint',
       minPeriod: 0.5,
     },
+    loop: {
+      isEnabled: true,
+      endpoint: 'loopEndpoint',
+      minPeriod: 0.5,
+    },
   },
 } as any;
 
@@ -68,6 +73,11 @@ const alternativeRule = {
     email: {
       isEnabled: false,
       endpoint: 'emailEndpoint',
+      minPeriod: 0.5,
+    },
+    loop: {
+      isEnabled: true,
+      endpoint: 'loopEndpoint',
       minPeriod: 0.5,
     },
   },
@@ -361,11 +371,16 @@ describe('NotifierWorker', () => {
           endpoint: 'emailEndpoint',
           minPeriod: 0.5,
         },
+        loop: {
+          isEnabled: true,
+          endpoint: 'loopEndpoint',
+          minPeriod: 0.5,
+        },
       };
 
       await worker.handle(message);
 
-      expect(worker.sendToSenderWorker).toBeCalledTimes(2);
+      expect(worker.sendToSenderWorker).toBeCalledTimes(3);
     });
 
     it('should compute event count for period for each fitted rule', async () => {
