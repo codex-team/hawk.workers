@@ -37,18 +37,8 @@ export default class LoopProvider extends NotificationsProvider {
       case 'several-events':template = templates.SeveralEventsTpl; break;
     }
 
-    const message = await this.render(template, notification.payload as EventsTemplateVariables);
+    const message = template(notification.payload as EventsTemplateVariables);
 
     await this.deliverer.deliver(to, message);
-  }
-
-  /**
-   * Render loop message template
-   *
-   * @param template - template to render
-   * @param variables - variables for template
-   */
-  private async render(template: LoopTemplate, variables: EventsTemplateVariables): Promise<string> {
-    return template(variables);
   }
 }
