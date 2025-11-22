@@ -35,9 +35,6 @@ export default class LoopProvider extends NotificationsProvider {
     switch (notification.type) {
       case 'event': template = templates.EventTpl; break;
       case 'several-events':template = templates.SeveralEventsTpl; break;
-      /**
-       * @todo add assignee notification for telegram provider
-       */
     }
 
     const message = await this.render(template, notification.payload as EventsTemplateVariables);
