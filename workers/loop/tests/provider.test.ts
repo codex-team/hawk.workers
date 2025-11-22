@@ -128,15 +128,11 @@ describe('LoopProvider', () => {
         },
       };
 
-      const provider = new LoopProvider();
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const render = (): string => provider.render(templates.EventTpl, vars.payload);
+      const render = (): string => templates.EventTpl(vars.payload);
 
       expect(render).not.toThrowError();
 
-      const message = await render();
+      const message = render();
 
       expect(message).toBeDefined();
     });
@@ -144,18 +140,14 @@ describe('LoopProvider', () => {
     /**
      * Check that rendering of a several events message works without errors
      */
-    it('should successfully render a several-events template', async () => {
+    it('should successfully render a several-events template', () => {
       const vars: SeveralEventsNotification = SeveralEventsNotifyMock;
 
-      const provider = new LoopProvider();
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const render = (): string => provider.render(templates.SeveralEventsTpl, vars.payload);
+      const render = (): string => templates.SeveralEventsTpl(vars.payload);
 
       expect(render).not.toThrowError();
 
-      const message = await render();
+      const message = render();
 
       expect(message).toBeDefined();
 
