@@ -61,12 +61,12 @@ describe('LoopProvider', () => {
     it('Select the new-event template if there is a single event in notify payload', async () => {
       const provider = new LoopProvider();
       const EventTpl = jest.spyOn(templates, 'EventTpl');
-      const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
+      const SeveralEventsTplSpy = jest.spyOn(templates, 'SeveralEventsTpl');
 
       await provider.send(loopEndpointSample, EventNotifyMock);
 
       expect(EventTpl).toHaveBeenCalledTimes(1);
-      expect(SeveralEventsTpl).toHaveBeenCalledTimes(0);
+      expect(SeveralEventsTplSpy).toHaveBeenCalledTimes(0);
     });
 
     /**
@@ -75,12 +75,12 @@ describe('LoopProvider', () => {
     it('Select the several-events template if there are several events in notify payload', async () => {
       const provider = new LoopProvider();
       const EventTpl = jest.spyOn(templates, 'EventTpl');
-      const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
+      const SeveralEventsTplSpy = jest.spyOn(templates, 'SeveralEventsTpl');
 
       await provider.send(loopEndpointSample, SeveralEventsNotifyMock);
 
       expect(EventTpl).toHaveBeenCalledTimes(0);
-      expect(SeveralEventsTpl).toHaveBeenCalledTimes(1);
+      expect(SeveralEventsTplSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -95,25 +95,25 @@ describe('LoopProvider', () => {
       const vars: EventNotification = {
         type: 'event',
         payload: {
-          events: [{
+          events: [ {
             event: {
               totalCount: 10,
               timestamp: Date.now(),
               payload: {
                 title: 'New event',
-                backtrace: [{
+                backtrace: [ {
                   file: 'file',
                   line: 1,
-                  sourceCode: [{
+                  sourceCode: [ {
                     line: 1,
                     content: 'code',
-                  }],
-                }],
+                  } ],
+                } ],
               },
             } as DecodedGroupedEvent,
             daysRepeated: 1,
             newCount: 1,
-          }],
+          } ],
           period: 60,
           host: process.env.GARAGE_URL,
           hostOfStatic: process.env.API_STATIC_URL,
@@ -184,14 +184,14 @@ describe('LoopProvider', () => {
           timestamp: Date.now(),
           payload: {
             title: 'New event',
-            backtrace: [{
+            backtrace: [ {
               file: 'file',
               line: 1,
-              sourceCode: [{
+              sourceCode: [ {
                 line: 1,
                 content: 'code',
-              }],
-            }],
+              } ],
+            } ],
           },
         } as DecodedGroupedEvent,
         daysRepeated: 1,
