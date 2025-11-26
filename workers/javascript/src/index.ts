@@ -14,7 +14,7 @@ import { beautifyUserAgent } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
-import * as path from 'path';
+import { extname } from 'path';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -477,7 +477,7 @@ export default class JavascriptEventWorker extends EventWorker {
     if (sourcePath) {
       // remove query/hash if there is any
       const cleanPath = sourcePath.split('?')[0].split('#')[0];
-      const ext = path.extname(cleanPath).toLowerCase();
+      const ext = extname(cleanPath).toLowerCase();
 
       const isTs   = ext === '.ts' || ext === '.d.ts';
       const isTsx  = ext === '.tsx';
