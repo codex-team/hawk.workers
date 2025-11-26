@@ -553,7 +553,7 @@ describe('JavaScript event worker', () => {
      */
     const context = (worker as any).getFunctionContext(tsSource, 7, 'example.ts');
 
-    // Ожидаем "ApiClient.request"
+    // We expect "ApiClient.request"
     expect(context).toBe('ApiClient.request');
   });
 });
