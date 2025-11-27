@@ -22,15 +22,18 @@
   <tr>
     <td style="display: block; padding: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
       <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-        Вы больше не отслеживаете новые ошибки, потому что закончился лимит или срок действия тарифного плана.
-        <br>
-        Чтобы продолжить получать события, выберите подходящий тарифный план и продлите подписку в настройках оплаты.
+        <p style="margin-top: 0;">
+          Вы больше не отслеживаете новые ошибки, потому что закончился лимит или срок действия тарифного плана.
+        </p>
+        <p style="margin-bottom: 0;">
+          Чтобы продолжить получать события, выберите подходящий тарифный план и продлите подписку в настройках оплаты.
+        </p>
       </font>
     </td>
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: workspace.tariffPlanId === '5f47f031ff71510040f433c1' ? 'Увеличить лимит от 99 ₽' : 'Открыть настройки'} %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: workspace.tariffPlanId is same as('5f47f031ff71510040f433c1') ? 'Увеличить лимит от 99 ₽' : 'Открыть настройки'} %}
     </td>
   </tr>
 {% endblock %}
