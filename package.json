@@ -47,7 +47,8 @@
         "run-release": "yarn worker hawk-worker-release",
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
-        "run-limiter": "yarn worker hawk-worker-limiter"
+        "run-limiter": "yarn worker hawk-worker-limiter",
+        "run-performance": "yarn worker hawk-worker-performance"
     },
     "dependencies": {
         "@hawk.so/nodejs": "^3.1.1",
