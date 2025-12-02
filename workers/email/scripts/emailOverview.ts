@@ -211,7 +211,6 @@ class EmailTestServer {
    */
   private sendHTML(html: string, response: http.ServerResponse): void {
     response.writeHead(HttpStatusCode.Ok, {
-      'Content-Type': 'text/html',
       'Content-Type': 'text/html; charset=utf-8',
     });
     response.write(html);
@@ -321,6 +320,8 @@ class EmailTestServer {
    */
   private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
+
+    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
   }
 
   private async calculateDaysAfterPayday(
@@ -334,7 +335,7 @@ class EmailTestServer {
     const paidUntil = new Date(workspace.paidUntil);
     const diffTime = now.getTime() - paidUntil.getTime();
 
-    return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+
     if (diffTime <= 0) {
       return 0;
     }
