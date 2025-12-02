@@ -322,6 +322,8 @@ export default class PaymasterWorker extends Worker {
      * If it is blocked then remind admins about it
      */
     if (workspace.isBlocked) {
+      // Send reminders on certain days after payday
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
       if (daysAfterPayday in [1, 2, 3, 5, 7, 30]) {
         await this.sendBlockedWorkspaceReminders(workspace, daysAfterPayday);
       }

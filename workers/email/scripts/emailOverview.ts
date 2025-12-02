@@ -340,6 +340,8 @@ class EmailTestServer {
       return 0;
     }
 
+    // Calculate difference in days
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;
