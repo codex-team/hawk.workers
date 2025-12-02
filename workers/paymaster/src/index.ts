@@ -420,17 +420,17 @@ export default class PaymasterWorker extends Worker {
    * Sends reminder emails to blocked workspace admins
    *
    * @param workspace - workspace to send reminders for
-   * @param daysBlocked - number of days the workspace has been blocked
+   * @param daysAfterPayday - number of days the workspace spent after payday
    */
   private async sendBlockedWorkspaceReminders(
     workspace: WorkspaceDBScheme,
-    daysBlocked: number = null
+    daysAfterPayday: number = null
   ): Promise<void> {
     await this.addTask(WorkerNames.EMAIL, {
       type: 'blocked-workspace-reminder',
       payload: {
         workspaceId: workspace._id.toString(),
-        daysBlocked: daysBlocked,
+        daysAfterPayday: daysAfterPayday,
       },
     });
   }
