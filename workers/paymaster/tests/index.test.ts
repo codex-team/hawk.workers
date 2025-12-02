@@ -254,11 +254,51 @@ describe('PaymasterWorker', () => {
         workspaceId: workspace._id.toString(),
       },
     });
+    MockDate.reset();
+  });
+
+  test('Should remind admins for blocked workspace if it has subscription and after payday passed 3 days', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-27');
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: 'some-subscription-id',
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: true,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    const worker = new PaymasterWorker();
+    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    /**
+     * Assert
+     */
     expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
       type: 'blocked-workspace-reminder',
       payload: {
         workspaceId: workspace._id.toString(),
-        daysAfterPayday: expect.any(Number),
+        daysAfterPayday: 5,
       },
     });
     MockDate.reset();
