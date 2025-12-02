@@ -154,3 +154,26 @@ Twig.extendFilter('abbrNumber', (value: number): string => {
 Twig.extendFilter('sortEvents', (events: TemplateEventData[]): TemplateEventData[] => {
   return events.sort((a, b) => a.newCount - b.newCount);
 });
+
+/**
+ * Pluralize Russian words based on a number
+ *
+ * @param {number} n - the number to determine the form
+ * @param {string[]} forms - array of word forms [singular, few, many]
+ * @returns {string}
+ */
+Twig.extendFunction('pluralize_ru', (n: number, forms: string[]): string => {
+  if (n % 100 >= 11 && n % 100 <= 19) {
+    return forms[2];
+  }
+
+  const last = n % 10;
+
+  if (last === 1) {
+    return forms[0];
+  } else if (last >= 2 && last <= 4) {
+    return forms[1];
+  } else {
+    return forms[2];
+  }
+});
