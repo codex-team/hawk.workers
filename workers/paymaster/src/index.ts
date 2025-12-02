@@ -34,6 +34,12 @@ const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
 const DAYS_LEFT_ALERT = [3, 2, 1, 0];
 
 /**
+ * Days after payday to remind admins about blocked workspace
+ */
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const DAYS_AFTER_PAYDAY_TO_REMIND = [1, 2, 3, 5, 7, 30];
+
+/**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
  */
 export default class PaymasterWorker extends Worker {
@@ -324,7 +330,7 @@ export default class PaymasterWorker extends Worker {
     if (workspace.isBlocked) {
       // Send reminders on certain days after payday
       // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-      if (daysAfterPayday in [1, 2, 3, 5, 7, 30]) {
+      if (DAYS_AFTER_PAYDAY_TO_REMIND.includes(daysAfterPayday)) {
         await this.sendBlockedWorkspaceReminders(workspace, daysAfterPayday);
       }
 
