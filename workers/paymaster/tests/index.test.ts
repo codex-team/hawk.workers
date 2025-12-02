@@ -167,8 +167,6 @@ describe('PaymasterWorker', () => {
       plan,
       subscriptionId: 'some-subscription-id',
       lastChargeDate: new Date('2005-11-22'),
-      // + one month, right?
-      paidUntil: new Date('2005-12-22'),
       isBlocked: false,
       billingPeriodEventsCount: 10,
     });
@@ -205,14 +203,6 @@ describe('PaymasterWorker', () => {
         workspaceId: workspace._id.toString(),
       },
     });
-
-    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
-      type: 'blocked-workspace-reminder',
-      payload: {
-        workspaceId: workspace._id.toString(),
-        daysAfterPayday: expect.any(Number),
-      },
-    });
     MockDate.reset();
   });
 
@@ -220,7 +210,7 @@ describe('PaymasterWorker', () => {
     /**
      * Arrange
      */
-    const currentDate = new Date('2005-12-26');
+    const currentDate = new Date('2005-12-27');
     const plan = createPlanMock({
       monthlyCharge: 100,
       isDefault: true,
@@ -262,6 +252,13 @@ describe('PaymasterWorker', () => {
       type: 'block-workspace',
       payload: {
         workspaceId: workspace._id.toString(),
+      },
+    });
+    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
+      type: 'blocked-workspace-reminder',
+      payload: {
+        workspaceId: workspace._id.toString(),
+        daysAfterPayday: expect.any(Number),
       },
     });
     MockDate.reset();
