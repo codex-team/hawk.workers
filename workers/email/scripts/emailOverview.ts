@@ -147,6 +147,7 @@ class EmailTestServer {
       user,
       period: 10,
       reason: 'error on the payment server side',
+      daysAfterPayday: await this.calculateDaysAfterPayday(workspace),
     };
 
     try {
@@ -211,6 +212,7 @@ class EmailTestServer {
   private sendHTML(html: string, response: http.ServerResponse): void {
     response.writeHead(HttpStatusCode.Ok, {
       'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=utf-8',
     });
     response.write(html);
     response.end();
@@ -319,8 +321,27 @@ class EmailTestServer {
    */
   private async getWorkspace(workspaceId: string): Promise<WorkspaceDBScheme | null> {
     const connection = await this.accountsDb.getConnection();
+  }
+
+  private async calculateDaysAfterPayday(
+    workspace: WorkspaceDBScheme
+  ): Promise<number> {
+    if (!workspace.paidUntil) {
+      return 0;
+    }
+
+    const now = new Date();
+    const paidUntil = new Date(workspace.paidUntil);
+    const diffTime = now.getTime() - paidUntil.getTime();
 
     return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+    if (diffTime <= 0) {
+      return 0;
+    }
+
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
   }
 
   /**

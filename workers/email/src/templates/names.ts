@@ -4,6 +4,7 @@
 enum Templates {
   Assignee = 'assignee',
   BlockWorkspace = 'block-workspace',
+  BlockedWorkspaceReminder = 'blocked-workspace-reminder',
   DaysLimitAlmostReached = 'days-limit-almost-reached',
   Event = 'event',
   EventsLimitAlmostReached = 'events-limit-almost-reached',

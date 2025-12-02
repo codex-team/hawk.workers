@@ -1,0 +1,3 @@
+{% import "../../components/utils.twig" as utils %}
+
+Вы уже {{ daysAfterPayday }} {{ daysAfterPayday ? utils.pluralize_ru(daysAfterPayday, ['день', 'дня', 'дней']) : '' }} не получаете новые ошибки

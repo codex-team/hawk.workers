@@ -1,0 +1,14 @@
+{% import "../../components/utils.twig" as utils %}
+
+Вы уже {{ daysAfterPayday }} {{ daysAfterPayday ? utils.pluralize_ru(daysAfterPayday, ['день', 'дня', 'дней']) : '' }} не получаете новые ошибки.
+
+Напоминаем, что мониторинг ошибок в «{{ workspace.name | escape }}» всё ещё остановлен, потому что закончился лимит или срок действия тарифного плана.
+
+Чтобы снова видеть актуальные события, выберите подходящий тарифный план и продлите подписку в настройках оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing
+
+***
+
+Хоук
+Российский трекер ошибок
+
+Made by CodeX
