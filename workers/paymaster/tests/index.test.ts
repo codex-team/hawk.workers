@@ -167,6 +167,8 @@ describe('PaymasterWorker', () => {
       plan,
       subscriptionId: 'some-subscription-id',
       lastChargeDate: new Date('2005-11-22'),
+      // + one month, right?
+      paidUntil: new Date('2005-12-22'),
       isBlocked: false,
       billingPeriodEventsCount: 10,
     });
