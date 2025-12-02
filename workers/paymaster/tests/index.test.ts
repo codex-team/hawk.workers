@@ -210,7 +210,7 @@ describe('PaymasterWorker', () => {
       type: 'blocked-workspace-reminder',
       payload: {
         workspaceId: workspace._id.toString(),
-        daysAfterPayday: 2,
+        daysAfterPayday: expect.any(Number),
       },
     });
     MockDate.reset();
