@@ -203,6 +203,14 @@ describe('PaymasterWorker', () => {
         workspaceId: workspace._id.toString(),
       },
     });
+
+    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
+      type: 'blocked-workspace-reminder',
+      payload: {
+        workspaceId: workspace._id.toString(),
+        daysAfterPayday: 2,
+      },
+    });
     MockDate.reset();
   });
 

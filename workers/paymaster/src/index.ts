@@ -319,9 +319,13 @@ export default class PaymasterWorker extends Worker {
 
     /**
      * Time to pay but workspace has paid plan
-     * If it is blocked then do nothing
+     * If it is blocked then remind admins about it
      */
     if (workspace.isBlocked) {
+      if (daysAfterPayday in [1, 2, 3, 5, 7, 30]) {
+        await this.sendBlockedWorkspaceReminders(workspace, daysAfterPayday);
+      }
+
       return [workspace, true];
     }
 
@@ -400,6 +404,26 @@ export default class PaymasterWorker extends Worker {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'unblock-workspace',
       workspaceId: workspace._id.toString(),
+    });
+  }
+
+
+  /**
+   * Sends reminder emails to blocked workspace admins
+   *
+   * @param workspace - workspace to send reminders for
+   * @param daysBlocked - number of days the workspace has been blocked
+   */
+  private async sendBlockedWorkspaceReminders(
+    workspace: WorkspaceDBScheme,
+    daysBlocked: number = null
+  ): Promise<void> {
+    await this.addTask(WorkerNames.EMAIL, {
+      type: 'blocked-workspace-reminder',
+      payload: {
+        workspaceId: workspace._id.toString(),
+        daysBlocked: daysBlocked,
+      },
     });
   }
 
