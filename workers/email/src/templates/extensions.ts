@@ -163,17 +163,17 @@ Twig.extendFilter('sortEvents', (events: TemplateEventData[]): TemplateEventData
  * @returns {string}
  */
 Twig.extendFunction('pluralize_ru', (n: number, forms: string[]): string => {
-  // eslint-disable-next-line no-magic-numbers
+  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   if (n % 100 >= 11 && n % 100 <= 19) {
     return forms[2];
   }
 
-  // eslint-disable-next-line no-magic-numbers
+  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   const last = n % 10;
 
   if (last === 1) {
     return forms[0];
-    // eslint-disable-next-line no-magic-numbers
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   } else if (last >= 2 && last <= 4) {
     return forms[1];
   } else {
