@@ -1,6 +1,7 @@
 import { SenderWorkerAssigneeTask } from './assignee';
 import { SenderWorkerEventTask } from './event';
-import { SenderWorkerBlockWorkspaceTask } from './blockWorkspace';
+import { SenderWorkerBlockWorkspaceTask } from './block-workspace';
+import { SenderWorkerBlockedWorkspaceReminderTask } from './blocked-workspace-reminder';
 import { SenderWorkerPaymentFailedTask } from './payment-failed';
 import { SenderWorkerPaymentSuccessTask } from './payment-success';
 import { SenderWorkerDaysLimitAlmostReachedTask } from './days-limit-almost-reached';
@@ -11,7 +12,8 @@ import { SenderWorkerWorkspaceInviteTask } from './workspace-invite';
 
 export { SenderWorkerEventTask, SenderWorkerEventPayload } from './event';
 export { SenderWorkerAssigneeTask, SenderWorkerAssigneePayload } from './assignee';
-export { SenderWorkerBlockWorkspaceTask, SenderWorkerBlockWorkspacePayload } from './blockWorkspace';
+export { SenderWorkerBlockWorkspaceTask, SenderWorkerBlockWorkspacePayload } from './block-workspace';
+export { SenderWorkerBlockedWorkspaceReminderTask, SenderWorkerBlockedWorkspaceReminderPayload } from './blocked-workspace-reminder';
 export { SenderWorkerPaymentFailedTask, SenderWorkerPaymentFailedPayload } from './payment-failed';
 export { SenderWorkerPaymentSuccessTask, SenderWorkerPaymentSuccessPayload } from './payment-success';
 export { SenderWorkerDaysLimitAlmostReachedTask, SenderWorkerDaysLimitAlmostReachedPayload } from './days-limit-almost-reached';
@@ -23,6 +25,7 @@ export { SenderWorkerWorkspaceInviteTask, SenderWorkerWorkspaceInvitePayload } f
 export type SenderWorkerTask = SenderWorkerEventTask
   | SenderWorkerAssigneeTask
   | SenderWorkerBlockWorkspaceTask
+  | SenderWorkerBlockedWorkspaceReminderTask
   | SenderWorkerPaymentFailedTask
   | SenderWorkerPaymentSuccessTask
   | SenderWorkerDaysLimitAlmostReachedTask

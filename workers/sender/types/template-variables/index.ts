@@ -1,7 +1,8 @@
 import { EventsTemplateVariables, EventNotification } from './event';
 import { SeveralEventsNotification } from './several-events';
 import { AssigneeTemplateVariables, AssigneeNotification } from './assignee';
-import { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './blockWorkspace';
+import { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './block-workspace';
+import { BlockedWorkspaceReminderTemplateVariables, BlockedWorkspaceReminderNotification } from './blocked-workspace-reminder';
 import { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 import { PaymentSuccessNotification, PaymentSuccessTemplateVariables } from './payment-success';
 import { DaysLimitAlmostReachedTemplateVariables, DaysLimitAlmostReachedNotification } from './days-limit-almost-reached';
@@ -14,7 +15,8 @@ export { CommonTemplateVariables } from './common-template';
 export { TemplateEventData, EventsTemplateVariables, EventNotification } from './event';
 export { SeveralEventsNotification } from './several-events';
 export { AssigneeTemplateVariables, AssigneeNotification } from './assignee';
-export { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './blockWorkspace';
+export { BlockWorkspaceTemplateVariables, BlockWorkspaceNotification } from './block-workspace';
+export { BlockedWorkspaceReminderTemplateVariables, BlockedWorkspaceReminderNotification } from './blocked-workspace-reminder';
 export { PaymentFailedTemplateVariables, PaymentFailedNotification } from './payment-failed';
 export { PaymentSuccessNotification, PaymentSuccessTemplateVariables } from './payment-success';
 export { SignUpNotification, SignUpVariables } from './sign-up';
@@ -28,6 +30,7 @@ export type Notification = EventNotification
   | SeveralEventsNotification
   | AssigneeNotification
   | BlockWorkspaceNotification
+  | BlockedWorkspaceReminderNotification
   | PaymentFailedNotification
   | PaymentSuccessNotification
   | DaysLimitAlmostReachedNotification
@@ -42,6 +45,7 @@ export type Notification = EventNotification
 export type TemplateVariables = EventsTemplateVariables
   | AssigneeTemplateVariables
   | BlockWorkspaceTemplateVariables
+  | BlockedWorkspaceReminderTemplateVariables
   | PaymentFailedTemplateVariables
   | PaymentSuccessTemplateVariables
   | DaysLimitAlmostReachedTemplateVariables
