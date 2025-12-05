@@ -257,7 +257,7 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
-  test('Should remind admins for blocked workspace if it has subscription and after payday passed 3 days', async () => {
+  test('Should remind admins for blocked workspace if it has subscription and after payday passed 5 days', async () => {
     /**
      * Arrange
      */
