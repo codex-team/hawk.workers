@@ -430,7 +430,7 @@ export default class PaymasterWorker extends Worker {
       type: 'blocked-workspace-reminder',
       payload: {
         workspaceId: workspace._id.toString(),
-        daysAfterPayday: daysAfterPayday,
+        daysAfterPayday,
       },
     });
   }
