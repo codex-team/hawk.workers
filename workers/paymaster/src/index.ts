@@ -424,7 +424,7 @@ export default class PaymasterWorker extends Worker {
    */
   private async sendBlockedWorkspaceReminders(
     workspace: WorkspaceDBScheme,
-    daysAfterPayday: number = null
+    daysAfterPayday: number
   ): Promise<void> {
     await this.addTask(WorkerNames.EMAIL, {
       type: 'blocked-workspace-reminder',
