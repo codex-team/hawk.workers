@@ -346,7 +346,6 @@ class EmailTestServer {
     const paidUntil = new Date(workspace.paidUntil);
     const diffTime = now.getTime() - paidUntil.getTime();
 
-
     if (diffTime <= 0) {
       return 0;
     }
