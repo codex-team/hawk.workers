@@ -324,9 +324,20 @@ class EmailTestServer {
     return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
   }
 
+  /**
+   * Calculate days after payday
+   * Return number of days after payday. If payday is in the future, return 0
+   *
+   * @param workspace - workspace data
+   * @returns number of days after payday
+   */
   private async calculateDaysAfterPayday(
     workspace: WorkspaceDBScheme
   ): Promise<number> {
+    /**
+     * Calculate number of days after payday
+     * If workspace.paidUntil is in the future, return 0
+     */
     if (!workspace.paidUntil) {
       return 0;
     }
