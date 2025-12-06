@@ -352,11 +352,9 @@ export default abstract class SenderWorker extends Worker {
           },
         });
       }
-
-      await this.updateLastNoticationDate(workspace, eventType);
     }));
 
-
+    await this.updateLastNoticationDate(workspace, eventType);
   }
 
   /**
@@ -419,9 +417,9 @@ export default abstract class SenderWorker extends Worker {
           },
         });
       }
-
-      await this.updateLastNoticationDate(workspace, eventType);
     }));
+
+    await this.updateLastNoticationDate(workspace, eventType);
   }
 
   /**
@@ -482,9 +480,9 @@ export default abstract class SenderWorker extends Worker {
           },
         });
       }
-
-      await this.updateLastNoticationDate(workspace, eventType);
     }));
+
+    await this.updateLastNoticationDate(workspace, eventType);
   }
 
   /**
