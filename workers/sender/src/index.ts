@@ -330,7 +330,7 @@ export default abstract class SenderWorker extends Worker {
     const admins = await this.getWorkspaceAdmins(workspaceId);
 
     if (!admins) {
-      this.logger.error(`Cannot send blocked workspace reminder notification: workspace team not found. Payload: ${task}`);
+      this.logger.error(`Cannot send blocked workspace reminder notification: workspace team not found. Payload: ${JSON.stringify(task)}`);
 
       return;
     }
