@@ -346,7 +346,7 @@ class EmailTestServer {
     } else if (workspace.lastChargeDate) {
       const lastCharge = new Date(workspace.lastChargeDate);
 
-      expectedPayDay = new Date(lastCharge.setMonth(lastCharge.getMonth() + 1));
+      expectedPayDay = new Date(lastCharge.getFullYear(), lastCharge.getMonth() + 1, lastCharge.getDate());
     }
 
     if (!expectedPayDay) {
