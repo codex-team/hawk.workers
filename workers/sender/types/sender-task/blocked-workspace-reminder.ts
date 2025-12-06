@@ -25,5 +25,5 @@ export interface SenderWorkerBlockedWorkspaceReminderTask {
   /**
    * Payload for task for blocked workspace reminder
    */
-  payload: SenderWorkerBlockedWorkspaceReminderPayload
+  payload: SenderWorkerBlockedWorkspaceReminderPayload;
 }
