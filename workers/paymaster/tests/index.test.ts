@@ -351,7 +351,6 @@ describe('PaymasterWorker', () => {
       );
     });
   });
-  });
 
   test('Should update lastChargeDate and billingPeriodEventsCount if workspace has free tariff plan and it\'s time to pay', async () => {
     /**
