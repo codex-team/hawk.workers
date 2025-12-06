@@ -313,7 +313,7 @@ export default abstract class SenderWorker extends Worker {
     const workspace = await this.getWorkspace(workspaceId);
 
     if (!workspace) {
-      this.logger.error(`Cannot send blocked workspace reminder notification: workspace not found. Payload: ${task}`);
+      this.logger.error(`Cannot send blocked workspace reminder notification: workspace not found. Payload: ${JSON.stringify(task)}`);
 
       return;
     }
