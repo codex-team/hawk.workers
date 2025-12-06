@@ -20,10 +20,10 @@ export interface SenderWorkerBlockedWorkspaceReminderTask {
   /**
    * Task for blocked workspace reminder
    */
-  type: 'blocked-workspace-reminder',
+  type: 'blocked-workspace-reminder';
 
   /**
    * Payload for task for blocked workspace reminder
    */
-  payload: SenderWorkerBlockedWorkspaceReminderPayload
+  payload: SenderWorkerBlockedWorkspaceReminderPayload;
 }
