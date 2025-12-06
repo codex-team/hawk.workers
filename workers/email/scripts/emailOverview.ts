@@ -18,7 +18,8 @@ import { GroupedEventDBScheme, ProjectDBScheme, UserDBScheme, WorkspaceDBScheme 
 import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { HttpStatusCode, HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE, MS_IN_SEC } from '../../../lib/utils/consts';
+import { HttpStatusCode } from '../../../lib/utils/consts';
+import { daysAfterPayday } from '../../../lib/utils/payday';
 
 /**
  * Merge email worker .env and root workers .env
@@ -27,11 +28,6 @@ const rootEnv = dotenv.config({ path: path.resolve(__dirname, '../../../.env') }
 const localEnv = dotenv.config({ path: path.resolve(__dirname, '../.env') }).parsed;
 
 Object.assign(process.env, rootEnv, localEnv);
-
-/**
- * Milliseconds in day. Needed for calculating difference between dates in days.
- */
-const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
  * Server for rendering email templates
@@ -339,36 +335,13 @@ class EmailTestServer {
   private async calculateDaysAfterPayday(
     workspace: WorkspaceDBScheme
   ): Promise<number> {
-    /**
-     * Calculate number of days after payday
-     * The expected payday is either paidUntil or lastChargeDate + 1 month
-     * This follows the same logic as PaymasterWorker
-     */
-    let expectedPayDay: Date | null = null;
-
-    if (workspace.paidUntil) {
-      expectedPayDay = new Date(workspace.paidUntil);
-    } else if (workspace.lastChargeDate) {
-      const lastCharge = new Date(workspace.lastChargeDate);
-
-      expectedPayDay = new Date(lastCharge.getFullYear(), lastCharge.getMonth() + 1, lastCharge.getDate());
-    }
-
-    if (!expectedPayDay) {
+    if (!workspace.lastChargeDate) {
       return 0;
     }
 
-    const now = new Date();
-    const diffTime = now.getTime() - expectedPayDay.getTime();
+    const days = daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil);
 
-    if (diffTime <= 0) {
-      return 0;
-    }
-
-    // Calculate difference in days
-    const diffDays = Math.floor(diffTime / MILLISECONDS_IN_DAY);
-
-    return diffDays;
+    return days > 0 ? days : 0;
   }
 
   /**
