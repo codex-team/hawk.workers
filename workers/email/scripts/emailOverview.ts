@@ -29,6 +29,11 @@ const localEnv = dotenv.config({ path: path.resolve(__dirname, '../.env') }).par
 Object.assign(process.env, rootEnv, localEnv);
 
 /**
+ * Milliseconds in day. Needs for calculating difference between dates in days.
+ */
+const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
+
+/**
  * Server for rendering email templates
  */
 class EmailTestServer {
@@ -361,7 +366,6 @@ class EmailTestServer {
     }
 
     // Calculate difference in days
-    const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
     const diffDays = Math.floor(diffTime / MILLISECONDS_IN_DAY);
 
     return diffDays;
