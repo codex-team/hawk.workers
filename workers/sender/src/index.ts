@@ -354,7 +354,7 @@ export default abstract class SenderWorker extends Worker {
       }
     }));
 
-    await this.updateLastNoticationDate(workspace, eventType);
+    await this.updateLastNotificationDate(workspace, eventType);
   }
 
   /**
@@ -419,7 +419,7 @@ export default abstract class SenderWorker extends Worker {
       }
     }));
 
-    await this.updateLastNoticationDate(workspace, eventType);
+    await this.updateLastNotificationDate(workspace, eventType);
   }
 
   /**
@@ -482,7 +482,7 @@ export default abstract class SenderWorker extends Worker {
       }
     }));
 
-    await this.updateLastNoticationDate(workspace, eventType);
+    await this.updateLastNotificationDate(workspace, eventType);
   }
 
   /**
@@ -772,7 +772,7 @@ export default abstract class SenderWorker extends Worker {
    * @param {string} type - event type
    * @param {number} date - date to be set
    */
-  private async updateLastNoticationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
+  private async updateLastNotificationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
     /**
      * Throw an error if workspace is missing
      */
