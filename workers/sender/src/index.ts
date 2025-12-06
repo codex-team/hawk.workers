@@ -352,7 +352,11 @@ export default abstract class SenderWorker extends Worker {
           },
         });
       }
+
+      await this.updateLastNoticationDate(workspace, eventType);
     }));
+
+
   }
 
   /**
@@ -414,12 +418,9 @@ export default abstract class SenderWorker extends Worker {
             daysLeft,
           },
         });
-
-        /**
-         * Update last notification data in DB
-         */
-        await this.updateLastNoticationDate(workspace, eventType);
       }
+
+      await this.updateLastNoticationDate(workspace, eventType);
     }));
   }
 
@@ -480,9 +481,9 @@ export default abstract class SenderWorker extends Worker {
             eventsLimit,
           },
         });
-
-        await this.updateLastNoticationDate(workspace, eventType);
       }
+
+      await this.updateLastNoticationDate(workspace, eventType);
     }));
   }
 
