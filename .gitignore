@@ -14,8 +14,7 @@ globalConfig.json
 !jest.setup.redis-mock.js
 !jest-mongodb-config.js
 !migrate-mongo-config.js
-!env.js
-!env-test.js
+!/env.js
 !convertors/**/*.js
 !tools/**/*.js
 !bin/**/*.js
