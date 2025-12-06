@@ -1,4 +1,7 @@
 "use strict";
+/**
+ * @file import this file to test-files to provide env-vars for testing
+ */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -24,9 +27,5 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv = __importStar(require("dotenv"));
-const path = __importStar(require("path"));
-/**
- * Load local environment configuration
- */
-const localEnv = dotenv.config({ path: path.resolve(__dirname, '../.env') }).parsed;
-Object.assign(process.env, localEnv);
+const path_1 = require("path");
+Object.assign(process.env, dotenv.config({ path: (0, path_1.resolve)(__dirname, '.env.test') }).parsed);

@@ -15,5 +15,7 @@ globalConfig.json
 !jest-mongodb-config.js
 !migrate-mongo-config.js
 !env.js
+!env-test.js
 !convertors/**/*.js
 !tools/**/*.js
+!bin/**/*.js
