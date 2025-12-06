@@ -25,6 +25,7 @@ export interface BlockedWorkspaceReminderNotification extends Notification<Block
    * Notification when workspace blocked
    */
   type: 'blocked-workspace-reminder';
+
   /**
    * Notification payload
    */
