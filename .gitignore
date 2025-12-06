@@ -6,3 +6,15 @@ coverage
 .DS_Store
 globalConfig.json
 *.log
+*.js
+!jest.config.js
+!jest.global-teardown.js
+!jest.setup.js
+!jest.setup.mongo-repl-set.js
+!jest.setup.redis-mock.js
+!jest-mongodb-config.js
+!migrate-mongo-config.js
+!/env.js
+!convertors/**/*.js
+!tools/**/*.js
+!bin/**/*.js

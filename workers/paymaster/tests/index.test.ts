@@ -210,7 +210,7 @@ describe('PaymasterWorker', () => {
     /**
      * Arrange
      */
-    const currentDate = new Date('2005-12-26');
+    const currentDate = new Date('2005-12-27');
     const plan = createPlanMock({
       monthlyCharge: 100,
       isDefault: true,
@@ -255,6 +255,101 @@ describe('PaymasterWorker', () => {
       },
     });
     MockDate.reset();
+  });
+
+  /**
+   * Helper function to run blocked workspace reminder test
+   *
+   * @param lastChargeDate - date of last charge
+   * @param currentDate - current date to test
+   * @param shouldBeCalled - whether the reminder should be called
+   * @param expectedDaysAfterPayday - expected days after payday in the call
+   */
+  const testBlockedWorkspaceReminder = async (
+    lastChargeDate: Date,
+    currentDate: Date,
+    shouldBeCalled: boolean,
+    expectedDaysAfterPayday?: number
+  ): Promise<jest.SpyInstance> => {
+    const plan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+    const workspace = createWorkspaceMock({
+      plan,
+      subscriptionId: 'some-subscription-id',
+      lastChargeDate,
+      isBlocked: true,
+      billingPeriodEventsCount: 10,
+    });
+
+    await fillDatabaseWithMockedData({
+      workspace,
+      plan,
+    });
+
+    MockDate.set(currentDate);
+
+    const worker = new PaymasterWorker();
+    const addTaskSpy = jest.spyOn(worker, 'addTask');
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    if (shouldBeCalled) {
+      expect(addTaskSpy).toHaveBeenCalledWith('sender/email', {
+        type: 'blocked-workspace-reminder',
+        payload: {
+          workspaceId: workspace._id.toString(),
+          daysAfterPayday: expectedDaysAfterPayday,
+        },
+      });
+    } else {
+      expect(addTaskSpy).not.toHaveBeenCalledWith('sender/email', expect.objectContaining({
+        type: 'blocked-workspace-reminder',
+      }));
+    }
+
+    MockDate.reset();
+    return addTaskSpy;
+  };
+
+  describe('Blocked workspace reminder tests', () => {
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 1 day', async () => {
+      await testBlockedWorkspaceReminder(
+        new Date('2005-11-22'),
+        new Date('2005-12-23'),
+        true,
+        1
+      );
+    });
+
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 5 days', async () => {
+      await testBlockedWorkspaceReminder(
+        new Date('2005-11-22'),
+        new Date('2005-12-27'),
+        true,
+        5
+      );
+    });
+
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 30 days', async () => {
+      await testBlockedWorkspaceReminder(
+        new Date('2005-11-22'),
+        new Date('2006-01-21'),
+        true,
+        30
+      );
+    });
+
+    test('Should not remind admins for blocked workspace on days not in reminder schedule (day 4)', async () => {
+      await testBlockedWorkspaceReminder(
+        new Date('2005-11-22'),
+        new Date('2005-12-26'),
+        false
+      );
+    });
   });
 
   test('Should update lastChargeDate and billingPeriodEventsCount if workspace has free tariff plan and it\'s time to pay', async () => {

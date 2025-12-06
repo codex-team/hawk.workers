@@ -19,6 +19,7 @@ import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { HttpStatusCode } from '../../../lib/utils/consts';
+import { daysAfterPayday } from '../../../lib/utils/payday';
 
 /**
  * Merge email worker .env and root workers .env
@@ -147,6 +148,7 @@ class EmailTestServer {
       user,
       period: 10,
       reason: 'error on the payment server side',
+      daysAfterPayday: await this.calculateDaysAfterPayday(workspace),
     };
 
     try {
@@ -210,7 +212,7 @@ class EmailTestServer {
    */
   private sendHTML(html: string, response: http.ServerResponse): void {
     response.writeHead(HttpStatusCode.Ok, {
-      'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=utf-8',
     });
     response.write(html);
     response.end();
@@ -321,6 +323,25 @@ class EmailTestServer {
     const connection = await this.accountsDb.getConnection();
 
     return connection.collection('workspaces').findOne({ _id: new ObjectId(workspaceId) });
+  }
+
+  /**
+   * Calculate days after payday
+   * Return number of days after payday. If payday is in the future, return 0
+   *
+   * @param workspace - workspace data
+   * @returns {Promise<number>} number of days after payday
+   */
+  private async calculateDaysAfterPayday(
+    workspace: WorkspaceDBScheme
+  ): Promise<number> {
+    if (!workspace.lastChargeDate) {
+      return 0;
+    }
+
+    const days = daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil);
+
+    return days > 0 ? days : 0;
   }
 
   /**

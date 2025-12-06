@@ -7,18 +7,13 @@ import { Collection } from 'mongodb';
 import { PlanDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import axios from 'axios';
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
 import * as WorkerNames from '../../../lib/workerNames';
 import HawkCatcher from '@hawk.so/nodejs';
+import { daysBeforePayday, daysAfterPayday } from '../../../lib/utils/payday';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
 });
-
-/**
- * Milliseconds in day. Needs for calculating difference between dates in days.
- */
-const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
  * Days after payday to try paying in actual subscription
@@ -32,6 +27,12 @@ const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
  */
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
 const DAYS_LEFT_ALERT = [3, 2, 1, 0];
+
+/**
+ * Days after payday to remind admins about blocked workspace
+ */
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const DAYS_AFTER_PAYDAY_TO_REMIND = [1, 2, 3, 5, 7, 30];
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -101,52 +102,6 @@ export default class PaymasterWorker extends Worker {
     }
 
     return endDate;
-  }
-
-  /**
-   * Returns difference between now and payday in days
-   *
-   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
-   *
-   * @param date - last charge date
-   * @param paidUntil - paid until date
-   * @param isDebug - flag for debug purposes
-   */
-  private static daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
-
-    if (isDebug) {
-      expectedPayDay.setDate(date.getDate() + 1);
-    } else if (!paidUntil) {
-      expectedPayDay.setMonth(date.getMonth() + 1);
-    }
-
-    const now = new Date().getTime();
-
-    return Math.floor((expectedPayDay.getTime() - now) / MILLISECONDS_IN_DAY);
-  }
-
-  /**
-   * Returns difference between payday and now in days
-   *
-   * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
-   *
-   * @param date - last charge date
-   * @param paidUntil - paid until date
-   * @param isDebug - flag for debug purposes
-   */
-  private static daysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-    const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
-
-    if (isDebug) {
-      expectedPayDay.setDate(date.getDate() + 1);
-    } else if (!paidUntil) {
-      expectedPayDay.setMonth(date.getMonth() + 1);
-    }
-
-    const now = new Date().getTime();
-
-    return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
   }
 
   /**
@@ -247,13 +202,13 @@ export default class PaymasterWorker extends Worker {
      * How many days have passed since payments the expected day of payments
      */
     // @ts-expect-error debug
-    const daysAfterPayday = PaymasterWorker.daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
+    const daysAfterPaydayValue = daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * How many days left for the expected day of payments
      */
     // @ts-expect-error debug
-    const daysLeft = PaymasterWorker.daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
+    const daysLeft = daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
      * Do we need to ask for money
@@ -319,9 +274,15 @@ export default class PaymasterWorker extends Worker {
 
     /**
      * Time to pay but workspace has paid plan
-     * If it is blocked then do nothing
+     * If it is blocked then remind admins about it
      */
     if (workspace.isBlocked) {
+      // Send reminders on certain days after payday
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      if (DAYS_AFTER_PAYDAY_TO_REMIND.includes(daysAfterPaydayValue)) {
+        await this.sendBlockedWorkspaceReminders(workspace, daysAfterPaydayValue);
+      }
+
       return [workspace, true];
     }
 
@@ -338,7 +299,7 @@ export default class PaymasterWorker extends Worker {
      * Block workspace if it has paid subscription,
      * but a few days have passed after payday
      */
-    if (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
+    if (daysAfterPaydayValue > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
@@ -400,6 +361,26 @@ export default class PaymasterWorker extends Worker {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'unblock-workspace',
       workspaceId: workspace._id.toString(),
+    });
+  }
+
+
+  /**
+   * Sends reminder emails to blocked workspace admins
+   *
+   * @param workspace - workspace to send reminders for
+   * @param days - number of days the workspace spent after payday
+   */
+  private async sendBlockedWorkspaceReminders(
+    workspace: WorkspaceDBScheme,
+    days: number
+  ): Promise<void> {
+    await this.addTask(WorkerNames.EMAIL, {
+      type: 'blocked-workspace-reminder',
+      payload: {
+        workspaceId: workspace._id.toString(),
+        daysAfterPayday: days,
+      },
     });
   }
 

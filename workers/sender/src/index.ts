@@ -29,7 +29,8 @@ import {
   SenderWorkerEventsLimitAlmostReachedTask,
   SenderWorkerSignUpTask,
   SenderWorkerPasswordResetTask,
-  SenderWorkerWorkspaceInviteTask
+  SenderWorkerWorkspaceInviteTask,
+  SenderWorkerBlockedWorkspaceReminderTask
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification, SignUpNotification } from '../types/template-variables';
@@ -115,6 +116,8 @@ export default abstract class SenderWorker extends Worker {
         return this.handleAssigneeTask(task as SenderWorkerAssigneeTask);
       case 'block-workspace':
         return this.handleBlockWorkspaceTask(task as SenderWorkerBlockWorkspaceTask);
+      case 'blocked-workspace-reminder':
+        return this.handleBlockedWorkspaceReminderTask(task as SenderWorkerBlockedWorkspaceReminderTask);
       case 'days-limit-almost-reached':
         return this.handleDaysLimitAlmostReachedTask(task as SenderWorkerDaysLimitAlmostReachedTask);
       case 'event':
@@ -196,7 +199,7 @@ export default abstract class SenderWorker extends Worker {
         project,
         events: eventsData,
         period: channel.minPeriod,
-        notificationRuleId: rule._id,
+        notificationRuleId: rule._id.toString(),
       },
     } as EventNotification | SeveralEventsNotification);
   }
@@ -297,6 +300,63 @@ export default abstract class SenderWorker extends Worker {
     }));
   }
 
+  private async handleBlockedWorkspaceReminderTask(task: SenderWorkerBlockedWorkspaceReminderTask): Promise<void> {
+    const eventType = 'blocked-workspace-reminder';
+
+    /**
+     * Send message not often than once per day
+     */
+    const throttleInterval = TimeMs.DAY;
+
+    const { workspaceId, daysAfterPayday } = task.payload;
+
+    const workspace = await this.getWorkspace(workspaceId);
+
+    if (!workspace) {
+      this.logger.error(`Cannot send blocked workspace reminder notification: workspace not found. Payload: ${JSON.stringify(task)}`);
+
+      return;
+    }
+
+    const allowToSendNotification = this.needToSendNextNotification(workspace, eventType, throttleInterval);
+
+    /**
+     * Do not send any notifications if we have already done in target throttle time
+     */
+    if (!allowToSendNotification) {
+      return;
+    }
+
+    const admins = await this.getWorkspaceAdmins(workspaceId);
+
+    if (!admins) {
+      this.logger.error(`Cannot send blocked workspace reminder notification: workspace team not found. Payload: ${JSON.stringify(task)}`);
+
+      return;
+    }
+
+    const adminIds = admins.map(admin => admin.userId.toString());
+    const users = await this.getUsers(adminIds);
+
+    await Promise.all(users.map(async user => {
+      const channel = user.notifications.channels[this.channelType];
+
+      if (channel.isEnabled) {
+        await this.provider.send(channel.endpoint, {
+          type: 'blocked-workspace-reminder',
+          payload: {
+            host: process.env.GARAGE_URL,
+            hostOfStatic: process.env.API_STATIC_URL,
+            workspace,
+            daysAfterPayday,
+          },
+        });
+      }
+    }));
+
+    await this.updateLastNotificationDate(workspace, eventType);
+  }
+
   /**
    * Handle task when days limit is almost reached
    *
@@ -356,13 +416,10 @@ export default abstract class SenderWorker extends Worker {
             daysLeft,
           },
         });
-
-        /**
-         * Update last notification data in DB
-         */
-        await this.updateLastNoticationDate(workspace, eventType);
       }
     }));
+
+    await this.updateLastNotificationDate(workspace, eventType);
   }
 
   /**
@@ -422,10 +479,10 @@ export default abstract class SenderWorker extends Worker {
             eventsLimit,
           },
         });
-
-        await this.updateLastNoticationDate(workspace, eventType);
       }
     }));
+
+    await this.updateLastNotificationDate(workspace, eventType);
   }
 
   /**
@@ -715,7 +772,7 @@ export default abstract class SenderWorker extends Worker {
    * @param {string} type - event type
    * @param {number} date - date to be set
    */
-  private async updateLastNoticationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
+  private async updateLastNotificationDate(workspace: WorkspaceDBScheme, type: string, date = new Date()): Promise<void> {
     /**
      * Throw an error if workspace is missing
      */
