@@ -257,192 +257,194 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
-  test('Should remind admins for blocked workspace if it has subscription and after payday passed 1 day', async () => {
-    /**
-     * Arrange
-     */
-    const currentDate = new Date('2005-12-23');
-    const plan = createPlanMock({
-      monthlyCharge: 100,
-      isDefault: true,
-    });
-    const workspace = createWorkspaceMock({
-      plan,
-      subscriptionId: 'some-subscription-id',
-      lastChargeDate: new Date('2005-11-22'),
-      isBlocked: true,
-      billingPeriodEventsCount: 10,
-    });
+  describe('Blocked workspace reminder tests', () => {
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 1 day', async () => {
+      /**
+       * Arrange
+       */
+      const currentDate = new Date('2005-12-23');
+      const plan = createPlanMock({
+        monthlyCharge: 100,
+        isDefault: true,
+      });
+      const workspace = createWorkspaceMock({
+        plan,
+        subscriptionId: 'some-subscription-id',
+        lastChargeDate: new Date('2005-11-22'),
+        isBlocked: true,
+        billingPeriodEventsCount: 10,
+      });
 
-    await fillDatabaseWithMockedData({
-      workspace,
-      plan,
-    });
+      await fillDatabaseWithMockedData({
+        workspace,
+        plan,
+      });
 
-    MockDate.set(currentDate);
+      MockDate.set(currentDate);
 
-    /**
-     * Act
-     */
-    const worker = new PaymasterWorker();
-    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
+      /**
+       * Act
+       */
+      const worker = new PaymasterWorker();
+      const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
 
-    await worker.start();
-    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
-    await worker.finish();
+      await worker.start();
+      await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+      await worker.finish();
 
-    /**
-     * Assert
-     */
-    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
-      type: 'blocked-workspace-reminder',
-      payload: {
-        workspaceId: workspace._id.toString(),
-        daysAfterPayday: 1,
-      },
-    });
-    MockDate.reset();
-  });
-
-  test('Should remind admins for blocked workspace if it has subscription and after payday passed 5 days', async () => {
-    /**
-     * Arrange
-     */
-    const currentDate = new Date('2005-12-27');
-    const plan = createPlanMock({
-      monthlyCharge: 100,
-      isDefault: true,
-    });
-    const workspace = createWorkspaceMock({
-      plan,
-      subscriptionId: 'some-subscription-id',
-      lastChargeDate: new Date('2005-11-22'),
-      isBlocked: true,
-      billingPeriodEventsCount: 10,
+      /**
+       * Assert
+       */
+      expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
+        type: 'blocked-workspace-reminder',
+        payload: {
+          workspaceId: workspace._id.toString(),
+          daysAfterPayday: 1,
+        },
+      });
+      MockDate.reset();
     });
 
-    await fillDatabaseWithMockedData({
-      workspace,
-      plan,
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 5 days', async () => {
+      /**
+       * Arrange
+       */
+      const currentDate = new Date('2005-12-27');
+      const plan = createPlanMock({
+        monthlyCharge: 100,
+        isDefault: true,
+      });
+      const workspace = createWorkspaceMock({
+        plan,
+        subscriptionId: 'some-subscription-id',
+        lastChargeDate: new Date('2005-11-22'),
+        isBlocked: true,
+        billingPeriodEventsCount: 10,
+      });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        plan,
+      });
+
+      MockDate.set(currentDate);
+
+      /**
+       * Act
+       */
+      const worker = new PaymasterWorker();
+      const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
+
+      await worker.start();
+      await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
+        type: 'blocked-workspace-reminder',
+        payload: {
+          workspaceId: workspace._id.toString(),
+          daysAfterPayday: 5,
+        },
+      });
+      MockDate.reset();
     });
 
-    MockDate.set(currentDate);
+    test('Should remind admins for blocked workspace if it has subscription and after payday passed 30 days', async () => {
+      /**
+       * Arrange
+       */
+      const currentDate = new Date('2006-01-21');
+      const plan = createPlanMock({
+        monthlyCharge: 100,
+        isDefault: true,
+      });
+      const workspace = createWorkspaceMock({
+        plan,
+        subscriptionId: 'some-subscription-id',
+        lastChargeDate: new Date('2005-11-22'),
+        isBlocked: true,
+        billingPeriodEventsCount: 10,
+      });
 
-    /**
-     * Act
-     */
-    const worker = new PaymasterWorker();
-    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
+      await fillDatabaseWithMockedData({
+        workspace,
+        plan,
+      });
 
-    await worker.start();
-    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
-    await worker.finish();
+      MockDate.set(currentDate);
 
-    /**
-     * Assert
-     */
-    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
-      type: 'blocked-workspace-reminder',
-      payload: {
-        workspaceId: workspace._id.toString(),
-        daysAfterPayday: 5,
-      },
-    });
-    MockDate.reset();
-  });
+      /**
+       * Act
+       */
+      const worker = new PaymasterWorker();
+      const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
 
-  test('Should remind admins for blocked workspace if it has subscription and after payday passed 30 days', async () => {
-    /**
-     * Arrange
-     */
-    const currentDate = new Date('2006-01-21');
-    const plan = createPlanMock({
-      monthlyCharge: 100,
-      isDefault: true,
-    });
-    const workspace = createWorkspaceMock({
-      plan,
-      subscriptionId: 'some-subscription-id',
-      lastChargeDate: new Date('2005-11-22'),
-      isBlocked: true,
-      billingPeriodEventsCount: 10,
-    });
+      await worker.start();
+      await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+      await worker.finish();
 
-    await fillDatabaseWithMockedData({
-      workspace,
-      plan,
-    });
-
-    MockDate.set(currentDate);
-
-    /**
-     * Act
-     */
-    const worker = new PaymasterWorker();
-    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
-
-    await worker.start();
-    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
-    await worker.finish();
-
-    /**
-     * Assert
-     */
-    expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
-      type: 'blocked-workspace-reminder',
-      payload: {
-        workspaceId: workspace._id.toString(),
-        daysAfterPayday: 30,
-      },
-    });
-    MockDate.reset();
-  });
-
-  test('Should not remind admins for blocked workspace on days not in reminder schedule (day 4)', async () => {
-    /**
-     * Arrange
-     */
-    const currentDate = new Date('2005-12-26');
-    const plan = createPlanMock({
-      monthlyCharge: 100,
-      isDefault: true,
-    });
-    const workspace = createWorkspaceMock({
-      plan,
-      subscriptionId: 'some-subscription-id',
-      lastChargeDate: new Date('2005-11-22'),
-      isBlocked: true,
-      billingPeriodEventsCount: 10,
+      /**
+       * Assert
+       */
+      expect(blockWorkspaceSpy).toHaveBeenCalledWith('sender/email', {
+        type: 'blocked-workspace-reminder',
+        payload: {
+          workspaceId: workspace._id.toString(),
+          daysAfterPayday: 30,
+        },
+      });
+      MockDate.reset();
     });
 
-    await fillDatabaseWithMockedData({
-      workspace,
-      plan,
+    test('Should not remind admins for blocked workspace on days not in reminder schedule (day 4)', async () => {
+      /**
+       * Arrange
+       */
+      const currentDate = new Date('2005-12-26');
+      const plan = createPlanMock({
+        monthlyCharge: 100,
+        isDefault: true,
+      });
+      const workspace = createWorkspaceMock({
+        plan,
+        subscriptionId: 'some-subscription-id',
+        lastChargeDate: new Date('2005-11-22'),
+        isBlocked: true,
+        billingPeriodEventsCount: 10,
+      });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        plan,
+      });
+
+      MockDate.set(currentDate);
+
+      /**
+       * Act
+       */
+      const worker = new PaymasterWorker();
+      const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
+
+      await worker.start();
+      await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+      await worker.finish();
+
+      /**
+       * Assert
+       */
+      expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('sender/email', {
+        type: 'blocked-workspace-reminder',
+        payload: {
+          workspaceId: workspace._id.toString(),
+          daysAfterPayday: 4,
+        },
+      });
+      MockDate.reset();
     });
-
-    MockDate.set(currentDate);
-
-    /**
-     * Act
-     */
-    const worker = new PaymasterWorker();
-    const blockWorkspaceSpy = jest.spyOn(worker, 'addTask');
-
-    await worker.start();
-    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
-    await worker.finish();
-
-    /**
-     * Assert
-     */
-    expect(blockWorkspaceSpy).not.toHaveBeenCalledWith('sender/email', {
-      type: 'blocked-workspace-reminder',
-      payload: {
-        workspaceId: workspace._id.toString(),
-        daysAfterPayday: 4,
-      },
-    });
-    MockDate.reset();
   });
 
   test('Should update lastChargeDate and billingPeriodEventsCount if workspace has free tariff plan and it\'s time to pay', async () => {
