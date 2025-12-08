@@ -291,6 +291,7 @@ export default class LimiterWorker extends Worker {
       /**
        * Notify that workspace is about to reach events limit
        */
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
       this.logger.info(`Workspace ${workspace._id} is about to reach events limit: ${Math.floor(usedQuota * 100)}% used`);
 
       /**
