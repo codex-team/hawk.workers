@@ -269,19 +269,30 @@ export default class LimiterWorker extends Worker {
     const isAlreadyBlocked = workspace.isBlocked;
 
     /**
-     * Send notification if workspace will be blocked cause events limit
+     * Check quota and send notifications if needed
+     * - if should be blocked by quota and is not blocked yet -> block and notify
+     * - if is about to reach limit -> notify
      */
-    if (!isAlreadyBlocked && shouldBeBlockedByQuota) {
-      /**
-       * Add task for Sender worker
-       */
-      await this.addTask(WorkerNames.EMAIL, {
-        type: 'block-workspace',
-        payload: {
-          workspaceId: workspace._id,
-        },
-      });
+    if (shouldBeBlockedByQuota) {
+      if (!isAlreadyBlocked) {
+        this.logger.info(`Workspace ${workspace._id} will be blocked by quota: ${workspaceEventsCount} of ${workspace.tariffPlan.eventsLimit} events used`);
+
+        /**
+         * Add task for Sender worker
+         */
+        await this.addTask(WorkerNames.EMAIL, {
+          type: 'block-workspace',
+          payload: {
+            workspaceId: workspace._id,
+          },
+        });
+      }
     } else if (quotaNotification) {
+      /**
+       * Notify that workspace is about to reach events limit
+       */
+      this.logger.info(`Workspace ${workspace._id} is about to reach events limit: ${Math.floor(usedQuota * 100)}% used`);
+
       /**
        * Add task for Sender worker
        */
