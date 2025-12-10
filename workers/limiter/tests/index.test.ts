@@ -223,7 +223,6 @@ describe('Limiter worker', () => {
        * Assert
        */
       const result = await redisClient.sMembers('DisabledProjectsSet');
-      const updatedWorkspace = await workspaceCollection.findOne({ _id: workspace._id });
 
       expect(result).toContain(project._id.toString());
     });
