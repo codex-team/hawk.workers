@@ -195,19 +195,9 @@ export default class LimiterWorker extends Worker {
 
     await Promise.all(workspaces.map(async (workspace) => {
       /**
-       * Temporary fix: set blockedDate for already blocked workspaces if missing
-       * TODO: remove this code after all blocked workspaces have blockedDate set
-       */
-      if (workspace.isBlocked && !workspace.blockedDate) {
-        workspace.blockedDate = new Date();
-      }
-
-      /**
        * If workspace is already blocked - do nothing
        */
       if (workspace.isBlocked) {
-        // TODO: remove this code after all blocked workspaces have blockedDate set
-        updatedWorkspaces.push(workspace);
         return;
       }
 
