@@ -263,11 +263,13 @@ describe('PaymasterWorker', () => {
    * Helper function to run blocked workspace reminder test
    *
    * @param lastChargeDate - date of last charge
+   * @param blockedDate - date when workspace was blocked
    * @param currentDate - current date to test
    * @param shouldBeCalled - whether the reminder should be called
    * @param expectedDaysAfterBlock - expected days after block in the call
    */
   const testBlockedWorkspaceReminder = async (
+    lastChargeDate: Date,
     blockedDate: Date,
     currentDate: Date,
     shouldBeCalled: boolean,
@@ -281,7 +283,7 @@ describe('PaymasterWorker', () => {
       plan,
       billingPeriodEventsCount: 10,
       // any date is good. lets say 14 days before blocked date
-      lastChargeDate: new Date(blockedDate.getTime() - 14 * 24 * 60 * 60 * 1000),
+      lastChargeDate: new Date(blockedDate.getTime() - 31 * 24 * 60 * 60 * 1000),
       subscriptionId: 'some-subscription-id',
       isBlocked: true,
       blockedDate,
@@ -322,26 +324,29 @@ describe('PaymasterWorker', () => {
   describe('Blocked workspace reminder tests', () => {
     test('Should remind admins for blocked workspace if it has subscription and after payday passed 1 day', async () => {
       await testBlockedWorkspaceReminder(
-        new Date('2005-11-22'),
-        new Date('2005-12-23'),
+        new Date('2004-12-31'),
+        new Date('2005-01-31'),
+        new Date('2005-02-01'),
         true,
         1
       );
     });
 
-    test('Should remind admins for blocked workspace if it has subscription and after payday passed 5 days', async () => {
+    test('Should remind admins for blocked workspace if it has subscription and after block passed 5 days', async () => {
       await testBlockedWorkspaceReminder(
-        new Date('2005-11-22'),
-        new Date('2005-12-27'),
+        new Date('2004-12-31'),
+        new Date('2005-01-31'),
+        new Date('2005-02-05'),
         true,
         5
       );
     });
 
-    test('Should remind admins for blocked workspace if it has subscription and after payday passed 30 days', async () => {
+    test('Should remind admins for blocked workspace if it has subscription and after block passed 30 days', async () => {
       await testBlockedWorkspaceReminder(
-        new Date('2005-11-22'),
-        new Date('2006-01-21'),
+        new Date('2004-12-31'),
+        new Date('2005-01-31'),
+        new Date('2005-03-02'),
         true,
         30
       );
@@ -349,8 +354,9 @@ describe('PaymasterWorker', () => {
 
     test('Should not remind admins for blocked workspace on days not in reminder schedule (day 4)', async () => {
       await testBlockedWorkspaceReminder(
-        new Date('2005-11-22'),
-        new Date('2005-12-26'),
+        new Date('2004-12-31'),
+        new Date('2005-01-31'),
+        new Date('2005-02-04'),
         false
       );
     });
