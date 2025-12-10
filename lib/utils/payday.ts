@@ -59,7 +59,7 @@ export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug
  */
 export function countDaysAfterBlock(workspace: WorkspaceDBScheme): number | undefined {
   if (!workspace.blockedDate) {
-    return;
+    return undefined;
   }
 
   const blockedDay = new Date(workspace.blockedDate);
