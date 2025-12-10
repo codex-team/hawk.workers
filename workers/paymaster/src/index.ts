@@ -283,7 +283,7 @@ export default class PaymasterWorker extends Worker {
      */
     if (workspace.isBlocked) {
       // Send reminders on certain days after block
-      if (daysAfterBlock !== null && DAYS_AFTER_BLOCK_TO_REMIND.includes(daysAfterBlock)) {
+      if (daysAfterBlock !== undefined && DAYS_AFTER_BLOCK_TO_REMIND.includes(daysAfterBlock)) {
         await this.sendBlockedWorkspaceReminders(workspace, daysAfterBlock);
       }
 
