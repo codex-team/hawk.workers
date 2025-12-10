@@ -205,7 +205,7 @@ export default class PaymasterWorker extends Worker {
     const daysLeft = countDaysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
 
     /**
-     * How many days have passed since payments the expected day of payments
+     * How many days have passed since the expected day of payments
      */
     // @ts-expect-error debug
     const daysAfterPayday = countDaysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
