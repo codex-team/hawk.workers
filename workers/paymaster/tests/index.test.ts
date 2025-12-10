@@ -60,7 +60,7 @@ const createWorkspaceMock = (parameters: {
     balance: 0,
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
-    blockedDate: parameters.isBlocked ? new Date() : null,
+    blockedDate: parameters.blockedDate !== undefined ? parameters.blockedDate : (parameters.isBlocked ? new Date() : null),
   };
 
   if (parameters.paidUntil) {
