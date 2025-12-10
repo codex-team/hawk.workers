@@ -316,7 +316,7 @@ export default class LimiterWorker extends Worker {
       ...workspace,
       billingPeriodEventsCount: workspaceEventsCount,
       isBlocked: isAlreadyBlocked || shouldBeBlockedByQuota,
-      blockedDate: workspace.blockedDate,
+      blockedDate: (shouldBeBlockedByQuota && !isAlreadyBlocked) ? new Date() : workspace.blockedDate,
     };
 
     return {
