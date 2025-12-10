@@ -373,7 +373,7 @@ export default class PaymasterWorker extends Worker {
    * Sends reminder emails to blocked workspace admins
    *
    * @param workspace - workspace to send reminders for
-   * @param daysAfterBlock - number of days the workspace spent after payday
+   * @param daysAfterBlock - number of days since the workspace was blocked
    */
   private async sendBlockedWorkspaceReminders(
     workspace: WorkspaceDBScheme,
