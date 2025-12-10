@@ -282,8 +282,7 @@ describe('PaymasterWorker', () => {
     const workspace = createWorkspaceMock({
       plan,
       billingPeriodEventsCount: 10,
-      // any date is good. lets say 14 days before blocked date
-      lastChargeDate: new Date(blockedDate.getTime() - 31 * 24 * 60 * 60 * 1000),
+      lastChargeDate: lastChargeDate,
       subscriptionId: 'some-subscription-id',
       isBlocked: true,
       blockedDate,
