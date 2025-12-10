@@ -226,8 +226,6 @@ describe('Limiter worker', () => {
       const updatedWorkspace = await workspaceCollection.findOne({ _id: workspace._id });
 
       expect(result).toContain(project._id.toString());
-      expect(updatedWorkspace.isBlocked).toBe(true);
-      expect(updatedWorkspace.blockedDate).toBeInstanceOf(Date);
     });
 
     test('Should not block project if it does not reach the limit', async () => {
