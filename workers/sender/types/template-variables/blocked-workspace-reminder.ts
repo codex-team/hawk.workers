@@ -12,9 +12,9 @@ export interface BlockedWorkspaceReminderTemplateVariables extends CommonTemplat
   workspace: WorkspaceDBScheme;
 
   /**
-   * Number of days after payday when workspace was blocked
+   * Number of days while workspace is blocked
    */
-  daysAfterPayday: number;
+  daysAfterBlock: number;
 }
 
 /**

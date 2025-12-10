@@ -1,3 +1,4 @@
+import { WorkspaceDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE, MS_IN_SEC } from './consts';
 
 /**
@@ -14,7 +15,7 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
  */
-export function daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
   const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
   if (isDebug) {
@@ -37,7 +38,7 @@ export function daysBeforePayday(date: Date, paidUntil: Date = null, isDebug = f
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
  */
-export function daysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
   const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
 
   if (isDebug) {
@@ -45,6 +46,23 @@ export function daysAfterPayday(date: Date, paidUntil: Date = null, isDebug = fa
   } else if (!paidUntil) {
     expectedPayDay.setMonth(date.getMonth() + 1);
   }
+
+  const now = new Date().getTime();
+
+  return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
+}
+
+/**
+ * Returns difference between day when workspace was blocked and now in days
+ *
+ * @param workspace - workspace object
+ */
+export function countDaysAfterBlock(workspace: WorkspaceDBScheme): number {
+  if (!workspace.blockedDate) {
+    return null;
+  }
+
+  const expectedPayDay = new Date(workspace.blockedDate);
 
   const now = new Date().getTime();
 

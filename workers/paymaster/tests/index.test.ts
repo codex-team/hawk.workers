@@ -46,6 +46,7 @@ const createWorkspaceMock = (parameters: {
   lastChargeDate: Date | undefined;
   subscriptionId: string;
   isBlocked: boolean;
+  blockedDate?: Date | null;
   paidUntil?: Date;
 }): WorkspaceDBScheme => {
   const workspace: WorkspaceDBScheme = {
@@ -59,6 +60,7 @@ const createWorkspaceMock = (parameters: {
     balance: 0,
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
+    blockedDate: parameters.isBlocked ? new Date() : null,
   };
 
   if (parameters.paidUntil) {
@@ -263,13 +265,13 @@ describe('PaymasterWorker', () => {
    * @param lastChargeDate - date of last charge
    * @param currentDate - current date to test
    * @param shouldBeCalled - whether the reminder should be called
-   * @param expectedDaysAfterPayday - expected days after payday in the call
+   * @param expectedDaysAfterBlock - expected days after block in the call
    */
   const testBlockedWorkspaceReminder = async (
     lastChargeDate: Date,
     currentDate: Date,
     shouldBeCalled: boolean,
-    expectedDaysAfterPayday?: number
+    expectedDaysAfterBlock?: number
   ): Promise<jest.SpyInstance> => {
     const plan = createPlanMock({
       monthlyCharge: 100,
@@ -280,6 +282,7 @@ describe('PaymasterWorker', () => {
       subscriptionId: 'some-subscription-id',
       lastChargeDate,
       isBlocked: true,
+      blockedDate: new Date(currentDate.getTime()),
       billingPeriodEventsCount: 10,
     });
 
@@ -302,7 +305,7 @@ describe('PaymasterWorker', () => {
         type: 'blocked-workspace-reminder',
         payload: {
           workspaceId: workspace._id.toString(),
-          daysAfterPayday: expectedDaysAfterPayday,
+          daysAfterBlock: expectedDaysAfterBlock,
         },
       });
     } else {

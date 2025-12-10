@@ -8,9 +8,9 @@ export interface SenderWorkerBlockedWorkspaceReminderPayload {
   workspaceId: string;
 
   /**
-   * Days after payday
+   * Days while workspace is blocked
    */
-  daysAfterPayday: number;
+  daysAfterBlock: number;
 }
 
 /**
