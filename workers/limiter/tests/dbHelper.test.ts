@@ -28,7 +28,7 @@ describe('DbHelper', () => {
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
     isBlocked?: boolean;
-    blockedDate?: Date | undefined;
+    blockedDate?: Date;
   }): WorkspaceDBScheme => {
     return {
       _id: new ObjectId(),
@@ -261,7 +261,6 @@ describe('DbHelper', () => {
         billingPeriodEventsCount: 0,
         lastChargeDate: new Date(),
         isBlocked: false,
-        blockedDate: undefined,
       });
 
       await workspaceCollection.insertOne(workspace);
@@ -297,7 +296,7 @@ describe('DbHelper', () => {
       const updatedWorkspace = {
         ...workspace,
         isBlocked: false,
-        blockedDate: undefined,
+        blockedDate: null,
         tariffPlan: mockedPlans.eventsLimit10,
       };
 

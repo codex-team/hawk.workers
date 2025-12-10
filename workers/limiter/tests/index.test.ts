@@ -45,7 +45,7 @@ describe('Limiter worker', () => {
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
     isBlocked?: boolean;
-    blockedDate?: Date | null;
+    blockedDate?: Date;
   }): WorkspaceDBScheme => {
     return {
       _id: new ObjectId(),

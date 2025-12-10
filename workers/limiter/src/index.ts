@@ -274,13 +274,6 @@ export default class LimiterWorker extends Worker {
     const isAlreadyBlocked = workspace.isBlocked;
 
     /**
-     * Set blocked date if workspace is already blocked but blockedDate is not set
-     */
-    if (isAlreadyBlocked && !workspace.blockedDate) {
-      workspace.blockedDate = new Date();
-    }
-
-    /**
      * Check quota and send notifications if needed
      * - if should be blocked by quota and is not blocked yet -> block and notify
      * - if is about to reach limit -> notify

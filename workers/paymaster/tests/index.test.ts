@@ -46,7 +46,7 @@ const createWorkspaceMock = (parameters: {
   lastChargeDate: Date | undefined;
   subscriptionId: string;
   isBlocked: boolean;
-  blockedDate?: Date | null;
+  blockedDate?: Date;
   paidUntil?: Date;
 }): WorkspaceDBScheme => {
   const workspace: WorkspaceDBScheme = {
@@ -60,7 +60,7 @@ const createWorkspaceMock = (parameters: {
     balance: 0,
     subscriptionId: parameters.subscriptionId,
     isBlocked: parameters.isBlocked,
-    blockedDate: parameters.blockedDate !== undefined ? parameters.blockedDate : (parameters.isBlocked ? new Date() : null),
+    blockedDate: parameters.blockedDate,
   };
 
   if (parameters.paidUntil) {
