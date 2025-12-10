@@ -195,9 +195,19 @@ export default class LimiterWorker extends Worker {
 
     await Promise.all(workspaces.map(async (workspace) => {
       /**
+       * Temporary fix: set blockedDate for already blocked workspaces if missing
+       * TODO: remove this code after all blocked workspaces have blockedDate set
+       */
+      if (workspace.isBlocked && !workspace.blockedDate) {
+        workspace.blockedDate = new Date();
+      }
+
+      /**
        * If workspace is already blocked - do nothing
        */
       if (workspace.isBlocked) {
+        // TODO: remove this code after all blocked workspaces have blockedDate set
+        updatedWorkspaces.push(workspace);
         return;
       }
 
@@ -219,6 +229,9 @@ export default class LimiterWorker extends Worker {
        */
       if (shouldBeBlockedByQuota) {
         const projectIds = projectsToUpdate.map(project => project._id.toString());
+
+        updatedWorkspace.isBlocked = true;
+        updatedWorkspace.blockedDate = new Date();
 
         this.redis.appendBannedProjects(projectIds);
         message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
@@ -271,6 +284,13 @@ export default class LimiterWorker extends Worker {
     const isAlreadyBlocked = workspace.isBlocked;
 
     /**
+     * Set blocked date if workspace is already blocked but blockedDate is not set
+     */
+    if (isAlreadyBlocked && !workspace.blockedDate) {
+      workspace.blockedDate = new Date();
+    }
+
+    /**
      * Check quota and send notifications if needed
      * - if should be blocked by quota and is not blocked yet -> block and notify
      * - if is about to reach limit -> notify
@@ -313,6 +333,7 @@ export default class LimiterWorker extends Worker {
       ...workspace,
       billingPeriodEventsCount: workspaceEventsCount,
       isBlocked: isAlreadyBlocked || shouldBeBlockedByQuota,
+      blockedDate: workspace.blockedDate,
     };
 
     return {
