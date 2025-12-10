@@ -322,7 +322,7 @@ describe('PaymasterWorker', () => {
   };
 
   describe('Blocked workspace reminder tests', () => {
-    test('Should remind admins for blocked workspace if it has subscription and after payday passed 1 day', async () => {
+    test('Should remind admins for blocked workspace if it has subscription and after block passed 1 day', async () => {
       await testBlockedWorkspaceReminder(
         new Date('2004-12-31'),
         new Date('2005-01-31'),
