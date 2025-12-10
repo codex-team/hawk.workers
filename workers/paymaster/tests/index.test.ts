@@ -282,7 +282,7 @@ describe('PaymasterWorker', () => {
       subscriptionId: 'some-subscription-id',
       lastChargeDate,
       isBlocked: true,
-      blockedDate: new Date(currentDate.getTime()),
+      blockedDate: new Date(currentDate.getTime() - (expectedDaysAfterBlock ? expectedDaysAfterBlock * 24 * 60 * 60 * 1000 : 0)),
       billingPeriodEventsCount: 10,
     });
 
