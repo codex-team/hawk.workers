@@ -261,6 +261,7 @@ describe('DbHelper', () => {
         billingPeriodEventsCount: 0,
         lastChargeDate: new Date(),
         isBlocked: false,
+        blockedDate: undefined,
       });
 
       await workspaceCollection.insertOne(workspace);

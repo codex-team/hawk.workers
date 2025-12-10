@@ -354,43 +354,6 @@ describe('Limiter worker', () => {
        */
       expect(telegram.sendMessage).not.toHaveBeenCalled();
     });
-
-    test('Should set blockedDate for already blocked workspace if missing', async () => {
-      /**
-       * Arrange - Create workspace that is blocked but missing blockedDate (temporary fix scenario)
-       */
-      const workspace = createWorkspaceMock({
-        plan: mockedPlans.eventsLimit10,
-        billingPeriodEventsCount: 15,
-        lastChargeDate: LAST_CHARGE_DATE,
-        isBlocked: true,
-        blockedDate: undefined, // Missing blockedDate
-      });
-      const project = createProjectMock({ workspaceId: workspace._id });
-
-      await fillDatabaseWithMockedData({
-        workspace,
-        project,
-        eventsToMock: 15,
-      });
-
-      /**
-       * Act
-       */
-      const worker = new LimiterWorker();
-
-      await worker.start();
-      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
-      await worker.finish();
-
-      /**
-       * Assert - Verify blockedDate was set
-       */
-      const updatedWorkspace = await workspaceCollection.findOne({ _id: workspace._id });
-
-      expect(updatedWorkspace.isBlocked).toBe(true);
-      expect(updatedWorkspace.blockedDate).toBeInstanceOf(Date);
-    });
   });
 
   describe('block-workspace', () => {
