@@ -62,9 +62,9 @@ export function countDaysAfterBlock(workspace: WorkspaceDBScheme): number | unde
     return;
   }
 
-  const expectedPayDay = new Date(workspace.blockedDate);
+  const blockedDay = new Date(workspace.blockedDate);
 
   const now = new Date().getTime();
 
-  return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
+  return Math.floor((now - blockedDay.getTime()) / MILLISECONDS_IN_DAY);
 }
