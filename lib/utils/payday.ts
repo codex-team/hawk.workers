@@ -53,7 +53,7 @@ export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug
 }
 
 /**
- * Returns difference between day when workspace was blocked and now in days
+ * Returns difference between day when workspace was blocked and now in days. Undefined for workspaces blocked before the "blockedDate" implemented.
  *
  * @param workspace - workspace object
  */
