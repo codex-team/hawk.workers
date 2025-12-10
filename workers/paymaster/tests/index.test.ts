@@ -268,7 +268,7 @@ describe('PaymasterWorker', () => {
    * @param expectedDaysAfterBlock - expected days after block in the call
    */
   const testBlockedWorkspaceReminder = async (
-    lastChargeDate: Date,
+    blockedDate: Date,
     currentDate: Date,
     shouldBeCalled: boolean,
     expectedDaysAfterBlock?: number
@@ -279,11 +279,12 @@ describe('PaymasterWorker', () => {
     });
     const workspace = createWorkspaceMock({
       plan,
-      subscriptionId: 'some-subscription-id',
-      lastChargeDate,
-      isBlocked: true,
-      blockedDate: new Date(currentDate.getTime() - (expectedDaysAfterBlock ? expectedDaysAfterBlock * 24 * 60 * 60 * 1000 : 0)),
       billingPeriodEventsCount: 10,
+      // any date is good. lets say 14 days before blocked date
+      lastChargeDate: new Date(blockedDate.getTime() - 14 * 24 * 60 * 60 * 1000),
+      subscriptionId: 'some-subscription-id',
+      isBlocked: true,
+      blockedDate,
     });
 
     await fillDatabaseWithMockedData({
