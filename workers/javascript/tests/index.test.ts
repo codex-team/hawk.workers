@@ -556,4 +556,66 @@ describe('JavaScript event worker', () => {
     // We expect "ApiClient.request"
     expect(context).toBe('ApiClient.request');
   });
+
+  it('should resolve function context inside Vue SFC with template block', () => {
+    const worker = new JavascriptEventWorker();
+    const vueSource = `
+<template>
+  <div>Hello</div>
+</template>
+
+<script>
+export function handleClick() {
+  throw new Error('Test');
+}
+</script>
+    `;
+
+    const targetLine = vueSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = (worker as any).getFunctionContext(vueSource, targetLine, 'Component.vue');
+
+    expect(context).toBe('handleClick');
+  });
+
+  it('should resolve function context inside Vue SFC script with lang="ts"', () => {
+    const worker = new JavascriptEventWorker();
+    const vueSource = `
+<template>
+  <div>Hello</div>
+</template>
+
+<script lang="ts">
+export function useData(): string {
+  const value: string = 'test';
+
+  throw new Error(value);
+}
+</script>
+    `;
+
+    const targetLine = vueSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = (worker as any).getFunctionContext(vueSource, targetLine, 'Component.vue?vue&type=script&lang=ts');
+
+    expect(context).toBe('useData');
+  });
+
+  it('should resolve function context inside Svelte component with markup outside script', () => {
+    const worker = new JavascriptEventWorker();
+    const svelteSource = `
+<script>
+  export function load() {
+    throw new Error('Load failed');
+  }
+</script>
+
+<main>
+  <h1>Page</h1>
+</main>
+    `;
+
+    const targetLine = svelteSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = (worker as any).getFunctionContext(svelteSource, targetLine, 'routes/+page.svelte');
+
+    expect(context).toBe('load');
+  });
 });

@@ -10,7 +10,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent } from './utils';
+import { beautifyUserAgent, cleanSourcePath, countLineBreaks } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
@@ -262,14 +262,24 @@ export default class JavascriptEventWorker extends EventWorker {
    * @returns {string | null} - string of the function context or null if it could not be parsed
    */
   private getFunctionContext(sourceCode: string, line: number, sourcePath?: string): string | null {
+    if (!sourceCode) {
+      return null;
+    }
+
+    const {
+      code: codeToParse,
+      targetLine,
+      hasTypeScriptLang,
+    } = this.prepareSourceForParsing(sourceCode, line, sourcePath);
+
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
 
     try {
-      const parserPlugins = this.getBabelParserPluginsForFile(sourcePath);
+      const parserPlugins = this.getBabelParserPluginsForFile(sourcePath, hasTypeScriptLang);
 
-      const ast = parse(sourceCode, {
+      const ast = parse(codeToParse, {
         sourceType: 'module',
         plugins: parserPlugins,
       });
@@ -281,8 +291,8 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         ClassDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
+            console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
             className = path.node.id.name || null;
           }
@@ -294,8 +304,8 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         ClassMethod(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
+            console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
             // Handle different key types
             if (path.node.key.type === 'Identifier') {
@@ -310,8 +320,8 @@ export default class JavascriptEventWorker extends EventWorker {
          * @param path
          */
         FunctionDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
+            console.log(`function declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
             functionName = path.node.id.name || null;
             isAsync = path.node.async;
@@ -327,10 +337,10 @@ export default class JavascriptEventWorker extends EventWorker {
             path.node.init &&
             (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
             path.node.loc &&
-            path.node.loc.start.line <= line &&
-            path.node.loc.end.line >= line
+            path.node.loc.start.line <= targetLine &&
+            path.node.loc.end.line >= targetLine
           ) {
-            console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
+            console.log(`variable declaration: node.type: ${path.node.init.type}, targetLine: ${targetLine}, `);
 
             // Handle different id types
             if (path.node.id.type === 'Identifier') {
@@ -348,6 +358,64 @@ export default class JavascriptEventWorker extends EventWorker {
     }
 
     return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
+  }
+
+  /**
+   * Method that extracts source code and target line from the source code related to js frameworks
+   * It is used to extract inner part of the <script> tag with its lang specifier
+   *
+   * @param sourceCode - content of the source file
+   * @param originalLine - number of the line from the stack trace where the error occurred
+   * @param sourcePath - original source path from the source map (used to pick parser plugins)
+   * @returns - object with source code, target line and if it has TypeScript language specifier
+   */
+  private prepareSourceForParsing(
+    sourceCode: string,
+    originalLine: number,
+    sourcePath?: string
+  ): { code: string; targetLine: number; hasTypeScriptLang: boolean } {
+    const defaultResult = {
+      code: sourceCode,
+      targetLine: originalLine,
+      hasTypeScriptLang: false,
+    };
+
+    if (!sourcePath) {
+      return defaultResult;
+    }
+
+    const cleanPath = cleanSourcePath(sourcePath);
+    const ext = extname(cleanPath).toLowerCase();
+    const frameworkExtensions = new Set([ '.vue', '.svelte' ]);
+
+    if (!frameworkExtensions.has(ext)) {
+      return defaultResult;
+    }
+
+    const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = scriptRegex.exec(sourceCode)) !== null) {
+      const attrs = match[1] ?? '';
+      const content = match[2] ?? '';
+      const before = sourceCode.slice(0, match.index);
+      const startLine = countLineBreaks(before) + 1;
+      const linesInBlock = countLineBreaks(content) + 1;
+      const endLine = startLine + linesInBlock - 1;
+
+      if (originalLine >= startLine && originalLine <= endLine) {
+        const relativeLine = originalLine - startLine + 1;
+        const hasTypeScriptLang = /lang\s*=\s*["']?(ts|typescript)["']?/i.test(attrs);
+
+        return {
+          code: content,
+          targetLine: relativeLine,
+          hasTypeScriptLang,
+        };
+      }
+    }
+
+    return defaultResult;
   }
 
   /**
@@ -457,7 +525,7 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param sourcePath - original file path from source map (e.g. "src/App.tsx")
    */
-  private getBabelParserPluginsForFile(sourcePath?: string): any[] {
+  private getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptLang?: boolean): any[] {
     const basePlugins: string[] = [
       'classProperties',
       'decorators',
@@ -468,28 +536,34 @@ export default class JavascriptEventWorker extends EventWorker {
       'topLevelAwait',
     ];
 
-    /**
-     * Default - use only typescript plugin because it's more stable and less likely will produce errors
-     */
-    let enableTypeScript = true;
+    let enableTypeScript = Boolean(hasTypeScriptLang);
     let enableJSX = false;
 
     if (sourcePath) {
-      // remove query/hash if there is any
-      const cleanPath = sourcePath.split('?')[0].split('#')[0];
+      const hasTypeScriptQuery = /(lang\s*=\s*["']?ts["']?)|(lang\.ts)/i.test(sourcePath);
+      const cleanPath = cleanSourcePath(sourcePath);
       const ext = extname(cleanPath).toLowerCase();
 
-      const isTs   = ext === '.ts' || ext === '.d.ts';
-      const isTsx  = ext === '.tsx';
-      const isJs   = ext === '.js' || ext === '.mjs' || ext === '.cjs';
-      const isJsx  = ext === '.jsx';
+      const isTypeScript = ext === '.ts' || ext === '.d.ts';
+      const isTypeScriptWithJsx = ext === '.tsx';
+      const isJavaScript = ext === '.js' || ext === '.mjs' || ext === '.cjs';
+      const isJavaScriptWithJsx = ext === '.jsx';
+      const isFrameworkFile = ext === '.vue' || ext === '.svelte';
 
-      enableTypeScript = isTs || isTsx;
-      // JSX:
-      //  - for .ts/.d.ts — DISABLE
-      //  - for .tsx/.jsx — ENABLE
-      //  - for .js — keep enabled, to not break App.js with JSX
-      enableJSX = isTsx || isJsx || isJs;
+      if (isTypeScriptWithJsx) {
+        enableTypeScript = true;
+        enableJSX = true;
+      } else {
+        if (isTypeScript || hasTypeScriptQuery || enableTypeScript) {
+          enableTypeScript = true;
+        }
+
+        if (isJavaScript || isJavaScriptWithJsx || isFrameworkFile) {
+          enableJSX = true;
+        }
+      }
+    } else {
+      enableTypeScript = true;
     }
 
     if (enableTypeScript) {

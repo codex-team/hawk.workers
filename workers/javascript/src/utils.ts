@@ -29,3 +29,27 @@ export function beautifyUserAgent(userAgent: string): JavaScriptAddons['beautifi
 
   return beautifiedAgent;
 }
+
+/**
+ * Count line breaks in the provided string.
+ *
+ * @param value - string to inspect
+ */
+export function countLineBreaks(value: string): number {
+  if (!value) {
+    return 0;
+  }
+
+  const matches = value.match(/\r\n|\r|\n/g);
+
+  return matches ? matches.length : 0;
+}
+
+/**
+ * Strip query and hash fragments from a source path.
+ *
+ * @param sourcePath - path that may contain query/hash suffix
+ */
+export function cleanSourcePath(sourcePath: string): string {
+  return sourcePath.split('?')[0].split('#')[0];
+}
