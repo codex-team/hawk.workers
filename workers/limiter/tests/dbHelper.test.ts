@@ -28,6 +28,7 @@ describe('DbHelper', () => {
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
     isBlocked?: boolean;
+    blockedDate?: Date;
   }): WorkspaceDBScheme => {
     return {
       _id: new ObjectId(),
@@ -39,6 +40,7 @@ describe('DbHelper', () => {
       accountId: '',
       balance: 0,
       isBlocked: parameters.isBlocked,
+      blockedDate: parameters.blockedDate,
     };
   };
 
@@ -213,17 +215,20 @@ describe('DbHelper', () => {
 
       await workspaceCollection.insertMany([workspace1, workspace2]);
 
+      const blockedDate = new Date();
       const updatedWorkspaces = [
         {
           ...workspace1,
           billingPeriodEventsCount: 5,
           isBlocked: true,
+          blockedDate: blockedDate,
           tariffPlan: mockedPlans.eventsLimit10,
         },
         {
           ...workspace2,
           billingPeriodEventsCount: 5000,
           isBlocked: true,
+          blockedDate: blockedDate,
           tariffPlan: mockedPlans.eventsLimit10000,
         },
       ];
@@ -241,8 +246,10 @@ describe('DbHelper', () => {
 
       expect(updatedWorkspace1.billingPeriodEventsCount).toBe(5);
       expect(updatedWorkspace1.isBlocked).toBe(true);
+      expect(updatedWorkspace1.blockedDate).toEqual(blockedDate);
       expect(updatedWorkspace2.billingPeriodEventsCount).toBe(5000);
       expect(updatedWorkspace2.isBlocked).toBe(true);
+      expect(updatedWorkspace2.blockedDate).toEqual(blockedDate);
     });
 
     test('Should not update anything if empty array provided', async () => {
@@ -254,6 +261,7 @@ describe('DbHelper', () => {
         billingPeriodEventsCount: 0,
         lastChargeDate: new Date(),
         isBlocked: false,
+        blockedDate: null,
       });
 
       await workspaceCollection.insertOne(workspace);
@@ -269,6 +277,42 @@ describe('DbHelper', () => {
       const unchangedWorkspace = await workspaceCollection.findOne({ _id: workspace._id });
 
       expect(unchangedWorkspace).toEqual(workspace);
+    });
+
+    test('Should set blockedDate to null when unblocking workspace', async () => {
+      /**
+       * Arrange
+       */
+      const blockedDate = new Date();
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+        isBlocked: true,
+        blockedDate: blockedDate,
+      });
+
+      await workspaceCollection.insertOne(workspace);
+
+      const updatedWorkspace = {
+        ...workspace,
+        isBlocked: false,
+        blockedDate: null,
+        tariffPlan: mockedPlans.eventsLimit10,
+      };
+
+      /**
+       * Act
+       */
+      await dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
+
+      /**
+       * Assert
+       */
+      const result = await workspaceCollection.findOne({ _id: workspace._id });
+
+      expect(result.isBlocked).toBe(false);
+      expect(result.blockedDate).toBeNull();
     });
   });
 

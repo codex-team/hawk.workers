@@ -131,6 +131,7 @@ export default class LimiterWorker extends Worker {
     const { updatedWorkspace } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
     updatedWorkspace.isBlocked = true;
+    updatedWorkspace.blockedDate = new Date();
     await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ updatedWorkspace ]);
 
     this.logger.info('workspace blocked in db ', event.workspaceId);
@@ -174,6 +175,7 @@ export default class LimiterWorker extends Worker {
     }
 
     updatedWorkspace.isBlocked = false;
+    updatedWorkspace.blockedDate = null;
 
     await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked([ updatedWorkspace ]);
     await this.redis.removeBannedProjects(projectIds);
@@ -217,6 +219,9 @@ export default class LimiterWorker extends Worker {
        */
       if (shouldBeBlockedByQuota) {
         const projectIds = projectsToUpdate.map(project => project._id.toString());
+
+        updatedWorkspace.isBlocked = true;
+        updatedWorkspace.blockedDate = new Date();
 
         this.redis.appendBannedProjects(projectIds);
         message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
@@ -269,19 +274,31 @@ export default class LimiterWorker extends Worker {
     const isAlreadyBlocked = workspace.isBlocked;
 
     /**
-     * Send notification if workspace will be blocked cause events limit
+     * Check quota and send notifications if needed
+     * - if should be blocked by quota and is not blocked yet -> block and notify
+     * - if is about to reach limit -> notify
      */
-    if (!isAlreadyBlocked && shouldBeBlockedByQuota) {
-      /**
-       * Add task for Sender worker
-       */
-      await this.addTask(WorkerNames.EMAIL, {
-        type: 'block-workspace',
-        payload: {
-          workspaceId: workspace._id,
-        },
-      });
+    if (shouldBeBlockedByQuota) {
+      if (!isAlreadyBlocked) {
+        this.logger.info(`Workspace ${workspace._id} will be blocked by quota: ${workspaceEventsCount} of ${workspace.tariffPlan.eventsLimit} events used`);
+
+        /**
+         * Add task for Sender worker
+         */
+        await this.addTask(WorkerNames.EMAIL, {
+          type: 'block-workspace',
+          payload: {
+            workspaceId: workspace._id,
+          },
+        });
+      }
     } else if (quotaNotification) {
+      /**
+       * Notify that workspace is about to reach events limit
+       */
+      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+      this.logger.info(`Workspace ${workspace._id} is about to reach events limit: ${Math.floor(usedQuota * 100)}% used`);
+
       /**
        * Add task for Sender worker
        */

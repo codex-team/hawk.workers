@@ -50,8 +50,10 @@
         "run-limiter": "yarn worker hawk-worker-limiter"
     },
     "dependencies": {
+        "@babel/parser": "^7.26.9",
+        "@babel/traverse": "7.26.9",
         "@hawk.so/nodejs": "^3.1.1",
-        "@hawk.so/types": "^0.1.35",
+        "@hawk.so/types": "^0.2.0",
         "@types/amqplib": "^0.8.2",
         "@types/jest": "^29.2.3",
         "@types/mongodb": "^3.5.15",
@@ -73,9 +75,7 @@
         "typescript": "^4.9.4",
         "uuid": "^8.3.0",
         "winston": "^3.2.1",
-        "yup": "^0.28.5",
-        "@babel/parser": "^7.26.9",
-        "@babel/traverse": "7.26.9"
+        "yup": "^0.28.5"
     },
     "devDependencies": {
         "@shelf/jest-mongodb": "^1.2.3",

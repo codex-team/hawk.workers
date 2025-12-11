@@ -45,6 +45,7 @@ describe('Limiter worker', () => {
     billingPeriodEventsCount: number;
     lastChargeDate: Date;
     isBlocked?: boolean;
+    blockedDate?: Date;
   }): WorkspaceDBScheme => {
     return {
       _id: new ObjectId(),
@@ -56,6 +57,7 @@ describe('Limiter worker', () => {
       accountId: '',
       balance: 0,
       isBlocked: parameters.isBlocked,
+      blockedDate: parameters.blockedDate,
     };
   };
 
@@ -391,6 +393,7 @@ describe('Limiter worker', () => {
       const blockedProjects = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(updatedWorkspace.isBlocked).toBe(true);
+      expect(updatedWorkspace.blockedDate).toBeInstanceOf(Date);
       expect(blockedProjects).toContain(project._id.toString());
       expect(telegram.sendMessage).toHaveBeenCalledWith(
         expect.stringContaining('⛔️ Workspace <b>Mocked workspace</b> blocked <b>(id: <code>'),
@@ -416,6 +419,7 @@ describe('Limiter worker', () => {
         billingPeriodEventsCount: 0,
         lastChargeDate: LAST_CHARGE_DATE,
         isBlocked: true,
+        blockedDate: new Date(),
       });
       const project = createProjectMock({ workspaceId: workspace._id });
 
@@ -449,6 +453,7 @@ describe('Limiter worker', () => {
       const blockedProjects = await redisClient.sMembers('DisabledProjectsSet');
 
       expect(updatedWorkspace.isBlocked).toBe(false);
+      expect(updatedWorkspace.blockedDate).toBeNull();
       expect(blockedProjects).not.toContain(project._id.toString());
       expect(telegram.sendMessage).toHaveBeenCalledWith(
         expect.stringContaining('✅ Workspace <b>Mocked workspace</b> unblocked <b>(id: <code>'),
