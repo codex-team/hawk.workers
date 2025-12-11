@@ -308,7 +308,7 @@ export default abstract class SenderWorker extends Worker {
      */
     const throttleInterval = TimeMs.DAY;
 
-    const { workspaceId, daysAfterPayday } = task.payload;
+    const { workspaceId, daysAfterBlock } = task.payload;
 
     const workspace = await this.getWorkspace(workspaceId);
 
@@ -348,7 +348,7 @@ export default abstract class SenderWorker extends Worker {
             host: process.env.GARAGE_URL,
             hostOfStatic: process.env.API_STATIC_URL,
             workspace,
-            daysAfterPayday,
+            daysAfterBlock,
           },
         });
       }

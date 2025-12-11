@@ -100,6 +100,7 @@ export class DbHelper {
             $set: {
               billingPeriodEventsCount: workspace.billingPeriodEventsCount,
               isBlocked: workspace.isBlocked,
+              blockedDate: workspace.blockedDate,
             },
           },
         },

@@ -19,7 +19,7 @@ import { ObjectId } from 'mongodb';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { HttpStatusCode } from '../../../lib/utils/consts';
-import { daysAfterPayday } from '../../../lib/utils/payday';
+import { countDaysAfterPayday } from '../../../lib/utils/payday';
 
 /**
  * Merge email worker .env and root workers .env
@@ -148,7 +148,7 @@ class EmailTestServer {
       user,
       period: 10,
       reason: 'error on the payment server side',
-      daysAfterPayday: await this.calculateDaysAfterPayday(workspace),
+      daysAfterPayday: countDaysAfterPayday(workspace.lastChargeDate, workspace.paidUntil),
     };
 
     try {
@@ -339,7 +339,7 @@ class EmailTestServer {
       return 0;
     }
 
-    const days = daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil);
+    const days = countDaysAfterPayday(workspace.lastChargeDate, workspace.paidUntil);
 
     return days > 0 ? days : 0;
   }

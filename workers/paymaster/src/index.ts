@@ -9,7 +9,7 @@ import { EventType, PaymasterEvent } from '../types/paymaster-worker-events';
 import axios from 'axios';
 import * as WorkerNames from '../../../lib/workerNames';
 import HawkCatcher from '@hawk.so/nodejs';
-import { daysBeforePayday, daysAfterPayday } from '../../../lib/utils/payday';
+import { countDaysBeforePayday, countDaysAfterPayday, countDaysAfterBlock } from '../../../lib/utils/payday';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -29,10 +29,10 @@ const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
 const DAYS_LEFT_ALERT = [3, 2, 1, 0];
 
 /**
- * Days after payday to remind admins about blocked workspace
+ * Days after block to remind admins about blocked workspace
  */
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-const DAYS_AFTER_PAYDAY_TO_REMIND = [1, 2, 3, 5, 7, 30];
+const DAYS_AFTER_BLOCK_TO_REMIND = [1, 2, 3, 5, 7, 30];
 
 /**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
@@ -199,16 +199,21 @@ export default class PaymasterWorker extends Worker {
     const isTimeToRecharge = PaymasterWorker.isTimeToRecharge(workspace.lastChargeDate, workspace.isDebug);
 
     /**
-     * How many days have passed since payments the expected day of payments
-     */
-    // @ts-expect-error debug
-    const daysAfterPaydayValue = daysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
-
-    /**
      * How many days left for the expected day of payments
      */
     // @ts-expect-error debug
-    const daysLeft = daysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
+    const daysLeft = countDaysBeforePayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
+
+    /**
+     * How many days have passed since the expected day of payments
+     */
+    // @ts-expect-error debug
+    const daysAfterPayday = countDaysAfterPayday(workspace.lastChargeDate, workspace.paidUntil, workspace.isDebug);
+
+    /**
+     * How many days have passed since the workspace was blocked
+     */
+    const daysAfterBlock = countDaysAfterBlock(workspace);
 
     /**
      * Do we need to ask for money
@@ -277,10 +282,9 @@ export default class PaymasterWorker extends Worker {
      * If it is blocked then remind admins about it
      */
     if (workspace.isBlocked) {
-      // Send reminders on certain days after payday
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-      if (DAYS_AFTER_PAYDAY_TO_REMIND.includes(daysAfterPaydayValue)) {
-        await this.sendBlockedWorkspaceReminders(workspace, daysAfterPaydayValue);
+      // Send reminders on certain days after block
+      if (daysAfterBlock !== undefined && DAYS_AFTER_BLOCK_TO_REMIND.includes(daysAfterBlock)) {
+        await this.sendBlockedWorkspaceReminders(workspace, daysAfterBlock);
       }
 
       return [workspace, true];
@@ -299,7 +303,7 @@ export default class PaymasterWorker extends Worker {
      * Block workspace if it has paid subscription,
      * but a few days have passed after payday
      */
-    if (daysAfterPaydayValue > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
+    if (daysAfterPayday > DAYS_AFTER_PAYDAY_TO_TRY_PAYING) {
       await this.blockWorkspace(workspace);
 
       return [workspace, true];
@@ -369,17 +373,17 @@ export default class PaymasterWorker extends Worker {
    * Sends reminder emails to blocked workspace admins
    *
    * @param workspace - workspace to send reminders for
-   * @param days - number of days the workspace spent after payday
+   * @param daysAfterBlock - number of days since the workspace was blocked
    */
   private async sendBlockedWorkspaceReminders(
     workspace: WorkspaceDBScheme,
-    days: number
+    daysAfterBlock: number
   ): Promise<void> {
     await this.addTask(WorkerNames.EMAIL, {
       type: 'blocked-workspace-reminder',
       payload: {
         workspaceId: workspace._id.toString(),
-        daysAfterPayday: days,
+        daysAfterBlock,
       },
     });
   }
