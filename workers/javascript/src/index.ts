@@ -10,11 +10,10 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent, cleanSourcePath, countLineBreaks } from './utils';
+import { beautifyUserAgent, cleanSourcePath, countLineBreaks, getBabelParserPluginsForFile, prepareSourceForParsing } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
-import { extname } from 'path';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -135,6 +134,9 @@ export default class JavascriptEventWorker extends EventWorker {
            */
           HawkCatcher.send(error, {
             payload: backtrace as unknown as Record<string, never>,
+            releaseRecord: JSON.stringify(releaseRecord),
+            backtrace: JSON.stringify(backtrace),
+            projectId,
           });
 
           return backtrace[index];
@@ -238,7 +240,7 @@ export default class JavascriptEventWorker extends EventWorker {
           originalLocation.source
         ) ?? originalLocation.name;
       } catch (e) {
-        HawkCatcher.send(e);
+        HawkCatcher.send(e, { stackFrame: JSON.stringify(stackFrame) });
         this.logger.error('Can\'t get function context');
         this.logger.error(e);
       }
@@ -270,14 +272,14 @@ export default class JavascriptEventWorker extends EventWorker {
       code: codeToParse,
       targetLine,
       hasTypeScriptLang,
-    } = this.prepareSourceForParsing(sourceCode, line, sourcePath);
+    } = prepareSourceForParsing(sourceCode, line, sourcePath);
 
     let functionName: string | null = null;
     let className: string | null = null;
     let isAsync = false;
 
     try {
-      const parserPlugins = this.getBabelParserPluginsForFile(sourcePath, hasTypeScriptLang);
+      const parserPlugins = getBabelParserPluginsForFile(sourcePath, hasTypeScriptLang);
 
       const ast = parse(codeToParse, {
         sourceType: 'module',
@@ -354,68 +356,15 @@ export default class JavascriptEventWorker extends EventWorker {
       console.error(`Failed to parse source code:`);
       console.error(traverseError);
 
-      HawkCatcher.send(traverseError);
+      HawkCatcher.send(traverseError, {
+        sourceCode: codeToParse,
+        targetLine,
+        hasTypeScriptLang,
+        sourcePath,
+      });
     }
 
     return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
-  }
-
-  /**
-   * Method that extracts source code and target line from the source code related to js frameworks
-   * It is used to extract inner part of the <script> tag with its lang specifier
-   *
-   * @param sourceCode - content of the source file
-   * @param originalLine - number of the line from the stack trace where the error occurred
-   * @param sourcePath - original source path from the source map (used to pick parser plugins)
-   * @returns - object with source code, target line and if it has TypeScript language specifier
-   */
-  private prepareSourceForParsing(
-    sourceCode: string,
-    originalLine: number,
-    sourcePath?: string
-  ): { code: string; targetLine: number; hasTypeScriptLang: boolean } {
-    const defaultResult = {
-      code: sourceCode,
-      targetLine: originalLine,
-      hasTypeScriptLang: false,
-    };
-
-    if (!sourcePath) {
-      return defaultResult;
-    }
-
-    const cleanPath = cleanSourcePath(sourcePath);
-    const ext = extname(cleanPath).toLowerCase();
-    const frameworkExtensions = new Set([ '.vue', '.svelte' ]);
-
-    if (!frameworkExtensions.has(ext)) {
-      return defaultResult;
-    }
-
-    const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-    let match: RegExpExecArray | null;
-
-    while ((match = scriptRegex.exec(sourceCode)) !== null) {
-      const attrs = match[1] ?? '';
-      const content = match[2] ?? '';
-      const before = sourceCode.slice(0, match.index);
-      const startLine = countLineBreaks(before) + 1;
-      const linesInBlock = countLineBreaks(content) + 1;
-      const endLine = startLine + linesInBlock - 1;
-
-      if (originalLine >= startLine && originalLine <= endLine) {
-        const relativeLine = originalLine - startLine + 1;
-        const hasTypeScriptLang = /lang\s*=\s*["']?(ts|typescript)["']?/i.test(attrs);
-
-        return {
-          code: content,
-          targetLine: relativeLine,
-          hasTypeScriptLang,
-        };
-      }
-    }
-
-    return defaultResult;
   }
 
   /**
@@ -518,62 +467,5 @@ export default class JavascriptEventWorker extends EventWorker {
     } catch (e) {
       this.logger.error(`Error on source-map consumer initialization: ${e}`);
     }
-  }
-
-  /**
-   * Choose babel parser plugins based on source file extension
-   *
-   * @param sourcePath - original file path from source map (e.g. "src/App.tsx")
-   */
-  private getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptLang?: boolean): any[] {
-    const basePlugins: string[] = [
-      'classProperties',
-      'decorators',
-      'optionalChaining',
-      'nullishCoalescingOperator',
-      'dynamicImport',
-      'bigInt',
-      'topLevelAwait',
-    ];
-
-    let enableTypeScript = Boolean(hasTypeScriptLang);
-    let enableJSX = false;
-
-    if (sourcePath) {
-      const hasTypeScriptQuery = /(lang\s*=\s*["']?ts["']?)|(lang\.ts)/i.test(sourcePath);
-      const cleanPath = cleanSourcePath(sourcePath);
-      const ext = extname(cleanPath).toLowerCase();
-
-      const isTypeScript = ext === '.ts' || ext === '.d.ts';
-      const isTypeScriptWithJsx = ext === '.tsx';
-      const isJavaScript = ext === '.js' || ext === '.mjs' || ext === '.cjs';
-      const isJavaScriptWithJsx = ext === '.jsx';
-      const isFrameworkFile = ext === '.vue' || ext === '.svelte';
-
-      if (isTypeScriptWithJsx) {
-        enableTypeScript = true;
-        enableJSX = true;
-      } else {
-        if (isTypeScript || hasTypeScriptQuery || enableTypeScript) {
-          enableTypeScript = true;
-        }
-
-        if (isJavaScript || isJavaScriptWithJsx || isFrameworkFile) {
-          enableJSX = true;
-        }
-      }
-    } else {
-      enableTypeScript = true;
-    }
-
-    if (enableTypeScript) {
-      basePlugins.push('typescript');
-    }
-
-    if (enableJSX) {
-      basePlugins.push('jsx');
-    }
-
-    return basePlugins;
   }
 }
