@@ -10,7 +10,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent, cleanSourcePath, countLineBreaks, getBabelParserPluginsForFile, prepareSourceForParsing } from './utils';
+import { beautifyUserAgent, getBabelParserPluginsForFile, prepareSourceForParsing } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';

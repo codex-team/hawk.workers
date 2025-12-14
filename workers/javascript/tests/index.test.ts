@@ -506,7 +506,7 @@ describe('JavaScript event worker', () => {
      * ...
      * 12: export const useUser = () => {
      * 13:   const user: User = wrap<User>({ id: '1', name: 'John' });
-     * 14: 
+     * 14:
      * 15:   return user;
      * 16: };
      */
@@ -542,11 +542,11 @@ describe('JavaScript event worker', () => {
      * 1: ''
      * 2: class ApiClient {
      * 3:   private baseUrl...
-     * 4: 
+     * 4:
      * 5:   public request() {
      * 6:     const raw = '{"ok":true}';
      * 7:     const parsed = <Record<string, unknown>>JSON.parse(raw);
-     * 8: 
+     * 8:
      * 9:     if (!parsed.ok) {
      * 10:      throw new Error('Request failed');
      * ...

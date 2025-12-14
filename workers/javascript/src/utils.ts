@@ -81,7 +81,7 @@ export function prepareSourceForParsing(
 
   const cleanPath = cleanSourcePath(sourcePath);
   const ext = extname(cleanPath).toLowerCase();
-  const frameworkExtensions = new Set([ '.vue', '.svelte' ]);
+  const frameworkExtensions = new Set(['.vue', '.svelte']);
 
   if (!frameworkExtensions.has(ext)) {
     return defaultResult;
@@ -113,11 +113,11 @@ export function prepareSourceForParsing(
   return defaultResult;
 }
 
-
 /**
  * Choose babel parser plugins based on source file extension
  *
  * @param sourcePath - original file path from source map (e.g. "src/App.tsx")
+ * @param hasTypeScriptLang
  */
 export function getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptLang?: boolean): any[] {
   const basePlugins: string[] = [
