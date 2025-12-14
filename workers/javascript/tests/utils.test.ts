@@ -1,4 +1,4 @@
-import { extractScriptFromSFC, getBabelParserPluginsForFile } from '../src/utils';
+import { extractScriptFromSFC, getBabelParserPluginsForFile, getFunctionContext } from '../src/utils';
 
 describe('extractScriptFromSFC', () => {
   it('returns passed source code and line with hasTypeScriptLang false when sourcePath is not provided', () => {
@@ -11,7 +11,7 @@ describe('extractScriptFromSFC', () => {
     });
   });
 
-  it('returns default result when sourcePath is not a framework file (.vue/.svelte)', () => {
+  it('returns passed source code and line with hasTypeScriptLang false when sourcePath is not a framework file (.vue/.svelte)', () => {
     const sourceCode = `<script>console.log(1)</script>`;
 
     expect(extractScriptFromSFC(sourceCode, 1, 'src/app.ts')).toEqual({
@@ -188,5 +188,172 @@ describe('getBabelParserPluginsForFile', () => {
     const plugins = getBabelParserPluginsForFile('src/App.js', false);
 
     expect(plugins).toEqual([...base, 'jsx']);
+  });
+});
+
+describe('getFunctionContext', () => {
+  it('resolves function context for TypeScript function with angle-bracket type assertion', () => {
+    const tsSource = `
+      const foo: string | null = 'bar';
+
+      function throwError() {
+        const value = <string>foo;
+        throw new Error(value);
+      }
+
+      export { throwError };
+    `;
+
+    /**
+     * String with throw new Error(...) is the 6th line (if counting from 1)
+     * 1: ''
+     * 2: const foo...
+     * 3: ''
+     * 4: function throwError() {
+     * 5:   const value = <string>foo;
+     * 6:   throw new Error(value);
+     * ...
+     */
+    const context = getFunctionContext(tsSource, 6, 'example.ts');
+
+    expect(context).toBe('throwError');
+  });
+
+  it('resolves function context for TypeScript generic arrow function', () => {
+    const tsSource = `
+      type User = {
+        id: string;
+        name: string;
+      };
+
+      const wrap = <T>(value: T): T => {
+        return value;
+      };
+
+      export const useUser = () => {
+        const user: User = wrap<User>({ id: '1', name: 'John' });
+
+        return user;
+      };
+    `;
+
+    /**
+     * String inside useUser - where we want to get context:
+     * 1: ''
+     * 2: type User = { ...
+     * ...
+     * 7: const wrap = <T>(value: T): T => {
+     * ...
+     * 12: export const useUser = () => {
+     * 13:   const user: User = wrap<User>({ id: '1', name: 'John' });
+     * 14:
+     * 15:   return user;
+     * 16: };
+     */
+    const context = getFunctionContext(tsSource, 13, 'example.ts');
+
+    expect(context).toBe('useUser');
+  });
+
+  it('resolves class method context for TypeScript class with type assertion', () => {
+    const tsSource = `
+      class ApiClient {
+        private baseUrl: string = 'https://example.com';
+
+        public request() {
+          const raw = '{"ok":true}';
+          const parsed = <Record<string, unknown>>JSON.parse(raw);
+
+          if (!parsed.ok) {
+            throw new Error('Request failed');
+          }
+
+          return parsed;
+        }
+      }
+
+      export default ApiClient;
+    `;
+
+    /**
+     * String where we want to get context - inside the request method:
+     * 1: ''
+     * 2: class ApiClient {
+     * 3:   private baseUrl...
+     * 4:
+     * 5:   public request() {
+     * 6:     const raw = '{"ok":true}';
+     * 7:     const parsed = <Record<string, unknown>>JSON.parse(raw);
+     * 8:
+     * 9:     if (!parsed.ok) {
+     * 10:      throw new Error('Request failed');
+     * ...
+     */
+    const context = getFunctionContext(tsSource, 7, 'example.ts');
+
+    expect(context).toBe('ApiClient.request');
+  });
+
+  it('resolves function context inside Vue SFC with template block', () => {
+    const vueSource = `
+<template>
+  <div>Hello</div>
+</template>
+
+<script>
+export function handleClick() {
+  throw new Error('Test');
+}
+</script>
+    `;
+
+    const targetLine = vueSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = getFunctionContext(vueSource, targetLine, 'Component.vue');
+
+    expect(context).toBe('handleClick');
+  });
+
+  it('resolves function context inside Vue SFC script with lang="ts"', () => {
+    const vueSource = `
+<template>
+  <div>Hello</div>
+</template>
+
+<script lang="ts">
+export function useData(): string {
+  const value: string = 'test';
+
+  throw new Error(value);
+}
+</script>
+    `;
+
+    const targetLine = vueSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = getFunctionContext(
+      vueSource,
+      targetLine,
+      'Component.vue?vue&type=script&lang=ts'
+    );
+
+    expect(context).toBe('useData');
+  });
+
+  it('resolves function context inside Svelte component with markup outside script', () => {
+    const svelteSource = `
+<script>
+  export function load() {
+    throw new Error('Load failed');
+  }
+</script>
+
+<main>
+  <h1>Page</h1>
+</main>
+    `;
+
+    const targetLine = svelteSource.split('\n').findIndex((line) => line.includes('throw new Error')) + 1;
+    const context = getFunctionContext(svelteSource, targetLine, 'routes/+page.svelte');
+
+    expect(context).toBe('load');
   });
 });

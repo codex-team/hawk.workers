@@ -10,10 +10,8 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent, getBabelParserPluginsForFile, extractScriptFromSFC } from './utils';
+import { beautifyUserAgent, getBabelParserPluginsForFile, extractScriptFromSFC, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
-import { parse } from '@babel/parser';
-import traverse from '@babel/traverse';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -234,7 +232,7 @@ export default class JavascriptEventWorker extends EventWorker {
 
         const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-        functionContext = await this.getFunctionContext(
+        functionContext = await getFunctionContext(
           originalContent,
           originalLocation.line,
           originalLocation.source
@@ -253,118 +251,6 @@ export default class JavascriptEventWorker extends EventWorker {
       function: functionContext,
       sourceCode: lines,
     }) as BacktraceFrame;
-  }
-
-  /**
-   * Method that is used to parse full function context of the code position
-   *
-   * @param sourceCode - content of the source file
-   * @param line - number of the line from the stack trace
-   * @param sourcePath - original source path from the source map (used to pick parser plugins)
-   * @returns {string | null} - string of the function context or null if it could not be parsed
-   */
-  private getFunctionContext(sourceCode: string, line: number, sourcePath?: string): string | null {
-    if (!sourceCode) {
-      return null;
-    }
-
-    const {
-      code: codeToParse,
-      targetLine,
-      hasTypeScriptLang,
-    } = extractScriptFromSFC(sourceCode, line, sourcePath);
-
-    let functionName: string | null = null;
-    let className: string | null = null;
-    let isAsync = false;
-
-    try {
-      const parserPlugins = getBabelParserPluginsForFile(sourcePath, hasTypeScriptLang);
-
-      const ast = parse(codeToParse, {
-        sourceType: 'module',
-        plugins: parserPlugins,
-      });
-
-      traverse(ast as any, {
-        /**
-         * It is used to get class decorator of the position, it will save class that is related to original position
-         *
-         * @param path
-         */
-        ClassDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-            console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            className = path.node.id.name || null;
-          }
-        },
-        /**
-         * It is used to get class and its method decorator of the position
-         * It will save class and method, that are related to original position
-         *
-         * @param path
-         */
-        ClassMethod(path) {
-          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-            console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            // Handle different key types
-            if (path.node.key.type === 'Identifier') {
-              functionName = path.node.key.name;
-            }
-            isAsync = path.node.async;
-          }
-        },
-        /**
-         * It is used to get function name that is declared out of class
-         *
-         * @param path
-         */
-        FunctionDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-            console.log(`function declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            functionName = path.node.id.name || null;
-            isAsync = path.node.async;
-          }
-        },
-        /**
-         * It is used to get anonimous function names in function expressions or arrow function expressions
-         *
-         * @param path
-         */
-        VariableDeclarator(path) {
-          if (
-            path.node.init &&
-            (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
-            path.node.loc &&
-            path.node.loc.start.line <= targetLine &&
-            path.node.loc.end.line >= targetLine
-          ) {
-            console.log(`variable declaration: node.type: ${path.node.init.type}, targetLine: ${targetLine}, `);
-
-            // Handle different id types
-            if (path.node.id.type === 'Identifier') {
-              functionName = path.node.id.name;
-            }
-            isAsync = (path.node.init as any).async;
-          }
-        },
-      });
-    } catch (traverseError) {
-      console.error(`Failed to parse source code:`);
-      console.error(traverseError);
-
-      HawkCatcher.send(traverseError, {
-        sourceCode: codeToParse,
-        targetLine,
-        hasTypeScriptLang,
-        sourcePath,
-      });
-    }
-
-    return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
   }
 
   /**
