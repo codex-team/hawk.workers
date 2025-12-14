@@ -10,7 +10,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent, getBabelParserPluginsForFile, extractScriptFromSFC, getFunctionContext } from './utils';
+import { beautifyUserAgent, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
