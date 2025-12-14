@@ -173,6 +173,7 @@ export function getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptL
 
 /**
  * Method that is used to parse full function context of the code position
+ * Function context is a string that contains the name of the function, class or anonymous function that is declared at the given line
  *
  * @param sourceCode - content of the source file
  * @param line - number of the line from the stack trace
