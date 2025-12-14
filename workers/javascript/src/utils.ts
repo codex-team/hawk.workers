@@ -147,9 +147,7 @@ export function getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptL
       enableTypeScript = true;
       enableJSX = true;
     } else {
-      if (isTypeScript || enableTypeScript) {
-        enableTypeScript = true;
-      }
+      enableTypeScript = enableTypeScript || isTypeScript;
 
       if (isJavaScriptWithJsx || isJavaScript || isFrameworkFile || !enableTypeScript) {
         enableJSX = true;
