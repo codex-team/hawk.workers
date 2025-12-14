@@ -10,7 +10,7 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent, getBabelParserPluginsForFile, prepareSourceForParsing } from './utils';
+import { beautifyUserAgent, getBabelParserPluginsForFile, extractScriptFromSFC } from './utils';
 import { Collection } from 'mongodb';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
@@ -272,7 +272,7 @@ export default class JavascriptEventWorker extends EventWorker {
       code: codeToParse,
       targetLine,
       hasTypeScriptLang,
-    } = prepareSourceForParsing(sourceCode, line, sourcePath);
+    } = extractScriptFromSFC(sourceCode, line, sourcePath);
 
     let functionName: string | null = null;
     let className: string | null = null;

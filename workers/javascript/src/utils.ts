@@ -64,7 +64,7 @@ export function cleanSourcePath(sourcePath: string): string {
  * @param sourcePath - original source path from the source map (used to pick parser plugins)
  * @returns - object with source code, target line and if it has TypeScript language specifier
  */
-export function prepareSourceForParsing(
+export function extractScriptFromSFC(
   sourceCode: string,
   originalLine: number,
   sourcePath?: string
@@ -149,7 +149,7 @@ export function getBabelParserPluginsForFile(sourcePath?: string, hasTypeScriptL
     } else {
       enableTypeScript = enableTypeScript || isTypeScript;
 
-      if (isJavaScriptWithJsx || isJavaScript || isFrameworkFile || !enableTypeScript) {
+      if (!enableTypeScript && (isJavaScriptWithJsx || isJavaScript || isFrameworkFile)) {
         enableJSX = true;
       }
     }
