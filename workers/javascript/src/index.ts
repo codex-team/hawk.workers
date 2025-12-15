@@ -10,11 +10,8 @@ import { JavaScriptEventWorkerTask } from '../types/javascript-event-worker-task
 import { BeautifyBacktracePayload } from '../types/beautify-backtrace-payload';
 import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
-import { beautifyUserAgent } from './utils';
+import { beautifyUserAgent, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
-import { parse } from '@babel/parser';
-import traverse from '@babel/traverse';
-import { extname } from 'path';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -135,6 +132,9 @@ export default class JavascriptEventWorker extends EventWorker {
            */
           HawkCatcher.send(error, {
             payload: backtrace as unknown as Record<string, never>,
+            releaseRecord: JSON.stringify(releaseRecord),
+            backtrace: JSON.stringify(backtrace),
+            projectId,
           });
 
           return backtrace[index];
@@ -232,13 +232,13 @@ export default class JavascriptEventWorker extends EventWorker {
 
         const originalContent = consumer.sourceContentFor(originalLocation.source);
 
-        functionContext = await this.getFunctionContext(
+        functionContext = await getFunctionContext(
           originalContent,
           originalLocation.line,
           originalLocation.source
         ) ?? originalLocation.name;
       } catch (e) {
-        HawkCatcher.send(e);
+        HawkCatcher.send(e, { stackFrame: JSON.stringify(stackFrame) });
         this.logger.error('Can\'t get function context');
         this.logger.error(e);
       }
@@ -251,103 +251,6 @@ export default class JavascriptEventWorker extends EventWorker {
       function: functionContext,
       sourceCode: lines,
     }) as BacktraceFrame;
-  }
-
-  /**
-   * Method that is used to parse full function context of the code position
-   *
-   * @param sourceCode - content of the source file
-   * @param line - number of the line from the stack trace
-   * @param sourcePath - original source path from the source map (used to pick parser plugins)
-   * @returns {string | null} - string of the function context or null if it could not be parsed
-   */
-  private getFunctionContext(sourceCode: string, line: number, sourcePath?: string): string | null {
-    let functionName: string | null = null;
-    let className: string | null = null;
-    let isAsync = false;
-
-    try {
-      const parserPlugins = this.getBabelParserPluginsForFile(sourcePath);
-
-      const ast = parse(sourceCode, {
-        sourceType: 'module',
-        plugins: parserPlugins,
-      });
-
-      traverse(ast as any, {
-        /**
-         * It is used to get class decorator of the position, it will save class that is related to original position
-         *
-         * @param path
-         */
-        ClassDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            className = path.node.id.name || null;
-          }
-        },
-        /**
-         * It is used to get class and its method decorator of the position
-         * It will save class and method, that are related to original position
-         *
-         * @param path
-         */
-        ClassMethod(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`class declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            // Handle different key types
-            if (path.node.key.type === 'Identifier') {
-              functionName = path.node.key.name;
-            }
-            isAsync = path.node.async;
-          }
-        },
-        /**
-         * It is used to get function name that is declared out of class
-         *
-         * @param path
-         */
-        FunctionDeclaration(path) {
-          if (path.node.loc && path.node.loc.start.line <= line && path.node.loc.end.line >= line) {
-            console.log(`function declaration: loc: ${path.node.loc}, line: ${line}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
-
-            functionName = path.node.id.name || null;
-            isAsync = path.node.async;
-          }
-        },
-        /**
-         * It is used to get anonimous function names in function expressions or arrow function expressions
-         *
-         * @param path
-         */
-        VariableDeclarator(path) {
-          if (
-            path.node.init &&
-            (path.node.init.type === 'FunctionExpression' || path.node.init.type === 'ArrowFunctionExpression') &&
-            path.node.loc &&
-            path.node.loc.start.line <= line &&
-            path.node.loc.end.line >= line
-          ) {
-            console.log(`variable declaration: node.type: ${path.node.init.type}, line: ${line}, `);
-
-            // Handle different id types
-            if (path.node.id.type === 'Identifier') {
-              functionName = path.node.id.name;
-            }
-            isAsync = (path.node.init as any).async;
-          }
-        },
-      });
-    } catch (traverseError) {
-      console.error(`Failed to parse source code:`);
-      console.error(traverseError);
-
-      HawkCatcher.send(traverseError);
-    }
-
-    return functionName ? `${isAsync ? 'async ' : ''}${className ? `${className}.` : ''}${functionName}` : null;
   }
 
   /**
@@ -450,56 +353,5 @@ export default class JavascriptEventWorker extends EventWorker {
     } catch (e) {
       this.logger.error(`Error on source-map consumer initialization: ${e}`);
     }
-  }
-
-  /**
-   * Choose babel parser plugins based on source file extension
-   *
-   * @param sourcePath - original file path from source map (e.g. "src/App.tsx")
-   */
-  private getBabelParserPluginsForFile(sourcePath?: string): any[] {
-    const basePlugins: string[] = [
-      'classProperties',
-      'decorators',
-      'optionalChaining',
-      'nullishCoalescingOperator',
-      'dynamicImport',
-      'bigInt',
-      'topLevelAwait',
-    ];
-
-    /**
-     * Default - use only typescript plugin because it's more stable and less likely will produce errors
-     */
-    let enableTypeScript = true;
-    let enableJSX = false;
-
-    if (sourcePath) {
-      // remove query/hash if there is any
-      const cleanPath = sourcePath.split('?')[0].split('#')[0];
-      const ext = extname(cleanPath).toLowerCase();
-
-      const isTs   = ext === '.ts' || ext === '.d.ts';
-      const isTsx  = ext === '.tsx';
-      const isJs   = ext === '.js' || ext === '.mjs' || ext === '.cjs';
-      const isJsx  = ext === '.jsx';
-
-      enableTypeScript = isTs || isTsx;
-      // JSX:
-      //  - for .ts/.d.ts — DISABLE
-      //  - for .tsx/.jsx — ENABLE
-      //  - for .js — keep enabled, to not break App.js with JSX
-      enableJSX = isTsx || isJsx || isJs;
-    }
-
-    if (enableTypeScript) {
-      basePlugins.push('typescript');
-    }
-
-    if (enableJSX) {
-      basePlugins.push('jsx');
-    }
-
-    return basePlugins;
   }
 }
