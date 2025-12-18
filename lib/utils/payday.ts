@@ -44,7 +44,6 @@ export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebu
  * @param date - last charge date
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
- * @todo Remove isDebug feature - it complicates the logic and should not be used in production
  */
 export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
   let expectedPayDay: Date;
