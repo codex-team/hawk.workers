@@ -421,6 +421,15 @@ export default class PaymasterWorker extends Worker {
       },
     });
 
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        isBlocked: true,
+        blockedDate: workspace.blockedDate || new Date(),
+      },
+    });
+
     await this.sendWorkspaceBlockedReport(workspace);
   }
 
@@ -433,6 +442,14 @@ export default class PaymasterWorker extends Worker {
     await this.addTask(WorkerNames.LIMITER, {
       type: 'unblock-workspace',
       workspaceId: workspace._id.toString(),
+    });
+
+    await this.workspaces.updateOne({
+      _id: workspace._id,
+    }, {
+      $set: {
+        isBlocked: false,
+      },
     });
   }
 
