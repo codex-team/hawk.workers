@@ -7,7 +7,7 @@ import { HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE, MS_IN_SEC } from './c
 const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
- * Returns difference between now and payday in days
+ * Returns expected payday date
  *
  * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
  *
@@ -15,7 +15,7 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
  */
-export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+export function getPayday(date: Date, paidUntil: Date = null, isDebug = false): Date {
   let expectedPayDay: Date;
 
   if (paidUntil) {
@@ -31,6 +31,20 @@ export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebu
     }
   }
 
+  return expectedPayDay;
+}
+
+/**
+ * Returns difference between now and payday in days
+ *
+ * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
+ *
+ * @param date - last charge date
+ * @param paidUntil - paid until date
+ * @param isDebug - flag for debug purposes
+ */
+export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
+  const expectedPayDay = getPayday(date, paidUntil, isDebug);
   const now = new Date().getTime();
 
   return Math.floor((expectedPayDay.getTime() - now) / MILLISECONDS_IN_DAY);
@@ -46,21 +60,7 @@ export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebu
  * @param isDebug - flag for debug purposes
  */
 export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-  let expectedPayDay: Date;
-
-  if (paidUntil) {
-    // If paidUntil is provided, use it as the payday
-    expectedPayDay = new Date(paidUntil);
-  } else {
-    // Otherwise calculate from lastChargeDate
-    expectedPayDay = new Date(date);
-    if (isDebug) {
-      expectedPayDay.setDate(date.getDate() + 1);
-    } else {
-      expectedPayDay.setMonth(date.getMonth() + 1);
-    }
-  }
-
+  const expectedPayDay = getPayday(date, paidUntil, isDebug);
   const now = new Date().getTime();
 
   return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
