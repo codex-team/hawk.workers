@@ -16,12 +16,19 @@ const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE *
  * @param isDebug - flag for debug purposes
  */
 export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-  const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
+  let expectedPayDay: Date;
 
-  if (isDebug) {
-    expectedPayDay.setDate(date.getDate() + 1);
-  } else if (!paidUntil) {
-    expectedPayDay.setMonth(date.getMonth() + 1);
+  if (paidUntil) {
+    // If paidUntil is provided, use it as the payday
+    expectedPayDay = new Date(paidUntil);
+  } else {
+    // Otherwise calculate from lastChargeDate
+    expectedPayDay = new Date(date);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
   }
 
   const now = new Date().getTime();
@@ -37,14 +44,22 @@ export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebu
  * @param date - last charge date
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
+ * @todo Remove isDebug feature - it complicates the logic and should not be used in production
  */
 export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-  const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
+  let expectedPayDay: Date;
 
-  if (isDebug) {
-    expectedPayDay.setDate(date.getDate() + 1);
-  } else if (!paidUntil) {
-    expectedPayDay.setMonth(date.getMonth() + 1);
+  if (paidUntil) {
+    // If paidUntil is provided, use it as the payday
+    expectedPayDay = new Date(paidUntil);
+  } else {
+    // Otherwise calculate from lastChargeDate
+    expectedPayDay = new Date(date);
+    if (isDebug) {
+      expectedPayDay.setDate(date.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(date.getMonth() + 1);
+    }
   }
 
   const now = new Date().getTime();
