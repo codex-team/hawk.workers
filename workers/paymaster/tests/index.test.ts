@@ -695,6 +695,103 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
+  test('Should refetch plans if workspace tariff appears after worker start', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-22');
+    const cachedPlan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+
+    await tariffCollection.insertOne(cachedPlan);
+
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+
+    const newPlan = createPlanMock({
+      monthlyCharge: 0,
+      isDefault: false,
+    });
+
+    await tariffCollection.insertOne(newPlan);
+
+    const workspace = createWorkspaceMock({
+      plan: newPlan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: true,
+      billingPeriodEventsCount: 10,
+    });
+
+    await workspacesCollection.insertOne(workspace);
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act
+     */
+    await expect(worker.handle(WORKSPACE_SUBSCRIPTION_CHECK)).resolves.not.toThrow();
+
+    /**
+     * Assert
+     */
+    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+
+    expect(updatedWorkspace.lastChargeDate).toEqual(currentDate);
+    expect(updatedWorkspace.billingPeriodEventsCount).toEqual(0);
+    expect(updatedWorkspace.isBlocked).toEqual(false);
+
+    await worker.finish();
+    MockDate.reset();
+  });
+
+  test('Should throw an error when workspace plan is still missing after refetch', async () => {
+    /**
+     * Arrange
+     */
+    const currentDate = new Date('2005-12-22');
+    const cachedPlan = createPlanMock({
+      monthlyCharge: 100,
+      isDefault: true,
+    });
+
+    await tariffCollection.insertOne(cachedPlan);
+
+    const worker = new PaymasterWorker();
+
+    await worker.start();
+
+    const missingPlan = createPlanMock({
+      monthlyCharge: 50,
+      isDefault: false,
+    });
+
+    const workspace = createWorkspaceMock({
+      plan: missingPlan,
+      subscriptionId: null,
+      lastChargeDate: new Date('2005-11-22'),
+      isBlocked: false,
+      billingPeriodEventsCount: 10,
+    });
+
+    await workspacesCollection.insertOne(workspace);
+
+    MockDate.set(currentDate);
+
+    /**
+     * Act + Assert
+     */
+    await expect(worker.handle(WORKSPACE_SUBSCRIPTION_CHECK)).rejects.toThrow(
+      `[Paymaster] Tariff plan ${missingPlan._id.toString()} not found for workspace ${workspace._id.toString()} (${workspace.name})`
+    );
+
+    await worker.finish();
+    MockDate.reset();
+  });
+
   afterAll(async () => {
     await connection.close();
     MockDate.reset();
