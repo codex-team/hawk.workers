@@ -394,15 +394,6 @@ export default class PaymasterWorker extends Worker {
       },
     });
 
-    await this.workspaces.updateOne({
-      _id: workspace._id,
-    }, {
-      $set: {
-        isBlocked: true,
-        blockedDate: workspace.blockedDate || new Date(),
-      },
-    });
-
     await this.sendWorkspaceBlockedReport(workspace);
   }
 
