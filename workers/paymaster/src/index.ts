@@ -124,33 +124,6 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * Finds plan by id from cached plans
-   */
-  private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
-    return this.plans.find((plan) => plan._id.toString() === planId.toString());
-  }
-
-  /**
-   * Returns workspace plan, refreshes cache when plan is missing
-   */
-  private async getWorkspacePlan(workspace: WorkspaceDBScheme): Promise<PlanDBScheme> {
-    let currentPlan = this.findPlanById(workspace.tariffPlanId);
-
-    if (currentPlan) {
-      return currentPlan;
-    }
-
-    await this.fetchPlans();
-    currentPlan = this.findPlanById(workspace.tariffPlanId);
-
-    if (!currentPlan) {
-      throw new Error(`[Paymaster] Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${workspace._id.toString()} (${workspace.name})`);
-    }
-
-    return currentPlan;
-  }
-
-  /**
    * Finish everything
    */
   public async finish(): Promise<void> {
