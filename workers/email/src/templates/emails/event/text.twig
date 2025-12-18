@@ -2,15 +2,15 @@
 {% set daysRepeated = events[0].daysRepeated %}
 {% set newCount = events[0].newCount %}
 {% set usersAffected = events[0].usersAffected %}
-{% set newLabel = 'a new event' %}
-{% if newCount > 1 %}
-    {% set newLabel = newCount ~ ' new events' %}
+{% set newLabel = newCount ~ ' ' ~ pluralize_ru(newCount, ['новое событие', 'новых события', 'новых событий']) %}
+{% if newCount == 1 %}
+    {# Оставить как есть #}
 {% endif %}
 
-You have {{ newLabel }} on «{{ project.name }}» project.
+{{ newLabel }} в проекте «{{ project.name }}»
 
 ------------------------
-{{ event.payload.type ? event.payload.type : 'Uncaught Error' }}: {{ event.payload.title | escape }}
+{{ event.payload.type ? event.payload.type : 'Необработанное событие' }}: {{ event.payload.title | escape }}
 ------------------------
 {% if event.payload.backtrace is not empty %}
     {% if event.payload.backtrace[0] is not empty %}
@@ -21,18 +21,21 @@ You have {{ newLabel }} on «{{ project.name }}» project.
     {% endif %}
 {% endif %}
 
-This event appears {{ event.totalCount }} total times, {{ daysRepeated }} days repeating.
+Это событие произошло {{ event.totalCount }} {{ pluralize_ru(event.totalCount, ['раз', 'раза', 'раз']) }}, повторяется {{ daysRepeated }} {{ pluralize_ru(daysRepeated, ['день', 'дня', 'дней']) }}.
 
-View event: {{ host }}/project/{{ project._id }}/event/{{ event._id }}
+Просмотреть событие: {{ host }}/project/{{ project._id }}/event/{{ event._id }}
 
 ***
 
-You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above. To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
+Вы получили это письмо, потому что подписаны на получение подобных оповещений в настройках уведомлений вашего проекта. Вы можете изменить свои предпочтения в любое время, перейдя по ссылке выше. Чтобы отписаться, перейдите по ссылке: {{ host }}/unsubscribe/{{ project._id }}
 
-Hawk
-Errors tracking system
+***
 
-Made by CodeX
+Хоук
+Российский трекер ошибок
+
+Сделан в CodeX
+
 
 
 

@@ -19,7 +19,7 @@
           {% else %}
             {{ whoAssigned.email }}
           {% endif %}
-          assigned you to resolve the event
+          поручил вам обработать событие
         </span>
       </font>
     </td>
@@ -28,7 +28,7 @@
   <tr>
     <td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
       {% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}
-      {% include '../../components/button.twig' with {href: url, label: 'View event'} %}
+      {% include '../../components/button.twig' with {href: url, label: 'Просмотреть событие'} %}
     </td>
   </tr>
 
@@ -39,7 +39,5 @@
 {% endblock %}
 
 {% block unsubscribeText %}
-  You received this email because you are currently opted in to receive such alerts via your
-  personal notifications settings. You may adjust your preferences at any time by clicking
-  the link above.
+  Вы получили это письмо, потому что подписаны на получение подобных оповещений в настройках вашего профиля. Вы можете их изменить, перейдя по ссылке выше.
 {% endblock %}

@@ -1,10 +1,12 @@
-{{ daysLeft | escape }} day{{ daysLeft > 1 ? 's' : '' }} left to the paid plan ending for workspace {{ workspace.name | escape }}.
+{{ daysLeft | escape }} {{ pluralize_ru(daysLeft, ['день', 'дня', 'дней']) }} до окончания платного тарифа воркспейса «{{ workspace.name | escape }}».
 
-Please, check payment settings and renew the plan: {{ host }}/workspace/{{ workspace._id }}/settings/billing
+Если оплата не пройдет, то мониторинг ошибок будет приостановлен.
+
+Пожалуйста, проверьте настройки оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing
 
 ***
 
-Hawk
-Errors tracking system
+Хоук
+Российский трекер ошибок
 
-Made by CodeX
+Сделан в CodeX
