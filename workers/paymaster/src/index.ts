@@ -124,21 +124,6 @@ export default class PaymasterWorker extends Worker {
   }
 
   /**
-   * Fetches tariff plans from database and keeps them cached
-   */
-  private async fetchPlans(): Promise<void> {
-    if (!this.plansCollection) {
-      throw new Error('Plans collection is not initialized');
-    }
-
-    this.plans = await this.plansCollection.find({}).toArray();
-
-    if (this.plans.length === 0) {
-      throw new Error('Please add tariff plans to the database');
-    }
-  }
-
-  /**
    * Finds plan by id from cached plans
    */
   private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
@@ -183,6 +168,48 @@ export default class PaymasterWorker extends Worker {
       case EventType.WorkspaceSubscriptionCheck:
         await this.handleWorkspaceSubscriptionCheckEvent();
     }
+  }
+
+  /**
+   * Fetches tariff plans from database and keeps them cached
+   */
+  private async fetchPlans(): Promise<void> {
+    if (!this.plansCollection) {
+      throw new Error('Plans collection is not initialized');
+    }
+
+    this.plans = await this.plansCollection.find({}).toArray();
+
+    if (this.plans.length === 0) {
+      throw new Error('Please add tariff plans to the database');
+    }
+  }
+
+  /**
+   * Finds plan by id from cached plans
+   */
+  private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
+    return this.plans.find((plan) => plan._id.toString() === planId.toString());
+  }
+
+  /**
+   * Returns workspace plan, refreshes cache when plan is missing
+   */
+  private async getWorkspacePlan(workspace: WorkspaceDBScheme): Promise<PlanDBScheme> {
+    let currentPlan = this.findPlanById(workspace.tariffPlanId);
+
+    if (currentPlan) {
+      return currentPlan;
+    }
+
+    await this.fetchPlans();
+    currentPlan = this.findPlanById(workspace.tariffPlanId);
+
+    if (!currentPlan) {
+      throw new Error(`[Paymaster] Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${workspace._id.toString()} (${workspace.name})`);
+    }
+
+    return currentPlan;
   }
 
   /**
