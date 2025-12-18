@@ -407,14 +407,6 @@ export default class PaymasterWorker extends Worker {
       type: 'unblock-workspace',
       workspaceId: workspace._id.toString(),
     });
-
-    await this.workspaces.updateOne({
-      _id: workspace._id,
-    }, {
-      $set: {
-        isBlocked: false,
-      },
-    });
   }
 
 
