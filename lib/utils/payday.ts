@@ -7,23 +7,44 @@ import { HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE, MS_IN_SEC } from './c
 const MILLISECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SEC;
 
 /**
+ * Returns expected payday date
+ *
+ * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
+ *
+ * @param lastChargeDate - last charge date
+ * @param paidUntil - paid until date
+ * @param isDebug - flag for debug purposes
+ */
+export function getPayday(lastChargeDate: Date, paidUntil: Date = null, isDebug = false): Date {
+  let expectedPayDay: Date;
+
+  if (paidUntil) {
+    // If paidUntil is provided, use it as the payday
+    expectedPayDay = new Date(paidUntil);
+  } else {
+    // Otherwise calculate from lastChargeDate
+    expectedPayDay = new Date(lastChargeDate);
+    if (isDebug) {
+      expectedPayDay.setDate(lastChargeDate.getDate() + 1);
+    } else {
+      expectedPayDay.setMonth(lastChargeDate.getMonth() + 1);
+    }
+  }
+
+  return expectedPayDay;
+}
+
+/**
  * Returns difference between now and payday in days
  *
  * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
  *
- * @param date - last charge date
+ * @param lastChargeDate - last charge date
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
  */
-export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-  const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
-
-  if (isDebug) {
-    expectedPayDay.setDate(date.getDate() + 1);
-  } else if (!paidUntil) {
-    expectedPayDay.setMonth(date.getMonth() + 1);
-  }
-
+export function countDaysBeforePayday(lastChargeDate: Date, paidUntil: Date = null, isDebug = false): number {
+  const expectedPayDay = getPayday(lastChargeDate, paidUntil, isDebug);
   const now = new Date().getTime();
 
   return Math.floor((expectedPayDay.getTime() - now) / MILLISECONDS_IN_DAY);
@@ -34,19 +55,12 @@ export function countDaysBeforePayday(date: Date, paidUntil: Date = null, isDebu
  *
  * Pay day is calculated by formula: paidUntil date or last charge date + 1 month
  *
- * @param date - last charge date
+ * @param lastChargeDate - last charge date
  * @param paidUntil - paid until date
  * @param isDebug - flag for debug purposes
  */
-export function countDaysAfterPayday(date: Date, paidUntil: Date = null, isDebug = false): number {
-  const expectedPayDay = paidUntil ? new Date(paidUntil) : new Date(date);
-
-  if (isDebug) {
-    expectedPayDay.setDate(date.getDate() + 1);
-  } else if (!paidUntil) {
-    expectedPayDay.setMonth(date.getMonth() + 1);
-  }
-
+export function countDaysAfterPayday(lastChargeDate: Date, paidUntil: Date = null, isDebug = false): number {
+  const expectedPayDay = getPayday(lastChargeDate, paidUntil, isDebug);
   const now = new Date().getTime();
 
   return Math.floor((now - expectedPayDay.getTime()) / MILLISECONDS_IN_DAY);
