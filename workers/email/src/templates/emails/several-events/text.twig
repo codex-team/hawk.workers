@@ -4,7 +4,7 @@
 
 {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
 
-{{ eventData.event.payload.type ?: 'Необработанная ошибка' }}: {{ eventData.event.payload.title }}
+{{ eventData.event.payload.type ? eventData.event.payload.type + ': ' : '' }}{{ eventData.event.payload.title }}
 
 В файле: {{ eventData.event.payload.backtrace[0].file }} на строке {{ eventData.event.payload.backtrace[0].line }}.
 
