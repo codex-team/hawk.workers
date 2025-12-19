@@ -226,6 +226,10 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
+       * [USED FOR PREPAID WORKSPACES]
+       * "Recharge" — to reset limits for the new billing period (month).
+       *  It should be done even for prepaid workspaces that do not need to pay anything today.
+       *
        * If it is time to recharge workspace limits, but not time to pay
        * Start new month - recharge billing period events count and update last charge date
        */
