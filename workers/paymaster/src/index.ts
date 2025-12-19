@@ -26,7 +26,7 @@ const DAYS_AFTER_PAYDAY_TO_TRY_PAYING = 3;
  * List of days left number to notify admins about upcoming payment
  */
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-const DAYS_LEFT_ALERT = [3, 2, 1, 0];
+const DAYS_LEFT_ALERT = [3, 2, 1];
 
 /**
  * Days after block to remind admins about blocked workspace
@@ -267,6 +267,10 @@ export default class PaymasterWorker extends Worker {
      */
     if (!isTimeToPay) {
       /**
+       * [USED FOR PREPAID WORKSPACES]
+       * "Recharge" — to reset limits for the new billing period (month).
+       *  It should be done even for prepaid workspaces that do not need to pay anything today.
+       *
        * If it is time to recharge workspace limits, but not time to pay
        * Start new month - recharge billing period events count and update last charge date
        */

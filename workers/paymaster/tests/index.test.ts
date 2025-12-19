@@ -738,11 +738,12 @@ describe('PaymasterWorker', () => {
     /**
      * Assert
      */
-    const updatedWorkspace = await workspacesCollection.findOne({ _id: workspace._id });
+    const addTaskSpy = jest.spyOn(worker, 'addTask');
 
-    expect(updatedWorkspace.lastChargeDate).toEqual(currentDate);
-    expect(updatedWorkspace.billingPeriodEventsCount).toEqual(0);
-    expect(updatedWorkspace.isBlocked).toEqual(false);
+    expect(addTaskSpy).toHaveBeenCalledWith('cron-tasks/limiter', {
+      type: 'unblock-workspace',
+      workspaceId: workspace._id.toString(),
+    });
 
     await worker.finish();
     MockDate.reset();
