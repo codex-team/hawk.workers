@@ -7,18 +7,22 @@ import { ObjectId } from 'mongodb';
  */
 let mockedNow: number | null = null;
 
-const setMockedNow = (date: Date) => {
+const setMockedNow = (date: Date): void => {
   mockedNow = date.getTime();
 };
 
-const resetMockedNow = () => {
+const resetMockedNow = (): void => {
   mockedNow = null;
 };
 
 // Override Date constructor
 const RealDate = Date;
 global.Date = class extends RealDate {
-  constructor(...args: any[]) {
+  /**
+   * Constructor for mocked Date class
+   * @param args - arguments passed to Date constructor
+   */
+  constructor(...args: unknown[]) {
     if (args.length === 0 && mockedNow !== null) {
       super(mockedNow);
     } else {
@@ -26,7 +30,7 @@ global.Date = class extends RealDate {
     }
   }
 
-  static now() {
+  public static now(): number {
     return mockedNow !== null ? mockedNow : RealDate.now();
   }
 } as DateConstructor;
