@@ -19,7 +19,7 @@
   {% if event.daysRepeated is not empty %}
   <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
     <nobr>
-      {{ event.daysRepeated }}&nbsp;{{ pluralize_ru(event.daysRepeated, ['день', 'дня', 'дней']) }}&nbsp;повторяется
+      {{ event.daysRepeated }}&nbsp;{{ pluralize_ru(event.daysRepeated, ['день', 'дня', 'дней']) }}
     </nobr>
   </font>
   &nbsp;&nbsp;
@@ -27,7 +27,7 @@
   {% if event.usersAffected %}
     <font color="#969FB3" style="font-size: 12px; line-height: 20px; letter-spacing: 0.17px;text-align: center; color: #969FB3;">
       <nobr>
-        {{ event.usersAffected }}&nbsp;{{ pluralize_ru(event.usersAffected, ['пользователь', 'пользователя', 'пользователей']) }}&nbsp;затронуто
+        {{ event.usersAffected }}&nbsp;{{ pluralize_ru(event.usersAffected, ['пользователь', 'пользователя', 'пользователей']) }}
       </nobr>
     </font>
   {% endif %}
