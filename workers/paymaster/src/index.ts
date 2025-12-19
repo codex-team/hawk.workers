@@ -54,9 +54,14 @@ export default class PaymasterWorker extends Worker {
   private workspaces: Collection<WorkspaceDBScheme>;
 
   /**
+   * Collection with plans
+   */
+  private plansCollection: Collection<PlanDBScheme>;
+
+  /**
    * List of tariff plans
    */
-  private plans: PlanDBScheme[];
+  private plans: PlanDBScheme[] = [];
 
   /**
    * Check if today is a payday for passed timestamp
@@ -111,13 +116,9 @@ export default class PaymasterWorker extends Worker {
     const connection = await this.db.connect();
 
     this.workspaces = connection.collection('workspaces');
-    const plansCollection = connection.collection<PlanDBScheme>('plans');
+    this.plansCollection = connection.collection<PlanDBScheme>('plans');
 
-    this.plans = await plansCollection.find({}).toArray();
-
-    if (this.plans.length === 0) {
-      throw new Error('Please add tariff plans to the database');
-    }
+    await this.fetchPlans();
 
     await super.start();
   }
@@ -140,6 +141,48 @@ export default class PaymasterWorker extends Worker {
       case EventType.WorkspaceSubscriptionCheck:
         await this.handleWorkspaceSubscriptionCheckEvent();
     }
+  }
+
+  /**
+   * Fetches tariff plans from database and keeps them cached
+   */
+  private async fetchPlans(): Promise<void> {
+    if (!this.plansCollection) {
+      throw new Error('Plans collection is not initialized');
+    }
+
+    this.plans = await this.plansCollection.find({}).toArray();
+
+    if (this.plans.length === 0) {
+      throw new Error('Please add tariff plans to the database');
+    }
+  }
+
+  /**
+   * Finds plan by id from cached plans
+   */
+  private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
+    return this.plans.find((plan) => plan._id.toString() === planId.toString());
+  }
+
+  /**
+   * Returns workspace plan, refreshes cache when plan is missing
+   */
+  private async getWorkspacePlan(workspace: WorkspaceDBScheme): Promise<PlanDBScheme> {
+    let currentPlan = this.findPlanById(workspace.tariffPlanId);
+
+    if (currentPlan) {
+      return currentPlan;
+    }
+
+    await this.fetchPlans();
+    currentPlan = this.findPlanById(workspace.tariffPlanId);
+
+    if (!currentPlan) {
+      throw new Error(`[Paymaster] Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${workspace._id.toString()} (${workspace.name})`);
+    }
+
+    return currentPlan;
   }
 
   /**
@@ -180,9 +223,7 @@ export default class PaymasterWorker extends Worker {
    */
   private async processWorkspaceSubscriptionCheck(workspace: WorkspaceDBScheme): Promise<[WorkspaceDBScheme, boolean]> {
     const date = new Date();
-    const currentPlan = this.plans.find(
-      (plan) => plan._id.toString() === workspace.tariffPlanId.toString()
-    );
+    const currentPlan = await this.getWorkspacePlan(workspace);
 
     /** Define readable values */
 
