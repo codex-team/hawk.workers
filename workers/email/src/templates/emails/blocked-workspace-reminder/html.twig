@@ -33,7 +33,13 @@
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: workspace.tariffPlanId is same as('5f47f031ff71510040f433c1') ? 'Выбрать тариф от 99 ₽' : 'Открыть настройки'} %}
+      {% set tariffPlanIdString = workspace.tariffPlanId ~ '' %}
+      {% if tariffPlanIdString == '5f47f031ff71510040f433c1' %}
+        {% set buttonLabel = 'Выбрать тариф от 99 ₽' %}
+      {% else %}
+        {% set buttonLabel = 'Открыть настройки' %}
+      {% endif %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: buttonLabel} %}
     </td>
   </tr>
 {% endblock %}

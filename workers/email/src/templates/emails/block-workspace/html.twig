@@ -14,7 +14,7 @@
     <td align="center" style="padding: 15px 0;">
       <font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
         <span style="vertical-align: middle; display: inline-block;">
-          «{{ workspace.name | escape }}» не принимает события
+          «{{ workspace.name | escape }}» не видит новые ошибки
         </span>
       </font>
     </td>
@@ -33,7 +33,13 @@
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: workspace.tariffPlanId is same as('5f47f031ff71510040f433c1') ? 'Увеличить лимит от 99 ₽' : 'Открыть настройки'} %}
+      {% set tariffPlanIdString = workspace.tariffPlanId ~ '' %}
+      {% if tariffPlanIdString == '5f47f031ff71510040f433c1' %}
+        {% set buttonLabel = 'Увеличить лимит от 99 ₽' %}
+      {% else %}
+        {% set buttonLabel = 'Открыть настройки' %}
+      {% endif %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: buttonLabel} %}
     </td>
   </tr>
 {% endblock %}
