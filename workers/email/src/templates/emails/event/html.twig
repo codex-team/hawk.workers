@@ -16,7 +16,7 @@
       <font color="#969FB3" style="font-size: 14px; text-align: center; color: #969FB3; letter-spacing: 0.2px;">
         <img src="{{ hostOfStatic }}/email/event-badge-icon.png" width="8" height="14" hspace="3" style="vertical-align: middle">
         <span style="vertical-align: middle; display: inline-block;">
-          {{ event.payload.type | default('') ? event.payload.type + ': ' : '' }}{{ event.payload.title | escape }}
+          {% if event.payload.type %}{{ event.payload.type }}: {% endif %}{{ event.payload.title | escape }}
         </span>
       </font>
     </td>

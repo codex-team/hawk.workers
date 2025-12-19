@@ -4,8 +4,7 @@
 
 {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
 
-{{ eventData.event.payload.type | default('') ? eventData.event.payload.type + ': ' : '' }}{{ eventData.event.payload.title }}
-
+{% if eventData.event.payload.type %}{{ eventData.event.payload.type }}: {% endif %}{{ eventData.event.payload.title | escape }}
 
 В файле: {{ eventData.event.payload.backtrace[0].file }} на строке {{ eventData.event.payload.backtrace[0].line }}.
 

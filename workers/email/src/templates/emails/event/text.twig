@@ -10,7 +10,7 @@
 {{ newLabel }} в проекте «{{ project.name }}»
 
 ------------------------
-{{ event.payload.type | default('') ? event.payload.type + ': ' : '' }}{{ event.payload.title | escape }}
+{% if event.payload.type %}{{ event.payload.type }}: {% endif %}{{ event.payload.title | escape }}
 ------------------------
 {% if event.payload.backtrace is not empty %}
     {% if event.payload.backtrace[0] is not empty %}
