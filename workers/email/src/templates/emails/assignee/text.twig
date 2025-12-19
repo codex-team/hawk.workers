@@ -1,4 +1,4 @@
-{% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} поручил вам обработать событие в проекте «{{ project.name | escape }}»
+{% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} назначил вас ответственным за исправление ошибки в проекте «{{ project.name | escape }}»
 
 {{ event.payload.title }}
 
