@@ -81,8 +81,17 @@ export default class EmailProvider extends NotificationsProvider {
       return;
     }
 
+    let sender = `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`;
+
+    /**
+     * Add prefix for Stage and Dev emails sender name
+     */
+    if (process.env.ENVIRONMENT_NAME !== 'prod') {
+      sender = `"${process.env.SMTP_SENDER_NAME}[${process.env.ENVIRONMENT_NAME}]" <${process.env.SMTP_SENDER_ADDRESS}>`; 
+    }
+
     const mailOptions = {
-      from: `"${process.env.SMTP_SENDER_NAME}" <${process.env.SMTP_SENDER_ADDRESS}>`,
+      from: sender,
       to,
       ...content,
     };
