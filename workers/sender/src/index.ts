@@ -598,6 +598,7 @@ export default abstract class SenderWorker extends Worker {
         host: process.env.GARAGE_URL,
         hostOfStatic: process.env.API_STATIC_URL,
         password,
+        email: endpoint,
       },
     } as SignUpNotification);
   }
