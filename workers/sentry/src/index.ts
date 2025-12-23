@@ -128,7 +128,7 @@ export default class SentryEventWorker extends Worker {
        * Skip non-event items
        */
       if (itemHeader.type !== 'event') {
-        this.logger.verbose(`Skipping non-event item of type: ${itemHeader.type}`);
+        this.logger.info(`Skipping non-event item of type: ${itemHeader.type}`);
         return 'skipped';
       }
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
