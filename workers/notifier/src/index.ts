@@ -160,6 +160,7 @@ export default class NotifierWorker extends Worker {
       await this.sendToSenderWorker(channelKey, [ {
         key: event.groupHash,
         count: 1,
+        repetitionId: event.repetitionId,
       } ]);
     }
   }

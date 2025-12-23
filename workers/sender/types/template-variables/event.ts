@@ -25,6 +25,11 @@ export interface TemplateEventData {
    * Number of affected users for this event
    */
   usersAffected?: number;
+
+  /**
+   * ID of the particular repetition of occurred event
+   */
+  repetitionId?: string | null;
 }
 
 /**

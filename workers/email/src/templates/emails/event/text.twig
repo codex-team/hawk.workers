@@ -1,4 +1,5 @@
 {% set event = events[0].event %}
+{% set repetitionId = events[0].repetitionId %}
 {% set daysRepeated = events[0].daysRepeated %}
 {% set newCount = events[0].newCount %}
 {% set usersAffected = events[0].usersAffected %}
@@ -25,7 +26,11 @@
 
 Это событие произошло {{ event.totalCount }} {{ pluralize_ru(event.totalCount, ['раз', 'раза', 'раз']) }} за {{ daysRepeated }} {{ pluralize_ru(daysRepeated, ['день', 'дня', 'дней']) }}.
 
-Смотреть детали: {{ host }}/project/{{ project._id }}/event/{{ event._id }}?{{ utmParams }}
+{% if repetitionId %}
+Смотреть детали: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/{{ repetitionId }}/overview?{{ utmParams }}
+{% else %}
+Смотреть детали: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview?{{ utmParams }}
+{% endif %}
 
 ***
 
