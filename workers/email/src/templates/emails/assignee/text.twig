@@ -1,18 +1,18 @@
-{% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} assigned you to resolve the event
+{% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} назначил вас ответственным за исправление ошибки в проекте «{{ project.name | escape }}»
 
 {{ event.payload.title }}
 
-{{ event.totalCount }} total
-{{ daysRepeated }} {% if daysRepeated == 1 %}day{% else %}days{% endif %} repeating
-{{ event.usersAffected }} {% if event.usersAffected  == 1 %}user{% else %}users{% endif %} affected
+{{ event.totalCount }} {{ pluralize_ru(event.totalCount, ['раз', 'раза', 'раз']) }}
+{{ daysRepeated }} {{ pluralize_ru(daysRepeated, ['день', 'дня', 'дней']) }} повторяется
+{{ event.usersAffected }} {{ pluralize_ru(event.usersAffected, ['пользователь', 'пользователя', 'пользователей']) }} затронуто
 
-View event: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview
+Смотреть событие: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview
 
 ***
 
-You received this email because you are currently opted in to receive such alerts via your personal notifications settings. You may adjust your preferences at any time by clicking the link: {{ host }}/account/notifications
+Вы получили это письмо, потому что подписаны на подобные уведомления. Вы можете изменить настройки, перейдя по ссылке: {{ host }}/account/notifications
 
-Hawk
-Errors tracking system
+***
 
-Made by CodeX
+Хоук
+Мониторинг ошибок

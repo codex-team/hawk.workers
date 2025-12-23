@@ -1,1 +1,1 @@
-{{ daysLeft | escape }} day{{ daysLeft > 1 ? 's' : '' }} left to the paid plan ending for workspace {{ workspace.name | escape }}!
+Через {{ daysLeft | escape }} {{ pluralize_ru(daysLeft, ['день', 'дня', 'дней']) }} заканчивается подписка воркспейса «{{ workspace.name | escape }}» на мониторинг ошибок!

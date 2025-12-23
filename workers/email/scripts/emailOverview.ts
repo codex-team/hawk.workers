@@ -149,6 +149,16 @@ class EmailTestServer {
       period: 10,
       reason: 'error on the payment server side',
       daysAfterPayday: countDaysAfterPayday(workspace.lastChargeDate, workspace.paidUntil),
+      daysAfterBlock: 5,
+      daysLeft: 3,
+      eventsCount: workspace.billingPeriodEventsCount,
+      eventsLimit: 100000,
+      tariffPlanId: '5f47f031ff71510040f433c1',
+      password: '1as2eadd321a3cDf',
+      plan: {
+        name: 'Корпоративный'
+      },
+      workspaceName: workspace.name,
     };
 
     try {

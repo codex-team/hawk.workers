@@ -1,1 +1,1 @@
-{{ project.name | escape }} — {{ events.length }} new events for the last {{ period | prettyTime }}
+{{ project.name | escape }} — {{ events.length }} {{ pluralize_ru(events.length, ['новое событие', 'новых события', 'новых событий']) }} за последние {{ period | prettyTime }}

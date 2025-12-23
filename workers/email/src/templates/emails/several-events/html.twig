@@ -50,10 +50,10 @@
       {% set url = host ~ '/project/' ~ project._id %}
       {% if events.length - eventsToShow > 0 %}
         {% set hiddenEventsLen = events.length - eventsToShow %}
-        {% set hiddenEventsMessage = 'and ' ~ hiddenEventsLen ~ ' more…' %}
+        {% set hiddenEventsMessage = 'и еще ' ~ hiddenEventsLen ~ '…' %}
         {% include '../../components/button.twig' with {href: url, label: hiddenEventsMessage} %}
       {% else %}
-        {% include '../../components/button.twig' with {href: url, label: 'View events'} %}
+        {% include '../../components/button.twig' with {href: url, label: 'Смотреть события'} %}
       {% endif %}
     </td>
   </tr>
@@ -65,7 +65,5 @@
 {% endblock %}
 
 {% block unsubscribeText %}
-  You received this email because you are currently opted in to receive such alerts via your
-  project’s notifications settings. You may adjust your preferences at any time by clicking
-  the link above.
+  Вы получили это письмо, потому что подписаны на подобные уведомления. Вы можете изменить настройки, перейдя по ссылке выше.
 {% endblock %}

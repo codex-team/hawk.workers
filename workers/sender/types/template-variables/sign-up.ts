@@ -8,7 +8,12 @@ export interface SignUpVariables extends CommonTemplateVariables {
   /**
    * Password generated for the user
    */
-  password: string
+  password: string;
+
+  /**
+   * Email of the user
+   */
+  email: string;
 }
 
 /**

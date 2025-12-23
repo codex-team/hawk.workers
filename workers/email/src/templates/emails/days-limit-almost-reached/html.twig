@@ -14,7 +14,7 @@
     <td align="center" style="padding: 15px 0;">
       <font color="#dbe6ff" style="font-size: 15px; text-align: center; color: #dbe6ff; letter-spacing: 0.4px;">
         <span style="vertical-align: middle; display: inline-block;">
-          {{ daysLeft | escape }} day{{ daysLeft > 1 ? 's' : '' }} left to the paid plan ending
+          Осталось {{ daysLeft | escape }} {{ pluralize_ru(daysLeft, ['день', 'дня', 'дней']) }} до окончания подписки на мониторинг ошибок.
         </span>
       </font>
     </td>
@@ -22,14 +22,16 @@
   <tr>
     <td style="display: block; padding: 20px; margin-bottom: 30px; border-width: 1px; border-color: #494f5e; border-style: solid; border-radius: 10px; line-height: 1.47">
       <font color="#dbe6ff" style="font-size: 15px; letter-spacing: 0.4px;">
-        Please, make sure that you have linked a card as a payment method for the workspace "{{ workspace.name | escape }}".
-        Otherwise it will be blocked because the plan was not renewed.
+          Привяжите карту для автоматического продления тарифа в воркспейсе «{{ workspace.name | escape }}». Или оплатите следующий месяц разово.<br>
+          <br>
+          Если план не продлить, то мониторинг ошибок будет приостановлен.
+        <br>
       </font>
     </td>
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: 'Go to payment settings'} %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: 'Перейти к настройкам'} %}
     </td>
   </tr>
 {% endblock %}

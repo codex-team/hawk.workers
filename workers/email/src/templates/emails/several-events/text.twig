@@ -1,35 +1,30 @@
-You have {{ events.length }} new events on «{{ project.name|escape }}» project for the last {{ period | prettyTime }}
+У вас {{ events.length }} {{ pluralize_ru(events.length, ['новое событие', 'новых события', 'новых событий']) }} в проекте «{{ project.name|escape }}» за последние {{ period | prettyTime }}
 
 {% set eventsToShow = 5 %}
 
 {% for eventData in events | sortEvents | slice(0, eventsToShow) %}
 
-{{ eventData.event.payload.type ?: 'Uncaught Error' }}: {{ eventData.event.payload.title }}
+{% if eventData.event.payload.type %}{{ eventData.event.payload.type }}: {% endif %}{{ eventData.event.payload.title | escape }}
 
-In file: {{ eventData.event.payload.backtrace[0].file }} at line {{ eventData.event.payload.backtrace[0].line }}.
+В файле: {{ eventData.event.payload.backtrace[0].file }} на строке {{ eventData.event.payload.backtrace[0].line }}.
 
-{{ eventData.newCount }} new and {{ eventData.event.totalCount }} total{{ event.daysRepeated ? ', ' ~ event.daysRepeated ~ 'days repeating' : ''  }} {{ event.usersAffected ? ', ' ~ event.userAffected ~ ' users affected' : '' }}
+{{ eventData.newCount }} {{ pluralize_ru(eventData.newCount, ['новое', 'новых события', 'новых событий']) }} и {{ eventData.event.totalCount }} {{ pluralize_ru(eventData.event.totalCount, ['раз', 'раза', 'раз']) }}{{ event.daysRepeated ? ', повторяется ' ~ event.daysRepeated ~ ' ' ~ pluralize_ru(event.daysRepeated, ['день', 'дня', 'дней']) : ''  }} {{ event.usersAffected ? ', затронуто ' ~ event.userAffected ~ ' ' ~ pluralize_ru(event.userAffected, ['пользователь', 'пользователя', 'пользователей']) : '' }}
 
 
 {% endfor %}
 
 {% if events.length - eventsToShow > 0 %}
-View other {{ events.length - eventsToShow }} events: {{ host }}/project/{{ project._id }}
+Смотреть еще {{ events.length - eventsToShow }} событий: {{ host }}/project/{{ project._id }}
 {% else %}
-View events: {{ host }}/project/{{ project._id }}
+Смотреть события: {{ host }}/project/{{ project._id }}
 {% endif %}
 
 
 ***
 
-You received this email because you are currently opted in to receive such alerts via your project’s notifications settings. You may adjust your preferences at any time by clicking the link above. To unsubscribe, follow the link: {{ host }}/unsubscribe/{{ project._id }}
+Вы получили это письмо, потому что подписаны на подобные уведомления. Вы можете изменить настройки, перейдя по ссылке: {{ host }}/unsubscribe/{{ project._id }}
 
-Hawk
-Errors tracking system
+***
 
-Made by CodeX
-
-
-
-
-
+Хоук
+Мониторинг ошибок
