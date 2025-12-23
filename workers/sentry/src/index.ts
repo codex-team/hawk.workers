@@ -140,12 +140,30 @@ export default class SentryEventWorker extends Worker {
 
       /**
        * Safely check if SDK name exists and is in the list
+       * SDK name can be either a simple name like "react" or a full name like "sentry.javascript.react"
        */
       const sdkName = payloadHasSDK && itemPayload.sdk && typeof itemPayload.sdk === 'object' && 'name' in itemPayload.sdk
         ? itemPayload.sdk.name
         : undefined;
 
-      const isJsSDK = sdkName !== undefined && sentryJsSDK.includes(sdkName);
+      /**
+       * Check if SDK is a JavaScript-related SDK
+       * Supports both simple names (e.g., "react") and full names (e.g., "sentry.javascript.react")
+       */
+      const isJsSDK = sdkName !== undefined && typeof sdkName === 'string' && (
+        /**
+         * Exact match for simple SDK names (e.g., "react", "browser")
+         */
+        sentryJsSDK.includes(sdkName) ||
+        /**
+         * Check if SDK name contains one of the JS SDK names
+         * Examples:
+         * - "sentry.javascript.react" matches "react"
+         * - "sentry.javascript.browser" matches "browser"
+         * - "@sentry/react" matches "react"
+         */
+        sentryJsSDK.some((jsSDK) => sdkName.includes(jsSDK))
+      );
 
       const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
 
@@ -158,7 +176,6 @@ export default class SentryEventWorker extends Worker {
       if (!taskSent) {
         /**
          * If addTask returns false, the message was not queued (queue full or channel closed)
-         * This is a critical error that should be logged and thrown
          */
         const error = new Error(`Failed to queue event to ${workerName} worker. Queue may be full or channel closed.`);
         this.logger.error(error.message);
@@ -167,7 +184,6 @@ export default class SentryEventWorker extends Worker {
         throw error;
       }
 
-      this.logger.verbose(`Successfully queued event to ${workerName} worker`);
       return 'processed';
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
@@ -198,7 +214,14 @@ export default class SentryEventWorker extends Worker {
      * convert sent_at from ISO 8601 to Unix timestamp
      */
     const msInSecond = 1000;
-    const sentAtUnix = Math.floor(new Date(sent_at).getTime() / msInSecond);
+    const sentAtDate = new Date(sent_at);
+    const sentAtTime = sentAtDate.getTime();
+
+    if (isNaN(sentAtTime)) {
+      throw new Error(`Invalid sent_at timestamp: ${sent_at}`);
+    }
+
+    const sentAtUnix = Math.floor(sentAtTime / msInSecond);
     /* eslint-enable @typescript-eslint/naming-convention */
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
@@ -211,9 +234,18 @@ export default class SentryEventWorker extends Worker {
      * We need to decode it to JSON
      */
     if (eventPayload instanceof Uint8Array) {
-      const textDecoder = new TextDecoder();
+      try {
+        const textDecoder = new TextDecoder();
+        const decoded = textDecoder.decode(eventPayload as Uint8Array);
 
-      eventPayload = JSON.parse(textDecoder.decode(eventPayload as Uint8Array));
+        try {
+          eventPayload = JSON.parse(decoded);
+        } catch (parseError) {
+          throw new Error(`Failed to parse event payload JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        }
+      } catch (decodeError) {
+        throw new Error(`Failed to decode Uint8Array event payload: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`);
+      }
     }
 
     const title = composeTitle(eventPayload);
