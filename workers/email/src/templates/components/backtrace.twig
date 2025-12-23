@@ -19,7 +19,7 @@
         </div>
       </td>
       <td style="border-top-right-radius: 6px;border-top-left-radius: 0;border-bottom-right-radius: 6px;border-bottom-left-radius: 0; background-color: {{ frame.line == backtrace.line ? 'rgba(149, 61, 135, 0.3);' : 'unset' }}">
-        <pre style="margin: 0;padding-top: 0;padding-right: 10px;margin-left: 20px;padding-bottom: 0; overflow: auto"><nobr><font color="#969FB3" style="font-size: 12px; line-height: 1.75; color: #969FB3; white-space: nowrap; text-overflow: clip">{{ frame.content | escape }}</font></nobr></pre>
+        <nobr><pre style="margin: 0;padding-top: 0;padding-right: 10px;margin-left: 20px;padding-bottom: 0; overflow: auto"><font color="#969FB3" style="font-size: 12px; line-height: 1.75; color: #969FB3; white-space: nowrap; text-overflow: clip">{{ frame.content | escape }}</font></pre></nobr>
       </td>
     </tr>
   {% endfor %}
