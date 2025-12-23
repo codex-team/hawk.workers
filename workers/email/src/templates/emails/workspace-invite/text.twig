@@ -4,7 +4,10 @@
 
 Чтобы получить доступ ко всем проектам этого воркспейса, нажмите ссылку ниже.
 
-{{ inviteLink }}
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=workspace-invite' %}
+{% set sep = ('?' in inviteLink) ? '&' : '?' %}
+
+{{ inviteLink }}{{ sep }}{{ utmParams }}
 
 ***
 

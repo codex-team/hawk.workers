@@ -47,7 +47,8 @@
 
   <tr>
     <td class="several-items-button-wrap" style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-      {% set url = host ~ '/project/' ~ project._id %}
+      {% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=several-events' %}
+      {% set url = host ~ '/project/' ~ project._id ~ '?' ~ utmParams %}
       {% if events.length - eventsToShow > 0 %}
         {% set hiddenEventsLen = events.length - eventsToShow %}
         {% set hiddenEventsMessage = 'и еще ' ~ hiddenEventsLen ~ '…' %}

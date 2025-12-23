@@ -2,8 +2,10 @@
 
 Ниже — данные для входа в аккаунт. Используйте этот пароль для первого входа, позже вы сможете изменить его в настройках.
 
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=sign-up' %}
+
 Пароль: {{ password }}
-Войти: {{ host ~ '/login?emailPrefilled=' ~ endpoint }}
+Войти: {{ host ~ '/login?emailPrefilled=' ~ endpoint }}&{{ utmParams }}
 
 ***
 

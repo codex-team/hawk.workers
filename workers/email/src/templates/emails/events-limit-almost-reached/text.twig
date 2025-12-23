@@ -2,7 +2,9 @@
 
 Ваш проект растёт — это здорово. Давайте убедимся, что ни одна важная ошибка не останется незамеченной.
 
-При необходимости обновите свой тариф, чтобы всегда быть в курсе всех происшествий: {{ host }}/workspace/{{ workspace._id }}/settings/billing
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=events-limit-almost-reached' %}
+
+При необходимости обновите свой тариф, чтобы всегда быть в курсе всех происшествий: {{ host }}/workspace/{{ workspace._id }}/settings/billing?{{ utmParams }}
 
 ***
 

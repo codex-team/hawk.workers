@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block content %}
+  {% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=assignee' %}
+
   <tr>
     <td>
       <img src="{{ hostOfStatic }}/email/user-assigned-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
@@ -27,7 +29,7 @@
   {% include '../../components/event.twig' with daysRepeated, event %}
   <tr>
     <td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-      {% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' %}
+      {% set url = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '/overview' ~ '?' ~ utmParams %}
       {% include '../../components/button.twig' with {href: url, label: 'Смотреть событие'} %}
     </td>
   </tr>
