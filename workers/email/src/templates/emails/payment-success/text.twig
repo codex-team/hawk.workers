@@ -1,8 +1,10 @@
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=payment-success' %}
+
 Платеж выполнен успешно
 
 Тариф «{{ plan.name }}» для воркспейса «{{ workspace.name | escape }}» продлен на один месяц. Ошибки под контролем.
 
-Перейти к настройкам оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing
+Перейти к настройкам оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing?{{ utmParams }}
 
 ***
 

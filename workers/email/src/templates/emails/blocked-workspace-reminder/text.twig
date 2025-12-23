@@ -1,7 +1,8 @@
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=blocked-workspace-reminder' %}
+
 Требуется действие: мониторинг ошибок в {{ workspace.name }} не работает уже {{ daysAfterBlock }} {{ pluralize_ru(daysAfterBlock, ['день', 'дня', 'дней']) }}
 
-Чтобы снова видеть актуальные события, выберите подходящий тарифный план и продлите подписку в настройках оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing
-
+Чтобы снова видеть актуальные события, выберите подходящий тарифный план и продлите подписку в настройках оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing?{{ utmParams }}
 ***
 
 Хоук

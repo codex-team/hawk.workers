@@ -1,7 +1,9 @@
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=password-reset' %}
+
 Используйте новый пароль для входа в ваш аккаунт.
 
 Новый пароль: {{ password }}
-Войти: {{ host ~ '/login' }}
+Войти: {{ host ~ '/login' }}?{{ utmParams }}
 
 ***
 

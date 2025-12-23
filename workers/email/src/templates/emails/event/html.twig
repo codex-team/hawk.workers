@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+  {% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=event' %}
 
   {% set event = events[0].event %}
   {% set daysRepeated = events[0].daysRepeated %}
@@ -55,7 +56,7 @@
 
   <tr>
     <td style="padding-top: 30px;padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-      {% set eventURL = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id %}
+      {% set eventURL = host ~ '/project/' ~ project._id ~ '/event/' ~ event._id ~ '?' ~ utmParams %}
       {% include '../../components/button.twig' with {href: eventURL, label: 'Смотреть детали'} %}
     </td>
   </tr>

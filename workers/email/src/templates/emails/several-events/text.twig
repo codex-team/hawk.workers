@@ -14,9 +14,10 @@
 {% endfor %}
 
 {% if events.length - eventsToShow > 0 %}
-Смотреть еще {{ events.length - eventsToShow }} событий: {{ host }}/project/{{ project._id }}
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=several-events' %}
+Смотреть еще {{ events.length - eventsToShow }} событий: {{ host }}/project/{{ project._id }}?{{ utmParams }}
 {% else %}
-Смотреть события: {{ host }}/project/{{ project._id }}
+Смотреть события: {{ host }}/project/{{ project._id }}?{{ utmParams }}
 {% endif %}
 
 

@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+  {% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=events-limit-almost-reached' %}
   <tr>
     <td>
       <img src="{{ hostOfStatic }}/email/low-balance-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 23px auto 0;">
@@ -32,7 +33,7 @@
   </tr>
   <tr>
     <td style="padding-right: 20px; padding-left: 20px; padding-bottom: 40px;">
-      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing', label: 'Увеличить лимит — от 99₽'} %}
+      {% include '../../components/button.twig' with {href: host ~ '/workspace/' ~ workspace._id ~ '/settings/billing' ~ '?' ~ utmParams, label: 'Увеличить лимит — от 99₽'} %}
     </td>
   </tr>
 {% endblock %}

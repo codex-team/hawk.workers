@@ -1,3 +1,5 @@
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=assignee' %}
+
 {% if whoAssigned.name %}{{ whoAssigned.name | escape }}{% else %}{{ whoAssigned.email }}{% endif %} назначил вас ответственным за исправление ошибки в проекте «{{ project.name | escape }}»
 
 {{ event.payload.title }}
@@ -6,7 +8,7 @@
 {{ daysRepeated }} {{ pluralize_ru(daysRepeated, ['день', 'дня', 'дней']) }} повторяется
 {{ event.usersAffected }} {{ pluralize_ru(event.usersAffected, ['пользователь', 'пользователя', 'пользователей']) }} затронуто
 
-Смотреть событие: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview
+Смотреть событие: {{ host }}/project/{{ project._id }}/event/{{ event._id }}/overview?{{ utmParams }}
 
 ***
 

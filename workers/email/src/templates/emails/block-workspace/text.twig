@@ -1,8 +1,10 @@
+{% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=block-workspace' %}
+
 Мониторинг ошибок остановлен
 
 Вы больше не отслеживаете новые ошибки «{{ workspace.name | escape }}», потому что закончился лимит или срок действия тарифного плана
 
-Чтобы продолжить получать события, выберите подходящий тарифный план и продлите подписку в настройках оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing
+Чтобы продолжить получать события, выберите подходящий тарифный план и продлите подписку в настройках оплаты: {{ host }}/workspace/{{ workspace._id }}/settings/billing?{{ utmParams }}
 
 ***
 

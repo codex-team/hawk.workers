@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+  {% set utmParams = 'utm_source=email&utm_medium=transactional&utm_campaign=payment-success' %}
   <tr>
     <td>
       <img src="{{ hostOfStatic }}/email/payment-success-icon.png" width="32" height="32" hspace="3" style="display: block; vertical-align: middle; margin: 0 auto; margin-top: 23px;">
@@ -28,7 +29,7 @@
   </tr>
   <tr>
     <td style="padding-right: 20px;padding-left: 20px;padding-bottom: 40px;">
-      {% set url = host ~ '/workspace/' ~ workspace._id ~ '/settings/billing' %}
+      {% set url = host ~ '/workspace/' ~ workspace._id ~ '/settings/billing' ~ '?' ~ utmParams %}
       {% include '../../components/button.twig' with {href: url, label: 'Настройки оплаты'} %}
     </td>
   </tr>
