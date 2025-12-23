@@ -39,9 +39,24 @@ export default class SentryEventWorker extends Worker {
 
       const [headers, items] = envelope;
 
-      for (const item of items) {
-        await this.handleEnvelopeItem(headers, item, event.projectId);
+      if (items.length === 0) {
+        this.logger.warn('Received envelope with no items');
+        return;
       }
+
+      let processedCount = 0;
+      let skippedCount = 0;
+
+      for (const item of items) {
+        const result = await this.handleEnvelopeItem(headers, item, event.projectId);
+        if (result === 'processed') {
+          processedCount++;
+        } else if (result === 'skipped') {
+          skippedCount++;
+        }
+      }
+
+      this.logger.verbose(`Processed ${processedCount} events, skipped ${skippedCount} non-event items from envelope`);
     } catch (error) {
       this.logger.error(`Error handling Sentry event task:`, error);
       this.logger.info('👇 Here is the problematic event:');
@@ -99,8 +114,9 @@ export default class SentryEventWorker extends Worker {
    * @param envelopeHeaders - The whole envelope headers
    * @param item - Sentry item
    * @param projectId - Sentry project ID
+   * @returns 'processed' if event was sent, 'skipped' if non-event item, throws error on failure
    */
-  private async handleEnvelopeItem(envelopeHeaders: Envelope[0], item: EnvelopeItem, projectId: string): Promise<void> {
+  private async handleEnvelopeItem(envelopeHeaders: Envelope[0], item: EnvelopeItem, projectId: string): Promise<'processed' | 'skipped'> {
     try {
       const [itemHeader, itemPayload] = item;
 
@@ -112,7 +128,8 @@ export default class SentryEventWorker extends Worker {
        * Skip non-event items
        */
       if (itemHeader.type !== 'event') {
-        return;
+        this.logger.verbose(`Skipping non-event item of type: ${itemHeader.type}`);
+        return 'skipped';
       }
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
 
@@ -121,18 +138,37 @@ export default class SentryEventWorker extends Worker {
        */
       const sentryJsSDK = ['browser', 'react', 'vue', 'angular', 'capacirtor', 'electron'];
 
-      const isJsSDK = payloadHasSDK && sentryJsSDK.includes(itemPayload.sdk.name);
+      /**
+       * Safely check if SDK name exists and is in the list
+       */
+      const sdkName = payloadHasSDK && itemPayload.sdk && typeof itemPayload.sdk === 'object' && 'name' in itemPayload.sdk
+        ? itemPayload.sdk.name
+        : undefined;
+
+      const isJsSDK = sdkName !== undefined && sentryJsSDK.includes(sdkName);
 
       const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
 
       /**
-       * If we have release attached to the event
+       * Send task to appropriate worker and check if it was successfully queued
        */
-      if (isJsSDK) {
-        await this.addTask(WorkerNames.JAVASCRIPT, hawkEvent as JavaScriptEventWorkerTask);
-      } else {
-        await this.addTask(WorkerNames.DEFAULT, hawkEvent as DefaultEventWorkerTask);
+      const workerName = isJsSDK ? WorkerNames.JAVASCRIPT : WorkerNames.DEFAULT;
+      const taskSent = await this.addTask(workerName, hawkEvent as JavaScriptEventWorkerTask | DefaultEventWorkerTask);
+
+      if (!taskSent) {
+        /**
+         * If addTask returns false, the message was not queued (queue full or channel closed)
+         * This is a critical error that should be logged and thrown
+         */
+        const error = new Error(`Failed to queue event to ${workerName} worker. Queue may be full or channel closed.`);
+        this.logger.error(error.message);
+        this.logger.info('👇 Here is the event that failed to queue:');
+        this.logger.json(hawkEvent);
+        throw error;
       }
+
+      this.logger.verbose(`Successfully queued event to ${workerName} worker`);
+      return 'processed';
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
       this.logger.info('👇 Here is the problematic item:');
