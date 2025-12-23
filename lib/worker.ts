@@ -330,7 +330,9 @@ export abstract class Worker {
       console.log('handle error');
       console.log(e);
 
-      HawkCatcher.send(e, context);
+      HawkCatcher.send(e, Object.assign(context, {
+        worker: this.type,
+      }));
 
       switch (e.constructor) {
         case CriticalError:
