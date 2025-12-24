@@ -806,23 +806,33 @@ describe('SentryEventWorker', () => {
           event_id: '4c40fee730194a989439a86bf75634111',
           sent_at: '2025-08-29T10:59:29.952Z',
           /* eslint-enable @typescript-eslint/naming-convention */
-          sdk: { name: 'sentry.javascript.react', version: '9.10.1' },
+          sdk: {
+            name: 'sentry.javascript.react',
+            version: '9.10.1',
+          },
         }),
         // Event item header
         JSON.stringify({ type: 'event' }),
         // Event item payload
-        JSON.stringify({ message: 'Test event', level: 'error' }),
+        JSON.stringify({
+          message: 'Test event',
+          level: 'error',
+        }),
         // Replay event item header - should be filtered out
         JSON.stringify({ type: 'replay_event' }),
         // Replay event item payload - should be filtered out
         JSON.stringify({
           /* eslint-disable @typescript-eslint/naming-convention */
           replay_id: 'test-replay',
+          /* eslint-disable @typescript-eslint/naming-convention */
           segment_id: 1,
           /* eslint-enable @typescript-eslint/naming-convention */
         }),
         // Replay recording item header - should be filtered out
-        JSON.stringify({ type: 'replay_recording', length: 343 }),
+        JSON.stringify({
+          type: 'replay_recording',
+          length: 343,
+        }),
         // Replay recording binary payload - should be filtered out
         'binary-data-here-that-is-not-json',
       ];
@@ -841,6 +851,7 @@ describe('SentryEventWorker', () => {
       expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
       expect(addedTaskPayload).toMatchObject({
         payload: expect.objectContaining({
           addons: {
@@ -865,7 +876,10 @@ describe('SentryEventWorker', () => {
           event_id: '62680958b3ab4497886375e06533d86a',
           sent_at: '2025-12-24T13:16:34.580Z',
           /* eslint-enable @typescript-eslint/naming-convention */
-          sdk: { name: 'sentry.javascript.react', version: '10.22.0' },
+          sdk: {
+            name: 'sentry.javascript.react',
+            version: '10.22.0',
+          },
         }),
         // Replay event item header - should be filtered out
         JSON.stringify({ type: 'replay_event' }),
@@ -907,7 +921,10 @@ describe('SentryEventWorker', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         }),
         // Replay recording item header - should be filtered out
-        JSON.stringify({ type: 'replay_recording', length: 16385 }),
+        JSON.stringify({
+          type: 'replay_recording',
+          length: 16385,
+        }),
         // Segment ID - should be filtered out
         JSON.stringify({ segment_id: 1 }),
         // Binary data (simulated) - should be filtered out

@@ -317,6 +317,7 @@ describe('PaymasterWorker', () => {
     }
 
     MockDate.reset();
+
     return addTaskSpy;
   };
 

@@ -45,7 +45,7 @@ export function memoize(options: MemoizeOptions = {}): MethodDecorator {
     max = 50,
     ttl = 1000 * 60 * 30,
     strategy = 'concat',
-    skipCache = []
+    skipCache = [],
   } = options;
   /* eslint-enable */
 
