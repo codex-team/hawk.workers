@@ -160,6 +160,8 @@ export default class PaymasterWorker extends Worker {
 
   /**
    * Finds plan by id from cached plans
+   *
+   * @param planId
    */
   private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
     return this.plans.find((plan) => plan._id.toString() === planId.toString());
@@ -167,6 +169,8 @@ export default class PaymasterWorker extends Worker {
 
   /**
    * Returns workspace plan, refreshes cache when plan is missing
+   *
+   * @param workspace
    */
   private async getWorkspacePlan(workspace: WorkspaceDBScheme): Promise<PlanDBScheme> {
     let currentPlan = this.findPlanById(workspace.tariffPlanId);
@@ -412,7 +416,6 @@ export default class PaymasterWorker extends Worker {
       workspaceId: workspace._id.toString(),
     });
   }
-
 
   /**
    * Sends reminder emails to blocked workspace admins

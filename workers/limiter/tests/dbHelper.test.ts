@@ -304,7 +304,7 @@ describe('DbHelper', () => {
       /**
        * Act
        */
-      await dbHelper.updateWorkspacesEventsCountAndIsBlocked([updatedWorkspace]);
+      await dbHelper.updateWorkspacesEventsCountAndIsBlocked([ updatedWorkspace ]);
 
       /**
        * Assert

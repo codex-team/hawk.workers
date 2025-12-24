@@ -67,10 +67,12 @@ export default class SentryEventWorker extends Worker {
 
   /**
    * Filter out binary items that crash parseEnvelope
+   * Also filters out all Sentry Replay events (replay_event and replay_recording)
    */
   private filterOutBinaryItems(rawEvent: string): string {
     const lines = rawEvent.split('\n');
     const filteredLines = [];
+    let isInReplayBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -90,17 +92,42 @@ export default class SentryEventWorker extends Worker {
         // Try to parse as JSON to check if it's a header
         const parsed = JSON.parse(line);
 
-        // If it's a replay header, skip this line and the next one (payload)
+        // Check if this is a replay event type
         if (parsed.type === 'replay_recording' || parsed.type === 'replay_event') {
-          // Skip the next line too (which would be the payload)
-          i++;
+          // Mark that we're in a replay block and skip this line
+          isInReplayBlock = true;
           continue;
         }
 
-        // Keep valid headers and other JSON data
-        filteredLines.push(line);
+        // If we're in a replay block, check if this is still part of it
+        if (isInReplayBlock) {
+          // Check if this line is part of replay data (segment_id, length, etc.)
+          if ('segment_id' in parsed || ('length' in parsed && parsed.type !== 'event') || 'replay_id' in parsed) {
+            // Still in replay block, skip this line
+            continue;
+          }
+
+          // If it's a new envelope item (like event), we've exited the replay block
+          if (parsed.type === 'event' || parsed.type === 'transaction' || parsed.type === 'session') {
+            isInReplayBlock = false;
+          } else {
+            // Unknown type, assume we're still in replay block
+            continue;
+          }
+        }
+
+        // Keep valid headers and other JSON data (not in replay block)
+        if (!isInReplayBlock) {
+          filteredLines.push(line);
+        }
       } catch {
-        // If line doesn't parse as JSON, it might be binary data - skip it
+        // If line doesn't parse as JSON, it might be binary data
+        // If we're in a replay block, skip it (it's part of replay recording)
+        if (isInReplayBlock) {
+          continue;
+        }
+
+        // If not in replay block and not JSON, it might be corrupted data - skip it
         continue;
       }
     }
