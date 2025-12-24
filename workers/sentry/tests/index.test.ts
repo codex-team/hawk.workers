@@ -824,7 +824,6 @@ describe('SentryEventWorker', () => {
         JSON.stringify({
           /* eslint-disable @typescript-eslint/naming-convention */
           replay_id: 'test-replay',
-          /* eslint-disable @typescript-eslint/naming-convention */
           segment_id: 1,
           /* eslint-enable @typescript-eslint/naming-convention */
         }),
@@ -925,8 +924,10 @@ describe('SentryEventWorker', () => {
           type: 'replay_recording',
           length: 16385,
         }),
+        /* eslint-disable @typescript-eslint/naming-convention */
         // Segment ID - should be filtered out
         JSON.stringify({ segment_id: 1 }),
+        /* eslint-enable @typescript-eslint/naming-convention */
         // Binary data (simulated) - should be filtered out
         'xnFWy@v$xAlJ=&fS~¾˶IJ<Dڒ%8yX]]ˣ·9V|JGd!+%fF',
       ];
