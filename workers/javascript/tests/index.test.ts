@@ -442,5 +442,4 @@ describe('JavaScript event worker', () => {
 
     await worker.finish();
   });
-
 });

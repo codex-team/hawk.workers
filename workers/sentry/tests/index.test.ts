@@ -806,12 +806,18 @@ describe('SentryEventWorker', () => {
           event_id: '4c40fee730194a989439a86bf75634111',
           sent_at: '2025-08-29T10:59:29.952Z',
           /* eslint-enable @typescript-eslint/naming-convention */
-          sdk: { name: 'sentry.javascript.react', version: '9.10.1' },
+          sdk: {
+            name: 'sentry.javascript.react',
+            version: '9.10.1',
+          },
         }),
         // Event item header
         JSON.stringify({ type: 'event' }),
         // Event item payload
-        JSON.stringify({ message: 'Test event', level: 'error' }),
+        JSON.stringify({
+          message: 'Test event',
+          level: 'error',
+        }),
         // Replay event item header - should be filtered out
         JSON.stringify({ type: 'replay_event' }),
         // Replay event item payload - should be filtered out
@@ -822,7 +828,10 @@ describe('SentryEventWorker', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         }),
         // Replay recording item header - should be filtered out
-        JSON.stringify({ type: 'replay_recording', length: 343 }),
+        JSON.stringify({
+          type: 'replay_recording',
+          length: 343,
+        }),
         // Replay recording binary payload - should be filtered out
         'binary-data-here-that-is-not-json',
       ];
@@ -841,6 +850,7 @@ describe('SentryEventWorker', () => {
       expect(mockedAmqpChannel.sendToQueue).toHaveBeenCalledTimes(1);
 
       const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
       expect(addedTaskPayload).toMatchObject({
         payload: expect.objectContaining({
           addons: {
@@ -851,6 +861,90 @@ describe('SentryEventWorker', () => {
           },
         }),
       });
+    });
+
+    it('should ignore envelope with only replay_event and replay_recording items', async () => {
+      /**
+       * Test case based on real-world scenario where envelope contains only replay data
+       * This should not crash with "Unexpected end of JSON input" error
+       */
+      const envelopeLines = [
+        // Envelope header
+        JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '62680958b3ab4497886375e06533d86a',
+          sent_at: '2025-12-24T13:16:34.580Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+          sdk: {
+            name: 'sentry.javascript.react',
+            version: '10.22.0',
+          },
+        }),
+        // Replay event item header - should be filtered out
+        JSON.stringify({ type: 'replay_event' }),
+        // Replay event item payload (large JSON) - should be filtered out
+        JSON.stringify({
+          /* eslint-disable @typescript-eslint/naming-convention */
+          type: 'replay_event',
+          replay_start_timestamp: 1766582182.757,
+          timestamp: 1766582194.579,
+          error_ids: [],
+          trace_ids: [],
+          urls: ['https://my.huntio.ru/applicants', 'https://my.huntio.ru/applicants/1270067'],
+          replay_id: '62680958b3ab4497886375e06533d86a',
+          segment_id: 1,
+          replay_type: 'session',
+          request: {
+            url: 'https://my.huntio.ru/applicants/1270067',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            },
+          },
+          event_id: '62680958b3ab4497886375e06533d86a',
+          environment: 'production',
+          release: '1.0.7',
+          sdk: {
+            integrations: ['InboundFilters', 'FunctionToString', 'BrowserApiErrors', 'Breadcrumbs'],
+            name: 'sentry.javascript.react',
+            version: '10.22.0',
+            settings: { infer_ip: 'auto' },
+          },
+          user: {
+            id: 487,
+            email: 'npr@unicorn-resources.pro',
+            username: 'Прохорова Наталья',
+          },
+          contexts: { react: { version: '19.1.0' } },
+          transaction: '/applicants/1270067',
+          platform: 'javascript',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        }),
+        // Replay recording item header - should be filtered out
+        JSON.stringify({
+          type: 'replay_recording',
+          length: 16385,
+        }),
+        /* eslint-disable @typescript-eslint/naming-convention */
+        // Segment ID - should be filtered out
+        JSON.stringify({ segment_id: 1 }),
+        /* eslint-enable @typescript-eslint/naming-convention */
+        // Binary data (simulated) - should be filtered out
+        'xnFWy@v$xAlJ=&fS~¾˶IJ<Dڒ%8yX]]ˣ·9V|JGd!+%fF',
+      ];
+
+      const envelopeString = envelopeLines.join('\n');
+
+      // Should not throw "Unexpected end of JSON input" error
+      await worker.handle({
+        payload: {
+          envelope: b64encode(envelopeString),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      // Should not send any tasks since all items were replay-related and filtered out
+      expect(mockedAmqpChannel.sendToQueue).not.toHaveBeenCalled();
     });
   });
 
