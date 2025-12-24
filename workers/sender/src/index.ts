@@ -171,13 +171,14 @@ export default abstract class SenderWorker extends Worker {
 
     const eventsData = await Promise.all(
       events.map(
-        async ({ key: groupHash, count }: { key: string; count: number }): Promise<TemplateEventData> => {
+        async ({ key: groupHash, count, repetitionId }: { key: string; count: number; repetitionId?: string | null }): Promise<TemplateEventData> => {
           const [event, daysRepeated] = await this.getEventDataByGroupHash(projectId, groupHash);
 
           return {
             event,
             newCount: count,
             daysRepeated,
+            repetitionId: repetitionId ?? null,
           };
         }
       )

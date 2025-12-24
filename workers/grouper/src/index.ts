@@ -265,6 +265,7 @@ export default class GrouperWorker extends Worker {
             title: task.payload.title,
             groupHash: uniqueEventHash,
             isNew: isFirstOccurrence,
+            repetitionId: repetitionId ? repetitionId.toString() : null,
           },
         });
       }

@@ -14,6 +14,12 @@ export type NotifierEvent = Pick<EventData<EventAddons>, 'title'> & {
    * Flag to show if event is received first time
    */
   isNew: boolean;
+
+  /**
+   * ID of the repetition that triggered this notification
+   * null for first occurrence, string for repetitions
+   */
+  repetitionId: string | null;
 };
 
 /**

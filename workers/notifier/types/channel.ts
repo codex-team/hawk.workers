@@ -35,6 +35,12 @@ export interface SenderData {
    * Number of events received
    */
   count: number;
+
+  /**
+   * ID of the repetition that triggered this notification
+   * null for first occurrence, ObjectId string for repetitions
+   */
+  repetitionId: string | null;
 }
 
 /**

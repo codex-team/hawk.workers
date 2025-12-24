@@ -734,6 +734,7 @@ describe('GrouperWorker', () => {
             title: task.payload.title,
             groupHash: expect.any(String),
             isNew: true,
+            repetitionId: null,
           },
         });
 
