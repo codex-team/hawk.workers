@@ -155,6 +155,46 @@ export default class SentryEventWorker extends Worker {
        * Skip non-event items
        */
       if (itemHeader.type !== 'event') {
+        if (itemHeader.type === 'client_report') {
+          /**
+           * Sentry "client_report" items are useful for debugging dropped events.
+           * We log internals here to make diagnosing SDK/reporting issues easier.
+           */
+          try {
+            let decodedPayload: unknown = itemPayload;
+
+            /**
+             * Sometimes Sentry parses the itemPayload as a Uint8Array.
+             * Decode it to JSON so it can be logged meaningfully.
+             */
+            if (decodedPayload instanceof Uint8Array) {
+              const textDecoder = new TextDecoder();
+              decodedPayload = textDecoder.decode(decodedPayload as Uint8Array);
+            }
+
+            if (typeof decodedPayload === 'string') {
+              try {
+                decodedPayload = JSON.parse(decodedPayload);
+              } catch {
+                /**
+                 * Keep the raw string if it isn't valid JSON.
+                 */
+              }
+            }
+
+            this.logger.info('Received client_report item; logging internals:');
+            this.logger.json({
+              envelopeHeaders,
+              itemHeader,
+              payload: decodedPayload,
+            });
+          } catch (clientReportError) {
+            this.logger.warn('Failed to decode/log client_report item:', clientReportError);
+            this.logger.info('👇 Here is the raw client_report item:');
+            this.logger.json(item);
+          }
+        }
+
         this.logger.info(`Skipping non-event item of type: ${itemHeader.type}`);
         return 'skipped';
       }
