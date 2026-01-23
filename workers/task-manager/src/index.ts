@@ -11,6 +11,9 @@ import type {
 } from '@hawk.so/types';
 import type { TaskManagerItem } from '@hawk.so/types/src/base/event/taskManagerItem.ts';
 import HawkCatcher from '@hawk.so/nodejs';
+import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
+import { GitHubService } from './GithubService';
+import { formatIssueFromEvent } from './utils/issue';
 
 /**
  * Maximum number of auto-created tasks per project per day
@@ -35,6 +38,11 @@ export default class TaskManagerWorker extends Worker {
    * Database Controller for events database
    */
   private eventsDb: DatabaseController = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+
+  /**
+   * GitHub Service for creating issues
+   */
+  private githubService: GitHubService = new GitHubService();
 
   /**
    * Start consuming messages
@@ -212,24 +220,45 @@ export default class TaskManagerWorker extends Worker {
       }
 
       /**
-       * Create GitHub Issue (mocked)
+       * Format Issue data from event
        */
-      const issueNumber = await this.createGitHubIssue(project, event);
+      const issueData = formatIssueFromEvent(event, project);
 
       /**
-       * Assign Copilot if enabled (mocked)
+       * Create GitHub Issue
+       */
+      const githubIssue = await this.githubService.createIssue(
+        taskManager.config.repoFullName,
+        taskManager.config.installationId,
+        issueData
+      );
+
+      /**
+       * Assign Copilot if enabled
        */
       if (taskManager.assignAgent) {
-        await this.assignCopilot(project, issueNumber);
+        try {
+          await this.githubService.assignCopilot(
+            taskManager.config.repoFullName,
+            githubIssue.number,
+            taskManager.config.installationId
+          );
+        } catch (error) {
+          /**
+           * Log error but don't fail the task creation
+           */
+          this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}:`, error);
+        }
       }
 
       /**
        * Save taskManagerItem to event
        */
-      await this.saveTaskManagerItem(projectId, event, issueNumber, taskManager);
+      await this.saveTaskManagerItem(projectId, event, githubIssue.number, taskManager, githubIssue.html_url);
 
       this.logger.info(`Created task for event ${event.groupHash} in project ${projectId}`, {
-        issueNumber,
+        issueNumber: githubIssue.number,
+        issueUrl: githubIssue.html_url,
         assignAgent: taskManager.assignAgent,
       });
     }
@@ -328,57 +357,6 @@ export default class TaskManagerWorker extends Worker {
     return events;
   }
 
-  /**
-   * Create GitHub Issue (mocked)
-   *
-   * @param project - project
-   * @param event - event to create issue for
-   * @returns Promise with issue number
-   */
-  private async createGitHubIssue(
-    project: ProjectDBScheme,
-    event: GroupedEventDBScheme
-  ): Promise<number> {
-    const taskManager = project.taskManager as ProjectTaskManagerConfig;
-
-    this.logger.info('Creating GitHub Issue (mocked)', {
-      projectId: project._id.toString(),
-      groupHash: event.groupHash,
-      repoFullName: taskManager.config.repoFullName,
-      title: event.payload.title,
-    });
-
-    /**
-     * TODO: Replace with actual GitHub API call
-     * For now, return a mock issue number
-     */
-    const mockIssueNumber = Math.floor(Math.random() * 1000) + 1;
-
-    this.logger.info(`Created GitHub Issue (mocked) #${mockIssueNumber}`);
-
-    return mockIssueNumber;
-  }
-
-  /**
-   * Assign Copilot to issue (mocked)
-   *
-   * @param project - project
-   * @param issueNumber - issue number
-   */
-  private async assignCopilot(project: ProjectDBScheme, issueNumber: number): Promise<void> {
-    const taskManager = project.taskManager as ProjectTaskManagerConfig;
-
-    this.logger.info('Assigning Copilot (mocked)', {
-      projectId: project._id.toString(),
-      repoFullName: taskManager.config.repoFullName,
-      issueNumber,
-    });
-
-    /**
-     * TODO: Replace with actual GitHub API call to assign Copilot
-     */
-    this.logger.info(`Assigned Copilot (mocked) to issue #${issueNumber}`);
-  }
 
   /**
    * Save taskManagerItem to event
@@ -387,21 +365,30 @@ export default class TaskManagerWorker extends Worker {
    * @param event - event to save taskManagerItem to
    * @param issueNumber - GitHub issue number
    * @param taskManager - task manager config
+   * @param issueUrl - GitHub issue URL
    */
   private async saveTaskManagerItem(
     projectId: string,
     event: GroupedEventDBScheme,
     issueNumber: number,
-    taskManager: ProjectTaskManagerConfig
+    taskManager: ProjectTaskManagerConfig,
+    issueUrl: string
   ): Promise<void> {
     const connection = await this.eventsDb.getConnection();
     const eventsCollection = connection.collection<GroupedEventDBScheme>(`events:${projectId}`);
 
+    /**
+     * Decode unsafe fields to get actual title
+     */
+    const decodedEvent = { ...event };
+
+    decodeUnsafeFields(decodedEvent);
+
     const taskManagerItem: TaskManagerItem = {
       type: 'github-issue',
       number: issueNumber,
-      url: `https://github.com/${taskManager.config.repoFullName}/issues/${issueNumber}`,
-      title: event.payload.title,
+      url: issueUrl,
+      title: decodedEvent.payload.title,
       createdBy: 'auto',
       createdAt: new Date(),
       assignee: taskManager.assignAgent ? 'copilot' : null,

@@ -18,8 +18,9 @@ The worker implements daily rate limiting:
 
 ## Environment Variables
 
-- `REGISTRY_URL` - RabbitMQ registry connection URL
 - `MAX_AUTO_TASKS_PER_DAY` - Maximum auto tasks per day (default: 10)
+- `GITHUB_APP_ID` - GitHub App ID
+- `GITHUB_PRIVATE_KEY` - GitHub App private key (PEM format)
 
 ## Usage
 

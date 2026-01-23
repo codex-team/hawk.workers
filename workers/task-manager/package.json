@@ -3,5 +3,13 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "license": "MIT",
-  "workerType": "hawk-worker-task-manager"
+  "workerType": "hawk-worker-task-manager",
+  "dependencies": {
+    "@octokit/rest": "^22.0.1",
+    "@octokit/types": "^16.0.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^8.3.5"
+  }
 }
