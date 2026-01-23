@@ -244,6 +244,7 @@ describe('converter utils', () => {
 
       expect(backtrace?.[0].arguments).toEqual([
         'emptyObject={}',
+        'emptyArray=[]',
         'normalValue=test',
       ]);
     });

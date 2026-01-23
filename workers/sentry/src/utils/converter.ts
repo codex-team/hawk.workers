@@ -20,6 +20,10 @@ function flattenObject(obj: unknown, prefix = ''): string[] {
   }
 
   if (Array.isArray(obj)) {
+    if (obj.length === 0) {
+      return [ prefix ? `${prefix}=[]` : '[]' ];
+    }
+
     obj.forEach((value, index) => {
       const key = prefix ? `${prefix}.${index}` : String(index);
 
