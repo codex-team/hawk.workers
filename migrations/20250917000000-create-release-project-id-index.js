@@ -6,23 +6,12 @@ module.exports = {
     const pairs = await db.collection(collectionName).aggregate([
       {
         $group: {
-          _id: {
-            projectId: '$projectId',
-            release: '$release',
-          },
+          _id: { projectId: '$projectId', release: '$release' },
           count: { $sum: 1 },
         },
       },
-      {
-        $project: {
-          _id: 0,
-          projectId: '$_id.projectId',
-          release: '$_id.release',
-          count: 1,
-        },
-      },
-    ])
-      .toArray();
+      { $project: { _id: 0, projectId: '$_id.projectId', release: '$_id.release', count: 1 } },
+    ]).toArray();
 
     console.log(`Found ${pairs.length} unique (projectId, release) pairs to process.`);
 
@@ -34,15 +23,7 @@ module.exports = {
 
       try {
         const docs = await db.collection(collectionName)
-          .find({
-            projectId,
-            release,
-          }, {
-            projection: {
-              files: 1,
-              commits: 1,
-            },
-          })
+          .find({ projectId, release }, { projection: { files: 1, commits: 1 } })
           .toArray();
 
         const filesByName = new Map();
@@ -75,24 +56,8 @@ module.exports = {
          * Replace all docs for this pair with a single consolidated doc
          */
         const ops = [
-          {
-            deleteMany: {
-              filter: {
-                projectId,
-                release,
-              },
-            },
-          },
-          {
-            insertOne: {
-              document: {
-                projectId,
-                release,
-                files: mergedFiles,
-                commits: mergedCommits,
-              },
-            },
-          },
+          { deleteMany: { filter: { projectId, release } } },
+          { insertOne: { document: { projectId, release, files: mergedFiles, commits: mergedCommits } } },
         ];
 
         await db.collection(collectionName).bulkWrite(ops, { ordered: true });
@@ -107,18 +72,10 @@ module.exports = {
      */
     try {
       const hasIndex = await db.collection(collectionName).indexExists(indexName);
-
       if (!hasIndex) {
         await db.collection(collectionName).createIndex(
-          {
-            projectId: 1,
-            release: 1,
-          },
-          {
-            name: indexName,
-            unique: true,
-            background: true,
-          }
+          { projectId: 1, release: 1 },
+          { name: indexName, unique: true, background: true }
         );
         console.log(`Index ${indexName} created on ${collectionName} (projectId, release unique).`);
       } else {
@@ -127,13 +84,13 @@ module.exports = {
     } catch (err) {
       console.error(`Error creating index ${indexName} on ${collectionName}:`, err);
     }
+
   },
 
   async down(db) {
     console.log(`Dropping index ${indexName} from ${collectionName}...`);
     try {
       const hasIndex = await db.collection(collectionName).indexExists(indexName);
-
       if (hasIndex) {
         await db.collection(collectionName).dropIndex(indexName);
         console.log(`Index ${indexName} dropped from ${collectionName}.`);

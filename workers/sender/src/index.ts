@@ -301,9 +301,6 @@ export default abstract class SenderWorker extends Worker {
     }));
   }
 
-  /**
-   * @param task
-   */
   private async handleBlockedWorkspaceReminderTask(task: SenderWorkerBlockedWorkspaceReminderTask): Promise<void> {
     const eventType = 'blocked-workspace-reminder';
 
