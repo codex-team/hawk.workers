@@ -1,0 +1,7 @@
+{
+  "name": "hawk-worker-task-manager",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "workerType": "hawk-worker-task-manager"
+}
