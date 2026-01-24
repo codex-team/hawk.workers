@@ -50,16 +50,18 @@ export default class TaskManagerWorker extends Worker {
   public async start(): Promise<void> {
     await this.accountsDb.connect();
     await this.eventsDb.connect();
-    await super.start();
+
+    // await super.start();
+    this.handle({type: 'auto-task-creation'})
   }
 
   /**
    * Finish everything
    */
   public async finish(): Promise<void> {
-    await super.finish();
     await this.accountsDb.close();
     await this.eventsDb.close();
+    await super.finish();
   }
 
   /**
@@ -208,60 +210,105 @@ export default class TaskManagerWorker extends Worker {
     const eventsToProcess = events.slice(0, remainingBudget);
 
     for (const event of eventsToProcess) {
-      /**
-       * Atomically increment usage.autoTasksCreated
-       */
-      const incrementSuccess = await this.incrementAutoTasksCreated(projectId, dayStartUtc);
+      await this.processEventForAutoTaskCreation({
+        project,
+        projectId,
+        taskManager,
+        event,
+        dayStartUtc,
+      });
+    }
+  }
 
-      if (!incrementSuccess) {
-        this.logger.warn(`Failed to increment usage for project ${projectId}, budget may be exhausted`);
+  /**
+   * Process a single event for auto task creation
+   *
+   * @param params - method params
+   * @param params.project - project
+   * @param params.projectId - project id
+   * @param params.taskManager - task manager config
+   * @param params.event - grouped event
+   * @param params.dayStartUtc - day start UTC used for usage increment
+   */
+  private async processEventForAutoTaskCreation(params: {
+    project: ProjectDBScheme;
+    projectId: string;
+    taskManager: ProjectTaskManagerConfig;
+    event: GroupedEventDBScheme;
+    dayStartUtc: Date;
+  }): Promise<void> {
+    const { project, projectId, taskManager, event, dayStartUtc } = params;
 
-        break;
-      }
+    /**
+     * Format Issue data from event
+     */
+    const issueData = formatIssueFromEvent(event, project);
 
-      /**
-       * Format Issue data from event
-       */
-      const issueData = formatIssueFromEvent(event, project);
+    /**
+     * Create GitHub Issue
+     */
+    let githubIssue: { number: number; html_url: string } | null = null;
 
-      /**
-       * Create GitHub Issue
-       */
-      const githubIssue = await this.githubService.createIssue(
+    try {
+      githubIssue = await this.githubService.createIssue(
         taskManager.config.repoFullName,
         taskManager.config.installationId,
         issueData
       );
+    } catch (error) {
+      this.logger.error(`Failed to create GitHub issue for event ${event.groupHash} (project ${projectId}):`, error);
 
       /**
-       * Assign Copilot if enabled
+       * Do not increment usage and do not save taskManagerItem if issue creation failed
        */
-      if (taskManager.assignAgent) {
-        try {
-          await this.githubService.assignCopilot(
-            taskManager.config.repoFullName,
-            githubIssue.number,
-            taskManager.config.installationId
-          );
-        } catch (error) {
-          /**
-           * Log error but don't fail the task creation
-           */
-          this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}:`, error);
-        }
-      }
-
-      /**
-       * Save taskManagerItem to event
-       */
-      await this.saveTaskManagerItem(projectId, event, githubIssue.number, taskManager, githubIssue.html_url);
-
-      this.logger.info(`Created task for event ${event.groupHash} in project ${projectId}`, {
-        issueNumber: githubIssue.number,
-        issueUrl: githubIssue.html_url,
-        assignAgent: taskManager.assignAgent,
-      });
+      return;
     }
+
+    /**
+     * Atomically increment usage.autoTasksCreated (only after successful issue creation)
+     */
+    const incrementSuccess = await this.incrementAutoTasksCreated(projectId, dayStartUtc);
+
+    if (!incrementSuccess) {
+      this.logger.warn(
+        `Issue #${githubIssue.number} was created but usage increment failed for project ${projectId} (budget may be exhausted)`
+      );
+
+      /**
+       * We still link the created issue to the event to avoid duplicates.
+       */
+    }
+
+    this.logger.verbose(`Project ${projectId} has Copilot assigning ${taskManager.assignAgent ? 'enabled' : 'disabled'}`)
+
+    /**
+     * Assign Copilot if enabled
+     */
+    if (taskManager.assignAgent) {
+      try {
+        await this.githubService.assignCopilot(
+          taskManager.config.repoFullName,
+          githubIssue.number,
+          taskManager.config.installationId
+        );
+      } catch (error) {
+        /**
+         * Log error but don't fail the task creation
+         */
+        this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}:`, error);
+      }
+    }
+
+    /**
+     * Save taskManagerItem to event
+     */
+    await this.saveTaskManagerItem(projectId, event, githubIssue.number, taskManager, githubIssue.html_url);
+
+    this.logger.info(`Created task for event ${event.groupHash} in project ${projectId}`, {
+      issueNumber: githubIssue.number,
+      issueUrl: githubIssue.html_url,
+      assignAgent: taskManager.assignAgent,
+    });
   }
 
   /**

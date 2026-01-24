@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Octokit } from '@octokit/rest';
 import type { Endpoints } from '@octokit/types';
+import { normalizeGitHubPrivateKey } from './utils/githubPrivateKey';
 
 /**
  * Type for GitHub Issue creation parameters
@@ -68,20 +69,7 @@ export class GitHubService {
    */
   private getPrivateKey(): string {
     if (process.env.GITHUB_PRIVATE_KEY) {
-      /**
-       * Get private key from environment variable
-       * Check if the string contains literal \n (backslash followed by n) instead of actual newlines
-       */
-      let privateKey = process.env.GITHUB_PRIVATE_KEY;
-
-      if (privateKey.includes('\\n') && !privateKey.includes('\n')) {
-        /**
-         * Replace literal \n with actual newlines
-         */
-        privateKey = privateKey.replace(/\\n/g, '\n');
-      }
-
-      return privateKey;
+      return normalizeGitHubPrivateKey(process.env.GITHUB_PRIVATE_KEY);
     }
 
     throw new Error('GITHUB_PRIVATE_KEY must be set');
@@ -191,7 +179,7 @@ export class GitHubService {
   }
 
   /**
-   * Assign GitHub Copilot to an issue
+   * Assign GitHub Copilot to an issue using GraphQL API
    *
    * @param {string} repoFullName - Repository full name (owner/repo)
    * @param {number} issueNumber - Issue number
@@ -222,13 +210,79 @@ export class GitHubService {
 
     try {
       /**
-       * Assign GitHub Copilot (github-copilot[bot]) as assignee
+       * Step 1: Get repository ID and find Copilot bot ID
+       * According to GitHub docs: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-a-pr
        */
-      await octokit.rest.issues.addAssignees({
+      const repoInfoQuery = `
+        query($owner: String!, $name: String!) {
+          repository(owner: $owner, name: $name) {
+            id
+            issue(number: ${issueNumber}) {
+              id
+            }
+            suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
+              nodes {
+                login
+                __typename
+                ... on Bot {
+                  id
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const repoInfo: any = await octokit.graphql(repoInfoQuery, {
         owner,
-        repo,
-        issue_number: issueNumber,
-        assignees: ['github-copilot[bot]'],
+        name: repo,
+      });
+
+      const repositoryId = repoInfo?.repository?.id;
+      const issueId = repoInfo?.repository?.issue?.id;
+
+      if (!repositoryId || !issueId) {
+        throw new Error(`Failed to get repository or issue ID for ${repoFullName}#${issueNumber}`);
+      }
+
+      /**
+       * Find Copilot bot in suggested actors
+       */
+      const copilotBot = repoInfo.repository.suggestedActors.nodes.find(
+        (node: any) => node.login === 'copilot-swe-agent'
+      );
+
+      if (!copilotBot || !copilotBot.id) {
+        throw new Error('Copilot coding agent (copilot-swe-agent) is not available for this repository');
+      }
+
+      /**
+       * Step 2: Assign issue to Copilot using GraphQL mutation
+       */
+      const assignMutation = `
+        mutation($assignableId: ID!, $actorIds: [ID!]!) {
+          addAssigneesToAssignable(input: {
+            assignableId: $assignableId
+            assigneeIds: $actorIds
+          }) {
+            assignable {
+              ... on Issue {
+                id
+                number
+                assignees(first: 10) {
+                  nodes {
+                    login
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      await octokit.graphql(assignMutation, {
+        assignableId: issueId,
+        actorIds: [copilotBot.id],
       });
 
       return true;

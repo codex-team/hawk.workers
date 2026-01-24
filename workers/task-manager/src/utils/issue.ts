@@ -1,5 +1,5 @@
 import type { GroupedEventDBScheme, ProjectDBScheme } from '@hawk.so/types';
-import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
+import { decodeUnsafeFields } from '../../../../lib/utils/unsafeFields';
 import type { IssueData } from '../GithubService';
 
 /**

@@ -2,18 +2,6 @@ import { ObjectId } from 'mongodb';
 import type { GroupedEventDBScheme, ProjectDBScheme } from '@hawk.so/types';
 import { formatIssueFromEvent } from '../src/utils/issue';
 
-/**
- * Mock decodeUnsafeFields to avoid actual decoding in tests
- */
-jest.mock('../../../lib/utils/unsafeFields', () => ({
-  decodeUnsafeFields: jest.fn((event) => {
-    /**
-     * In tests, we assume fields are already decoded
-     */
-    return event;
-  }),
-}));
-
 describe('formatIssueFromEvent', () => {
   const mockProject: ProjectDBScheme = {
     _id: new ObjectId('507f1f77bcf86cd799439011'),
