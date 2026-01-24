@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Octokit } from '@octokit/rest';
 import type { Endpoints } from '@octokit/types';
 import { normalizeGitHubPrivateKey } from './utils/githubPrivateKey';
+import { refreshToken as refreshOAuthToken } from '@octokit/oauth-methods';
 
 /**
  * Type for GitHub Issue creation parameters
@@ -26,9 +27,19 @@ export type GitHubIssue = Pick<
  */
 export class GitHubService {
   /**
-   * GitHub App ID from environment variables (optional if using PAT)
+   * GitHub App ID from environment variables
    */
   private readonly appId?: string;
+
+  /**
+   * GitHub App Client ID from environment variables (optional, needed for token refresh)
+   */
+  private readonly clientId?: string;
+
+  /**
+   * GitHub App Client Secret from environment variables (optional, needed for token refresh)
+   */
+  private readonly clientSecret?: string;
 
   /**
    * Default timeout for GitHub API requests (in milliseconds)
@@ -37,19 +48,24 @@ export class GitHubService {
 
   /**
    * Creates an instance of GitHubService
-   * Supports both GitHub App authentication and Personal Access Token (PAT)
+   * Requires GitHub App authentication
    */
   constructor() {
-    /**
-     * If GITHUB_PAT is set, use PAT authentication (no need for GITHUB_APP_ID)
-     * Otherwise, require GITHUB_APP_ID for GitHub App authentication
-     */
-    if (!process.env.GITHUB_PAT && !process.env.GITHUB_APP_ID) {
-      throw new Error('Either GITHUB_PAT or GITHUB_APP_ID environment variable must be set');
+    if (!process.env.GITHUB_APP_ID) {
+      throw new Error('GITHUB_APP_ID environment variable must be set');
     }
 
-    if (process.env.GITHUB_APP_ID) {
-      this.appId = process.env.GITHUB_APP_ID;
+    this.appId = process.env.GITHUB_APP_ID;
+
+    /**
+     * Client ID and Secret are optional but needed for token refresh
+     */
+    if (process.env.GITHUB_APP_CLIENT_ID) {
+      this.clientId = process.env.GITHUB_APP_CLIENT_ID;
+    }
+
+    if (process.env.GITHUB_APP_CLIENT_SECRET) {
+      this.clientSecret = process.env.GITHUB_APP_CLIENT_SECRET;
     }
   }
 
@@ -115,36 +131,15 @@ export class GitHubService {
   }
 
   /**
-   * Get Personal Access Token from environment variables
+   * Get authentication token (installation access token)
    *
-   * @returns {string | null} PAT if available, null otherwise
-   */
-  private getPAT(): string | null {
-    return process.env.GITHUB_PAT || null;
-  }
-
-  /**
-   * Get authentication token (PAT or installation access token)
-   *
-   * @param {string | null} installationId - GitHub App installation ID (optional if using PAT)
+   * @param {string | null} installationId - GitHub App installation ID
    * @returns {Promise<string>} Authentication token
    * @throws {Error} If token creation fails
    */
   private async getAuthToken(installationId: string | null): Promise<string> {
-    /**
-     * If PAT is available, use it directly
-     */
-    const pat = this.getPAT();
-    if (pat) {
-      console.log('[GitHub API] Using Personal Access Token (PAT) for authentication');
-      return pat;
-    }
-
-    /**
-     * Otherwise, use GitHub App authentication
-     */
     if (!installationId) {
-      throw new Error('installationId is required when using GitHub App authentication');
+      throw new Error('installationId is required for GitHub App authentication');
     }
 
     console.log('[GitHub API] Using GitHub App authentication with installation ID:', installationId);
@@ -184,9 +179,10 @@ export class GitHubService {
    * Create a GitHub issue
    *
    * @param {string} repoFullName - Repository full name (owner/repo)
-   * @param {string | null} installationId - GitHub App installation ID (optional if using PAT)
+   * @param {string | null} installationId - GitHub App installation ID (optional if using delegatedUser)
    * @param {IssueData} issueData - Issue data (title, body, labels)
    * @param {boolean} assignAgent - Whether to assign Copilot agent (creates issue via GraphQL with assigneeIds)
+   * @param {string | null} delegatedUserToken - User-to-server OAuth token (optional, preferred over installation token)
    * @returns {Promise<GitHubIssue>} Created issue
    * @throws {Error} If issue creation fails
    */
@@ -194,7 +190,8 @@ export class GitHubService {
     repoFullName: string,
     installationId: string | null,
     issueData: IssueData,
-    assignAgent: boolean = false
+    assignAgent: boolean = false,
+    delegatedUserToken: string | null = null
   ): Promise<GitHubIssue> {
     const [owner, repo] = repoFullName.split('/');
 
@@ -203,9 +200,16 @@ export class GitHubService {
     }
 
     /**
-     * Get authentication token (PAT or installation access token)
+     * Get authentication token (delegatedUser token preferred, then installation access token)
      */
-    const accessToken = await this.getAuthToken(installationId);
+    let accessToken: string;
+
+    if (delegatedUserToken) {
+      console.log('[GitHub API] Using delegated user-to-server token for authentication');
+      accessToken = delegatedUserToken;
+    } else {
+      accessToken = await this.getAuthToken(installationId);
+    }
 
     /**
      * Create Octokit instance with authentication token and configured timeout
@@ -415,4 +419,133 @@ export class GitHubService {
     }
   }
 
+  /**
+   * Get valid access token with automatic refresh if needed
+   * Checks if token is expired or close to expiration and refreshes if necessary
+   *
+   * @param {Object} tokenInfo - Current token information
+   * @param {string} tokenInfo.accessToken - Current access token
+   * @param {string} tokenInfo.refreshToken - Refresh token
+   * @param {Date | null} tokenInfo.accessTokenExpiresAt - Access token expiration date
+   * @param {Date | null} tokenInfo.refreshTokenExpiresAt - Refresh token expiration date
+   * @param {Function} onRefresh - Callback to save refreshed tokens (called after successful refresh)
+   * @returns {Promise<string>} Valid access token
+   * @throws {Error} If token refresh fails or refresh token is expired
+   */
+  public async getValidAccessToken(
+    tokenInfo: {
+      accessToken: string;
+      refreshToken: string;
+      accessTokenExpiresAt: Date | null;
+      refreshTokenExpiresAt: Date | null;
+    },
+    onRefresh?: (newTokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: Date | null;
+      refreshTokenExpiresAt: Date | null;
+    }) => Promise<void>
+  ): Promise<string> {
+    const now = new Date();
+    const bufferTime = 5 * 60 * 1000; // 5 minutes buffer before expiration
+
+    /**
+     * Check if access token is expired or close to expiration
+     */
+    if (tokenInfo.accessTokenExpiresAt) {
+      const timeUntilExpiration = tokenInfo.accessTokenExpiresAt.getTime() - now.getTime();
+
+      if (timeUntilExpiration <= bufferTime) {
+        /**
+         * Token is expired or close to expiration, need to refresh
+         */
+        if (!tokenInfo.refreshToken) {
+          throw new Error('Access token expired and no refresh token available');
+        }
+
+        /**
+         * Check if refresh token is expired
+         */
+        if (tokenInfo.refreshTokenExpiresAt && tokenInfo.refreshTokenExpiresAt <= now) {
+          throw new Error('Refresh token is expired');
+        }
+
+        if (!this.clientId || !this.clientSecret) {
+          throw new Error('GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET are required for token refresh');
+        }
+
+        /**
+         * Refresh the token
+         */
+        const newTokens = await this.refreshUserToken(tokenInfo.refreshToken);
+
+        /**
+         * Save refreshed tokens if callback provided
+         */
+        if (onRefresh) {
+          await onRefresh(newTokens);
+        }
+
+        return newTokens.accessToken;
+      }
+    }
+
+    /**
+     * Token is still valid, return it
+     */
+    return tokenInfo.accessToken;
+  }
+
+  /**
+   * Refresh user-to-server access token using refresh token
+   * Rotates refresh token if a new one is provided
+   *
+   * @param {string} refreshToken - OAuth refresh token
+   * @returns {Promise<{ accessToken: string; refreshToken: string; expiresAt: Date | null; refreshTokenExpiresAt: Date | null }>} New tokens
+   * @throws {Error} If token refresh fails
+   */
+  public async refreshUserToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: Date | null;
+    refreshTokenExpiresAt: Date | null;
+  }> {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET are required for token refresh');
+    }
+
+    try {
+      const { authentication } = await refreshOAuthToken({
+        clientType: 'github-app',
+        clientId: this.clientId,
+        clientSecret: this.clientSecret,
+        refreshToken,
+      });
+
+      if (!authentication.token) {
+        throw new Error('No access token in refresh response');
+      }
+
+      /**
+       * refreshToken, expiresAt, and refreshTokenExpiresAt are only available in certain authentication types
+       * Use type guards to safely access these properties
+       */
+      const newRefreshToken = 'refreshToken' in authentication && authentication.refreshToken
+        ? authentication.refreshToken
+        : refreshToken; // Use new refresh token if provided, otherwise keep old one
+
+      return {
+        accessToken: authentication.token,
+        refreshToken: newRefreshToken,
+        expiresAt: 'expiresAt' in authentication && authentication.expiresAt
+          ? new Date(authentication.expiresAt)
+          : null,
+        refreshTokenExpiresAt: 'refreshTokenExpiresAt' in authentication && authentication.refreshTokenExpiresAt
+          ? new Date(authentication.refreshTokenExpiresAt)
+          : null,
+      };
+    } catch (error) {
+      throw new Error(`Failed to refresh user token: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 }

@@ -5,6 +5,7 @@
   "license": "MIT",
   "workerType": "hawk-worker-task-manager",
   "dependencies": {
+    "@octokit/oauth-methods": "^4.0.0",
     "@octokit/rest": "^22.0.1",
     "@octokit/types": "^16.0.0",
     "jsonwebtoken": "^9.0.3"

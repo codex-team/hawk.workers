@@ -249,17 +249,28 @@ export default class TaskManagerWorker extends Worker {
      * According to GitHub community discussions, assigning Copilot during issue creation
      * via GraphQL createIssue with assigneeIds is more reliable than assigning after creation
      */
-    let githubIssue: { number: number; html_url: string } | null = null;
+    let githubIssue: { number: number; html_url: string };
 
     try {
-      githubIssue = await this.githubService.createIssue(
-        taskManager.config.repoFullName,
-        taskManager.config.installationId,
-        issueData,
-        taskManager.assignAgent || false
-      );
-    } catch (error) {
-      this.logger.error(`Failed to create GitHub issue for event ${event.groupHash} (project ${projectId}):`, error);
+      githubIssue = await this.executeWithTokenRefresh({
+        projectId,
+        taskManager,
+        operationName: 'create issue',
+        operation: async (token) => {
+          return await this.githubService.createIssue(
+            taskManager.config.repoFullName,
+            taskManager.config.installationId,
+            issueData,
+            taskManager.assignAgent || false,
+            token
+          );
+        },
+      });
+    } catch (error: any) {
+      /**
+       * Log error message only, not the full error object to avoid logging tokens
+       */
+      this.logger.error(`Failed to create GitHub issue for event ${event.groupHash} (project ${projectId}): ${error instanceof Error ? error.message : String(error)}`);
 
       /**
        * Do not increment usage and do not save taskManagerItem if issue creation failed
@@ -292,6 +303,190 @@ export default class TaskManagerWorker extends Worker {
       issueUrl: githubIssue.html_url,
       assignAgent: taskManager.assignAgent,
     });
+  }
+
+  /**
+   * Update delegatedUser tokens in project
+   *
+   * @param {string} projectId - Project ID
+   * @param {Object} tokenData - New token data
+   * @returns {Promise<void>}
+   */
+  private async updateDelegatedUserTokens(
+    projectId: string,
+    tokenData: {
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: Date | null;
+      refreshTokenExpiresAt: Date | null;
+      tokenLastValidatedAt: Date;
+    }
+  ): Promise<void> {
+    const connection = await this.accountsDb.getConnection();
+    const projectsCollection = connection.collection<ProjectDBScheme>('projects');
+
+    await projectsCollection.updateOne(
+      { _id: new ObjectId(projectId) },
+      {
+        $set: {
+          'taskManager.config.delegatedUser.accessToken': tokenData.accessToken,
+          'taskManager.config.delegatedUser.refreshToken': tokenData.refreshToken,
+          'taskManager.config.delegatedUser.accessTokenExpiresAt': tokenData.expiresAt,
+          'taskManager.config.delegatedUser.refreshTokenExpiresAt': tokenData.refreshTokenExpiresAt,
+          'taskManager.config.delegatedUser.tokenLastValidatedAt': tokenData.tokenLastValidatedAt,
+          'taskManager.updatedAt': new Date(),
+        },
+      }
+    );
+  }
+
+  /**
+   * Execute a GitHub API operation with automatic token refresh on 401 errors
+   * This function handles token refresh and retry logic for operations that may fail with 401
+   *
+   * @param {Object} params - Parameters for the operation
+   * @param {string} params.projectId - Project ID
+   * @param {ProjectTaskManagerConfig} params.taskManager - Task manager configuration
+   * @param {Function} params.operation - Async function that performs the GitHub API operation
+   * @param {string} params.operationName - Name of the operation for logging (e.g., "create issue")
+   * @returns {Promise<T>} Result of the operation
+   * @throws {Error} If operation fails and token refresh doesn't help
+   */
+  private async executeWithTokenRefresh<T>(params: {
+    projectId: string;
+    taskManager: ProjectTaskManagerConfig;
+    operation: (token: string | null) => Promise<T>;
+    operationName: string;
+  }): Promise<T> {
+    const { projectId, taskManager, operation, operationName } = params;
+
+    /**
+     * Get valid access token with automatic refresh if needed
+     */
+    let delegatedUserToken: string | null = null;
+
+    if (taskManager.config.delegatedUser?.status === 'active') {
+      const delegatedUser = taskManager.config.delegatedUser;
+
+      try {
+        /**
+         * Get valid access token with automatic refresh if needed
+         */
+        delegatedUserToken = await this.githubService.getValidAccessToken(
+          {
+            accessToken: delegatedUser.accessToken,
+            refreshToken: delegatedUser.refreshToken,
+            accessTokenExpiresAt: delegatedUser.accessTokenExpiresAt
+              ? new Date(delegatedUser.accessTokenExpiresAt)
+              : null,
+            refreshTokenExpiresAt: delegatedUser.refreshTokenExpiresAt
+              ? new Date(delegatedUser.refreshTokenExpiresAt)
+              : null,
+          },
+          /**
+           * Callback to save refreshed tokens in database
+           */
+          async (newTokens) => {
+            await this.updateDelegatedUserTokens(projectId, {
+              ...newTokens,
+              tokenLastValidatedAt: new Date(),
+            });
+
+            this.logger.info(`Refreshed and saved new tokens for project ${projectId}`);
+          }
+        );
+      } catch (refreshError) {
+        /**
+         * Log error message only, not the full error object to avoid logging tokens
+         */
+        this.logger.warn(`Failed to refresh token for project ${projectId}, falling back to installation token: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`);
+
+        /**
+         * If refresh fails, fall back to installation token
+         */
+        delegatedUserToken = null;
+      }
+    }
+
+    /**
+     * Try to execute the operation
+     */
+    try {
+      return await operation(delegatedUserToken);
+    } catch (error: any) {
+      /**
+       * Check if error is 401 (unauthorized) - token might be revoked
+       * Try to refresh token and retry once
+       */
+      if (error?.status === 401 && taskManager.config.delegatedUser?.status === 'active') {
+        const delegatedUser = taskManager.config.delegatedUser;
+
+        this.logger.warn(`Received 401 error for project ${projectId} during ${operationName}, attempting token refresh...`);
+
+        try {
+          /**
+           * Refresh token
+           */
+          const newTokens = await this.githubService.refreshUserToken(delegatedUser.refreshToken);
+
+          /**
+           * Save refreshed tokens
+           */
+          await this.updateDelegatedUserTokens(projectId, {
+            ...newTokens,
+            tokenLastValidatedAt: new Date(),
+          });
+
+          /**
+           * Retry operation with new token
+           */
+          const result = await operation(newTokens.accessToken);
+
+          this.logger.info(`Successfully refreshed token and completed ${operationName} for project ${projectId}`);
+
+          return result;
+        } catch (refreshError) {
+          /**
+           * Refresh failed, mark token as revoked
+           * Log error message only, not the full error object to avoid logging tokens
+           */
+          this.logger.error(`Failed to refresh token for project ${projectId}: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`);
+
+          await this.markDelegatedUserAsRevoked(projectId);
+
+          /**
+           * Re-throw original error
+           */
+          throw error;
+        }
+      } else {
+        /**
+         * Not a 401 error or no delegatedUser, re-throw original error
+         */
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Mark delegatedUser as revoked
+   *
+   * @param {string} projectId - Project ID
+   * @returns {Promise<void>}
+   */
+  private async markDelegatedUserAsRevoked(projectId: string): Promise<void> {
+    const connection = await this.accountsDb.getConnection();
+    const projectsCollection = connection.collection<ProjectDBScheme>('projects');
+
+    await projectsCollection.updateOne(
+      { _id: new ObjectId(projectId) },
+      {
+        $set: {
+          'taskManager.config.delegatedUser.status': 'revoked',
+          'taskManager.updatedAt': new Date(),
+        },
+      }
+    );
   }
 
   /**
