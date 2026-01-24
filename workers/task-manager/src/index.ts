@@ -245,7 +245,9 @@ export default class TaskManagerWorker extends Worker {
     const issueData = formatIssueFromEvent(event, project);
 
     /**
-     * Create GitHub Issue
+     * Create GitHub Issue (with Copilot assignment if enabled)
+     * According to GitHub community discussions, assigning Copilot during issue creation
+     * via GraphQL createIssue with assigneeIds is more reliable than assigning after creation
      */
     let githubIssue: { number: number; html_url: string } | null = null;
 
@@ -253,7 +255,8 @@ export default class TaskManagerWorker extends Worker {
       githubIssue = await this.githubService.createIssue(
         taskManager.config.repoFullName,
         taskManager.config.installationId,
-        issueData
+        issueData,
+        taskManager.assignAgent || false
       );
     } catch (error) {
       this.logger.error(`Failed to create GitHub issue for event ${event.groupHash} (project ${projectId}):`, error);
@@ -277,26 +280,6 @@ export default class TaskManagerWorker extends Worker {
       /**
        * We still link the created issue to the event to avoid duplicates.
        */
-    }
-
-    this.logger.verbose(`Project ${projectId} has Copilot assigning ${taskManager.assignAgent ? 'enabled' : 'disabled'}`)
-
-    /**
-     * Assign Copilot if enabled
-     */
-    if (taskManager.assignAgent) {
-      try {
-        await this.githubService.assignCopilot(
-          taskManager.config.repoFullName,
-          githubIssue.number,
-          taskManager.config.installationId
-        );
-      } catch (error) {
-        /**
-         * Log error but don't fail the task creation
-         */
-        this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}:`, error);
-      }
     }
 
     /**
