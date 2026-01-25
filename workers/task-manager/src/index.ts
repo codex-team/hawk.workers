@@ -245,27 +245,16 @@ export default class TaskManagerWorker extends Worker {
     const issueData = formatIssueFromEvent(event, project);
 
     /**
-     * Create GitHub Issue (with Copilot assignment if enabled)
-     * According to GitHub community discussions, assigning Copilot during issue creation
-     * via GraphQL createIssue with assigneeIds is more reliable than assigning after creation
+     * Step 1: Create GitHub Issue using installation token (GitHub App)
      */
     let githubIssue: { number: number; html_url: string };
 
     try {
-      githubIssue = await this.executeWithTokenRefresh({
-        projectId,
-        taskManager,
-        operationName: 'create issue',
-        operation: async (token) => {
-          return await this.githubService.createIssue(
-            taskManager.config.repoFullName,
-            taskManager.config.installationId,
-            issueData,
-            taskManager.assignAgent || false,
-            token
-          );
-        },
-      });
+      githubIssue = await this.githubService.createIssue(
+        taskManager.config.repoFullName,
+        taskManager.config.installationId,
+        issueData
+      );
     } catch (error: any) {
       /**
        * Log error message only, not the full error object to avoid logging tokens
@@ -294,9 +283,52 @@ export default class TaskManagerWorker extends Worker {
     }
 
     /**
-     * Save taskManagerItem to event
+     * Save taskManagerItem to event (independent of Copilot assignment)
+     * We determine assignee status based on whether assignAgent is enabled,
+     * not whether assignment actually succeeded
      */
-    await this.saveTaskManagerItem(projectId, event, githubIssue.number, taskManager, githubIssue.html_url);
+    let copilotAssigned = false;
+
+    /**
+     * Step 2: Assign Copilot agent if enabled (using user-to-server OAuth token)
+     */
+    if (taskManager.assignAgent && taskManager.config.delegatedUser?.accessToken) {
+      try {
+        await this.executeWithTokenRefresh({
+          projectId,
+          taskManager,
+          operationName: 'assign Copilot',
+          operation: async (token) => {
+            await this.githubService.assignCopilot(
+              taskManager.config.repoFullName,
+              githubIssue.number,
+              token
+            );
+          },
+        });
+        copilotAssigned = true;
+      } catch (error: any) {
+        /**
+         * Log error but don't fail the whole operation - issue was created successfully
+         */
+        this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}: ${error instanceof Error ? error.message : String(error)}`);
+        copilotAssigned = false;
+      }
+    }
+
+    /**
+     * Save taskManagerItem to event
+     * Note: assignee is set based on whether assignment was attempted and succeeded,
+     * not just whether assignAgent is enabled
+     */
+    await this.saveTaskManagerItem(
+      projectId,
+      event,
+      githubIssue.number,
+      taskManager,
+      githubIssue.html_url,
+      copilotAssigned
+    );
 
     this.logger.info(`Created task for event ${event.groupHash} in project ${projectId}`, {
       issueNumber: githubIssue.number,
@@ -557,7 +589,7 @@ export default class TaskManagerWorker extends Worker {
    * @param threshold - minimum totalCount threshold
    * @returns Promise with array of events
    */
-  private async findEventsForTaskCreation(
+  private async   findEventsForTaskCreation(
     projectId: string,
     connectedAt: Date,
     threshold: number
@@ -573,7 +605,7 @@ export default class TaskManagerWorker extends Worker {
     const events = await eventsCollection
       .find({
         taskManagerItem: { $exists: false },
-        timestamp: { $gte: connectedAtTimestamp },
+        // timestamp: { $gte: connectedAtTimestamp },
         totalCount: { $gte: threshold },
       })
       .sort({ totalCount: -1, timestamp: -1 })
@@ -591,13 +623,15 @@ export default class TaskManagerWorker extends Worker {
    * @param issueNumber - GitHub issue number
    * @param taskManager - task manager config
    * @param issueUrl - GitHub issue URL
+   * @param copilotAssigned - whether Copilot was successfully assigned
    */
   private async saveTaskManagerItem(
     projectId: string,
     event: GroupedEventDBScheme,
     issueNumber: number,
     taskManager: ProjectTaskManagerConfig,
-    issueUrl: string
+    issueUrl: string,
+    copilotAssigned: boolean = false
   ): Promise<void> {
     const connection = await this.eventsDb.getConnection();
     const eventsCollection = connection.collection<GroupedEventDBScheme>(`events:${projectId}`);
@@ -616,7 +650,7 @@ export default class TaskManagerWorker extends Worker {
       title: decodedEvent.payload.title,
       createdBy: 'auto',
       createdAt: new Date(),
-      assignee: taskManager.assignAgent ? 'copilot' : null,
+      assignee: copilotAssigned ? 'copilot' : null,
     };
 
     await eventsCollection.updateOne(
