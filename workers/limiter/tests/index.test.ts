@@ -27,7 +27,7 @@ const REGULAR_WORKSPACES_CHECK_EVENT: RegularWorkspacesCheckEvent = {
  */
 const LAST_CHARGE_DATE = new Date(1585742400 * 1000);
 
-describe.skip('Limiter worker', () => {
+describe('Limiter worker', () => {
   let connection: MongoClient;
   let db: Db;
   let projectCollection: Collection<ProjectDBScheme>;

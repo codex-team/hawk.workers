@@ -106,7 +106,7 @@ function generateTask(event: Partial<EventData<EventAddons>> = undefined, timest
   };
 }
 
-describe.skip('GrouperWorker', () => {
+describe('GrouperWorker', () => {
   let connection: MongoClient;
   let accountsConnection: MongoClient;
   let eventsCollection: Collection;
