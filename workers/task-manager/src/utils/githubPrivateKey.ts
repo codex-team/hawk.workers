@@ -11,8 +11,8 @@ export function normalizeGitHubPrivateKey(rawPrivateKey: string): string {
   let privateKey = rawPrivateKey.trim();
 
   if (
-    (privateKey.startsWith('"') && privateKey.endsWith('"'))
-    || (privateKey.startsWith('\'') && privateKey.endsWith('\''))
+    (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+    (privateKey.startsWith('\'') && privateKey.endsWith('\''))
   ) {
     privateKey = privateKey.slice(1, -1);
   }
@@ -21,7 +21,9 @@ export function normalizeGitHubPrivateKey(rawPrivateKey: string): string {
    * Support passing base64-encoded private key (common in CI).
    * If it doesn't look like a PEM block but looks like base64, decode it.
    */
-  if (!privateKey.includes('BEGIN') && /^[A-Za-z0-9+/=\s]+$/.test(privateKey) && privateKey.length > 200) {
+  const MIN_BASE64_KEY_LENGTH = 200;
+
+  if (!privateKey.includes('BEGIN') && /^[A-Za-z0-9+/=\s]+$/.test(privateKey) && privateKey.length > MIN_BASE64_KEY_LENGTH) {
     try {
       privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
     } catch {
@@ -54,4 +56,3 @@ export function normalizeGitHubPrivateKey(rawPrivateKey: string): string {
 
   return privateKey;
 }
-

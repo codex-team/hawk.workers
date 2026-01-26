@@ -48,7 +48,6 @@ describe('formatIssueFromEvent', () => {
     );
   });
 
-
   it('should include stacktrace when backtrace is present', () => {
     const event: GroupedEventDBScheme = {
       _id: new ObjectId(),
@@ -154,10 +153,22 @@ at func9 (src/file9.js:9:0)
             column: 5,
             function: 'handleRequest',
             sourceCode: [
-              { line: 8, content: 'const x = 1;' },
-              { line: 9, content: 'const y = 2;' },
-              { line: 10, content: 'throw new Error("test");' },
-              { line: 11, content: 'const z = 3;' },
+              {
+                line: 8,
+                content: 'const x = 1;',
+              },
+              {
+                line: 9,
+                content: 'const y = 2;',
+              },
+              {
+                line: 10,
+                content: 'throw new Error("test");',
+              },
+              {
+                line: 11,
+                content: 'const z = 3;',
+              },
             ],
           },
         ],
@@ -286,9 +297,18 @@ at <anonymous> (<unknown>:0:0)
             column: 10,
             function: 'main',
             sourceCode: [
-              { line: 40, content: 'const data = fetchData();' },
-              { line: 41, content: 'processData(data);' },
-              { line: 42, content: 'throw new Error("Failed");' },
+              {
+                line: 40,
+                content: 'const data = fetchData();',
+              },
+              {
+                line: 41,
+                content: 'processData(data);',
+              },
+              {
+                line: 42,
+                content: 'throw new Error("Failed");',
+              },
             ],
           },
         ],

@@ -53,9 +53,14 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
     bodyParts.push('```');
 
     /**
-     * Take top 10 frames and format them
+     * Maximum number of frames to show in issue
      */
-    const topFrames = decodedEvent.payload.backtrace.slice(0, 10);
+    const MAX_FRAMES_TO_SHOW = 10;
+
+    /**
+     * Take top frames and format them
+     */
+    const topFrames = decodedEvent.payload.backtrace.slice(0, MAX_FRAMES_TO_SHOW);
 
     for (const frame of topFrames) {
       const file = frame.file || '<unknown>';
@@ -66,10 +71,15 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
       bodyParts.push(`at ${func} (${file}:${line}:${column})`);
 
       /**
+       * Maximum number of source code lines to show per frame
+       */
+      const MAX_SOURCE_LINES_PER_FRAME = 3;
+
+      /**
        * Add source code snippet if available (first 3 lines)
        */
       if (frame.sourceCode && frame.sourceCode.length > 0) {
-        const sourceLines = frame.sourceCode.slice(0, 3);
+        const sourceLines = frame.sourceCode.slice(0, MAX_SOURCE_LINES_PER_FRAME);
 
         for (const sourceLine of sourceLines) {
           bodyParts.push(`  ${sourceLine.line}: ${sourceLine.content}`);
@@ -90,7 +100,7 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
   /**
    * Labels: hawk:error
    */
-  const labels = ['hawk:error'];
+  const labels = [ 'hawk:error' ];
 
   return {
     title,

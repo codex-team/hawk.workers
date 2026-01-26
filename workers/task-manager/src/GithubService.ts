@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Octokit } from '@octokit/rest';
 import type { Endpoints } from '@octokit/types';
+import TimeMs from '../../../lib/utils/time';
 import { normalizeGitHubPrivateKey } from './utils/githubPrivateKey';
 import { refreshToken as refreshOAuthToken } from '@octokit/oauth-methods';
 
@@ -27,6 +28,26 @@ export type GitHubIssue = Pick<
  */
 export class GitHubService {
   /**
+   * Default timeout for GitHub API requests (in milliseconds)
+   */
+  private static readonly DEFAULT_TIMEOUT = 10000;
+
+  /**
+   * Minutes in 10 minutes (JWT expiration time)
+   */
+  private static readonly JWT_EXPIRATION_MINUTES = 10;
+
+  /**
+   * Minutes for token refresh buffer
+   */
+  private static readonly TOKEN_REFRESH_BUFFER_MINUTES = 5;
+
+  /**
+   * Number of assignees to fetch in GraphQL query
+   */
+  private static readonly ASSIGNEES_QUERY_LIMIT = 20;
+
+  /**
    * GitHub App ID from environment variables
    */
   private readonly appId?: string;
@@ -40,11 +61,6 @@ export class GitHubService {
    * GitHub App Client Secret from environment variables (optional, needed for token refresh)
    */
   private readonly clientSecret?: string;
-
-  /**
-   * Default timeout for GitHub API requests (in milliseconds)
-   */
-  private static readonly DEFAULT_TIMEOUT = 10000;
 
   /**
    * Creates an instance of GitHubService
@@ -66,112 +82,6 @@ export class GitHubService {
 
     if (process.env.GITHUB_APP_CLIENT_SECRET) {
       this.clientSecret = process.env.GITHUB_APP_CLIENT_SECRET;
-    }
-  }
-
-  /**
-   * Create Octokit instance with configured timeout
-   *
-   * @param auth - Authentication token (JWT or installation access token)
-   * @returns Configured Octokit instance
-   */
-  private createOctokit(auth: string): Octokit {
-    return new Octokit({
-      auth,
-      request: {
-        timeout: GitHubService.DEFAULT_TIMEOUT,
-        headers: {
-          'GraphQL-Features': 'issues_copilot_assignment_api_support',
-        },
-      },
-    });
-  }
-
-  /**
-   * Get private key from environment variables
-   *
-   * @returns {string} Private key in PEM format with real newlines
-   * @throws {Error} If GITHUB_PRIVATE_KEY is not set
-   */
-  private getPrivateKey(): string {
-    if (process.env.GITHUB_PRIVATE_KEY) {
-      return normalizeGitHubPrivateKey(process.env.GITHUB_PRIVATE_KEY);
-    }
-
-    throw new Error('GITHUB_PRIVATE_KEY must be set');
-  }
-
-  /**
-   * Create JWT token for GitHub App authentication
-   *
-   * @returns {string} JWT token
-   * @throws {Error} If GITHUB_APP_ID is not set
-   */
-  private createJWT(): string {
-    if (!this.appId) {
-      throw new Error('GITHUB_APP_ID is required for GitHub App authentication');
-    }
-
-    const privateKey = this.getPrivateKey();
-    const now = Math.floor(Date.now() / 1000);
-
-    /**
-     * JWT payload for GitHub App
-     * - iat: issued at time (current time)
-     * - exp: expiration time (10 minutes from now, GitHub allows up to 10 minutes)
-     * - iss: issuer (GitHub App ID)
-     */
-    const payload = {
-      iat: now - 60, // Allow 1 minute clock skew
-      exp: now + 600, // 10 minutes expiration
-      iss: this.appId,
-    };
-
-    return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
-  }
-
-  /**
-   * Get authentication token (installation access token)
-   *
-   * @param {string | null} installationId - GitHub App installation ID
-   * @returns {Promise<string>} Authentication token
-   * @throws {Error} If token creation fails
-   */
-  private async getAuthToken(installationId: string | null): Promise<string> {
-    if (!installationId) {
-      throw new Error('installationId is required for GitHub App authentication');
-    }
-
-    console.log('[GitHub API] Using GitHub App authentication with installation ID:', installationId);
-    return this.createInstallationToken(installationId);
-  }
-
-  /**
-   * Get installation access token from GitHub API
-   *
-   * @param {string} installationId - GitHub App installation ID
-   * @returns {Promise<string>} Installation access token (valid for 1 hour)
-   * @throws {Error} If token creation fails
-   */
-  private async createInstallationToken(installationId: string): Promise<string> {
-    const token = this.createJWT();
-
-    /**
-     * Create Octokit instance with JWT authentication and configured timeout
-     */
-    const octokit = this.createOctokit(token);
-
-    try {
-      /**
-       * Request installation access token
-       */
-      const { data } = await octokit.rest.apps.createInstallationAccessToken({
-        installation_id: parseInt(installationId, 10),
-      });
-
-      return data.token;
-    } catch (error) {
-      throw new Error(`Failed to create installation token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -240,6 +150,7 @@ export class GitHubService {
       /**
        * Step 1: Get repository ID and find Copilot bot ID
        */
+      const suggestedActorsLimit = GitHubService.ASSIGNEES_QUERY_LIMIT;
       const repoInfoQuery = `
         query($owner: String!, $name: String!, $issueNumber: Int!) {
           repository(owner: $owner, name: $name) {
@@ -247,7 +158,7 @@ export class GitHubService {
             issue(number: $issueNumber) {
               id
             }
-            suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 100) {
+            suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: ${suggestedActorsLimit}) {
               nodes {
                 login
                 __typename
@@ -269,7 +180,9 @@ export class GitHubService {
         issueNumber,
       });
 
-      console.log('[GitHub API] Repository info query response:', JSON.stringify(repoInfo, null, 2));
+      const JSON_INDENT_SPACES = 2;
+
+      console.log('[GitHub API] Repository info query response:', JSON.stringify(repoInfo, null, JSON_INDENT_SPACES));
 
       const repositoryId = repoInfo?.repository?.id;
       const issueId = repoInfo?.repository?.issue?.id;
@@ -289,7 +202,12 @@ export class GitHubService {
         (node: any) => node.login === 'copilot-swe-agent'
       );
 
-      console.log('[GitHub API] Copilot bot found in suggestedActors:', copilotBot ? { login: copilotBot.login, id: copilotBot.id } : 'not found');
+      console.log('[GitHub API] Copilot bot found in suggestedActors:', copilotBot
+        ? {
+          login: copilotBot.login,
+          id: copilotBot.id,
+        }
+        : 'not found');
 
       /**
        * If not found in suggestedActors, try to get it directly by login
@@ -312,7 +230,7 @@ export class GitHubService {
             login: 'copilot-swe-agent',
           });
 
-          console.log('[GitHub API] Direct Copilot bot query response:', JSON.stringify(copilotUserInfo, null, 2));
+          console.log('[GitHub API] Direct Copilot bot query response:', JSON.stringify(copilotUserInfo, null, JSON_INDENT_SPACES));
 
           if (copilotUserInfo?.user?.id) {
             copilotBot = {
@@ -329,7 +247,10 @@ export class GitHubService {
         throw new Error('Copilot coding agent (copilot-swe-agent) is not available for this repository');
       }
 
-      console.log('[GitHub API] Using Copilot bot:', { login: copilotBot.login, id: copilotBot.id });
+      console.log('[GitHub API] Using Copilot bot:', {
+        login: copilotBot.login,
+        id: copilotBot.id,
+      });
 
       /**
        * Step 2: Assign Copilot to issue via GraphQL
@@ -367,10 +288,10 @@ export class GitHubService {
 
       const response: any = await octokit.graphql(assignCopilotMutation, {
         issueId,
-        assigneeIds: [copilotBot.id],
+        assigneeIds: [ copilotBot.id ],
       });
 
-      console.log('[GitHub API] Assign Copilot mutation response:', JSON.stringify(response, null, 2));
+      console.log('[GitHub API] Assign Copilot mutation response:', JSON.stringify(response, null, JSON_INDENT_SPACES));
 
       const assignable = response?.addAssigneesToAssignable?.assignable;
 
@@ -381,7 +302,7 @@ export class GitHubService {
       /**
        * Assignable is a union type (Issue | PullRequest), so we need to check which type it is
        * Both Issue and PullRequest have assignees field, so we can access it directly
-       * 
+       *
        * Note: The assignees list might not be immediately updated in the response,
        * so we check if the mutation succeeded (assignable is not null) rather than
        * verifying the assignees list directly
@@ -420,50 +341,6 @@ export class GitHubService {
   }
 
   /**
-   * Create a GitHub issue via REST API (helper method)
-   *
-   * @param {Octokit} octokit - Octokit instance
-   * @param {string} owner - Repository owner
-   * @param {string} repo - Repository name
-   * @param {IssueData} issueData - Issue data (title, body, labels)
-   * @returns {Promise<GitHubIssue>} Created issue
-   * @throws {Error} If issue creation fails
-   */
-  private async createIssueViaRest(
-    octokit: Octokit,
-    owner: string,
-    repo: string,
-    issueData: IssueData
-  ): Promise<GitHubIssue> {
-    try {
-      const { data } = await octokit.rest.issues.create({
-        owner,
-        repo,
-        title: issueData.title,
-        body: issueData.body,
-        labels: issueData.labels,
-      });
-
-      console.log('[GitHub API] Create issue response:', JSON.stringify({
-        number: data.number,
-        html_url: data.html_url,
-        title: data.title,
-        state: data.state,
-        assignees: data.assignees?.map(a => a.login) || [],
-      }, null, 2));
-
-      return {
-        number: data.number,
-        html_url: data.html_url,
-        title: data.title,
-        state: data.state,
-      };
-    } catch (error) {
-      throw new Error(`Failed to create issue: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
    * Get valid access token with automatic refresh if needed
    * Checks if token is expired or close to expiration and refreshes if necessary
    *
@@ -491,7 +368,7 @@ export class GitHubService {
     }) => Promise<void>
   ): Promise<string> {
     const now = new Date();
-    const bufferTime = 5 * 60 * 1000; // 5 minutes buffer before expiration
+    const bufferTime = GitHubService.TOKEN_REFRESH_BUFFER_MINUTES * TimeMs.MINUTE; // 5 minutes buffer before expiration
 
     /**
      * Check if access token is expired or close to expiration
@@ -590,6 +467,167 @@ export class GitHubService {
       };
     } catch (error) {
       throw new Error(`Failed to refresh user token: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Create a GitHub issue via REST API (helper method)
+   *
+   * @param {Octokit} octokit - Octokit instance
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {IssueData} issueData - Issue data (title, body, labels)
+   * @returns {Promise<GitHubIssue>} Created issue
+   * @throws {Error} If issue creation fails
+   */
+  private async createIssueViaRest(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    issueData: IssueData
+  ): Promise<GitHubIssue> {
+    try {
+      const { data } = await octokit.rest.issues.create({
+        owner,
+        repo,
+        title: issueData.title,
+        body: issueData.body,
+        labels: issueData.labels,
+      });
+
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { html_url } = data;
+
+      const JSON_INDENT_SPACES = 2;
+
+      console.log('[GitHub API] Create issue response:', JSON.stringify({
+        number: data.number,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        html_url,
+        title: data.title,
+        state: data.state,
+        assignees: data.assignees?.map(a => a.login) || [],
+      }, null, JSON_INDENT_SPACES));
+
+      return {
+        number: data.number,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        html_url,
+        title: data.title,
+        state: data.state,
+      };
+    } catch (error) {
+      throw new Error(`Failed to create issue: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Create Octokit instance with configured timeout
+   *
+   * @param auth - Authentication token (JWT or installation access token)
+   * @returns Configured Octokit instance
+   */
+  private createOctokit(auth: string): Octokit {
+    return new Octokit({
+      auth,
+      request: {
+        timeout: GitHubService.DEFAULT_TIMEOUT,
+        headers: {
+          'GraphQL-Features': 'issues_copilot_assignment_api_support',
+        },
+      },
+    });
+  }
+
+  /**
+   * Get private key from environment variables
+   *
+   * @returns {string} Private key in PEM format with real newlines
+   * @throws {Error} If GITHUB_PRIVATE_KEY is not set
+   */
+  private getPrivateKey(): string {
+    if (process.env.GITHUB_PRIVATE_KEY) {
+      return normalizeGitHubPrivateKey(process.env.GITHUB_PRIVATE_KEY);
+    }
+
+    throw new Error('GITHUB_PRIVATE_KEY must be set');
+  }
+
+  /**
+   * Create JWT token for GitHub App authentication
+   *
+   * @returns {string} JWT token
+   * @throws {Error} If GITHUB_APP_ID is not set
+   */
+  private createJWT(): string {
+    if (!this.appId) {
+      throw new Error('GITHUB_APP_ID is required for GitHub App authentication');
+    }
+
+    const privateKey = this.getPrivateKey();
+    const now = Math.floor(Date.now() / TimeMs.SECOND);
+
+    /**
+     * JWT payload for GitHub App
+     * - iat: issued at time (current time)
+     * - exp: expiration time (10 minutes from now, GitHub allows up to 10 minutes)
+     * - iss: issuer (GitHub App ID)
+     */
+    const secondsInMinute = TimeMs.MINUTE / TimeMs.SECOND;
+    const payload = {
+      iat: now - secondsInMinute, // Allow 1 minute clock skew
+      exp: now + (GitHubService.JWT_EXPIRATION_MINUTES * secondsInMinute), // 10 minutes expiration
+      iss: this.appId,
+    };
+
+    return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
+  }
+
+  /**
+   * Get authentication token (installation access token)
+   *
+   * @param {string | null} installationId - GitHub App installation ID
+   * @returns {Promise<string>} Authentication token
+   * @throws {Error} If token creation fails
+   */
+  private async getAuthToken(installationId: string | null): Promise<string> {
+    if (!installationId) {
+      throw new Error('installationId is required for GitHub App authentication');
+    }
+
+    console.log('[GitHub API] Using GitHub App authentication with installation ID:', installationId);
+
+    return this.createInstallationToken(installationId);
+  }
+
+  /**
+   * Get installation access token from GitHub API
+   *
+   * @param {string} installationId - GitHub App installation ID
+   * @returns {Promise<string>} Installation access token (valid for 1 hour)
+   * @throws {Error} If token creation fails
+   */
+  private async createInstallationToken(installationId: string): Promise<string> {
+    const token = this.createJWT();
+
+    /**
+     * Create Octokit instance with JWT authentication and configured timeout
+     */
+    const octokit = this.createOctokit(token);
+
+    try {
+      /**
+       * Request installation access token
+       */
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const { data } = await octokit.rest.apps.createInstallationAccessToken({
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        installation_id: parseInt(installationId, 10),
+      });
+
+      return data.token;
+    } catch (error) {
+      throw new Error(`Failed to create installation token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

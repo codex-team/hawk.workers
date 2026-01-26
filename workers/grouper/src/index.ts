@@ -132,12 +132,10 @@ export default class GrouperWorker extends Worker {
       uniqueEventHash = similarEvent.groupHash;
 
       existedEvent = similarEvent;
-    }
-
-    /**
-     * If we couldn't group by grouping pattern — try grouping bt hash (title)
-     */
-    else {
+    } else {
+      /**
+       * If we couldn't group by grouping pattern — try grouping bt hash (title)
+       */
       /**
        * Find event by group hash.
        */

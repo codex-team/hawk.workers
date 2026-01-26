@@ -2,23 +2,29 @@ import './env';
 import { ObjectId } from 'mongodb';
 import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
+import TimeMs from '../../../lib/utils/time';
 import * as pkg from '../package.json';
 import type { TaskManagerWorkerTask } from '../types/task-manager-worker-task';
 import type {
   ProjectDBScheme,
   GroupedEventDBScheme,
-  ProjectTaskManagerConfig,
+  ProjectTaskManagerConfig
 } from '@hawk.so/types';
-import type { TaskManagerItem } from '@hawk.so/types/src/base/event/taskManagerItem.ts';
+import type { TaskManagerItem } from '@hawk.so/types/src/base/event/taskManagerItem';
 import HawkCatcher from '@hawk.so/nodejs';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { GitHubService } from './GithubService';
 import { formatIssueFromEvent } from './utils/issue';
 
 /**
+ * Default maximum number of auto-created tasks per project per day
+ */
+const DEFAULT_MAX_AUTO_TASKS_PER_DAY = 10;
+
+/**
  * Maximum number of auto-created tasks per project per day
  */
-const MAX_AUTO_TASKS_PER_DAY = Number(process.env.MAX_AUTO_TASKS_PER_DAY) || 10;
+const MAX_AUTO_TASKS_PER_DAY = Number(process.env.MAX_AUTO_TASKS_PER_DAY) || DEFAULT_MAX_AUTO_TASKS_PER_DAY;
 
 /**
  * Worker for automatically creating GitHub issues for errors that meet the threshold
@@ -52,7 +58,7 @@ export default class TaskManagerWorker extends Worker {
     await this.eventsDb.connect();
 
     // await super.start();
-    this.handle({type: 'auto-task-creation'})
+    this.handle({ type: 'auto-task-creation' });
   }
 
   /**
@@ -109,8 +115,14 @@ export default class TaskManagerWorker extends Worker {
     const projects = await projectsCollection.find({
       'taskManager.type': 'github',
       'taskManager.autoTaskEnabled': true,
-      'taskManager.config.repoId': { $exists: true, $ne: null },
-      'taskManager.config.repoFullName': { $exists: true, $ne: null },
+      'taskManager.config.repoId': {
+        $exists: true,
+        $ne: null,
+      },
+      'taskManager.config.repoFullName': {
+        $exists: true,
+        $ne: null,
+      },
     }).toArray();
 
     return projects;
@@ -247,6 +259,7 @@ export default class TaskManagerWorker extends Worker {
     /**
      * Step 1: Create GitHub Issue using installation token (GitHub App)
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     let githubIssue: { number: number; html_url: string };
 
     try {
@@ -417,6 +430,8 @@ export default class TaskManagerWorker extends Worker {
           },
           /**
            * Callback to save refreshed tokens in database
+           *
+           * @param newTokens
            */
           async (newTokens) => {
             await this.updateDelegatedUserTokens(projectId, {
@@ -450,7 +465,9 @@ export default class TaskManagerWorker extends Worker {
        * Check if error is 401 (unauthorized) - token might be revoked
        * Try to refresh token and retry once
        */
-      if (error?.status === 401 && taskManager.config.delegatedUser?.status === 'active') {
+      const HTTP_UNAUTHORIZED = 401;
+
+      if (error?.status === HTTP_UNAUTHORIZED && taskManager.config.delegatedUser?.status === 'active') {
         const delegatedUser = taskManager.config.delegatedUser;
 
         this.logger.warn(`Received 401 error for project ${projectId} during ${operationName}, attempting token refresh...`);
@@ -544,7 +561,6 @@ export default class TaskManagerWorker extends Worker {
     );
   }
 
-
   /**
    * Atomically increment autoTasksCreated
    *
@@ -589,7 +605,7 @@ export default class TaskManagerWorker extends Worker {
    * @param threshold - minimum totalCount threshold
    * @returns Promise with array of events
    */
-  private async   findEventsForTaskCreation(
+  private async findEventsForTaskCreation(
     projectId: string,
     connectedAt: Date,
     threshold: number
@@ -597,23 +613,20 @@ export default class TaskManagerWorker extends Worker {
     const connection = await this.eventsDb.getConnection();
     const eventsCollection = connection.collection<GroupedEventDBScheme>(`events:${projectId}`);
 
-    /**
-     * Convert connectedAt to timestamp (seconds)
-     */
-    const connectedAtTimestamp = Math.floor(connectedAt.getTime() / 1000);
-
     const events = await eventsCollection
       .find({
         taskManagerItem: { $exists: false },
         // timestamp: { $gte: connectedAtTimestamp },
         totalCount: { $gte: threshold },
       })
-      .sort({ totalCount: -1, timestamp: -1 })
+      .sort({
+        totalCount: -1,
+        timestamp: -1,
+      })
       .toArray();
 
     return events;
   }
-
 
   /**
    * Save taskManagerItem to event
@@ -631,7 +644,7 @@ export default class TaskManagerWorker extends Worker {
     issueNumber: number,
     taskManager: ProjectTaskManagerConfig,
     issueUrl: string,
-    copilotAssigned: boolean = false
+    copilotAssigned = false
   ): Promise<void> {
     const connection = await this.eventsDb.getConnection();
     const eventsCollection = connection.collection<GroupedEventDBScheme>(`events:${projectId}`);
@@ -667,5 +680,4 @@ export default class TaskManagerWorker extends Worker {
       url: taskManagerItem.url,
     });
   }
-
 }
