@@ -14,6 +14,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { GitHubService } from './GithubService';
 import { formatIssueFromEvent } from './utils/issue';
+import TimeMs from '../../../lib/utils/time';
 
 /**
  * Default maximum number of auto-created tasks per project per day
@@ -23,7 +24,7 @@ const DEFAULT_MAX_AUTO_TASKS_PER_DAY = 10;
 /**
  * Maximum number of auto-created tasks per project per day
  */
-const MAX_AUTO_TASKS_PER_DAY = Number(process.env.MAX_AUTO_TASKS_PER_DAY) || DEFAULT_MAX_AUTO_TASKS_PER_DAY;
+const MAX_AUTO_TASKS_PER_DAY = parseInt(process.env.MAX_AUTO_TASKS_PER_DAY, 10) || DEFAULT_MAX_AUTO_TASKS_PER_DAY;
 
 /**
  * Worker for automatically creating GitHub issues for errors that meet the threshold
@@ -56,7 +57,7 @@ export default class TaskManagerWorker extends Worker {
     await this.accountsDb.connect();
     await this.eventsDb.connect();
 
-    // await super.start();
+    await super.start();
     this.handle({ type: 'auto-task-creation' });
   }
 
@@ -612,10 +613,16 @@ export default class TaskManagerWorker extends Worker {
     const connection = await this.eventsDb.getConnection();
     const eventsCollection = connection.collection<GroupedEventDBScheme>(`events:${projectId}`);
 
+    /**
+     * Convert connectedAt to timestamp (seconds)
+     */
+    const connectedAtTimestamp = Math.floor(connectedAt.getTime() / TimeMs.SECOND);
+
+
     const events = await eventsCollection
       .find({
         taskManagerItem: { $exists: false },
-        // timestamp: { $gte: connectedAtTimestamp },
+        timestamp: { $gte: connectedAtTimestamp },
         totalCount: { $gte: threshold },
       })
       .sort({

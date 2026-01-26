@@ -134,7 +134,7 @@ export default class GrouperWorker extends Worker {
       existedEvent = similarEvent;
     } else {
       /**
-       * If we couldn't group by grouping pattern — try grouping bt hash (title)
+       * If we couldn't group by grouping pattern — try grouping by hash (title)
        */
       /**
        * Find event by group hash.
