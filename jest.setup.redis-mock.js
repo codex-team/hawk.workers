@@ -21,5 +21,17 @@ beforeAll(async () => {
 );
 
 afterAll(async () => {
-  await redisTestContainer.stop();
-});
+  if (redisTestContainer) {
+    try {
+      await redisTestContainer.stop();
+    } catch (error) {
+      // Ignore errors when stopping container
+      // Container might already be stopped or not started
+    }
+  }
+
+  /**
+   * Clear REDIS_URL to prevent further connection attempts
+   */
+  delete process.env.REDIS_URL;
+}, 30000);
