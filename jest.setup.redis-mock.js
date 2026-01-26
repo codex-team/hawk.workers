@@ -11,7 +11,7 @@ beforeAll(async () => {
     .start();
 
   const port = redisTestContainer.getMappedPort(6379);
-  const host = redisTestContainer.getContainerIpAddress();
+  const host = redisTestContainer.getHost();
 
   /**
    * Set environment variable for redisHelper to connect to redis container
