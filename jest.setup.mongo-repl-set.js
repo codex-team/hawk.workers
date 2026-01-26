@@ -15,10 +15,10 @@ beforeAll(async () => {
     let status = await admin.command({ replSetGetStatus: 1 }).catch(() => null);
 
     if (status && status.ok) {
-      console.log('✅ Replica set already initialized');
+      // console.log('✅ Replica set already initialized');
     } else {
       await admin.command({ replSetInitiate: {} });
-      console.log('✅ Replica set initiated');
+      // console.log('✅ Replica set initiated');
     }
 
     const startTime = Date.now();
@@ -39,7 +39,7 @@ beforeAll(async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
     } while (Date.now() - startTime < timeout);
 
-    console.log('✅ Replica set is stable');
+    // console.log('✅ Replica set is stable');
   } catch (err) {
     console.error('❌ Failed to initiate replica set:', err);
   }
