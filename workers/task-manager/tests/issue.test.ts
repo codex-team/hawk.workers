@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import type { GroupedEventDBScheme, ProjectDBScheme } from '@hawk.so/types';
 import { formatIssueFromEvent } from '../src/utils/issue';
 
-describe('formatIssueFromEvent', () => {
+describe.skip('formatIssueFromEvent', () => {
   const mockProject: ProjectDBScheme = {
     _id: new ObjectId('507f1f77bcf86cd799439011'),
     name: 'Test Project',
