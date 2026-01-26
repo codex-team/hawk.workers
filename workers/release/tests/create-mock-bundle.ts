@@ -27,12 +27,27 @@ export default class MockBundle {
         entry: this.entry,
         output: {
           path: this.outputDir,
-          libraryExport: 'default',
+          filename: 'main.js',
+          library: {
+            type: 'commonjs2',
+            export: 'default',
+          },
         },
         devtool: 'source-map',
+        /**
+         * Webpack 5 requires explicit target configuration
+         */
+        target: 'node',
       }, (err, stats) => {
         if (err) {
+          console.error('[MockBundle] Webpack compilation error:', err);
           reject(err);
+
+          return;
+        }
+
+        if (!stats) {
+          reject(new Error('Webpack stats is undefined'));
 
           return;
         }
@@ -40,14 +55,19 @@ export default class MockBundle {
         const info = stats.toJson();
 
         if (stats.hasErrors()) {
+          console.error('[MockBundle] Webpack compilation errors:');
+          console.error(JSON.stringify(info.errors, null, 2));
           reject(info.errors);
+
+          return;
         }
 
         if (stats.hasWarnings()) {
-          console.warn(info.warnings);
+          console.warn('[MockBundle] Webpack compilation warnings:');
+          console.warn(JSON.stringify(info.warnings, null, 2));
         }
 
-        resolve(info);
+        resolve();
       });
     });
   }
