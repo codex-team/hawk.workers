@@ -56,6 +56,7 @@ export default class MockBundle {
 
         if (stats.hasErrors()) {
           console.error('[MockBundle] Webpack compilation errors:');
+          // eslint-disable-next-line @typescript-eslint/no-magic-numbers
           console.error(JSON.stringify(info.errors, null, 2));
           reject(info.errors);
 
@@ -64,6 +65,7 @@ export default class MockBundle {
 
         if (stats.hasWarnings()) {
           console.warn('[MockBundle] Webpack compilation warnings:');
+          // eslint-disable-next-line @typescript-eslint/no-magic-numbers
           console.warn(JSON.stringify(info.warnings, null, 2));
         }
 
