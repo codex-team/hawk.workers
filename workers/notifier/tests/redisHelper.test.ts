@@ -1,7 +1,7 @@
 import RedisHelper from '../src/redisHelper';
 import { createClient, RedisClientType } from 'redis';
 
-describe.skip('RedisHelper', () => {
+describe('RedisHelper', () => {
   let redisHelper: RedisHelper;
   let redisClientMock: jest.Mocked<ReturnType<typeof createClient>>;
   let redisClient: RedisClientType;

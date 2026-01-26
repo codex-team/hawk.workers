@@ -135,7 +135,7 @@ class MockDBController {
   }
 }
 
-describe.skip('NotifierWorker', () => {
+describe('NotifierWorker', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const NotifierWorker = require('../src').default;
   let redisClient: RedisClientType;
