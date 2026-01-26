@@ -13,6 +13,7 @@ const mockedAmqpChannel = {
   sendToQueue: jest.fn().mockReturnValue(true),
   on: jest.fn(),
   consume: jest.fn().mockReturnValue('mockedTag'),
+  // consume: jest.fn().mockResolvedValue({ consumerTag: 'mockedTag' }),
 };
 
 /**
