@@ -41,6 +41,7 @@ export default class SentryEventWorker extends Worker {
 
       if (items.length === 0) {
         this.logger.warn('Received envelope with no items');
+
         return;
       }
 
@@ -49,6 +50,7 @@ export default class SentryEventWorker extends Worker {
 
       for (const item of items) {
         const result = await this.handleEnvelopeItem(headers, item, event.projectId);
+
         if (result === 'processed') {
           processedCount++;
         } else if (result === 'skipped') {
@@ -68,6 +70,8 @@ export default class SentryEventWorker extends Worker {
   /**
    * Filter out binary items that crash parseEnvelope
    * Also filters out all Sentry Replay events (replay_event and replay_recording)
+   *
+   * @param rawEvent
    */
   private filterOutBinaryItems(rawEvent: string): string {
     const lines = rawEvent.split('\n');
@@ -169,6 +173,7 @@ export default class SentryEventWorker extends Worker {
              */
             if (decodedPayload instanceof Uint8Array) {
               const textDecoder = new TextDecoder();
+
               decodedPayload = textDecoder.decode(decodedPayload as Uint8Array);
             }
 
@@ -196,6 +201,7 @@ export default class SentryEventWorker extends Worker {
         }
 
         this.logger.info(`Skipping non-event item of type: ${itemHeader.type}`);
+
         return 'skipped';
       }
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
@@ -245,6 +251,7 @@ export default class SentryEventWorker extends Worker {
          * If addTask returns false, the message was not queued (queue full or channel closed)
          */
         const error = new Error(`Failed to queue event to ${workerName} worker. Queue may be full or channel closed.`);
+
         this.logger.error(error.message);
         this.logger.info('👇 Here is the event that failed to queue:');
         this.logger.json(hawkEvent);

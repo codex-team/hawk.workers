@@ -10,6 +10,6 @@
   "private": true,
   "devDependencies": {
     "rimraf": "^3.0.0",
-    "webpack": "^4.39.3"
+    "webpack": "^5.95.0"
   }
 }
