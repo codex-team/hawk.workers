@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "license": "MIT",
-  "workerType": "hawk-worker-task-manager",
+  "workerType": "cron-tasks/task-manager",
   "dependencies": {
     "@octokit/oauth-methods": "^4.0.0",
     "@octokit/rest": "^22.0.1",
