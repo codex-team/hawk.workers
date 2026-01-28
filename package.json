@@ -1,7 +1,7 @@
 {
     "name": "hawk.workers",
     "private": true,
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Hawk workers",
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "BUSL-1.1",
@@ -33,6 +33,7 @@
         "test:paymaster": "jest workers/paymaster",
         "test:notifier": "jest workers/notifier",
         "test:js": "jest workers/javascript",
+        "test:task-manager": "jest workers/task-manager",
         "test:clear": "jest --clearCache",
         "run-default": "yarn worker hawk-worker-default",
         "run-sentry": "yarn worker hawk-worker-sentry",
@@ -47,7 +48,8 @@
         "run-release": "yarn worker hawk-worker-release",
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
-        "run-limiter": "yarn worker hawk-worker-limiter"
+        "run-limiter": "yarn worker hawk-worker-limiter",
+        "run-task-manager": "yarn worker hawk-worker-task-manager"
     },
     "dependencies": {
         "@babel/parser": "^7.26.9",
@@ -61,7 +63,7 @@
         "amqplib": "^0.8.0",
         "codex-accounting-sdk": "codex-team/codex-accounting-sdk",
         "debug": "^4.1.1",
-        "dotenv": "^8.2.0",
+        "dotenv": "^17.2.3",
         "migrate-mongo": "^7.2.1",
         "mockdate": "^3.0.2",
         "mongodb": "^3.5.7",
