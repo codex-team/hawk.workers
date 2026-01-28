@@ -268,7 +268,7 @@ export default class TaskManagerWorker extends Worker {
         taskManager.config.installationId,
         issueData
       );
-    } catch (error: any) {
+    } catch (error) {
       /**
        * Log error message only, not the full error object to avoid logging tokens
        */
@@ -320,7 +320,7 @@ export default class TaskManagerWorker extends Worker {
           },
         });
         copilotAssigned = true;
-      } catch (error: any) {
+      } catch (error) {
         /**
          * Log error but don't fail the whole operation - issue was created successfully
          */
@@ -460,7 +460,7 @@ export default class TaskManagerWorker extends Worker {
      */
     try {
       return await operation(delegatedUserToken);
-    } catch (error: any) {
+    } catch (error) {
       /**
        * Check if error is 401 (unauthorized) - token might be revoked
        * Try to refresh token and retry once
@@ -588,10 +588,12 @@ export default class TaskManagerWorker extends Worker {
       },
       {
         $inc: { 'taskManager.usage.autoTasksCreated': 1 },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       {
         returnDocument: 'after',
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any);
 
     return result?.value !== null && result?.value !== undefined;
@@ -617,7 +619,6 @@ export default class TaskManagerWorker extends Worker {
      * Convert connectedAt to timestamp (seconds)
      */
     const connectedAtTimestamp = Math.floor(connectedAt.getTime() / TimeMs.SECOND);
-
 
     const events = await eventsCollection
       .find({

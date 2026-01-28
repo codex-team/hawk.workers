@@ -1,22 +1,36 @@
 import type { GroupedEventDBScheme, ProjectDBScheme } from '@hawk.so/types';
 import { decodeUnsafeFields } from '../../../../lib/utils/unsafeFields';
+import TimeMs from '../../../../lib/utils/time';
 import type { IssueData } from '../GithubService';
+
+/**
+ * Width used for padding date/time parts.
+ */
+const DATE_TIME_PART_WIDTH = 2;
+
+/**
+ * Number of spaces used for JSON pretty-printing.
+ */
+const JSON_INDENT_SPACES = 2;
 
 /**
  * Format date for display in GitHub issue
  *
  * @param timestamp - Unix timestamp in seconds
- * @returns Formatted date string (e.g., "23 Feb 2025 14:40:21")
+ * @returns {string} Formatted date string (e.g., "23 Feb 2025 14:40:21")
  */
 function formatDate(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
-  const months = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
+  const date = new Date(timestamp * TimeMs.SECOND);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const day = date.getUTCDate();
   const month = months[date.getUTCMonth()];
   const year = date.getUTCFullYear();
-  const hours = date.getUTCHours().toString().padStart(2, '0');
-  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-  const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+  const hours = date.getUTCHours().toString()
+    .padStart(DATE_TIME_PART_WIDTH, '0');
+  const minutes = date.getUTCMinutes().toString()
+    .padStart(DATE_TIME_PART_WIDTH, '0');
+  const seconds = date.getUTCSeconds().toString()
+    .padStart(DATE_TIME_PART_WIDTH, '0');
 
   return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
 }
@@ -25,12 +39,12 @@ function formatDate(timestamp: number): string {
  * Calculate days repeating from timestamp
  *
  * @param timestamp - Unix timestamp in seconds
- * @returns Number of days since first occurrence
+ * @returns {number} Number of days since first occurrence
  */
 function calculateDaysRepeating(timestamp: number): number {
   const now = Date.now();
-  const eventTimestamp = timestamp * 1000;
-  const differenceInDays = (now - eventTimestamp) / (1000 * 3600 * 24);
+  const eventTimestamp = timestamp * TimeMs.SECOND;
+  const differenceInDays = (now - eventTimestamp) / TimeMs.DAY;
 
   return Math.round(differenceInDays);
 }
@@ -41,27 +55,35 @@ function calculateDaysRepeating(timestamp: number): number {
  *
  * @param sourceCode - Array of source code lines
  * @param errorLine - Line number where error occurred
- * @returns Formatted diff string
+ * @returns {string} Formatted diff string
  */
 function formatSourceCodeAsDiff(sourceCode: Array<{ line: number; content: string }>, errorLine: number): string {
   const lines: string[] = [];
 
+  /**
+   * Use the widest line number among provided source lines and error line.
+   * This keeps alignment correct for both small and large line numbers.
+   */
+  const maxLineNumber = sourceCode.reduce((maxLine, current) => {
+    if (current.line > maxLine) {
+      return current.line;
+    }
+
+    return maxLine;
+  }, errorLine);
+  const lineNumberWidth = String(maxLineNumber).length;
+
   for (const sourceLine of sourceCode) {
-    const lineNumber = sourceLine.line.toString().padStart(3, ' ');
+    const lineNumber = sourceLine.line.toString().padStart(lineNumberWidth, ' ');
     const isErrorLine = sourceLine.line === errorLine;
     const prefix = isErrorLine ? '-' : ' ';
 
     /**
-     * Escape HTML entities in content
+     * Do not escape HTML here because content is rendered inside Markdown code block.
      */
-    const escapedContent = sourceLine.content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    const content = sourceLine.content ?? '';
 
-    lines.push(`${prefix}${lineNumber}: ${escapedContent}`);
+    lines.push(`${prefix}${lineNumber}: ${content}`);
   }
 
   return lines.join('\n');
@@ -72,7 +94,7 @@ function formatSourceCodeAsDiff(sourceCode: Array<{ line: number; content: strin
  *
  * @param event - event to format issue for
  * @param project - project
- * @returns Issue data for GitHub API
+ * @returns {IssueData} Issue data for GitHub API
  */
 export function formatIssueFromEvent(event: GroupedEventDBScheme, project: ProjectDBScheme): IssueData {
   /**
@@ -195,7 +217,7 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
     if (decodedEvent.payload.context) {
       bodyParts.push('### Context');
       bodyParts.push('\n```json');
-      bodyParts.push(JSON.stringify(decodedEvent.payload.context, null, 2));
+      bodyParts.push(JSON.stringify(decodedEvent.payload.context, null, JSON_INDENT_SPACES));
       bodyParts.push('```');
     }
 
@@ -205,7 +227,7 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
     if (decodedEvent.payload.addons) {
       bodyParts.push('\n### Addons');
       bodyParts.push('\n```json');
-      bodyParts.push(JSON.stringify(decodedEvent.payload.addons, null, 2));
+      bodyParts.push(JSON.stringify(decodedEvent.payload.addons, null, JSON_INDENT_SPACES));
       bodyParts.push('```');
     }
 
