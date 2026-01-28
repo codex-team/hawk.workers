@@ -80,13 +80,35 @@ export default class ReleaseWorker extends Worker {
   }
 
   /**
+   * Normalize release identifier (convert Date.toString() format to timestamp if needed)
+   * @param release - raw release value
+   * @returns normalized release identifier
+   */
+  private normalizeRelease(release: string): string {
+    // If release looks like Date.toString() output (contains "GMT" or month names)
+    if (/GMT|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(release)) {
+      const parsed = Date.parse(release);
+
+      if (!isNaN(parsed)) {
+        // Convert to timestamp (milliseconds)
+        return String(parsed);
+      }
+    }
+
+    // Return as-is (semantic version, timestamp, or custom identifier)
+    return release;
+  }
+
+  /**
    * Save user's release
    *
    * @param projectId - project id to bind the corresponding release.
    * @param payload - release payload
    */
   private async saveRelease(projectId: string, payload: ReleaseWorkerAddReleasePayload): Promise<void> {
-    this.logger.info(`saveRelease: save release for project: ${projectId}, release: ${payload.release}`);
+    const normalizedRelease = this.normalizeRelease(payload.release);
+
+    this.logger.info(`saveRelease: save release for project: ${projectId}, release: ${payload.release} (normalized: ${normalizedRelease})`);
     try {
       const commits = payload.commits;
 
@@ -101,7 +123,7 @@ export default class ReleaseWorker extends Worker {
 
         await this.releasesCollection.updateOne({
           projectId: projectId,
-          release: payload.release,
+          release: normalizedRelease,
         }, {
           $set: {
             commits: commitsWithParsedDate,
@@ -113,7 +135,7 @@ export default class ReleaseWorker extends Worker {
 
       // save source maps
       if (payload.files) {
-        await this.saveSourceMap(projectId, payload);
+        await this.saveSourceMap(projectId, { ...payload, release: normalizedRelease });
       }
     } catch (err) {
       this.logger.error(`Couldn't save the release due to: ${err}`);

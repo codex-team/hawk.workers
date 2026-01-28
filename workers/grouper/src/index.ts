@@ -110,10 +110,35 @@ export default class GrouperWorker extends Worker {
     // FIX RELEASE TYPE
     // TODO: REMOVE AFTER 01.01.2026, after the most of the users update to new js catcher
     if (task.payload && task.payload.release !== undefined) {
+      let normalizedRelease = String(task.payload.release);
+
+      // Normalize Date.toString() format to timestamp
+      if (/GMT|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(normalizedRelease)) {
+        const parsed = Date.parse(normalizedRelease);
+
+        if (!isNaN(parsed)) {
+          normalizedRelease = String(parsed);
+        }
+      }
+
       task.payload = {
         ...task.payload,
-        release: String(task.payload.release),
+        release: normalizedRelease,
       };
+
+      // Ensure release appears in the releases list (used by project.releases in API)
+      if (task.projectId) {
+        try {
+          const releasesCol = this.eventsDb.getConnection().collection('releases');
+          await releasesCol.updateOne(
+            { projectId: task.projectId, release: normalizedRelease },
+            { $setOnInsert: { projectId: task.projectId, release: normalizedRelease, commits: [] } },
+            { upsert: true },
+          );
+        } catch (err) {
+          this.logger.warn('Failed to ensure release in releases collection', { err, projectId: task.projectId, release: normalizedRelease });
+        }
+      }
     }
 
     let existedEvent: GroupedEventDBScheme;

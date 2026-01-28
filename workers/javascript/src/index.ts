@@ -312,6 +312,22 @@ export default class JavascriptEventWorker extends EventWorker {
   }
 
   /**
+   * Normalize release identifier for DB lookup (same logic as grouper/release worker).
+   * Converts Date.toString() format to timestamp so lookup matches how releases are stored.
+   */
+  private normalizeRelease(release: string): string {
+    if (/GMT|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(release)) {
+      const parsed = Date.parse(release);
+
+      if (!isNaN(parsed)) {
+        return String(parsed);
+      }
+    }
+
+    return release;
+  }
+
+  /**
    * Return source map for passed release from DB
    * Source Map are delivered at the building-time from client's server to the Source Maps Worker
    *
@@ -319,11 +335,13 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param {string} release - bundle version passed with source map and same release passed to the catcher's init
    */
   private async getReleaseRecord(projectId: string, release: string): Promise<SourceMapsRecord> {
+    const normalizedRelease = this.normalizeRelease(release);
+
     try {
       const releaseRecord = await this.releasesDbCollection
         .findOne({
           projectId,
-          release,
+          release: normalizedRelease,
         }, {
           sort: {
             _id: -1,
