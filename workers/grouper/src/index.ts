@@ -105,6 +105,11 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
+    if (typeof task.payload !== 'object' || task.payload === null || Array.isArray(task.payload)) {
+      this.logger.error(`Invalid payload type: ${typeof task.payload}. Event rejected.`);
+      return;
+    }
+
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     // FIX RELEASE TYPE

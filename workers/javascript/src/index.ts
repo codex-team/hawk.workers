@@ -71,6 +71,11 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+    if (typeof event.payload !== 'object' || event.payload === null || Array.isArray(event.payload)) {
+      this.logger.error(`Invalid payload type: ${typeof event.payload}. Event rejected.`);
+      return;
+    }
+
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
