@@ -20,9 +20,16 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should memoize return value with concat strategy across several calls', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param a
+       * @param b
+       */
       @memoize({ strategy: 'concat', ttl: 60_000, max: 50 })
       public async run(a: number, b: string) {
         this.calls += 1;
@@ -47,9 +54,16 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should memoize return value with set of arguments with concat strategy across several calls', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param a
+       * @param b
+       */
       @memoize({ strategy: 'concat' })
       public async run(a: unknown, b: unknown) {
         this.calls += 1;
@@ -84,9 +98,16 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should memoize return value for stringified objects across several calls', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param x
+       * @param y
+       */
       @memoize({ strategy: 'concat' })
       public async run(x: unknown, y: unknown) {
         this.calls += 1;
@@ -105,9 +126,15 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should memoize return value for method with non-default arguments (NaN, Infinity, -0, Symbol, Date, RegExp) still cache same-args', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param {...any} args
+       */
       @memoize({ strategy: 'concat' })
       public async run(...args: unknown[]) {
         this.calls += 1;
@@ -131,9 +158,15 @@ describe('memoize decorator — per-test inline classes', () => {
   it('should call crypto hash with blake2b512 algo and base64url digest, should memoize return value with hash strategy', async () => {
     const hashSpy = jest.spyOn(Crypto, 'hash');
 
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param {...any} args
+       */
       @memoize({ strategy: 'hash' })
       public async run(...args: unknown[]) {
         this.calls += 1;
@@ -151,9 +184,15 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should not memoize return value with hash strategy and different arguments', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param {...any} args
+       */
       @memoize({ strategy: 'hash' })
       public async run(...args: unknown[]) {
         this.calls += 1;
@@ -171,9 +210,15 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should memoize return value with hash strategy across several calls with same args', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param arg
+       */
       @memoize({ strategy: 'hash' })
       public async run(arg: unknown) {
         this.calls += 1;
@@ -196,9 +241,15 @@ describe('memoize decorator — per-test inline classes', () => {
 
     const { memoize: memoizeWithMockedTimers } = await import('../memoize/index');
 
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param x
+       */
       @memoizeWithMockedTimers({ strategy: 'concat', ttl: 1_000 })
       public async run(x: string) {
         this.calls += 1;
@@ -221,9 +272,15 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('error calls should never be momized', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
 
+      /**
+       * @param x
+       */
       @memoize()
       public async run(x: number) {
         this.calls += 1;
@@ -245,9 +302,15 @@ describe('memoize decorator — per-test inline classes', () => {
   });
 
   it('should NOT cache results listed in skipCache (primitives)', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
-  
+
+      /**
+       * @param kind
+       */
       @memoize({ strategy: 'concat', skipCache: [null, undefined, 0, false, ''] })
       public async run(kind: 'null' | 'undef' | 'zero' | 'false' | 'empty') {
         this.calls += 1;
@@ -260,55 +323,68 @@ describe('memoize decorator — per-test inline classes', () => {
         }
       }
     }
-  
+
     const sample = new Sample();
-  
+
     // Each repeated call should invoke the original again because result is in skipCache.
     await sample.run('null');
     await sample.run('null');
-  
+
     await sample.run('undef');
     await sample.run('undef');
-  
+
     await sample.run('zero');
     await sample.run('zero');
-  
+
     await sample.run('false');
     await sample.run('false');
-  
+
     await sample.run('empty');
     await sample.run('empty');
-  
+
     // 5 kinds × 2 calls each = 10 calls, none cached
     expect(sample.calls).toBe(10);
   });
-  
+
   it('should cache results NOT listed in skipCache', async () => {
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
-  
+
+      /**
+       * @param x
+       */
       @memoize({ strategy: 'concat', skipCache: [null, undefined] })
       public async run(x: number) {
         this.calls += 1;
+
         // returns a non-skipped primitive
         return x * 2;
       }
     }
-  
+
     const sample = new Sample();
-  
+
     expect(await sample.run(21)).toBe(42);
     expect(await sample.run(21)).toBe(42);
-  
+
     expect(sample.calls).toBe(1);
   });
-  
+
   it('should use equality for skipCache with objects: deep equal objects are cached', async () => {
     const deepEqualObject = { a: 1 };
-  
+
+    /**
+     *
+     */
     class Sample {
       public calls = 0;
-  
+
+      /**
+       *
+       */
       @memoize({ strategy: 'concat', skipCache: [deepEqualObject] })
       public async run() {
         this.calls += 1;
@@ -316,12 +392,12 @@ describe('memoize decorator — per-test inline classes', () => {
         return { a: 1 };
       }
     }
-  
+
     const sample = new Sample();
-  
+
     const first = await sample.run();
     const second = await sample.run();
-  
+
     expect(first).toEqual({ a: 1 });
     expect(second).toBe(first);
     expect(sample.calls).toBe(1);

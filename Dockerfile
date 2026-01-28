@@ -1,4 +1,4 @@
-FROM node:18.20-slim as build-stage
+FROM node:24-slim as build-stage
 
 RUN apt update
 RUN apt install git -y
