@@ -44,6 +44,8 @@ export default class DataFilter {
     'credentials',
     'card[number]',
     'password',
+    'oldpassword',
+    'newpassword',
     'auth',
     'access_token',
     'accesstoken',
