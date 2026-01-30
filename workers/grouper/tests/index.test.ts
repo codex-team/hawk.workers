@@ -7,6 +7,7 @@ import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
 import type { ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import TimeMs from '../../../lib/utils/time';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
 
@@ -57,16 +58,41 @@ const projectIdMock = '5d206f7f9aaf7c0071d64596';
 /**
  * Mock project data
  */
+const planIdMock = new mongodb.ObjectId();
+const workspaceIdMock = new mongodb.ObjectId();
+
+const planMock = {
+  _id: planIdMock,
+  rateLimitSettings: {
+    N: 0,
+    T: 0,
+  },
+};
+
+const workspaceMock = {
+  _id: workspaceIdMock,
+  tariffPlanId: planIdMock,
+  rateLimitSettings: {
+    N: 0,
+    T: 0,
+  },
+};
+
 const projectMock = {
   _id: new mongodb.ObjectId(projectIdMock),
   id: projectIdMock,
   name: 'Test Project',
   token: 'test-token',
+  workspaceId: workspaceIdMock,
   uidAdded: {
     id: 'test-user-id',
   },
   unreadCount: 0,
   description: 'Test project for grouper worker tests',
+  rateLimitSettings: {
+    N: 0,
+    T: 0,
+  },
   eventGroupingPatterns: [ {
     _id: mongodb.ObjectId(),
     pattern: 'New error .*',
@@ -113,8 +139,30 @@ describe('GrouperWorker', () => {
   let dailyEventsCollection: Collection;
   let repetitionsCollection: Collection;
   let projectsCollection: Collection;
+  let workspacesCollection: Collection;
+  let plansCollection: Collection;
   let redisClient: RedisClientType;
   let worker: GrouperWorker;
+  const setPlanRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
+    await plansCollection.updateOne(
+      { _id: planIdMock },
+      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+      { upsert: true }
+    );
+  };
+  const setWorkspaceRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
+    await workspacesCollection.updateOne(
+      { _id: workspaceIdMock },
+      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+      { upsert: true }
+    );
+  };
+  const setProjectRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
+    await projectsCollection.updateOne(
+      { _id: new mongodb.ObjectId(projectIdMock) },
+      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+    );
+  };
 
   beforeAll(async () => {
     worker = new GrouperWorker();
@@ -133,11 +181,16 @@ describe('GrouperWorker', () => {
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
     projectsCollection = accountsConnection.db().collection('projects');
+    workspacesCollection = accountsConnection.db().collection('workspaces');
+    plansCollection = accountsConnection.db().collection('plans');
 
     /**
      * Create unique index for groupHash
      */
     await eventsCollection.createIndex({ groupHash: 1 }, { unique: true });
+
+    await plansCollection.insertOne(planMock);
+    await workspacesCollection.insertOne(workspaceMock);
 
     /**
      * Insert mock project into accounts database
@@ -155,9 +208,13 @@ describe('GrouperWorker', () => {
    */
   beforeEach(async () => {
     worker.clearCache();
+    delete (worker as any)['memoizeCache:getProjectRateLimitSettings'];
     await eventsCollection.deleteMany({});
     await dailyEventsCollection.deleteMany({});
     await repetitionsCollection.deleteMany({});
+    await setPlanRateLimit(0, 0);
+    await setWorkspaceRateLimit(0, 0);
+    await setProjectRateLimit(0, 0);
   });
 
   afterEach(async () => {
@@ -743,10 +800,257 @@ describe('GrouperWorker', () => {
     });
   });
 
+  describe('Rate limits counter increment', () => {
+    const rateLimitsKey = 'rate_limits';
+
+    test('increments counter when handling an event', async () => {
+      await setProjectRateLimit(5, 60);
+
+      let currentTime = 1_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        await worker.handle(generateTask());
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).toBe(`${Math.floor(currentTime / 1000)}:1`);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('reuses window and increments while within limit', async () => {
+      await setProjectRateLimit(5, 60);
+
+      let currentTime = 2_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        await worker.handle(generateTask());
+        await worker.handle(generateTask());
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [, count] = (storedValue as string).split(':');
+
+        expect(Number(count)).toBe(2);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('does not exceed configured limit within same window', async () => {
+      const eventsLimit = 3;
+
+      await setProjectRateLimit(eventsLimit, 60);
+
+      let currentTime = 3_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        for (let i = 0; i < eventsLimit + 2; i++) {
+          await worker.handle(generateTask());
+        }
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [, count] = (storedValue as string).split(':');
+
+        expect(Number(count)).toBe(eventsLimit);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('resets window after period elapses', async () => {
+      await setProjectRateLimit(5, 2);
+
+      let currentTime = 4_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        await worker.handle(generateTask());
+
+        currentTime += 3_000; // advance by 3 seconds
+
+        await worker.handle(generateTask());
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [timestamp, count] = (storedValue as string).split(':');
+
+        expect(Number(timestamp)).toBe(Math.floor(currentTime / 1000));
+        expect(Number(count)).toBe(1);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('uses workspace limits when project overrides are absent', async () => {
+      await setPlanRateLimit(10, 60);
+      await setWorkspaceRateLimit(3, 60);
+      await setProjectRateLimit(0, 0);
+
+      let currentTime = 5_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        for (let i = 0; i < 5; i++) {
+          await worker.handle(generateTask());
+        }
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [, count] = (storedValue as string).split(':');
+
+        expect(Number(count)).toBe(3);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('falls back to plan limits when workspace settings are empty', async () => {
+      await setPlanRateLimit(4, 60);
+      await setWorkspaceRateLimit(0, 0);
+      await setProjectRateLimit(0, 0);
+
+      let currentTime = 6_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        for (let i = 0; i < 6; i++) {
+          await worker.handle(generateTask());
+        }
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [, count] = (storedValue as string).split(':');
+
+        expect(Number(count)).toBe(4);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test('prefers project limits over workspace and plan', async () => {
+      await setPlanRateLimit(4, 60);
+      await setWorkspaceRateLimit(6, 60);
+      await setProjectRateLimit(8, 60);
+
+      let currentTime = 7_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+      try {
+        for (let i = 0; i < 10; i++) {
+          await worker.handle(generateTask());
+        }
+
+        const storedValue = await redisClient.hGet(rateLimitsKey, projectIdMock);
+
+        expect(storedValue).not.toBeNull();
+
+        const [, count] = (storedValue as string).split(':');
+
+        expect(Number(count)).toBe(8);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('Events-stored metrics', () => {
+    test('writes minutely, hourly, and daily samples after handling an event', async () => {
+      const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(safeTsAddSpy).toHaveBeenCalledTimes(3);
+
+        const expectedLabels = {
+          type: 'error',
+          status: 'events-stored',
+          project: projectIdMock,
+        };
+
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          1,
+          `ts:project-events-stored:${projectIdMock}:minutely`,
+          1,
+          expectedLabels,
+          TimeMs.DAY,
+        );
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          2,
+          `ts:project-events-stored:${projectIdMock}:hourly`,
+          1,
+          expectedLabels,
+          TimeMs.WEEK,
+        );
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          3,
+          `ts:project-events-stored:${projectIdMock}:daily`,
+          1,
+          expectedLabels,
+          90 * TimeMs.DAY,
+        );
+      } finally {
+        safeTsAddSpy.mockRestore();
+      }
+    });
+
+    test('logs when a time-series write fails but continues processing', async () => {
+      const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');
+      const loggerErrorSpy = jest.spyOn((worker as any).logger, 'error').mockImplementation(() => undefined);
+      const failure = new Error('TS failure');
+
+      safeTsAddSpy
+        .mockImplementationOnce(() => Promise.resolve())
+        .mockImplementationOnce(async () => { throw failure; })
+        .mockImplementationOnce(() => Promise.resolve());
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to add hourly TS for events-stored', failure);
+        expect(await eventsCollection.find().count()).toBe(1);
+      } finally {
+        safeTsAddSpy.mockRestore();
+        loggerErrorSpy.mockRestore();
+      }
+    });
+
+    test('records metrics exactly once per handled event', async () => {
+      const recordMetricsSpy = jest.spyOn(worker as any, 'recordProjectMetrics');
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(recordMetricsSpy).toHaveBeenCalledTimes(1);
+        expect(recordMetricsSpy).toHaveBeenCalledWith(projectIdMock, 'events-stored');
+      } finally {
+        recordMetricsSpy.mockRestore();
+      }
+    });
+  });
+
   afterAll(async () => {
     await redisClient.quit();
     await worker.finish();
     await projectsCollection.deleteMany({});
+    await workspacesCollection.deleteMany({});
+    await plansCollection.deleteMany({});
     await accountsConnection.close();
     await connection.close();
   });
