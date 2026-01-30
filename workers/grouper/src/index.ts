@@ -31,6 +31,7 @@ import { hasValue } from '../../../lib/utils/hasValue';
  */
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
+import TimeMs from '../../../lib/utils/time';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -306,6 +307,186 @@ export default class GrouperWorker extends Worker {
         });
       }
     }
+
+    await this.incrementRateLimitCounter(task.projectId);
+    await this.recordProjectMetrics(task.projectId, 'events-stored');
+  }
+
+  /**
+   * Build RedisTimeSeries key for project metrics.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   * @param granularity - time granularity
+   */
+  private getTimeSeriesKey(
+    projectId: string,
+    metricType: string,
+    granularity: 'minutely' | 'hourly' | 'daily'
+  ): string {
+    return `ts:project-${metricType}:${projectId}:${granularity}`;
+  }
+
+  /**
+   * Record project metrics to Redis TimeSeries.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   */
+  private async recordProjectMetrics(projectId: string, metricType: string): Promise<void> {
+    const minutelyKey = this.getTimeSeriesKey(projectId, metricType, 'minutely');
+    const hourlyKey = this.getTimeSeriesKey(projectId, metricType, 'hourly');
+    const dailyKey = this.getTimeSeriesKey(projectId, metricType, 'daily');
+
+    const labels: Record<string, string> = {
+      type: 'error',
+      status: metricType,
+      project: projectId,
+    };
+
+    const series = [
+      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY },
+      { key: hourlyKey, label: 'hourly', retentionMs: TimeMs.WEEK },
+      { key: dailyKey, label: 'daily', retentionMs: 90 * TimeMs.DAY },
+    ];
+
+    for (const { key, label, retentionMs } of series) {
+      try {
+        await this.redis.safeTsAdd(key, 1, labels, retentionMs);
+      } catch (error) {
+        this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
+      }
+    }
+  }
+
+  /**
+   * Increment rate limit counters for the project.
+   *
+   * @param projectId - id of the project
+   */
+  private async incrementRateLimitCounter(projectId: string): Promise<void> {
+    try {
+      const settings = await this.getProjectRateLimitSettings(projectId);
+
+      if (!settings) {
+        return;
+      }
+
+      await this.redis.incrementRateLimitCounterForCurrentEvent(
+        projectId,
+        settings.eventsPeriod,
+        settings.eventsLimit
+      );
+    } catch (error) {
+      this.logger.error(`Failed to increment rate limit counter for project ${projectId}`, error);
+    }
+  }
+
+  /**
+   * Fetch and normalize rate limit settings
+   * Rate limit settings could appear in tarifPlan, workspace and project.
+   * All rateLimits have different priority.
+   *
+   * @param projectId - id of the project
+   */
+  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'concat', skipCache: [null] })
+  private async getProjectRateLimitSettings(projectId: string): Promise<{ eventsLimit: number; eventsPeriod: number } | null> {
+    if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
+      return null;
+    }
+
+    const accountsDb = this.accountsDb.getConnection();
+
+    /**
+     * Fetch project from the db
+     */
+    const project = await accountsDb
+      .collection('projects')
+      .findOne(
+        { _id: new mongodb.ObjectId(projectId) },
+        { projection: { rateLimitSettings: 1, workspaceId: 1 } }
+      );
+
+    if (!project) {
+      return null;
+    }
+
+    const projectRateLimitSettings = project.rateLimitSettings as { N: number, T: number };
+    const workspaceId = new mongodb.ObjectID(project.workspaceId);
+
+    let planRateLimitSettings: { N: number, T: number};
+    let workspaceRateLimitSettings: { N: number, T: number};
+
+    /**
+     * Fetch workspace from the db
+     */
+    if (workspaceId) {
+      const workspace = await accountsDb
+        .collection('workspaces')
+        .findOne(
+          { _id: workspaceId },
+          { projection: { rateLimitSettings: 1, tariffPlanId: 1 } }
+        );
+
+      workspaceRateLimitSettings = workspace?.rateLimitSettings as { N: number, T: number };
+
+      const planId = new mongodb.ObjectId(workspace?.tariffPlanId);
+
+      /**
+       * Tarif plan from the db
+       */
+      if (planId) {
+        const plan = await accountsDb
+          .collection('plans')
+          .findOne(
+            { _id: planId },
+            { projection: { rateLimitSettings: 1 } }
+          );
+
+        planRateLimitSettings = plan?.rateLimitSettings;
+      }
+    }
+
+    return this.normalizeRateLimitSettings(
+      planRateLimitSettings,
+      workspaceRateLimitSettings,
+      projectRateLimitSettings
+    );
+  }
+
+  /**
+   * Normalize rate limit settings shape from database.
+   *
+   * @param rateLimitLayers - raw settings documents in priority order
+   */
+  private normalizeRateLimitSettings(
+    ...rateLimitLayers: { N: number, T: number }[]
+  ): { eventsLimit: number; eventsPeriod: number } | null {
+    let eventsLimit = 0;
+    let eventsPeriod = 0;
+
+    for (const layer of rateLimitLayers) {
+      if (!layer) {
+        continue;
+      }
+
+      const limit = layer.N as number;
+      const period = layer.T as number;
+
+      if (limit !== undefined && limit > 0) {
+        eventsLimit = limit;
+      }
+
+      if (period !== undefined && period > 0) {
+        eventsPeriod = period;
+      }
+    }
+
+    if (eventsLimit <= 0 || eventsPeriod <= 0) {
+      return null;
+    }
+
+    return { eventsLimit, eventsPeriod };
   }
 
   /**
