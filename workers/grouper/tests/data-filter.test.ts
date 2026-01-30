@@ -177,7 +177,7 @@ describe('GrouperWorker', () => {
     test('should not filter MongoDB ObjectId values in context and addons', async () => {
       const objectId = '507f1f77bcf86cd799439011';
       const objectIdUpper = '507F1F77BCF86CD799439011';
-      /** ObjectId that contains only digits (could be mistaken for PAN) */
+      // All-numeric ObjectId that could be mistaken for a 24-digit PAN if not checked
       const numericObjectId = '672808419583041003090824';
 
       const event = generateEvent({
@@ -201,8 +201,8 @@ describe('GrouperWorker', () => {
       expect(event.addons['hawk']['projectId']).toBe(objectId);
     });
 
-    test('should still filter actual PAN numbers even if they have some letters', async () => {
-      // This is a real Mastercard test number with some formatting
+    test('should still filter actual PAN numbers with formatting characters', async () => {
+      // Test real Mastercard test number with spaces and dashes
       const panWithSpaces = '5500 0000 0000 0004';
       const panWithDashes = '5500-0000-0000-0004';
 
@@ -238,6 +238,28 @@ describe('GrouperWorker', () => {
       expect(event.context['shortId']).toBe(shortHex);
       expect(event.context['longId']).toBe(longNumber);
       expect(event.context['mixedId']).toBe(mixedAlphaNum);
+    });
+
+    test('should filter UUIDs and ObjectIds when they are in sensitive key fields', async () => {
+      // Even if the value is a valid UUID or ObjectId, it should be filtered
+      // if the key name is in the sensitive keys list
+      const uuid = '550e8400-e29b-41d4-a716-446655440000';
+      const objectId = '507f1f77bcf86cd799439011';
+
+      const event = generateEvent({
+        context: {
+          password: uuid,
+          secret: objectId,
+          auth: '672808419583041003090824',
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      // All should be filtered because of sensitive key names
+      expect(event.context['password']).toBe('[filtered]');
+      expect(event.context['secret']).toBe('[filtered]');
+      expect(event.context['auth']).toBe('[filtered]');
     });
   });
 });

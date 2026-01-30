@@ -60,9 +60,9 @@ export default class DataFilter {
   private objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
   /**
-   * UUID Regex (with or without dashes)
+   * UUID Regex - matches UUIDs with all dashes (8-4-4-4-12 format) or no dashes (32 hex chars)
    */
-  private uuidRegex = /^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$/;
+  private uuidRegex = /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32})$/;
 
   /**
    * Accept event and process 'addons' and 'context' fields.
