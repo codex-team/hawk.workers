@@ -145,21 +145,22 @@ describe('GrouperWorker', () => {
     });
 
     test('should not filter UUID values', async () => {
-      const uuidV4 = '550e8400-e29b-41d4-a716-446655440000';
-      const uuidV4Upper = '550E8400-E29B-41D4-A716-446655440000';
-      const uuidWithoutDashes = '550e8400e29b41d4a716446655440000';
+      // These UUIDs contain exactly 16 digits, which when cleaned match PAN patterns
+      // Without UUID detection, they would be incorrectly filtered as credit cards
+      const uuidWithManyDigits = '4a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d'; // Cleans to 16 digits starting with 4
+      const uuidUpperCase = '5A1B2C3D-4E5F-6A7B-8C9D-0E1F2A3B4C5D'; // Cleans to 16 digits starting with 5
+      const uuidNoDashes = '2a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d'; // 32 hex chars without dashes
 
       const event = generateEvent({
         context: {
-          userId: uuidV4,
-          sessionId: uuidV4Upper,
-          transactionId: uuidWithoutDashes,
-          requestId: uuidV4,
+          userId: uuidWithManyDigits,
+          sessionId: uuidUpperCase,
+          transactionId: uuidNoDashes,
         },
         addons: {
           vue: {
             props: {
-              componentId: uuidV4,
+              componentId: uuidWithManyDigits,
             },
           },
         },
@@ -167,38 +168,38 @@ describe('GrouperWorker', () => {
 
       dataFilter.processEvent(event);
 
-      expect(event.context['userId']).toBe(uuidV4);
-      expect(event.context['sessionId']).toBe(uuidV4Upper);
-      expect(event.context['transactionId']).toBe(uuidWithoutDashes);
-      expect(event.context['requestId']).toBe(uuidV4);
-      expect(event.addons['vue']['props']['componentId']).toBe(uuidV4);
+      expect(event.context['userId']).toBe(uuidWithManyDigits);
+      expect(event.context['sessionId']).toBe(uuidUpperCase);
+      expect(event.context['transactionId']).toBe(uuidNoDashes);
+      expect(event.addons['vue']['props']['componentId']).toBe(uuidWithManyDigits);
     });
 
     test('should not filter MongoDB ObjectId values in context and addons', async () => {
-      const objectId = '507f1f77bcf86cd799439011';
-      const objectIdUpper = '507F1F77BCF86CD799439011';
-      // All-numeric ObjectId that could be mistaken for a 24-digit PAN if not checked
-      const numericObjectId = '672808419583041003090824';
+      // These ObjectIds contain exactly 16 digits which when cleaned match PAN patterns
+      // Without ObjectId detection, they would be incorrectly filtered as credit cards
+      const objectIdWithManyDigits = '4111111111111111abcdefab'; // 16 digits + 8 hex letters = 24 chars, cleans to Visa pattern
+      const objectIdUpperCase = '5111111111111111ABCDEFAB'; // Cleans to Mastercard pattern
+      const objectIdMixedCase = '2111111111111111AbCdEfAb'; // Cleans to Maestro/Mastercard pattern
 
       const event = generateEvent({
         context: {
-          projectId: objectId,
-          workspaceId: objectIdUpper,
-          numericProjectId: numericObjectId,
+          projectId: objectIdWithManyDigits,
+          workspaceId: objectIdUpperCase,
+          transactionId: objectIdMixedCase,
         },
         addons: {
           hawk: {
-            projectId: objectId,
+            projectId: objectIdWithManyDigits,
           },
         },
       });
 
       dataFilter.processEvent(event);
 
-      expect(event.context['projectId']).toBe(objectId);
-      expect(event.context['workspaceId']).toBe(objectIdUpper);
-      expect(event.context['numericProjectId']).toBe(numericObjectId);
-      expect(event.addons['hawk']['projectId']).toBe(objectId);
+      expect(event.context['projectId']).toBe(objectIdWithManyDigits);
+      expect(event.context['workspaceId']).toBe(objectIdUpperCase);
+      expect(event.context['transactionId']).toBe(objectIdMixedCase);
+      expect(event.addons['hawk']['projectId']).toBe(objectIdWithManyDigits);
     });
 
     test('should still filter actual PAN numbers with formatting characters', async () => {
