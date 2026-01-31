@@ -144,7 +144,7 @@ describe('GrouperWorker', () => {
       expect(event.addons['vue']['props']['normalKey']).toBe(normalValue);
     });
 
-    test('should not filter UUID values', async () => {
+    test('should not filter UUID values that contain exactly 16 digits', async () => {
       // These UUIDs contain exactly 16 digits, which when cleaned match PAN patterns
       // Without UUID detection, they would be incorrectly filtered as credit cards
       const uuidWithManyDigits = '4a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d'; // Cleans to 16 digits starting with 4
@@ -174,7 +174,7 @@ describe('GrouperWorker', () => {
       expect(event.addons['vue']['props']['componentId']).toBe(uuidWithManyDigits);
     });
 
-    test('should not filter MongoDB ObjectId values in context and addons', async () => {
+    test('should not filter MongoDB ObjectId values that contain exactly 16 digits', async () => {
       // These ObjectIds contain exactly 16 digits which when cleaned match PAN patterns
       // Without ObjectId detection, they would be incorrectly filtered as credit cards
       const objectIdWithManyDigits = '4111111111111111abcdefab'; // 16 digits + 8 hex letters = 24 chars, cleans to Visa pattern
