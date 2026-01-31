@@ -1,7 +1,7 @@
 {
     "name": "hawk.workers",
     "private": true,
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Hawk workers",
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "BUSL-1.1",
