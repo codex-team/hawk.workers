@@ -36,17 +36,71 @@ export default class DataFilter {
   private filteredValuePlaceholder = '[filtered]';
 
   /**
-   * Possibly sensitive keys
+   * Possibly sensitive keys (lowercase; keys are compared via key.toLowerCase())
    */
   private possiblySensitiveDataKeys = new Set([
-    'pan',
-    'secret',
-    'credentials',
-    'card[number]',
-    'password',
+    /**
+     * Authorization and sessions
+     */
     'auth',
+    'authorization',
     'access_token',
     'accesstoken',
+    'token',
+    'jwt',
+    'session',
+    'sessionid',
+    'session_id',
+    /**
+     * API keys and secure tokens
+     */
+    'api_key',
+    'apikey',
+    'x-api-key',
+    'x-auth-token',
+    'bearer',
+    'client_secret',
+    'secret',
+    'credentials',
+    /**
+     * Passwords
+     */
+    'password',
+    'passwd',
+    'mysql_pwd',
+    'oldpassword',
+    'old-password',
+    'old_password',
+    'newpassword',
+    'new-password',
+    'new_password',
+    /**
+     * Encryption keys
+     */
+    'private_key',
+    'ssh_key',
+    /**
+     * Payments data
+     */
+    'card',
+    'cardnumber',
+    'card[number]',
+    'creditcard',
+    'credit_card',
+    'pan',
+    'pin',
+    'security_code',
+    'stripetoken',
+    'cloudpayments_public_id',
+    'cloudpayments_secret',
+    /**
+     * Config and connections
+     */
+    'dsn',
+    /**
+     * Personal data
+     */
+    'ssn',
   ]);
 
   /**
@@ -127,7 +181,9 @@ export default class DataFilter {
      */
     const clean = value.replace(/\D/g, '');
 
-    // Reset last index to 0
+    /**
+     * Reset last index to 0
+     */
     this.bankCardRegex.lastIndex = 0;
     if (!this.bankCardRegex.test(clean)) {
       return value;
