@@ -109,6 +109,16 @@ export default class DataFilter {
   private bankCardRegex = /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/g;
 
   /**
+   * MongoDB ObjectId Regex (24 hexadecimal characters)
+   */
+  private objectIdRegex = /^[0-9a-fA-F]{24}$/;
+
+  /**
+   * UUID Regex - matches UUIDs with all dashes (8-4-4-4-12 format) or no dashes (32 hex chars)
+   */
+  private uuidRegex = /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32})$/;
+
+  /**
    * Accept event and process 'addons' and 'context' fields.
    * It mutates the original object
    *
@@ -147,6 +157,22 @@ export default class DataFilter {
      * If value is not a string — it is not a PAN
      */
     if (typeof value !== 'string') {
+      return value;
+    }
+
+    /**
+     * Check if value matches MongoDB ObjectId pattern (24 hex chars)
+     * ObjectIds should not be filtered
+     */
+    if (this.objectIdRegex.test(value)) {
+      return value;
+    }
+
+    /**
+     * Check if value matches UUID pattern (with or without dashes)
+     * UUIDs should not be filtered
+     */
+    if (this.uuidRegex.test(value)) {
       return value;
     }
 
