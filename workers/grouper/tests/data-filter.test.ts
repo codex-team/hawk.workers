@@ -219,7 +219,7 @@ describe('GrouperWorker', () => {
       const event = generateEvent({
         context: {
           userId: uuidWithManyDigits,
-          sessionId: uuidUpperCase,
+          requestId: uuidUpperCase,
           transactionId: uuidNoDashes,
         },
         addons: {
@@ -234,7 +234,7 @@ describe('GrouperWorker', () => {
       dataFilter.processEvent(event);
 
       expect(event.context['userId']).toBe(uuidWithManyDigits);
-      expect(event.context['sessionId']).toBe(uuidUpperCase);
+      expect(event.context['requestId']).toBe(uuidUpperCase);
       expect(event.context['transactionId']).toBe(uuidNoDashes);
       expect(event.addons['vue']['props']['componentId']).toBe(uuidWithManyDigits);
     });
