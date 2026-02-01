@@ -36,10 +36,44 @@ const sensitiveDataMock = {
   credentials: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
   'card[number]': '5500 0000 0000 0004',
   password: 'bFb7PBm6nZ7RJRq9',
+  oldpassword: 'oldSecret123',
+  newpassword: 'newSecret456',
+  'old-password': 'oldSecretHyphen',
+  old_password: 'oldSecretUnderscore',
+  'new-password': 'newSecretHyphen',
+  new_password: 'newSecretUnderscore',
   auth: 'C4CA4238A0B923820DCC509A6F75849B',
   // eslint-disable-next-line @typescript-eslint/naming-convention
   access_token: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
   accessToken: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
+};
+
+/**
+ * Additional sensitive keys (newly added / previously uncovered)
+ */
+const additionalSensitiveDataMock = {
+  authorization: 'Bearer abc123',
+  token: 'token-value',
+  jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
+  session: 'sess_xyz',
+  session_id: 'sid_789',
+  api_key: 'sk_live_xxx',
+  bearer: 'Bearer token',
+  client_secret: 'client_secret_value',
+  passwd: 'passwd_value',
+  mysql_pwd: 'mysql_pwd_value',
+  private_key: '-----BEGIN PRIVATE KEY-----',
+  ssh_key: 'ssh-rsa AAAA...',
+  card: '4111111111111111',
+  cardnumber: '5500000000000004',
+  creditcard: '4111111111111111',
+  pin: '1234',
+  security_code: '999',
+  stripetoken: 'tok_xxx',
+  cloudpayments_public_id: 'pk_xxx',
+  cloudpayments_secret: 'secret_xxx',
+  dsn: 'postgres://user:pass@host/db',
+  ssn: '123-45-6789',
 };
 
 describe('GrouperWorker', () => {
@@ -119,6 +153,34 @@ describe('GrouperWorker', () => {
       dataFilter.processEvent(event);
 
       Object.keys(sensitiveDataMock).forEach((key) => {
+        expect(event.addons['vue']['props'][key]).toBe('[filtered]');
+      });
+    });
+
+    test('should filter additional sensitive keys (authorization, token, payment, dsn, ssn, etc.) in context', async () => {
+      const event = generateEvent({
+        context: additionalSensitiveDataMock,
+      });
+
+      dataFilter.processEvent(event);
+
+      Object.keys(additionalSensitiveDataMock).forEach((key) => {
+        expect(event.context[key]).toBe('[filtered]');
+      });
+    });
+
+    test('should filter additional sensitive keys in addons', async () => {
+      const event = generateEvent({
+        addons: {
+          vue: {
+            props: additionalSensitiveDataMock,
+          },
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      Object.keys(additionalSensitiveDataMock).forEach((key) => {
         expect(event.addons['vue']['props'][key]).toBe('[filtered]');
       });
     });
