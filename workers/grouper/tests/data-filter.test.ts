@@ -28,8 +28,10 @@ function generateEvent({ context, addons }: {context?: Json, addons?: EventAddon
 }
 
 /**
- * Example of object with sensitive information
+ * Example of object with sensitive information.
+ * Keys intentionally use snake_case/kebab-case to match data-filter list.
  */
+/* eslint-disable @typescript-eslint/naming-convention */
 const sensitiveDataMock = {
   pan: '5500 0000 0000 0004',
   secret: 'D6A03F5C2E0E356F262D56F44370E1CD813583B2',
@@ -43,13 +45,13 @@ const sensitiveDataMock = {
   'new-password': 'newSecretHyphen',
   new_password: 'newSecretUnderscore',
   auth: 'C4CA4238A0B923820DCC509A6F75849B',
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   access_token: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
   accessToken: '70BA33708CBFB103F1A8E34AFEF333BA7DC021022B2D9AAA583AABB8058D8D67',
 };
 
 /**
- * Additional sensitive keys (newly added / previously uncovered)
+ * Additional sensitive keys (newly added / previously uncovered).
+ * Keys intentionally use snake_case to match data-filter list.
  */
 const additionalSensitiveDataMock = {
   authorization: 'Bearer abc123',
@@ -75,6 +77,7 @@ const additionalSensitiveDataMock = {
   dsn: 'postgres://user:pass@host/db',
   ssn: '123-45-6789',
 };
+/* eslint-enable @typescript-eslint/naming-convention */
 
 describe('GrouperWorker', () => {
   const dataFilter = new DataFilter();
