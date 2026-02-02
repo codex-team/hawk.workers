@@ -24,6 +24,7 @@ import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+import { validateEventStructure } from '../../../lib/utils/validateEventStructure';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -105,8 +106,11 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
-    if (typeof task.payload !== 'object' || task.payload === null || Array.isArray(task.payload)) {
-      this.logger.error(`Invalid payload type: ${typeof task.payload}. Event rejected.`);
+    const validation = validateEventStructure(task.payload);
+
+    if (!validation.isValid) {
+      this.logger.error(`${validation.error}. Event rejected.`);
+
       return;
     }
 
