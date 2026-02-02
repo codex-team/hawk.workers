@@ -36,23 +36,87 @@ export default class DataFilter {
   private filteredValuePlaceholder = '[filtered]';
 
   /**
-   * Possibly sensitive keys
+   * Possibly sensitive keys (lowercase; keys are compared via key.toLowerCase())
    */
   private possiblySensitiveDataKeys = new Set([
-    'pan',
-    'secret',
-    'credentials',
-    'card[number]',
-    'password',
+    /**
+     * Authorization and sessions
+     */
     'auth',
+    'authorization',
     'access_token',
     'accesstoken',
+    'token',
+    'jwt',
+    'session',
+    'sessionid',
+    'session_id',
+    /**
+     * API keys and secure tokens
+     */
+    'api_key',
+    'apikey',
+    'x-api-key',
+    'x-auth-token',
+    'bearer',
+    'client_secret',
+    'secret',
+    'credentials',
+    /**
+     * Passwords
+     */
+    'password',
+    'passwd',
+    'mysql_pwd',
+    'oldpassword',
+    'old-password',
+    'old_password',
+    'newpassword',
+    'new-password',
+    'new_password',
+    /**
+     * Encryption keys
+     */
+    'private_key',
+    'ssh_key',
+    /**
+     * Payments data
+     */
+    'card',
+    'cardnumber',
+    'card[number]',
+    'creditcard',
+    'credit_card',
+    'pan',
+    'pin',
+    'security_code',
+    'stripetoken',
+    'cloudpayments_public_id',
+    'cloudpayments_secret',
+    /**
+     * Config and connections
+     */
+    'dsn',
+    /**
+     * Personal data
+     */
+    'ssn',
   ]);
 
   /**
    * Bank card PAN Regex
    */
   private bankCardRegex = /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/g;
+
+  /**
+   * MongoDB ObjectId Regex (24 hexadecimal characters)
+   */
+  private objectIdRegex = /^[0-9a-fA-F]{24}$/;
+
+  /**
+   * UUID Regex - matches UUIDs with all dashes (8-4-4-4-12 format) or no dashes (32 hex chars)
+   */
+  private uuidRegex = /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32})$/;
 
   /**
    * Accept event and process 'addons' and 'context' fields.
@@ -97,11 +161,29 @@ export default class DataFilter {
     }
 
     /**
+     * Check if value matches MongoDB ObjectId pattern (24 hex chars)
+     * ObjectIds should not be filtered
+     */
+    if (this.objectIdRegex.test(value)) {
+      return value;
+    }
+
+    /**
+     * Check if value matches UUID pattern (with or without dashes)
+     * UUIDs should not be filtered
+     */
+    if (this.uuidRegex.test(value)) {
+      return value;
+    }
+
+    /**
      * Remove all non-digit chars
      */
     const clean = value.replace(/\D/g, '');
 
-    // Reset last index to 0
+    /**
+     * Reset last index to 0
+     */
     this.bankCardRegex.lastIndex = 0;
     if (!this.bankCardRegex.test(clean)) {
       return value;
