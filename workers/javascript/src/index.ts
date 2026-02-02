@@ -12,6 +12,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import { BacktraceFrame, CatcherMessagePayload, CatcherMessageType, ErrorsCatcherType, SourceCodeLine, SourceMapDataExtended } from '@hawk.so/types';
 import { beautifyUserAgent, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
+import { validateEventStructure } from '../../../lib/utils/validateEventStructure';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
@@ -71,6 +72,14 @@ export default class JavascriptEventWorker extends EventWorker {
    * @param event - event to handle
    */
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
+    const validation = validateEventStructure(event.payload);
+
+    if (!validation.isValid) {
+      this.logger.error(`${validation.error}. Event rejected.`);
+
+      return;
+    }
+
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');
 
