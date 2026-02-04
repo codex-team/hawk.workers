@@ -26,6 +26,7 @@ import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
+import { register, client } from '../../../lib/metrics';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -73,6 +74,28 @@ export default class GrouperWorker extends Worker {
   private redis = new RedisHelper();
 
   /**
+   * Prometheus metrics
+   */
+  private metricsEventsTotal = new client.Counter({
+    name: 'hawk_grouper_events_total',
+    help: 'Total number of events processed by grouper',
+    labelNames: ['type'],
+    registers: [register],
+  });
+
+  private metricsEventDuration = new client.Histogram({
+    name: 'hawk_grouper_event_duration_seconds',
+    help: 'Duration of event processing in seconds',
+    registers: [register],
+  });
+
+  private metricsErrorsTotal = new client.Counter({
+    name: 'hawk_grouper_errors_total',
+    help: 'Total number of errors during event processing',
+    registers: [register],
+  });
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -105,6 +128,24 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
+    const endTimer = this.metricsEventDuration.startTimer();
+
+    try {
+      await this.handleInternal(task);
+      endTimer();
+    } catch (error) {
+      endTimer();
+      this.metricsErrorsTotal.inc();
+      throw error;
+    }
+  }
+
+  /**
+   * Internal task handling function
+   *
+   * @param task - event to handle
+   */
+  private async handleInternal(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     // FIX RELEASE TYPE
@@ -146,6 +187,11 @@ export default class GrouperWorker extends Worker {
      * Event happened for the first time
      */
     const isFirstOccurrence = !existedEvent && !similarEvent;
+
+    /**
+     * Increment metrics counter
+     */
+    this.metricsEventsTotal.inc({ type: isFirstOccurrence ? 'new' : 'repeated' });
 
     let repetitionId = null;
 
