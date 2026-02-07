@@ -2,6 +2,7 @@ import HawkCatcher from '@hawk.so/nodejs';
 import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import createLogger from '../../../lib/logger';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Class with helper functions for working with Redis
@@ -152,27 +153,12 @@ export default class RedisHelper {
     `
 
     const key = 'rate_limits';
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / MS_IN_SEC);
 
     await this.redisClient.eval(script, {
       keys: [key],
       arguments: [projectId, now.toString(), eventsPeriod.toString(), limit.toString()],
     });
-  }
-
-  /**
-   * Build label arguments for RedisTimeSeries commands
-   *
-   * @param labels - labels to attach to the time series
-   */
-  private buildLabelArguments(labels: Record<string, string>): string[] {
-    const labelArgs: string[] = ['LABELS'];
-
-    for (const [labelKey, labelValue] of Object.entries(labels)) {
-      labelArgs.push(labelKey, labelValue);
-    }
-
-    return labelArgs;
   }
 
   /**
@@ -319,6 +305,21 @@ export default class RedisHelper {
         throw error;
       }
     }
+  }
+
+  /**
+   * Build label arguments for RedisTimeSeries commands
+   *
+   * @param labels - labels to attach to the time series
+   */
+  private buildLabelArguments(labels: Record<string, string>): string[] {
+    const labelArgs: string[] = ['LABELS'];
+
+    for (const [labelKey, labelValue] of Object.entries(labels)) {
+      labelArgs.push(labelKey, labelValue);
+    }
+
+    return labelArgs;
   }
 
   /**
