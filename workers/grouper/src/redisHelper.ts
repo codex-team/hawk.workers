@@ -116,6 +116,7 @@ export default class RedisHelper {
    *
    * @param projectId - id of the project which event belongs to
    * @param eventsPeriod - rate limit period configured for the project
+   * @param limit - current event count limit (from project / workspace / plan)
    */
   public async incrementRateLimitCounterForCurrentEvent(projectId: string, eventsPeriod: number, limit: number): Promise<void> {
     const script = `
@@ -150,13 +151,13 @@ export default class RedisHelper {
 
     -- Increment counter
     redis.call('HSET', key, field, timestamp .. ':' .. (count + 1))
-    `
+    `;
 
     const key = 'rate_limits';
     const now = Math.floor(Date.now() / MS_IN_SEC);
 
     await this.redisClient.eval(script, {
-      keys: [key],
+      keys: [ key ],
       arguments: [projectId, now.toString(), eventsPeriod.toString(), limit.toString()],
     });
   }
@@ -313,7 +314,7 @@ export default class RedisHelper {
    * @param labels - labels to attach to the time series
    */
   private buildLabelArguments(labels: Record<string, string>): string[] {
-    const labelArgs: string[] = ['LABELS'];
+    const labelArgs: string[] = [ 'LABELS' ];
 
     for (const [labelKey, labelValue] of Object.entries(labels)) {
       labelArgs.push(labelKey, labelValue);

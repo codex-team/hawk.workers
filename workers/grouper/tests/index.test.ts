@@ -146,21 +146,42 @@ describe('GrouperWorker', () => {
   const setPlanRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
     await plansCollection.updateOne(
       { _id: planIdMock },
-      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+      {
+        $set: {
+          rateLimitSettings: {
+            N: eventsLimit,
+            T: eventsPeriod,
+          },
+        },
+      },
       { upsert: true }
     );
   };
   const setWorkspaceRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
     await workspacesCollection.updateOne(
       { _id: workspaceIdMock },
-      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+      {
+        $set: {
+          rateLimitSettings: {
+            N: eventsLimit,
+            T: eventsPeriod,
+          },
+        },
+      },
       { upsert: true }
     );
   };
   const setProjectRateLimit = async (eventsLimit: number, eventsPeriod: number): Promise<void> => {
     await projectsCollection.updateOne(
       { _id: new mongodb.ObjectId(projectIdMock) },
-      { $set: { rateLimitSettings: { N: eventsLimit, T: eventsPeriod } } },
+      {
+        $set: {
+          rateLimitSettings: {
+            N: eventsLimit,
+            T: eventsPeriod,
+          },
+        },
+      }
     );
   };
 
@@ -806,7 +827,7 @@ describe('GrouperWorker', () => {
     test('increments counter when handling an event', async () => {
       await setProjectRateLimit(5, 60);
 
-      let currentTime = 1_000_000;
+      const currentTime = 1_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -823,7 +844,7 @@ describe('GrouperWorker', () => {
     test('reuses window and increments while within limit', async () => {
       await setProjectRateLimit(5, 60);
 
-      let currentTime = 2_000_000;
+      const currentTime = 2_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -847,7 +868,7 @@ describe('GrouperWorker', () => {
 
       await setProjectRateLimit(eventsLimit, 60);
 
-      let currentTime = 3_000_000;
+      const currentTime = 3_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -898,7 +919,7 @@ describe('GrouperWorker', () => {
       await setWorkspaceRateLimit(3, 60);
       await setProjectRateLimit(0, 0);
 
-      let currentTime = 5_000_000;
+      const currentTime = 5_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -923,7 +944,7 @@ describe('GrouperWorker', () => {
       await setWorkspaceRateLimit(0, 0);
       await setProjectRateLimit(0, 0);
 
-      let currentTime = 6_000_000;
+      const currentTime = 6_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -948,7 +969,7 @@ describe('GrouperWorker', () => {
       await setWorkspaceRateLimit(6, 60);
       await setProjectRateLimit(8, 60);
 
-      let currentTime = 7_000_000;
+      const currentTime = 7_000_000;
       const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => currentTime);
 
       try {
@@ -989,21 +1010,21 @@ describe('GrouperWorker', () => {
           `ts:project-events-stored:${projectIdMock}:minutely`,
           1,
           expectedLabels,
-          TimeMs.DAY,
+          TimeMs.DAY
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           2,
           `ts:project-events-stored:${projectIdMock}:hourly`,
           1,
           expectedLabels,
-          TimeMs.WEEK,
+          TimeMs.WEEK
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           3,
           `ts:project-events-stored:${projectIdMock}:daily`,
           1,
           expectedLabels,
-          90 * TimeMs.DAY,
+          90 * TimeMs.DAY
         );
       } finally {
         safeTsAddSpy.mockRestore();
@@ -1017,7 +1038,9 @@ describe('GrouperWorker', () => {
 
       safeTsAddSpy
         .mockImplementationOnce(() => Promise.resolve())
-        .mockImplementationOnce(async () => { throw failure; })
+        .mockImplementationOnce(async () => {
+          throw failure;
+        })
         .mockImplementationOnce(() => Promise.resolve());
 
       try {
