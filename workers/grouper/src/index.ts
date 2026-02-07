@@ -345,10 +345,22 @@ export default class GrouperWorker extends Worker {
     };
 
     const series = [
-      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY },
-      { key: hourlyKey, label: 'hourly', retentionMs: TimeMs.WEEK },
-      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
-      { key: dailyKey, label: 'daily', retentionMs: 90 * TimeMs.DAY },
+      {
+        key: minutelyKey,
+        label: 'minutely',
+        retentionMs: TimeMs.DAY,
+      },
+      {
+        key: hourlyKey,
+        label: 'hourly',
+        retentionMs: TimeMs.WEEK,
+      },
+      {
+        key: dailyKey,
+        label: 'daily',
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        retentionMs: 90 * TimeMs.DAY,
+      },
     ];
 
     for (const { key, label, retentionMs } of series) {
@@ -405,7 +417,12 @@ export default class GrouperWorker extends Worker {
       .collection('projects')
       .findOne(
         { _id: new mongodb.ObjectId(projectId) },
-        { projection: { rateLimitSettings: 1, workspaceId: 1 } }
+        {
+          projection: {
+            rateLimitSettings: 1,
+            workspaceId: 1,
+          },
+        }
       );
 
     if (!project) {
@@ -426,7 +443,12 @@ export default class GrouperWorker extends Worker {
         .collection('workspaces')
         .findOne(
           { _id: workspaceId },
-          { projection: { rateLimitSettings: 1, tariffPlanId: 1 } }
+          {
+            projection: {
+              rateLimitSettings: 1,
+              tariffPlanId: 1,
+            },
+          }
         );
 
       workspaceRateLimitSettings = workspace?.rateLimitSettings as { N: number, T: number };
@@ -487,7 +509,10 @@ export default class GrouperWorker extends Worker {
       return null;
     }
 
-    return { eventsLimit, eventsPeriod };
+    return {
+      eventsLimit,
+      eventsPeriod,
+    };
   }
 
   /**
