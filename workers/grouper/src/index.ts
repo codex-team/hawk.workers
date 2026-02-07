@@ -347,6 +347,7 @@ export default class GrouperWorker extends Worker {
     const series = [
       { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY },
       { key: hourlyKey, label: 'hourly', retentionMs: TimeMs.WEEK },
+      /* eslint-disable-next-line @typescript-eslint/no-magic-numbers */
       { key: dailyKey, label: 'daily', retentionMs: 90 * TimeMs.DAY },
     ];
 
