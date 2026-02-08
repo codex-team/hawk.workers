@@ -112,57 +112,6 @@ export default class RedisHelper {
   }
 
   /**
-   * Increments redis counter used for rate limiting
-   *
-   * @param projectId - id of the project which event belongs to
-   * @param eventsPeriod - rate limit period configured for the project
-   * @param limit - current event count limit (from project / workspace / plan)
-   */
-  public async incrementRateLimitCounterForCurrentEvent(projectId: string, eventsPeriod: number, limit: number): Promise<void> {
-    const script = `
-    local key = KEYS[1]
-    local field = ARGV[1]
-    local now = tonumber(ARGV[2])
-    local period = tonumber(ARGV[3])
-    local limit = tonumber(ARGV[4])
-
-    local current = redis.call('HGET', key, field)
-
-    -- If no record yet, start a new window with count = 1
-    if not current then
-        redis.call('HSET', key, field, now .. ':1')
-        return
-    end
-
-    local timestamp, count = string.match(current, '(%d+):(%d+)')
-    timestamp = tonumber(timestamp)
-    count = tonumber(count)
-
-    -- Check if we're in a new time window
-    if now - timestamp >= period then
-        redis.call('HSET', key, field, now .. ':1')
-        return
-    end
-
-    -- Check if incrementing would exceed limit
-    if count + 1 > limit then
-        return
-    end
-
-    -- Increment counter
-    redis.call('HSET', key, field, timestamp .. ':' .. (count + 1))
-    `;
-
-    const key = 'rate_limits';
-    const now = Math.floor(Date.now() / MS_IN_SEC);
-
-    await this.redisClient.eval(script, {
-      keys: [ key ],
-      arguments: [projectId, now.toString(), eventsPeriod.toString(), limit.toString()],
-    });
-  }
-
-  /**
    * Creates a RedisTimeSeries key if it doesn't exist.
    *
    * @param key - time series key
