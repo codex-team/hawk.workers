@@ -362,13 +362,19 @@ export default class GrouperWorker extends Worker {
       },
     ];
 
-    for (const { key, label, retentionMs } of series) {
-      try {
-        await this.redis.safeTsAdd(key, 1, labels, retentionMs);
-      } catch (error) {
-        this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
+    const operations = series.map(({ key, label, retentionMs }) => ({
+      label,
+      promise: this.redis.safeTsAdd(key, 1, labels, retentionMs),
+    }));
+
+    const results = await Promise.allSettled(operations.map((op) => op.promise));
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const { label } = operations[index];
+        this.logger.error(`Failed to add ${label} TS for ${metricType}`, result.reason);
       }
-    }
+    });
   }
 
   /**
