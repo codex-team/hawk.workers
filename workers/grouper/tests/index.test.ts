@@ -743,7 +743,7 @@ describe('GrouperWorker', () => {
     });
   });
 
-  describe('Events-stored metrics', () => {
+  describe('Events-accepted metrics', () => {
     test('writes minutely, hourly, and daily samples after handling an event', async () => {
       const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');
 
@@ -754,27 +754,27 @@ describe('GrouperWorker', () => {
 
         const expectedLabels = {
           type: 'error',
-          status: 'events-stored',
+          status: 'events-accepted',
           project: projectIdMock,
         };
 
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           1,
-          `ts:project-events-stored:${projectIdMock}:minutely`,
+          `ts:project-events-accepted:${projectIdMock}:minutely`,
           1,
           expectedLabels,
           TimeMs.DAY
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           2,
-          `ts:project-events-stored:${projectIdMock}:hourly`,
+          `ts:project-events-accepted:${projectIdMock}:hourly`,
           1,
           expectedLabels,
           TimeMs.WEEK
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           3,
-          `ts:project-events-stored:${projectIdMock}:daily`,
+          `ts:project-events-accepted:${projectIdMock}:daily`,
           1,
           expectedLabels,
           90 * TimeMs.DAY
@@ -799,7 +799,7 @@ describe('GrouperWorker', () => {
       try {
         await worker.handle(generateTask());
 
-        expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to add hourly TS for events-stored', failure);
+        expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to add hourly TS for events-accepted', failure);
         expect(await eventsCollection.find().count()).toBe(1);
       } finally {
         safeTsAddSpy.mockRestore();
@@ -814,7 +814,7 @@ describe('GrouperWorker', () => {
         await worker.handle(generateTask());
 
         expect(recordMetricsSpy).toHaveBeenCalledTimes(1);
-        expect(recordMetricsSpy).toHaveBeenCalledWith(projectIdMock, 'events-stored');
+        expect(recordMetricsSpy).toHaveBeenCalledWith(projectIdMock, 'events-accepted');
       } finally {
         recordMetricsSpy.mockRestore();
       }
