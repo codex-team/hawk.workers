@@ -308,7 +308,7 @@ export default class GrouperWorker extends Worker {
       }
     }
 
-    await this.recordProjectMetrics(task.projectId, 'events-stored');
+    await this.recordProjectMetrics(task.projectId, 'events-accepted');
   }
 
   /**
