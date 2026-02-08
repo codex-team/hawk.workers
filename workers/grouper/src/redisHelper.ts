@@ -2,7 +2,6 @@ import HawkCatcher from '@hawk.so/nodejs';
 import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import createLogger from '../../../lib/logger';
-import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
  * Class with helper functions for working with Redis
