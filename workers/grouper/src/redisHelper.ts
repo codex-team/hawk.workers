@@ -122,13 +122,16 @@ export default class RedisHelper {
     labels: Record<string, string>,
     retentionMs = 0
   ): Promise<void> {
-    const exists = await this.redisClient.exists(key);
+    const script = `
+      if redis.call('EXISTS', KEYS[1]) == 1 then
+        return 0
+      end
 
-    if (exists > 0) {
-      return;
-    }
+      redis.call('TS.CREATE', KEYS[1], unpack(ARGV))
+      return 1
+    `;
 
-    const args: string[] = ['TS.CREATE', key];
+    const args: string[] = [];
 
     if (retentionMs > 0) {
       args.push('RETENTION', Math.floor(retentionMs).toString());
@@ -136,7 +139,13 @@ export default class RedisHelper {
 
     args.push(...this.buildLabelArguments(labels));
 
-    await this.redisClient.sendCommand(args);
+    await this.redisClient.eval(
+      script,
+      {
+        keys: [key],
+        arguments: args,
+      }
+    );
   }
 
   /**
