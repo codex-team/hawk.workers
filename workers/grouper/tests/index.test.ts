@@ -58,41 +58,16 @@ const projectIdMock = '5d206f7f9aaf7c0071d64596';
 /**
  * Mock project data
  */
-const planIdMock = new mongodb.ObjectId();
-const workspaceIdMock = new mongodb.ObjectId();
-
-const planMock = {
-  _id: planIdMock,
-  rateLimitSettings: {
-    N: 0,
-    T: 0,
-  },
-};
-
-const workspaceMock = {
-  _id: workspaceIdMock,
-  tariffPlanId: planIdMock,
-  rateLimitSettings: {
-    N: 0,
-    T: 0,
-  },
-};
-
 const projectMock = {
   _id: new mongodb.ObjectId(projectIdMock),
   id: projectIdMock,
   name: 'Test Project',
   token: 'test-token',
-  workspaceId: workspaceIdMock,
   uidAdded: {
     id: 'test-user-id',
   },
   unreadCount: 0,
   description: 'Test project for grouper worker tests',
-  rateLimitSettings: {
-    N: 0,
-    T: 0,
-  },
   eventGroupingPatterns: [ {
     _id: mongodb.ObjectId(),
     pattern: 'New error .*',
@@ -139,8 +114,6 @@ describe('GrouperWorker', () => {
   let dailyEventsCollection: Collection;
   let repetitionsCollection: Collection;
   let projectsCollection: Collection;
-  let workspacesCollection: Collection;
-  let plansCollection: Collection;
   let redisClient: RedisClientType;
   let worker: GrouperWorker;
   beforeAll(async () => {
@@ -160,16 +133,11 @@ describe('GrouperWorker', () => {
     dailyEventsCollection = connection.db().collection('dailyEvents:' + projectIdMock);
     repetitionsCollection = connection.db().collection('repetitions:' + projectIdMock);
     projectsCollection = accountsConnection.db().collection('projects');
-    workspacesCollection = accountsConnection.db().collection('workspaces');
-    plansCollection = accountsConnection.db().collection('plans');
 
     /**
      * Create unique index for groupHash
      */
     await eventsCollection.createIndex({ groupHash: 1 }, { unique: true });
-
-    await plansCollection.insertOne(planMock);
-    await workspacesCollection.insertOne(workspaceMock);
 
     /**
      * Insert mock project into accounts database
@@ -857,8 +825,6 @@ describe('GrouperWorker', () => {
     await redisClient.quit();
     await worker.finish();
     await projectsCollection.deleteMany({});
-    await workspacesCollection.deleteMany({});
-    await plansCollection.deleteMany({});
     await accountsConnection.close();
     await connection.close();
   });
