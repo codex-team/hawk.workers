@@ -156,7 +156,7 @@ class EmailTestServer {
       tariffPlanId: '5f47f031ff71510040f433c1',
       password: '1as2eadd321a3cDf',
       plan: {
-        name: 'Корпоративный'
+        name: 'Корпоративный',
       },
       workspaceName: workspace.name,
     };

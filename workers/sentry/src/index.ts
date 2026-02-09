@@ -41,6 +41,7 @@ export default class SentryEventWorker extends Worker {
 
       if (items.length === 0) {
         this.logger.warn('Received envelope with no items');
+
         return;
       }
 
@@ -49,6 +50,7 @@ export default class SentryEventWorker extends Worker {
 
       for (const item of items) {
         const result = await this.handleEnvelopeItem(headers, item, event.projectId);
+
         if (result === 'processed') {
           processedCount++;
         } else if (result === 'skipped') {
@@ -67,10 +69,14 @@ export default class SentryEventWorker extends Worker {
 
   /**
    * Filter out binary items that crash parseEnvelope
+   * Also filters out all Sentry Replay events (replay_event and replay_recording)
+   *
+   * @param rawEvent
    */
   private filterOutBinaryItems(rawEvent: string): string {
     const lines = rawEvent.split('\n');
     const filteredLines = [];
+    let isInReplayBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -90,17 +96,42 @@ export default class SentryEventWorker extends Worker {
         // Try to parse as JSON to check if it's a header
         const parsed = JSON.parse(line);
 
-        // If it's a replay header, skip this line and the next one (payload)
+        // Check if this is a replay event type
         if (parsed.type === 'replay_recording' || parsed.type === 'replay_event') {
-          // Skip the next line too (which would be the payload)
-          i++;
+          // Mark that we're in a replay block and skip this line
+          isInReplayBlock = true;
           continue;
         }
 
-        // Keep valid headers and other JSON data
-        filteredLines.push(line);
+        // If we're in a replay block, check if this is still part of it
+        if (isInReplayBlock) {
+          // Check if this line is part of replay data (segment_id, length, etc.)
+          if ('segment_id' in parsed || ('length' in parsed && parsed.type !== 'event') || 'replay_id' in parsed) {
+            // Still in replay block, skip this line
+            continue;
+          }
+
+          // If it's a new envelope item (like event), we've exited the replay block
+          if (parsed.type === 'event' || parsed.type === 'transaction' || parsed.type === 'session') {
+            isInReplayBlock = false;
+          } else {
+            // Unknown type, assume we're still in replay block
+            continue;
+          }
+        }
+
+        // Keep valid headers and other JSON data (not in replay block)
+        if (!isInReplayBlock) {
+          filteredLines.push(line);
+        }
       } catch {
-        // If line doesn't parse as JSON, it might be binary data - skip it
+        // If line doesn't parse as JSON, it might be binary data
+        // If we're in a replay block, skip it (it's part of replay recording)
+        if (isInReplayBlock) {
+          continue;
+        }
+
+        // If not in replay block and not JSON, it might be corrupted data - skip it
         continue;
       }
     }
@@ -128,7 +159,49 @@ export default class SentryEventWorker extends Worker {
        * Skip non-event items
        */
       if (itemHeader.type !== 'event') {
-        this.logger.verbose(`Skipping non-event item of type: ${itemHeader.type}`);
+        if (itemHeader.type === 'client_report') {
+          /**
+           * Sentry "client_report" items are useful for debugging dropped events.
+           * We log internals here to make diagnosing SDK/reporting issues easier.
+           */
+          try {
+            let decodedPayload: unknown = itemPayload;
+
+            /**
+             * Sometimes Sentry parses the itemPayload as a Uint8Array.
+             * Decode it to JSON so it can be logged meaningfully.
+             */
+            if (decodedPayload instanceof Uint8Array) {
+              const textDecoder = new TextDecoder();
+
+              decodedPayload = textDecoder.decode(decodedPayload as Uint8Array);
+            }
+
+            if (typeof decodedPayload === 'string') {
+              try {
+                decodedPayload = JSON.parse(decodedPayload);
+              } catch {
+                /**
+                 * Keep the raw string if it isn't valid JSON.
+                 */
+              }
+            }
+
+            this.logger.info('Received client_report item; logging internals:');
+            this.logger.json({
+              envelopeHeaders,
+              itemHeader,
+              payload: decodedPayload,
+            });
+          } catch (clientReportError) {
+            this.logger.warn('Failed to decode/log client_report item:', clientReportError);
+            this.logger.info('👇 Here is the raw client_report item:');
+            this.logger.json(item);
+          }
+        }
+
+        this.logger.info(`Skipping non-event item of type: ${itemHeader.type}`);
+
         return 'skipped';
       }
       const payloadHasSDK = typeof itemPayload === 'object' && 'sdk' in itemPayload;
@@ -140,12 +213,30 @@ export default class SentryEventWorker extends Worker {
 
       /**
        * Safely check if SDK name exists and is in the list
+       * SDK name can be either a simple name like "react" or a full name like "sentry.javascript.react"
        */
       const sdkName = payloadHasSDK && itemPayload.sdk && typeof itemPayload.sdk === 'object' && 'name' in itemPayload.sdk
         ? itemPayload.sdk.name
         : undefined;
 
-      const isJsSDK = sdkName !== undefined && sentryJsSDK.includes(sdkName);
+      /**
+       * Check if SDK is a JavaScript-related SDK
+       * Supports both simple names (e.g., "react") and full names (e.g., "sentry.javascript.react")
+       */
+      const isJsSDK = sdkName !== undefined && typeof sdkName === 'string' && (
+        /**
+         * Exact match for simple SDK names (e.g., "react", "browser")
+         */
+        sentryJsSDK.includes(sdkName) ||
+        /**
+         * Check if SDK name contains one of the JS SDK names
+         * Examples:
+         * - "sentry.javascript.react" matches "react"
+         * - "sentry.javascript.browser" matches "browser"
+         * - "@sentry/react" matches "react"
+         */
+        sentryJsSDK.some((jsSDK) => sdkName.includes(jsSDK))
+      );
 
       const hawkEvent = this.transformToHawkFormat(envelopeHeaders as EventEnvelope[0], item as EventItem, projectId, isJsSDK);
 
@@ -158,16 +249,15 @@ export default class SentryEventWorker extends Worker {
       if (!taskSent) {
         /**
          * If addTask returns false, the message was not queued (queue full or channel closed)
-         * This is a critical error that should be logged and thrown
          */
         const error = new Error(`Failed to queue event to ${workerName} worker. Queue may be full or channel closed.`);
+
         this.logger.error(error.message);
         this.logger.info('👇 Here is the event that failed to queue:');
         this.logger.json(hawkEvent);
         throw error;
       }
 
-      this.logger.verbose(`Successfully queued event to ${workerName} worker`);
       return 'processed';
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
@@ -198,7 +288,14 @@ export default class SentryEventWorker extends Worker {
      * convert sent_at from ISO 8601 to Unix timestamp
      */
     const msInSecond = 1000;
-    const sentAtUnix = Math.floor(new Date(sent_at).getTime() / msInSecond);
+    const sentAtDate = new Date(sent_at);
+    const sentAtTime = sentAtDate.getTime();
+
+    if (isNaN(sentAtTime)) {
+      throw new Error(`Invalid sent_at timestamp: ${sent_at}`);
+    }
+
+    const sentAtUnix = Math.floor(sentAtTime / msInSecond);
     /* eslint-enable @typescript-eslint/naming-convention */
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
@@ -211,9 +308,18 @@ export default class SentryEventWorker extends Worker {
      * We need to decode it to JSON
      */
     if (eventPayload instanceof Uint8Array) {
-      const textDecoder = new TextDecoder();
+      try {
+        const textDecoder = new TextDecoder();
+        const decoded = textDecoder.decode(eventPayload as Uint8Array);
 
-      eventPayload = JSON.parse(textDecoder.decode(eventPayload as Uint8Array));
+        try {
+          eventPayload = JSON.parse(decoded);
+        } catch (parseError) {
+          throw new Error(`Failed to parse event payload JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        }
+      } catch (decodeError) {
+        throw new Error(`Failed to decode Uint8Array event payload: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`);
+      }
     }
 
     const title = composeTitle(eventPayload);

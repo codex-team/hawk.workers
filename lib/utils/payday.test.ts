@@ -17,9 +17,11 @@ const resetMockedNow = (): void => {
 
 // Override Date constructor
 const RealDate = Date;
+
 global.Date = class extends RealDate {
   /**
    * Constructor for mocked Date class
+   *
    * @param args - arguments passed to Date constructor
    */
   constructor(...args: unknown[]) {
@@ -30,6 +32,9 @@ global.Date = class extends RealDate {
     }
   }
 
+  /**
+   *
+   */
   public static now(): number {
     return mockedNow !== null ? mockedNow : RealDate.now();
   }

@@ -281,6 +281,7 @@ export default class ReleaseWorker extends Worker {
         /**
          * Some bundlers could skip file in the source map content since it duplicates in map name
          * Like map name bundle.js.map is a source map for a bundle.js
+         *
          * @see https://sourcemaps.info/spec.html - format
          */
         originFileName: mapContent.file ?? file.name.replace(/\.map$/, ''),

@@ -1,6 +1,6 @@
 {
   "name": "hawk-worker-grouper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Accepts processed errors from language-workers and saves it to the DB with grouping of similar ones. ",
   "main": "src/index.ts",
   "repository": "https://github.com/codex-team/hawk.workers/tree/master/workers/grouper",

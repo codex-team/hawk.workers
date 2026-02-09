@@ -2,6 +2,53 @@ import { BacktraceFrame, DefaultAddons, EventContext, EventData, Json, SentryAdd
 import { Event as SentryEvent } from '@sentry/core';
 
 /**
+ * Flattens a nested object into an array of strings using dot notation
+ * For example: {foo: 1, bar: {baz: 2}} becomes ["foo=1", "bar.baz=2"]
+ *
+ * @param obj - The object to flatten
+ * @param prefix - The prefix to use for nested keys (used in recursion)
+ */
+function flattenObject(obj: unknown, prefix = ''): string[] {
+  const result: string[] = [];
+
+  if (obj === null || obj === undefined) {
+    return [ prefix ? `${prefix}=${obj}` : String(obj) ];
+  }
+
+  if (typeof obj !== 'object') {
+    return [ prefix ? `${prefix}=${obj}` : String(obj) ];
+  }
+
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) {
+      return [ prefix ? `${prefix}=[]` : '[]' ];
+    }
+
+    obj.forEach((value, index) => {
+      const key = prefix ? `${prefix}.${index}` : String(index);
+
+      result.push(...flattenObject(value, key));
+    });
+
+    return result;
+  }
+
+  const entries = Object.entries(obj);
+
+  if (entries.length === 0) {
+    return [ prefix ? `${prefix}={}` : '{}' ];
+  }
+
+  entries.forEach(([key, value]) => {
+    const newPrefix = prefix ? `${prefix}.${key}` : key;
+
+    result.push(...flattenObject(value, newPrefix));
+  });
+
+  return result;
+}
+
+/**
  * Compose title from Sentry event payload
  *
  * @param eventPayload - Sentry event payload
@@ -79,8 +126,8 @@ export function composeBacktrace(eventPayload: SentryEvent): EventData<DefaultAd
       }
 
       if (frame.vars) {
-        backtraceFrame.arguments = Object.entries(frame.vars).map(([name, value]) => {
-          return `${name}=${value}`;
+        backtraceFrame.arguments = Object.entries(frame.vars).flatMap(([name, value]) => {
+          return flattenObject(value, name);
         });
       }
 

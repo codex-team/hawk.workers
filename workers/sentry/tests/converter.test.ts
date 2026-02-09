@@ -93,6 +93,162 @@ describe('converter utils', () => {
       });
     });
 
+    it('should handle nested objects in vars using dot notation', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [ {
+                filename: 'test.js',
+                lineno: 10,
+                vars: {
+                  params: {
+                    foo: 1,
+                    bar: 2,
+                    second: {
+                      glass: 3,
+                    },
+                  },
+                },
+              } ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0].arguments).toEqual([
+        'params.foo=1',
+        'params.bar=2',
+        'params.second.glass=3',
+      ]);
+    });
+
+    it('should handle arrays in vars using dot notation with indices', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [ {
+                filename: 'test.js',
+                lineno: 10,
+                vars: {
+                  items: ['first', 'second', 'third'],
+                },
+              } ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0].arguments).toEqual([
+        'items.0=first',
+        'items.1=second',
+        'items.2=third',
+      ]);
+    });
+
+    it('should handle mixed nested objects and arrays in vars', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [ {
+                filename: 'test.js',
+                lineno: 10,
+                vars: {
+                  config: {
+                    users: [
+                      {
+                        name: 'Alice',
+                        age: 30,
+                      },
+                      {
+                        name: 'Bob',
+                        age: 25,
+                      },
+                    ],
+                    settings: {
+                      enabled: true,
+                    },
+                  },
+                },
+              } ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0].arguments).toEqual([
+        'config.users.0.name=Alice',
+        'config.users.0.age=30',
+        'config.users.1.name=Bob',
+        'config.users.1.age=25',
+        'config.settings.enabled=true',
+      ]);
+    });
+
+    it('should handle null and undefined values in vars', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [ {
+                filename: 'test.js',
+                lineno: 10,
+                vars: {
+                  nullValue: null,
+                  undefinedValue: undefined,
+                  normalValue: 'test',
+                },
+              } ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0].arguments).toEqual([
+        'nullValue=null',
+        'undefinedValue=undefined',
+        'normalValue=test',
+      ]);
+    });
+
+    it('should handle empty objects and arrays in vars', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            stacktrace: {
+              frames: [ {
+                filename: 'test.js',
+                lineno: 10,
+                vars: {
+                  emptyObject: {},
+                  emptyArray: [],
+                  normalValue: 'test',
+                },
+              } ],
+            },
+          } ],
+        },
+      };
+
+      const backtrace = composeBacktrace(event);
+
+      expect(backtrace?.[0].arguments).toEqual([
+        'emptyObject={}',
+        'emptyArray=[]',
+        'normalValue=test',
+      ]);
+    });
+
     it('should reverse frames', () => {
       const event: SentryEvent = {
         exception: {

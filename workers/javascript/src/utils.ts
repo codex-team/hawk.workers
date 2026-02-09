@@ -211,7 +211,7 @@ export function getFunctionContext(sourceCode: string, line: number, sourcePath?
        */
       ClassDeclaration(path) {
         if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-          console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          // console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
           className = path.node.id.name || null;
         }
@@ -224,7 +224,7 @@ export function getFunctionContext(sourceCode: string, line: number, sourcePath?
        */
       ClassMethod(path) {
         if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-          console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          // console.log(`class declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
           // Handle different key types
           if (path.node.key.type === 'Identifier') {
@@ -240,7 +240,7 @@ export function getFunctionContext(sourceCode: string, line: number, sourcePath?
        */
       FunctionDeclaration(path) {
         if (path.node.loc && path.node.loc.start.line <= targetLine && path.node.loc.end.line >= targetLine) {
-          console.log(`function declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
+          // console.log(`function declaration: loc: ${path.node.loc}, targetLine: ${targetLine}, node.start.line: ${path.node.loc.start.line}, node.end.line: ${path.node.loc.end.line}`);
 
           functionName = path.node.id.name || null;
           isAsync = path.node.async;
@@ -259,7 +259,7 @@ export function getFunctionContext(sourceCode: string, line: number, sourcePath?
           path.node.loc.start.line <= targetLine &&
           path.node.loc.end.line >= targetLine
         ) {
-          console.log(`variable declaration: node.type: ${path.node.init.type}, targetLine: ${targetLine}, `);
+          // console.log(`variable declaration: node.type: ${path.node.init.type}, targetLine: ${targetLine}, `);
 
           // Handle different id types
           if (path.node.id.type === 'Identifier') {
