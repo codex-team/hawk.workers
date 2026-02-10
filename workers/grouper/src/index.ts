@@ -25,6 +25,11 @@ import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+
+/**
+ * eslint does not count decorators as a variable usage
+ */
+/* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
 /**
