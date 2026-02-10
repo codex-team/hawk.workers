@@ -19,6 +19,7 @@ import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
@@ -31,7 +32,7 @@ import { memoize } from '../../../lib/memoize';
  * eslint does not count decorators as a variable usage
  */
 /* eslint-disable-next-line no-unused-vars */
-const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
+const MEMOIZATION_TTL = 600_000;
 
 /**
  * Error code of MongoDB key duplication error
@@ -97,7 +98,7 @@ export default class GrouperWorker extends Worker {
      */
     this.cacheCleanupInterval = setInterval(() => {
       this.clearCache();
-    }, 5 * 60 * 1000);
+    }, 5 * TimeMs.MINUTE);
 
     await super.start();
   }
@@ -264,9 +265,7 @@ export default class GrouperWorker extends Worker {
        * Clear the large event payload references to allow garbage collection
        * This prevents memory leaks from retaining full event objects after delta is computed
        */
-      delta = null;
-      existedEvent.payload = null;
-      task.payload = null;
+      delta = undefined;
     }
 
     /**
@@ -364,7 +363,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param title - title of the event to find similar one
    */
-  @memoize({ max: 50, ttl: 600, strategy: 'hash', skipCache: [undefined] })
+  @memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash', skipCache: [undefined] })
   private async findSimilarEvent(projectId: string, title: string): Promise<GroupedEventDBScheme | undefined> {
     /**
      * If no match by Levenshtein, try matching by patterns
