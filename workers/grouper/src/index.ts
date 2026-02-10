@@ -73,6 +73,11 @@ export default class GrouperWorker extends Worker {
   private redis = new RedisHelper();
 
   /**
+   * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
+   */
+  private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -85,6 +90,15 @@ export default class GrouperWorker extends Worker {
 
     await this.redis.initialize();
     console.log('redis initialized');
+
+    /**
+     * Start periodic cache cleanup to prevent memory leaks from unbounded cache growth
+     * Runs every 5 minutes to clear old cache entries
+     */
+    this.cacheCleanupInterval = setInterval(() => {
+      this.clearCache();
+    }, 5 * 60 * 1000);
+
     await super.start();
   }
 
@@ -92,6 +106,14 @@ export default class GrouperWorker extends Worker {
    * Finish everything
    */
   public async finish(): Promise<void> {
+    /**
+     * Clear cache cleanup interval to prevent resource leaks
+     */
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
+
     await super.finish();
     this.prepareCache();
     await this.eventsDb.close();
@@ -237,6 +259,14 @@ export default class GrouperWorker extends Worker {
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
+
+      /**
+       * Clear the large event payload references to allow garbage collection
+       * This prevents memory leaks from retaining full event objects after delta is computed
+       */
+      delta = null;
+      existedEvent.payload = null;
+      task.payload = null;
     }
 
     /**
@@ -334,7 +364,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param title - title of the event to find similar one
    */
-  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash', skipCache: [undefined] })
+  @memoize({ max: 50, ttl: 600, strategy: 'hash', skipCache: [undefined] })
   private async findSimilarEvent(projectId: string, title: string): Promise<GroupedEventDBScheme | undefined> {
     /**
      * If no match by Levenshtein, try matching by patterns

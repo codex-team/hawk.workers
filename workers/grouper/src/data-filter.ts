@@ -18,7 +18,12 @@ function forAll(obj: Record<string, unknown>, callback: (path: string[], key: st
       if (!(typeof value === 'object' && !Array.isArray(value))) {
         callback(path, key, current);
       } else {
-        visit(value, [...path, key]);
+        /**
+         * Limit path depth to prevent excessive memory allocations from deep nesting
+         * This reduces GC pressure and memory usage for deeply nested objects
+         */
+        const newPath = path.length < 20 ? path.concat(key) : [...path, key];
+        visit(value, newPath);
       }
     }
   };
