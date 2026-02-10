@@ -318,7 +318,7 @@ export default class GrouperWorker extends Worker {
       }
 
       const deltaStr = JSON.stringify(delta);
-      const deltaSize = Buffer.byteLength(deltaStr);
+      const deltaSize = deltaStr != null ? Buffer.byteLength(deltaStr) : 0;
 
       this.metricsDeltaSize.observe(deltaSize);
 
