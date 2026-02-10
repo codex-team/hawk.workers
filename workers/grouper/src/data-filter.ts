@@ -2,6 +2,11 @@ import type { EventAddons, EventData } from '@hawk.so/types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
 
 /**
+ * Maximum depth for object traversal to prevent excessive memory allocations
+ */
+const MAX_TRAVERSAL_DEPTH = 20;
+
+/**
  * Recursively iterate through object and call function on each key
  *
  * @param obj - Object to iterate
@@ -18,7 +23,12 @@ function forAll(obj: Record<string, unknown>, callback: (path: string[], key: st
       if (!(typeof value === 'object' && !Array.isArray(value))) {
         callback(path, key, current);
       } else {
-        visit(value, [...path, key]);
+        /**
+         * Limit path depth to prevent excessive memory allocations from deep nesting
+         * This reduces GC pressure and memory usage for deeply nested objects
+         */
+        const newPath = path.length < MAX_TRAVERSAL_DEPTH ? path.concat(key) : path;
+        visit(value, newPath);
       }
     }
   };
