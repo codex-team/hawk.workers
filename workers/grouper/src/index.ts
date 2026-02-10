@@ -31,8 +31,12 @@ import { memoize } from '../../../lib/memoize';
 /**
  * eslint does not count decorators as a variable usage
  */
-/* eslint-disable-next-line no-unused-vars */
 const MEMOIZATION_TTL = 600_000;
+
+/**
+ * Cache cleanup interval in minutes
+ */
+const CACHE_CLEANUP_INTERVAL_MINUTES = 5;
 
 /**
  * Error code of MongoDB key duplication error
@@ -98,7 +102,7 @@ export default class GrouperWorker extends Worker {
      */
     this.cacheCleanupInterval = setInterval(() => {
       this.clearCache();
-    }, 5 * TimeMs.MINUTE);
+    }, CACHE_CLEANUP_INTERVAL_MINUTES * TimeMs.MINUTE);
 
     await super.start();
   }
