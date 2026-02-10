@@ -83,15 +83,42 @@ export default class GrouperWorker extends Worker {
     registers: [register],
   });
 
-  private metricsEventDuration = new client.Histogram({
-    name: 'hawk_grouper_event_duration_seconds',
-    help: 'Duration of event processing in seconds',
+  private metricsHandleDuration = new client.Histogram({
+    name: 'hawk_grouper_handle_duration_seconds',
+    help: 'Duration of handle() call in seconds',
     registers: [register],
   });
 
   private metricsErrorsTotal = new client.Counter({
     name: 'hawk_grouper_errors_total',
     help: 'Total number of errors during event processing',
+    registers: [register],
+  });
+
+  private metricsMongoDuration = new client.Histogram({
+    name: 'hawk_grouper_mongo_duration_seconds',
+    help: 'Duration of MongoDB operations in seconds',
+    labelNames: ['operation'],
+    registers: [register],
+  });
+
+  private metricsDeltaSize = new client.Histogram({
+    name: 'hawk_grouper_delta_size_bytes',
+    help: 'Size of computed repetition delta in bytes',
+    buckets: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000],
+    registers: [register],
+  });
+
+  private metricsPayloadSize = new client.Histogram({
+    name: 'hawk_grouper_payload_size_bytes',
+    help: 'Size of incoming event payload in bytes',
+    buckets: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000],
+    registers: [register],
+  });
+
+  private metricsDuplicateRetries = new client.Counter({
+    name: 'hawk_grouper_duplicate_retries_total',
+    help: 'Number of retries due to duplicate key errors',
     registers: [register],
   });
 
@@ -128,7 +155,7 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
-    const endTimer = this.metricsEventDuration.startTimer();
+    const endTimer = this.metricsHandleDuration.startTimer();
 
     try {
       await this.handleInternal(task);
@@ -146,6 +173,12 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   private async handleInternal(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
+    const taskPayloadSize = Buffer.byteLength(JSON.stringify(task.payload));
+
+    this.metricsPayloadSize.observe(taskPayloadSize);
+
+    this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
+
     let uniqueEventHash = await this.getUniqueEventHash(task);
 
     // FIX RELEASE TYPE
@@ -211,6 +244,8 @@ export default class GrouperWorker extends Worker {
       try {
         const incrementAffectedUsers = !!task.payload.user;
 
+        this.logger.info(`[saveEvent] new event, payloadSize=${taskPayloadSize}b`);
+
         /**
          * Insert new event
          */
@@ -240,6 +275,8 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          this.metricsDuplicateRetries.inc();
+          this.logger.info(`[saveEvent] duplicate key, retrying as repetition`);
           await this.handle(task);
 
           return;
@@ -266,6 +303,10 @@ export default class GrouperWorker extends Worker {
 
       let delta: RepetitionDelta;
 
+      const existedPayloadSize = Buffer.byteLength(JSON.stringify(existedEvent.payload));
+
+      this.logger.info(`[computeDelta] existedPayloadSize=${existedPayloadSize}b taskPayloadSize=${taskPayloadSize}b`);
+
       try {
         /**
          * Calculate delta between original event and repetition
@@ -276,9 +317,16 @@ export default class GrouperWorker extends Worker {
         throw new DiffCalculationError(e, existedEvent.payload, task.payload);
       }
 
+      const deltaStr = JSON.stringify(delta);
+      const deltaSize = Buffer.byteLength(deltaStr);
+
+      this.metricsDeltaSize.observe(deltaSize);
+
+      this.logger.info(`[computeDelta] deltaSize=${deltaSize}b`);
+
       const newRepetition = {
         groupHash: uniqueEventHash,
-        delta: JSON.stringify(delta),
+        delta: deltaStr,
         timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
@@ -295,6 +343,10 @@ export default class GrouperWorker extends Worker {
       repetitionId,
       incrementDailyAffectedUsers
     );
+
+    const mem = process.memoryUsage();
+
+    this.logger.info(`[handle] done, heapUsed=${Math.round(mem.heapUsed / 1024 / 1024)}MB heapTotal=${Math.round(mem.heapTotal / 1024 / 1024)}MB rss=${Math.round(mem.rss / 1024 / 1024)}MB`);
 
     /**
      * Add task for NotifierWorker only if event is not ignored
@@ -394,7 +446,9 @@ export default class GrouperWorker extends Worker {
         try {
           const originalEvent = await this.findFirstEventByPattern(matchingPattern.pattern, projectId);
 
-          this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
+          const originalEventSize = Buffer.byteLength(JSON.stringify(originalEvent));
+
+          this.logger.info(`[findSimilarEvent] found by pattern, originalEventSize=${originalEventSize}b`);
 
           if (originalEvent) {
             return originalEvent;
@@ -564,7 +618,9 @@ export default class GrouperWorker extends Worker {
     const eventCacheKey = await this.getEventCacheKey(projectId, groupHash);
 
     return this.cache.get(eventCacheKey, async () => {
-      return this.eventsDb.getConnection()
+      const endTimer = this.metricsMongoDuration.startTimer({ operation: 'getEvent' });
+
+      const result = await this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
         .findOne({
           groupHash,
@@ -572,6 +628,10 @@ export default class GrouperWorker extends Worker {
         .catch((err) => {
           throw new DatabaseReadWriteError(err);
         });
+
+      endTimer();
+
+      return result;
     });
   }
 
@@ -599,12 +659,18 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
+    const endTimer = this.metricsMongoDuration.startTimer({ operation: 'saveEvent' });
+
     const collection = this.eventsDb.getConnection().collection(`events:${projectId}`);
 
     encodeUnsafeFields(groupedEventData);
 
-    return (await collection
+    const result = (await collection
       .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
+
+    endTimer();
+
+    return result;
   }
 
   /**
@@ -618,13 +684,20 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveRepetition: Project ID is invalid or missing');
     }
 
+    const endTimer = this.metricsMongoDuration.startTimer({ operation: 'saveRepetition' });
+
     try {
       const collection = this.eventsDb.getConnection().collection(`repetitions:${projectId}`);
 
       encodeUnsafeFields(repetition);
 
-      return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
+      const result = (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
+
+      endTimer();
+
+      return result;
     } catch (err) {
+      endTimer();
       throw new DatabaseReadWriteError(err, {
         repetition: repetition as unknown as Record<string, never>,
         projectId,
@@ -644,6 +717,8 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
+    const endTimer = this.metricsMongoDuration.startTimer({ operation: 'incrementCounter' });
+
     try {
       const updateQuery = incrementAffected
         ? {
@@ -658,10 +733,15 @@ export default class GrouperWorker extends Worker {
           },
         };
 
-      return (await this.eventsDb.getConnection()
+      const result = (await this.eventsDb.getConnection()
         .collection(`events:${projectId}`)
         .updateOne(query, updateQuery)).modifiedCount;
+
+      endTimer();
+
+      return result;
     } catch (err) {
+      endTimer();
       throw new DatabaseReadWriteError(err);
     }
   }
@@ -687,6 +767,8 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
     }
 
+    const endTimer = this.metricsMongoDuration.startTimer({ operation: 'saveDailyEvents' });
+
     try {
       const midnight = this.getMidnightByEventTimestamp(eventTimestamp);
 
@@ -710,7 +792,10 @@ export default class GrouperWorker extends Worker {
             },
           },
           { upsert: true });
+
+      endTimer();
     } catch (err) {
+      endTimer();
       throw new DatabaseReadWriteError(err);
     }
   }
