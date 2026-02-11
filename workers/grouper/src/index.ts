@@ -54,6 +54,11 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 const MAX_CODE_LINE_LENGTH = 140;
 
 /**
+ * TTL for repetition cache lookups in seconds
+ */
+const REPETITION_CACHE_TTL = 300;
+
+/**
  * Worker for handling Javascript events
  */
 export default class GrouperWorker extends Worker {
@@ -86,6 +91,11 @@ export default class GrouperWorker extends Worker {
    * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
    */
   private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Cache for compiled RegExp patterns to avoid repeated compilation
+   */
+  private regexpCache = new Map<string, RegExp>();
 
   /**
    * Start consuming messages
@@ -132,6 +142,35 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Override clearCache to also clear memoization caches and RegExp cache
+   * This prevents memory leaks from decorator-based LRU caches
+   */
+  public clearCache(): void {
+    super.clearCache();
+
+    /**
+     * Clear RegExp cache
+     */
+    this.regexpCache.clear();
+
+    /**
+     * Clear memoization caches from decorators
+     * These are stored as properties on the instance
+     */
+    const memoizeCachePrefix = 'memoizeCache:';
+
+    Object.keys(this).forEach(key => {
+      if (key.startsWith(memoizeCachePrefix)) {
+        const cache = this[key] as any;
+
+        if (cache && typeof cache.reset === 'function') {
+          cache.reset();
+        }
+      }
+    });
+  }
+
+  /**
    * Task handling function
    *
    * @param task - event to handle
@@ -156,7 +195,7 @@ export default class GrouperWorker extends Worker {
     const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
     if (similarEvent) {
-      this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
+      this.logger.info(`similar event found: groupHash=${similarEvent.groupHash}, totalCount=${similarEvent.totalCount}`);
 
       /**
        * Override group hash with found event's group hash
@@ -386,7 +425,7 @@ export default class GrouperWorker extends Worker {
         try {
           const originalEvent = await this.findFirstEventByPattern(matchingPattern.pattern, projectId);
 
-          this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
+          this.logger.info(`original event for pattern found: groupHash=${originalEvent?.groupHash || 'none'}`);
 
           if (originalEvent) {
             return originalEvent;
@@ -416,7 +455,12 @@ export default class GrouperWorker extends Worker {
     }
 
     return patterns.filter(pattern => {
-      const patternRegExp = new RegExp(pattern.pattern);
+      let patternRegExp = this.regexpCache.get(pattern.pattern);
+
+      if (!patternRegExp) {
+        patternRegExp = new RegExp(pattern.pattern);
+        this.regexpCache.set(pattern.pattern, patternRegExp);
+      }
 
       return title.match(patternRegExp);
     }).pop() || null;
@@ -428,6 +472,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - id of the project to find related event patterns
    * @returns {ProjectEventGroupingPatternsDBScheme[]} EventPatterns object with projectId and list of patterns
    */
+  @memoize({ max: 100, ttl: MEMOIZATION_TTL, strategy: 'hash' })
   private async getProjectPatterns(projectId: string): Promise<ProjectEventGroupingPatternsDBScheme[]> {
     const project = await this.accountsDb.getConnection()
       .collection('projects')
@@ -478,11 +523,14 @@ export default class GrouperWorker extends Worker {
       const repetitionCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}`;
       const repetition = await this.cache.get(repetitionCacheKey, async () => {
         return this.eventsDb.getConnection().collection(`repetitions:${task.projectId}`)
-          .findOne({
-            groupHash: existedEvent.groupHash,
-            'payload.user.id': eventUser.id,
-          });
-      });
+          .findOne(
+            {
+              groupHash: existedEvent.groupHash,
+              'payload.user.id': eventUser.id,
+            },
+            { projection: { _id: 1 } }
+          );
+      }, REPETITION_CACHE_TTL);
 
       if (repetition) {
         shouldIncrementRepetitionAffectedUsers = false;
@@ -512,15 +560,18 @@ export default class GrouperWorker extends Worker {
       const repetitionDailyCacheKey = `repetitions:${task.projectId}:${existedEvent.groupHash}:${eventUser.id}:${eventMidnight}`;
       const repetitionDaily = await this.cache.get(repetitionDailyCacheKey, async () => {
         return this.eventsDb.getConnection().collection(`repetitions:${task.projectId}`)
-          .findOne({
-            groupHash: existedEvent.groupHash,
-            'payload.user.id': eventUser.id,
-            timestamp: {
-              $gte: eventMidnight,
-              $lt: eventNextMidnight,
+          .findOne(
+            {
+              groupHash: existedEvent.groupHash,
+              'payload.user.id': eventUser.id,
+              timestamp: {
+                $gte: eventMidnight,
+                $lt: eventNextMidnight,
+              },
             },
-          });
-      });
+            { projection: { _id: 1 } }
+          );
+      }, REPETITION_CACHE_TTL);
 
       /**
        * If daily repetition exists, don't increment daily affected users
@@ -575,7 +626,7 @@ export default class GrouperWorker extends Worker {
    * @returns {string} cache key for event
    */
   private async getEventCacheKey(projectId: string, groupHash: string): Promise<string> {
-    return `${projectId}:${JSON.stringify({ groupHash })}`;
+    return `event:${projectId}:${groupHash}`;
   }
 
   /**
