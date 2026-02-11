@@ -159,7 +159,7 @@ export default class GrouperWorker extends Worker {
      */
     const memoizeCachePrefix = 'memoizeCache:';
 
-    for (const key in this) {
+    Object.keys(this).forEach(key => {
       if (key.startsWith(memoizeCachePrefix)) {
         const cache = this[key] as any;
 
@@ -167,7 +167,7 @@ export default class GrouperWorker extends Worker {
           cache.reset();
         }
       }
-    }
+    });
   }
 
   /**
