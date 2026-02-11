@@ -54,6 +54,11 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 const MAX_CODE_LINE_LENGTH = 140;
 
 /**
+ * TTL for repetition cache lookups in seconds
+ */
+const REPETITION_CACHE_TTL = 300;
+
+/**
  * Worker for handling Javascript events
  */
 export default class GrouperWorker extends Worker {
@@ -86,6 +91,11 @@ export default class GrouperWorker extends Worker {
    * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
    */
   private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Cache for compiled RegExp patterns to avoid repeated compilation
+   */
+  private regexpCache = new Map<string, RegExp>();
 
   /**
    * Start consuming messages
@@ -430,11 +440,6 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Cache for compiled RegExp patterns to avoid repeated compilation
-   */
-  private regexpCache = new Map<string, RegExp>();
-
-  /**
    * Method that returns matched pattern for event, if event do not match any of patterns return null
    *
    * @param patterns - list of the patterns of the related project
@@ -525,7 +530,7 @@ export default class GrouperWorker extends Worker {
             },
             { projection: { _id: 1 } }
           );
-      }, 300);
+      }, REPETITION_CACHE_TTL);
 
       if (repetition) {
         shouldIncrementRepetitionAffectedUsers = false;
@@ -566,7 +571,7 @@ export default class GrouperWorker extends Worker {
             },
             { projection: { _id: 1 } }
           );
-      }, 300);
+      }, REPETITION_CACHE_TTL);
 
       /**
        * If daily repetition exists, don't increment daily affected users
