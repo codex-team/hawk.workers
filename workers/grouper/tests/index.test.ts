@@ -7,6 +7,7 @@ import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
 import type { ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import TimeMs from '../../../lib/utils/time';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
 
@@ -115,7 +116,6 @@ describe('GrouperWorker', () => {
   let projectsCollection: Collection;
   let redisClient: RedisClientType;
   let worker: GrouperWorker;
-
   beforeAll(async () => {
     worker = new GrouperWorker();
 
@@ -740,6 +740,84 @@ describe('GrouperWorker', () => {
 
         mockAddTask.mockRestore();
       });
+    });
+  });
+
+  describe('Events-accepted metrics', () => {
+    test('writes minutely, hourly, and daily samples after handling an event', async () => {
+      const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(safeTsAddSpy).toHaveBeenCalledTimes(3);
+
+        const expectedLabels = {
+          type: 'error',
+          status: 'events-accepted',
+          project: projectIdMock,
+        };
+
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          1,
+          `ts:project-events-accepted:${projectIdMock}:minutely`,
+          1,
+          expectedLabels,
+          TimeMs.DAY
+        );
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          2,
+          `ts:project-events-accepted:${projectIdMock}:hourly`,
+          1,
+          expectedLabels,
+          TimeMs.WEEK
+        );
+        expect(safeTsAddSpy).toHaveBeenNthCalledWith(
+          3,
+          `ts:project-events-accepted:${projectIdMock}:daily`,
+          1,
+          expectedLabels,
+          90 * TimeMs.DAY
+        );
+      } finally {
+        safeTsAddSpy.mockRestore();
+      }
+    });
+
+    test('logs when a time-series write fails but continues processing', async () => {
+      const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');
+      const loggerErrorSpy = jest.spyOn((worker as any).logger, 'error').mockImplementation(() => undefined);
+      const failure = new Error('TS failure');
+
+      safeTsAddSpy
+        .mockImplementationOnce(() => Promise.resolve())
+        .mockImplementationOnce(async () => {
+          throw failure;
+        })
+        .mockImplementationOnce(() => Promise.resolve());
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(loggerErrorSpy).toHaveBeenCalledWith('Failed to add hourly TS for events-accepted', failure);
+        expect(await eventsCollection.find().count()).toBe(1);
+      } finally {
+        safeTsAddSpy.mockRestore();
+        loggerErrorSpy.mockRestore();
+      }
+    });
+
+    test('records metrics exactly once per handled event', async () => {
+      const recordMetricsSpy = jest.spyOn(worker as any, 'recordProjectMetrics');
+
+      try {
+        await worker.handle(generateTask());
+
+        expect(recordMetricsSpy).toHaveBeenCalledTimes(1);
+        expect(recordMetricsSpy).toHaveBeenCalledWith(projectIdMock, 'events-accepted');
+      } finally {
+        recordMetricsSpy.mockRestore();
+      }
     });
   });
 
