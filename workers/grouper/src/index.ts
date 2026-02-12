@@ -156,7 +156,7 @@ export default class GrouperWorker extends Worker {
     const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
     if (similarEvent) {
-      this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
+      this.logger.info(`[handle] similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
 
       /**
        * Override group hash with found event's group hash
@@ -386,7 +386,7 @@ export default class GrouperWorker extends Worker {
         try {
           const originalEvent = await this.findFirstEventByPattern(matchingPattern.pattern, projectId);
 
-          this.logger.info(`original event for pattern: ${JSON.stringify(originalEvent)}`);
+          this.logger.info(`[findSimilarEvent] found by pattern, groupHash=${originalEvent?.groupHash} title="${originalEvent?.payload?.title}"`);
 
           if (originalEvent) {
             return originalEvent;
