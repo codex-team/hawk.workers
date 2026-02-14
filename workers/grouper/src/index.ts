@@ -54,6 +54,11 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 const MAX_CODE_LINE_LENGTH = 140;
 
 /**
+ * Delay in milliseconds to wait for duplicate key event to be persisted to database
+ */
+const DUPLICATE_KEY_RETRY_DELAY_MS = 10;
+
+/**
  * Worker for handling Javascript events
  */
 export default class GrouperWorker extends Worker {
@@ -239,7 +244,7 @@ export default class GrouperWorker extends Worker {
            * Fetch the event that was just inserted by the competing worker
            * Add small delay to ensure the event is persisted
            */
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise(resolve => setTimeout(resolve, DUPLICATE_KEY_RETRY_DELAY_MS));
 
           existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
 
