@@ -9,6 +9,11 @@ import { WebhookPayload } from '../types/template';
 const DELIVERY_TIMEOUT_MS = 10000;
 
 /**
+ * HTTP status code threshold for error responses
+ */
+const HTTP_ERROR_STATUS = 400;
+
+/**
  * Deliverer sends JSON POST requests to external webhook endpoints
  */
 export default class WebhookDeliverer {
@@ -56,7 +61,7 @@ export default class WebhookDeliverer {
         (res) => {
           res.resume();
 
-          if (res.statusCode && res.statusCode >= 400) {
+          if (res.statusCode && res.statusCode >= HTTP_ERROR_STATUS) {
             this.logger.log('error', `Webhook delivery failed: ${res.statusCode} ${res.statusMessage} for ${endpoint}`);
           }
 
