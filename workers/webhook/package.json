@@ -1,0 +1,11 @@
+{
+  "name": "hawk-worker-webhook",
+  "version": "1.0.0",
+  "description": "Webhook sender worker — delivers event notifications as JSON POST requests",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "workerType": "sender/webhook",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
