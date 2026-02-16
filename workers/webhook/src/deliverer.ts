@@ -1,5 +1,12 @@
+import https from 'https';
+import http from 'http';
 import { createLogger, format, Logger, transports } from 'winston';
 import { WebhookPayload } from '../types/template';
+
+/**
+ * Timeout for webhook delivery in milliseconds
+ */
+const DELIVERY_TIMEOUT_MS = 10000;
 
 /**
  * Deliverer sends JSON POST requests to external webhook endpoints
@@ -31,23 +38,45 @@ export default class WebhookDeliverer {
    */
   public async deliver(endpoint: string, payload: WebhookPayload): Promise<void> {
     const body = JSON.stringify(payload);
+    const url = new URL(endpoint);
+    const transport = url.protocol === 'https:' ? https : http;
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Hawk-Webhook/1.0',
+    return new Promise<void>((resolve) => {
+      const req = transport.request(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Hawk-Webhook/1.0',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout: DELIVERY_TIMEOUT_MS,
         },
-        body,
-        signal: AbortSignal.timeout(10_000),
+        (res) => {
+          res.resume();
+
+          if (res.statusCode && res.statusCode >= 400) {
+            this.logger.log('error', `Webhook delivery failed: ${res.statusCode} ${res.statusMessage} for ${endpoint}`);
+          }
+
+          resolve();
+        }
+      );
+
+      req.on('error', (e) => {
+        this.logger.log('error', `Can't deliver webhook to ${endpoint}: ${e.message}`);
+        resolve();
       });
 
-      if (!response.ok) {
-        this.logger.log('error', `Webhook delivery failed: ${response.status} ${response.statusText} for ${endpoint}`);
-      }
-    } catch (e) {
-      this.logger.log('error', `Can't deliver webhook to ${endpoint}: `, e);
-    }
+      req.on('timeout', () => {
+        this.logger.log('error', `Webhook delivery timed out for ${endpoint}`);
+        req.destroy();
+        resolve();
+      });
+
+      req.write(body);
+      req.end();
+    });
   }
 }
