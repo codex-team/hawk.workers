@@ -1,7 +1,1 @@
-import EventTpl from './event';
-import SeveralEventsTpl from './several-events';
-
-export default {
-  EventTpl,
-  SeveralEventsTpl,
-};
+export { default as toDelivery } from './generic';

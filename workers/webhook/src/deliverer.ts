@@ -1,6 +1,7 @@
 import https from 'https';
 import http from 'http';
 import { createLogger, format, Logger, transports } from 'winston';
+import { WebhookDelivery } from '../types/template';
 
 /**
  * Timeout for webhook delivery in milliseconds
@@ -35,13 +36,14 @@ export default class WebhookDeliverer {
   });
 
   /**
-   * Sends JSON payload to the webhook endpoint via HTTP POST
+   * Sends webhook delivery to the endpoint via HTTP POST.
+   * Adds X-Hawk-Notification header with the notification type (similar to GitHub's X-GitHub-Event).
    *
    * @param endpoint - URL to POST to
-   * @param payload - JSON body to send
+   * @param delivery - webhook delivery { type, payload }
    */
-  public async deliver(endpoint: string, payload: Record<string, unknown>): Promise<void> {
-    const body = JSON.stringify(payload);
+  public async deliver(endpoint: string, delivery: WebhookDelivery): Promise<void> {
+    const body = JSON.stringify(delivery);
     const url = new URL(endpoint);
     const transport = url.protocol === 'https:' ? https : http;
 
@@ -53,6 +55,7 @@ export default class WebhookDeliverer {
           headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'Hawk-Webhook/1.0',
+            'X-Hawk-Notification': delivery.type,
             'Content-Length': Buffer.byteLength(body),
           },
           timeout: DELIVERY_TIMEOUT_MS,

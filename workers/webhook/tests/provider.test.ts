@@ -1,6 +1,6 @@
-import templates from '../src/templates';
 import EventNotifyMock from './__mocks__/event-notify';
 import SeveralEventsNotifyMock from './__mocks__/several-events-notify';
+import AssigneeNotifyMock from './__mocks__/assignee-notify';
 import WebhookProvider from '../src/provider';
 
 /**
@@ -18,9 +18,6 @@ const deliver = jest.fn();
  */
 jest.mock('./../src/deliverer.ts', () => {
   return jest.fn().mockImplementation(() => {
-    /**
-     * Now we can track calls to 'deliver'
-     */
     return {
       deliver: deliver,
     };
@@ -35,48 +32,92 @@ afterEach(() => {
 });
 
 describe('WebhookProvider', () => {
-  /**
-   * Check that the 'send' method works without errors
-   */
-  it('The "send" method should render and deliver message', async () => {
+  it('should deliver a message with { type, payload } structure', async () => {
     const provider = new WebhookProvider();
 
     await provider.send(webhookEndpointSample, EventNotifyMock);
 
     expect(deliver).toHaveBeenCalledTimes(1);
-    expect(deliver).toHaveBeenCalledWith(webhookEndpointSample, expect.anything());
+    expect(deliver).toHaveBeenCalledWith(webhookEndpointSample, expect.objectContaining({
+      type: 'event',
+      payload: expect.any(Object),
+    }));
   });
 
-  /**
-   * Logic for select the template depended on events count
-   */
-  describe('Select correct template', () => {
-    /**
-     * If there is a single event in payload, use the 'event' template
-     */
-    it('Select the event template if there is a single event in notify payload', async () => {
-      const provider = new WebhookProvider();
-      const EventTpl = jest.spyOn(templates, 'EventTpl');
-      const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
+  it('should preserve notification type in delivery', async () => {
+    const provider = new WebhookProvider();
 
-      await provider.send(webhookEndpointSample, EventNotifyMock);
+    await provider.send(webhookEndpointSample, EventNotifyMock);
+    expect(deliver.mock.calls[0][1].type).toBe('event');
 
-      expect(EventTpl).toHaveBeenCalledTimes(1);
-      expect(SeveralEventsTpl).toHaveBeenCalledTimes(0);
-    });
+    deliver.mockClear();
 
-    /**
-     * If there are several events in payload, use the 'several-events' template
-     */
-    it('Select the several-events template if there are several events in notify payload', async () => {
-      const provider = new WebhookProvider();
-      const EventTpl = jest.spyOn(templates, 'EventTpl');
-      const SeveralEventsTpl = jest.spyOn(templates, 'SeveralEventsTpl');
+    await provider.send(webhookEndpointSample, SeveralEventsNotifyMock);
+    expect(deliver.mock.calls[0][1].type).toBe('several-events');
 
-      await provider.send(webhookEndpointSample, SeveralEventsNotifyMock);
+    deliver.mockClear();
 
-      expect(EventTpl).toHaveBeenCalledTimes(0);
-      expect(SeveralEventsTpl).toHaveBeenCalledTimes(1);
-    });
+    await provider.send(webhookEndpointSample, AssigneeNotifyMock);
+    expect(deliver.mock.calls[0][1].type).toBe('assignee');
+  });
+
+  it('should strip internal fields (host, hostOfStatic) from payload', async () => {
+    const provider = new WebhookProvider();
+
+    await provider.send(webhookEndpointSample, {
+      type: 'payment-failed',
+      payload: {
+        host: 'https://garage.hawk.so',
+        hostOfStatic: 'https://api.hawk.so',
+        workspace: { name: 'Workspace' },
+        reason: 'Insufficient funds',
+      },
+    } as any);
+
+    const delivery = deliver.mock.calls[0][1];
+
+    expect(delivery.payload).not.toHaveProperty('host');
+    expect(delivery.payload).not.toHaveProperty('hostOfStatic');
+    expect(delivery.payload).toHaveProperty('reason', 'Insufficient funds');
+  });
+
+  it('should handle all known notification types without throwing', async () => {
+    const provider = new WebhookProvider();
+
+    const types = [
+      'event',
+      'several-events',
+      'assignee',
+      'block-workspace',
+      'blocked-workspace-reminder',
+      'payment-failed',
+      'payment-success',
+      'days-limit-almost-reached',
+      'events-limit-almost-reached',
+      'sign-up',
+      'password-reset',
+      'workspace-invite',
+    ];
+
+    for (const type of types) {
+      await expect(
+        provider.send(webhookEndpointSample, {
+          type,
+          payload: { host: 'h', hostOfStatic: 's' },
+        } as any)
+      ).resolves.toBeUndefined();
+    }
+
+    expect(deliver).toHaveBeenCalledTimes(types.length);
+  });
+
+  it('should only have { type, payload } keys at root level', async () => {
+    const provider = new WebhookProvider();
+
+    await provider.send(webhookEndpointSample, EventNotifyMock);
+
+    const delivery = deliver.mock.calls[0][1];
+
+    expect(Object.keys(delivery).sort()).toEqual(['payload', 'type']);
   });
 });
