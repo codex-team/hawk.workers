@@ -34,6 +34,7 @@
         "test:notifier": "jest workers/notifier",
         "test:js": "jest workers/javascript",
         "test:task-manager": "jest workers/task-manager",
+        "test:webhook": "jest workers/webhook",
         "test:clear": "jest --clearCache",
         "run-default": "yarn worker hawk-worker-default",
         "run-sentry": "yarn worker hawk-worker-sentry",

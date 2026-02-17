@@ -1,7 +1,7 @@
 import NotificationsProvider from 'hawk-worker-sender/src/provider';
 import { Notification, EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
 import templates from './templates';
-import { WebhookPayload } from '../types/template';
+import { WebhookTemplate } from '../types/template';
 import WebhookDeliverer from './deliverer';
 
 /**
@@ -26,7 +26,7 @@ export default class WebhookProvider extends NotificationsProvider {
    * @param notification - notification with payload and type
    */
   public async send(to: string, notification: Notification): Promise<void> {
-    let template: (tplData: EventsTemplateVariables) => WebhookPayload;
+    let template: WebhookTemplate;
 
     switch (notification.type) {
       case 'event': template = templates.EventTpl; break;

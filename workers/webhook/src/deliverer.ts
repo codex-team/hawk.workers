@@ -1,7 +1,6 @@
 import https from 'https';
 import http from 'http';
 import { createLogger, format, Logger, transports } from 'winston';
-import { WebhookPayload } from '../types/template';
 
 /**
  * Timeout for webhook delivery in milliseconds
@@ -41,7 +40,7 @@ export default class WebhookDeliverer {
    * @param endpoint - URL to POST to
    * @param payload - JSON body to send
    */
-  public async deliver(endpoint: string, payload: WebhookPayload): Promise<void> {
+  public async deliver(endpoint: string, payload: Record<string, unknown>): Promise<void> {
     const body = JSON.stringify(payload);
     const url = new URL(endpoint);
     const transport = url.protocol === 'https:' ? https : http;

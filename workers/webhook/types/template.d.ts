@@ -1,28 +1,14 @@
+import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+
 /**
- * Shape of the JSON body sent to webhook endpoints
+ * Webhook templates should implement this interface.
+ * Returns a JSON-serializable representation of EventsTemplateVariables.
  */
-export interface WebhookPayload {
-  /** Notification type */
-  type: 'event' | 'several-events';
-
-  /** Project info */
-  project: {
-    id: string;
-    name: string;
-    url?: string;
-  };
-
-  /** List of events in this notification */
-  events: Array<{
-    id: string;
-    title: string;
-    newCount: number;
-    totalCount: number;
-    url: string;
-    location: string | null;
-    daysRepeated: number;
-  }>;
-
-  /** Time period in seconds (for several-events) */
-  period?: number;
+export interface WebhookTemplate {
+  /**
+   * Rendering method that accepts tpl args and returns a JSON-serializable object
+   *
+   * @param tplData - template variables
+   */
+  (tplData: EventsTemplateVariables): Record<string, unknown>;
 }

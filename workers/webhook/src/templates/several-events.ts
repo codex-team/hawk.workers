@@ -1,16 +1,15 @@
 import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
-import { WebhookPayload } from '../../types/template';
 
 /**
- * Builds webhook JSON payload for a several-events notification
+ * Builds webhook JSON payload for a several-events notification.
+ * Mirrors the same data structure other workers receive, serialized as JSON.
  *
  * @param tplData - event template data
  */
-export default function render(tplData: EventsTemplateVariables): WebhookPayload {
+export default function render(tplData: EventsTemplateVariables): Record<string, unknown> {
   const projectUrl = tplData.host + '/project/' + tplData.project._id;
 
   return {
-    type: 'several-events',
     project: {
       id: tplData.project._id.toString(),
       name: tplData.project.name,
@@ -19,20 +18,14 @@ export default function render(tplData: EventsTemplateVariables): WebhookPayload
     events: tplData.events.map(({ event, newCount, daysRepeated }) => {
       const eventURL = tplData.host + '/project/' + tplData.project._id + '/event/' + event._id + '/';
 
-      let location: string | null = null;
-
-      if (event.payload.backtrace && event.payload.backtrace.length > 0 && event.payload.backtrace[0].file) {
-        location = event.payload.backtrace[0].file;
-      }
-
       return {
-        id: event._id.toString(),
-        title: event.payload.title,
-        newCount,
+        id: event._id?.toString() ?? null,
+        groupHash: event.groupHash,
         totalCount: event.totalCount,
-        url: eventURL,
-        location,
+        newCount,
         daysRepeated,
+        url: eventURL,
+        payload: event.payload,
       };
     }),
     period: tplData.period,
