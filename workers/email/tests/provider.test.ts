@@ -10,7 +10,7 @@ nodemailerMock.createTransport = jest.fn(() => ({
 
 jest.mock('nodemailer', () => nodemailerMock);
 
-import { DecodedGroupedEvent, ProjectDBScheme } from '@hawk.so/types';
+import { DecodedGroupedEvent, ProjectDBScheme, UserDBScheme } from '@hawk.so/types';
 import '../src/env';
 import EmailProvider from '../src/provider';
 import Templates from '../src/templates/names';
@@ -187,6 +187,11 @@ describe('EmailProvider', () => {
           password: '$argon2i$v=19$m=4096,t=3,p=1$QOo3u8uEor0t+nqCLpEW3g$aTCDEaHht9ro9VZDD1yZGpaTi+g1OWsfHbYd5TQBRPs',
           name: 'Hahahawk',
         },
+        assignee: {
+          _id: new ObjectId('5ec3ffe769c0030022f88f25'),
+          email: 'assignee@email.ru',
+          name: 'Assignee User',
+        } as UserDBScheme,
         project: {
           _id: new ObjectId('5d206f7f9aaf7c0071d64596'),
           token: 'project-token',

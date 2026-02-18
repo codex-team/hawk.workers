@@ -18,7 +18,7 @@ const deliver = jest.fn();
 /**
  * Webhook Deliverer mock
  */
-jest.mock('./../src/deliverer.ts', () => {
+jest.mock('../src/deliverer', () => {
   return jest.fn().mockImplementation(() => {
     return {
       deliver: deliver,

@@ -84,7 +84,15 @@ export default class WebhookDeliverer {
 
           const status = res.statusCode || 0;
 
-          if (status >= HttpStatusCode.MultipleChoices && status <= HttpStatusCode.PermanentRedirect) {
+          const isRedirect = (
+            status === HttpStatusCode.MovedPermanently ||
+            status === HttpStatusCode.Found ||
+            status === HttpStatusCode.SeeOther ||
+            status === HttpStatusCode.TemporaryRedirect ||
+            status === HttpStatusCode.PermanentRedirect
+          ) && res.headers.location;
+
+          if (isRedirect) {
             this.logger.log('error', `Webhook blocked — redirect ${status} to ${res.headers.location} from ${endpoint}`);
             resolve();
 
