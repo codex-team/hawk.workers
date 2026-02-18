@@ -1,93 +1,104 @@
-import { Notification } from 'hawk-worker-sender/types/template-variables';
+import { Notification, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
+import {
+  ProjectDBScheme,
+  WorkspaceDBScheme,
+  UserDBScheme,
+  DecodedGroupedEvent,
+  PlanDBScheme,
+} from '@hawk.so/types';
 import { WebhookDelivery } from '../../types/template';
 
 /**
- * Converts ObjectId (or any BSON value) to string, passes primitives through
+ * Projects safe public fields from a project document
  *
- * @param value - value to stringify
+ * @param p - project DB record
  */
-function str(value: unknown): string {
-  return String(value);
+function projectDTO(p: ProjectDBScheme): Record<string, unknown> {
+  return {
+    id: String(p._id),
+    name: p.name,
+    workspaceId: String(p.workspaceId),
+    image: p.image ?? null,
+  };
 }
 
 /**
- * Safe property accessor — returns undefined for missing nested paths
+ * Projects safe public fields from a workspace document
  *
- * @param obj - source object
- * @param key - property name
+ * @param w - workspace DB record
  */
-function get(obj: Record<string, unknown>, key: string): unknown {
-  return obj?.[key];
-}
-
-/* ---------- Shared DTO projectors ---------- */
-
-function projectDTO(p: Record<string, unknown>): Record<string, unknown> {
+function workspaceDTO(w: WorkspaceDBScheme): Record<string, unknown> {
   return {
-    id: str(get(p, '_id')),
-    name: get(p, 'name') ?? null,
-    workspaceId: get(p, 'workspaceId') ? str(get(p, 'workspaceId')) : null,
-    image: get(p, 'image') ?? null,
+    id: String(w._id),
+    name: w.name,
+    image: w.image ?? null,
   };
 }
 
-function workspaceDTO(w: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Projects safe public fields from a user document (no password, no bank cards)
+ *
+ * @param u - user DB record
+ */
+function userDTO(u: UserDBScheme): Record<string, unknown> {
   return {
-    id: str(get(w, '_id')),
-    name: get(w, 'name') ?? null,
-    image: get(w, 'image') ?? null,
+    id: String(u._id),
+    name: u.name ?? null,
+    email: u.email ?? null,
+    image: u.image ?? null,
   };
 }
 
-function userDTO(u: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Projects safe public fields from a grouped event (no sourceCode, no breadcrumbs, no addons)
+ *
+ * @param e - decoded grouped event
+ */
+function eventDTO(e: DecodedGroupedEvent): Record<string, unknown> {
   return {
-    id: str(get(u, '_id')),
-    name: get(u, 'name') ?? null,
-    email: get(u, 'email') ?? null,
-    image: get(u, 'image') ?? null,
-  };
-}
-
-function eventDTO(e: Record<string, unknown>): Record<string, unknown> {
-  const payload = (e.payload ?? {}) as Record<string, unknown>;
-  const backtrace = (payload.backtrace ?? []) as Array<Record<string, unknown>>;
-
-  return {
-    id: e._id ? str(e._id) : null,
-    groupHash: e.groupHash ?? null,
-    totalCount: e.totalCount ?? null,
-    catcherType: e.catcherType ?? null,
-    timestamp: e.timestamp ?? null,
-    usersAffected: e.usersAffected ?? null,
-    title: payload.title ?? null,
-    type: payload.type ?? null,
-    backtrace: backtrace.map((f) => ({
-      file: f.file ?? null,
-      line: f.line ?? null,
+    id: e._id ? String(e._id) : null,
+    groupHash: e.groupHash,
+    totalCount: e.totalCount,
+    catcherType: e.catcherType,
+    timestamp: e.timestamp,
+    usersAffected: e.usersAffected,
+    title: e.payload.title,
+    type: e.payload.type ?? null,
+    backtrace: (e.payload.backtrace ?? []).map((f) => ({
+      file: f.file,
+      line: f.line,
       column: f.column ?? null,
       function: f.function ?? null,
     })),
   };
 }
 
-function templateEventDataDTO(item: Record<string, unknown>): Record<string, unknown> {
-  const event = (item.event ?? {}) as Record<string, unknown>;
-
+/**
+ * Projects event list item with its metadata (newCount, daysRepeated, etc.)
+ *
+ * @param item - template event data from sender worker
+ */
+function templateEventDataDTO(item: TemplateEventData): Record<string, unknown> {
   return {
-    event: eventDTO(event),
-    newCount: item.newCount ?? null,
-    daysRepeated: item.daysRepeated ?? null,
+    event: eventDTO(item.event),
+    newCount: item.newCount,
+    daysRepeated: item.daysRepeated,
     usersAffected: item.usersAffected ?? null,
-    repetitionId: item.repetitionId ? str(item.repetitionId) : null,
+    repetitionId: item.repetitionId ? String(item.repetitionId) : null,
   };
 }
 
-function planDTO(p: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Projects safe public fields from a plan document
+ *
+ * @param p - plan DB record
+ */
+function planDTO(p: PlanDBScheme): Record<string, unknown> {
   return {
-    id: str(get(p, '_id')),
-    name: get(p, 'name') ?? null,
-    eventsLimit: get(p, 'eventsLimit') ?? null,
-    monthlyCharge: get(p, 'monthlyCharge') ?? null,
+    id: String(p._id),
+    name: p.name,
+    eventsLimit: p.eventsLimit,
+    monthlyCharge: p.monthlyCharge,
   };
 }
 
@@ -95,52 +106,52 @@ type PayloadProjector = (payload: Record<string, unknown>) => Record<string, unk
 
 const projectors: Record<string, PayloadProjector> = {
   'event': (p) => ({
-    project: projectDTO((p.project ?? {}) as Record<string, unknown>),
-    events: ((p.events ?? []) as Array<Record<string, unknown>>).map(templateEventDataDTO),
+    project: p.project ? projectDTO(p.project as ProjectDBScheme) : null,
+    events: ((p.events ?? []) as TemplateEventData[]).map(templateEventDataDTO),
     period: p.period ?? null,
   }),
 
   'several-events': (p) => ({
-    project: projectDTO((p.project ?? {}) as Record<string, unknown>),
-    events: ((p.events ?? []) as Array<Record<string, unknown>>).map(templateEventDataDTO),
+    project: p.project ? projectDTO(p.project as ProjectDBScheme) : null,
+    events: ((p.events ?? []) as TemplateEventData[]).map(templateEventDataDTO),
     period: p.period ?? null,
   }),
 
   'assignee': (p) => ({
-    project: projectDTO((p.project ?? {}) as Record<string, unknown>),
-    event: eventDTO((p.event ?? {}) as Record<string, unknown>),
-    whoAssigned: userDTO((p.whoAssigned ?? {}) as Record<string, unknown>),
+    project: p.project ? projectDTO(p.project as ProjectDBScheme) : null,
+    event: p.event ? eventDTO(p.event as DecodedGroupedEvent) : null,
+    whoAssigned: p.whoAssigned ? userDTO(p.whoAssigned as UserDBScheme) : null,
     daysRepeated: p.daysRepeated ?? null,
   }),
 
   'block-workspace': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
   }),
 
   'blocked-workspace-reminder': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
     daysAfterBlock: p.daysAfterBlock ?? null,
   }),
 
   'days-limit-almost-reached': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
     daysLeft: p.daysLeft ?? null,
   }),
 
   'events-limit-almost-reached': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
     eventsCount: p.eventsCount ?? null,
     eventsLimit: p.eventsLimit ?? null,
   }),
 
   'payment-failed': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
     reason: p.reason ?? null,
   }),
 
   'payment-success': (p) => ({
-    workspace: workspaceDTO((p.workspace ?? {}) as Record<string, unknown>),
-    plan: planDTO((p.plan ?? {}) as Record<string, unknown>),
+    workspace: p.workspace ? workspaceDTO(p.workspace as WorkspaceDBScheme) : null,
+    plan: p.plan ? planDTO(p.plan as PlanDBScheme) : null,
   }),
 
   'sign-up': (p) => ({
@@ -163,9 +174,9 @@ const projectors: Record<string, PayloadProjector> = {
  * @param notification - notification with type and payload
  */
 export default function render(notification: Notification): WebhookDelivery {
-  const project = projectors[notification.type];
-  const payload = project
-    ? project(notification.payload as unknown as Record<string, unknown>)
+  const projector = projectors[notification.type];
+  const payload = projector
+    ? projector(notification.payload as unknown as Record<string, unknown>)
     : {};
 
   return {
