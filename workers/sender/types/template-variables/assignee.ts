@@ -22,6 +22,11 @@ export interface AssigneeTemplateVariables extends CommonTemplateVariables {
   whoAssigned: UserDBScheme;
 
   /**
+   * User who was assigned to resolve the event
+   */
+  assignee: UserDBScheme;
+
+  /**
    * Number of event repetitions
    */
   daysRepeated: number;
