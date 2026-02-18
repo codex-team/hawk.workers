@@ -15,33 +15,32 @@ const DELIVERY_TIMEOUT_MS = 10000;
 const HTTP_ERROR_STATUS = 400;
 
 /**
+ * Regex patterns matching private/reserved IP ranges.
+ * Covers: 0.x, 10.x, 127.x, 169.254.x, 172.16-31.x, 192.168.x, 100.64-127.x (IPv4)
+ * and ::1, ::, fe80::, fc/fd ULA (IPv6).
+ */
+const PRIVATE_IP_PATTERNS: RegExp[] = [
+  /^0\./,
+  /^10\./,
+  /^127\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+  /^::1$/,
+  /^::$/,
+  /^fe80/i,
+  /^f[cd]/i,
+];
+
+/**
  * Checks whether an IPv4 or IPv6 address belongs to a private/reserved range.
  * Blocks loopback, link-local, RFC1918, metadata IPs and IPv6 equivalents.
+ *
+ * @param ip - IP address string (v4 or v6)
  */
-function isPrivateIP(ip: string): boolean {
-  const parts = ip.split('.').map(Number);
-
-  if (parts.length === 4 && parts.every((p) => p >= 0 && p <= 255)) {
-    return (
-      parts[0] === 127 ||
-      parts[0] === 10 ||
-      parts[0] === 0 ||
-      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
-      (parts[0] === 192 && parts[1] === 168) ||
-      (parts[0] === 169 && parts[1] === 254) ||
-      (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
-    );
-  }
-
-  const lower = ip.toLowerCase();
-
-  return (
-    lower === '::1' ||
-    lower.startsWith('fe80') ||
-    lower.startsWith('fc') ||
-    lower.startsWith('fd') ||
-    lower === '::')
-  ;
+export function isPrivateIP(ip: string): boolean {
+  return PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(ip));
 }
 
 /**

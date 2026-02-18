@@ -2,6 +2,7 @@ import EventNotifyMock from './__mocks__/event-notify';
 import SeveralEventsNotifyMock from './__mocks__/several-events-notify';
 import AssigneeNotifyMock from './__mocks__/assignee-notify';
 import WebhookProvider from '../src/provider';
+import { Notification } from 'hawk-worker-sender/types/template-variables';
 
 /**
  * The sample of a webhook endpoint
@@ -17,11 +18,19 @@ const deliver = jest.fn();
  * Webhook Deliverer mock
  */
 jest.mock('./../src/deliverer.ts', () => {
-  return jest.fn().mockImplementation(() => {
+  const original = jest.requireActual('./../src/deliverer.ts');
+
+  const MockDeliverer = jest.fn().mockImplementation(() => {
     return {
       deliver: deliver,
     };
   });
+
+  return {
+    __esModule: true,
+    default: MockDeliverer,
+    isPrivateIP: original.isPrivateIP,
+  };
 });
 
 /**
@@ -30,6 +39,24 @@ jest.mock('./../src/deliverer.ts', () => {
 afterEach(() => {
   jest.clearAllMocks();
 });
+
+/**
+ * All notification types supported by the system
+ */
+const ALL_NOTIFICATION_TYPES = [
+  'event',
+  'several-events',
+  'assignee',
+  'block-workspace',
+  'blocked-workspace-reminder',
+  'payment-failed',
+  'payment-success',
+  'days-limit-almost-reached',
+  'events-limit-almost-reached',
+  'sign-up',
+  'password-reset',
+  'workspace-invite',
+] as const;
 
 describe('WebhookProvider', () => {
   it('should deliver a message with { type, payload } structure', async () => {
@@ -44,21 +71,44 @@ describe('WebhookProvider', () => {
     }));
   });
 
-  it('should preserve notification type in delivery', async () => {
+  it('should only have { type, payload } keys at root level', async () => {
     const provider = new WebhookProvider();
 
     await provider.send(webhookEndpointSample, EventNotifyMock);
-    expect(deliver.mock.calls[0][1].type).toBe('event');
 
-    deliver.mockClear();
+    const delivery = deliver.mock.calls[0][1];
 
-    await provider.send(webhookEndpointSample, SeveralEventsNotifyMock);
-    expect(deliver.mock.calls[0][1].type).toBe('several-events');
+    expect(Object.keys(delivery).sort()).toEqual(['payload', 'type']);
+  });
 
-    deliver.mockClear();
+  it.each([
+    ['event', EventNotifyMock],
+    ['several-events', SeveralEventsNotifyMock],
+    ['assignee', AssigneeNotifyMock],
+  ] as const)('should preserve type "%s" from mock notification', async (expectedType, mock) => {
+    const provider = new WebhookProvider();
 
-    await provider.send(webhookEndpointSample, AssigneeNotifyMock);
-    expect(deliver.mock.calls[0][1].type).toBe('assignee');
+    await provider.send(webhookEndpointSample, mock);
+
+    expect(deliver.mock.calls[0][1].type).toBe(expectedType);
+  });
+
+  it.each(
+    ALL_NOTIFICATION_TYPES.map((type) => [type])
+  )('should handle "%s" notification without throwing', async (type) => {
+    const provider = new WebhookProvider();
+
+    await expect(
+      provider.send(webhookEndpointSample, {
+        type,
+        payload: { projectName: 'Test' },
+      } as unknown as Notification)
+    ).resolves.toBeUndefined();
+
+    const delivery = deliver.mock.calls[0][1];
+
+    expect(delivery.type).toBe(type);
+    expect(delivery.payload).toBeDefined();
   });
 
   it('should strip all internal/sensitive fields from payload', async () => {
@@ -84,59 +134,58 @@ describe('WebhookProvider', () => {
           },
         }],
       },
-    } as any);
+    } as unknown as Notification);
 
     const delivery = deliver.mock.calls[0][1];
+    const payload = delivery.payload as Record<string, unknown>;
+    const project = payload.project as Record<string, unknown>;
+    const events = payload.events as Array<Record<string, Record<string, unknown>>>;
 
-    expect(delivery.payload).not.toHaveProperty('host');
-    expect(delivery.payload).not.toHaveProperty('hostOfStatic');
-    expect(delivery.payload).not.toHaveProperty('notificationRuleId');
-    expect(delivery.payload.project).not.toHaveProperty('token');
-    expect(delivery.payload.project).not.toHaveProperty('integrationId');
-    expect(delivery.payload.project).not.toHaveProperty('uidAdded');
-    expect(delivery.payload.project).not.toHaveProperty('notifications');
-    expect(delivery.payload.project).toHaveProperty('name', 'My Project');
-    expect((delivery.payload.events as any[])[0].event).not.toHaveProperty('visitedBy');
-    expect((delivery.payload.events as any[])[0].event).toHaveProperty('groupHash', 'abc');
+    expect(payload).not.toHaveProperty('host');
+    expect(payload).not.toHaveProperty('hostOfStatic');
+    expect(payload).not.toHaveProperty('notificationRuleId');
+    expect(project).not.toHaveProperty('token');
+    expect(project).not.toHaveProperty('integrationId');
+    expect(project).not.toHaveProperty('uidAdded');
+    expect(project).not.toHaveProperty('notifications');
+    expect(project).toHaveProperty('name', 'My Project');
+    expect(events[0].event).not.toHaveProperty('visitedBy');
+    expect(events[0].event).toHaveProperty('groupHash', 'abc');
   });
 
-  it('should handle all known notification types without throwing', async () => {
+  it('should strip internal fields from all notification types', async () => {
     const provider = new WebhookProvider();
+    const sensitivePayload = {
+      host: 'h',
+      hostOfStatic: 's',
+      token: 'secret',
+      notifications: [],
+      integrationId: 'id',
+      notificationRuleId: 'rid',
+      visitedBy: ['u1'],
+      uidAdded: 'uid',
+      safeField: 'keep-me',
+    };
 
-    const types = [
-      'event',
-      'several-events',
-      'assignee',
-      'block-workspace',
-      'blocked-workspace-reminder',
-      'payment-failed',
-      'payment-success',
-      'days-limit-almost-reached',
-      'events-limit-almost-reached',
-      'sign-up',
-      'password-reset',
-      'workspace-invite',
-    ];
+    for (const type of ALL_NOTIFICATION_TYPES) {
+      deliver.mockClear();
 
-    for (const type of types) {
-      await expect(
-        provider.send(webhookEndpointSample, {
-          type,
-          payload: { host: 'h', hostOfStatic: 's' },
-        } as any)
-      ).resolves.toBeUndefined();
+      await provider.send(webhookEndpointSample, {
+        type,
+        payload: { ...sensitivePayload },
+      } as unknown as Notification);
+
+      const payload = deliver.mock.calls[0][1].payload as Record<string, unknown>;
+
+      expect(payload).not.toHaveProperty('host');
+      expect(payload).not.toHaveProperty('hostOfStatic');
+      expect(payload).not.toHaveProperty('token');
+      expect(payload).not.toHaveProperty('notifications');
+      expect(payload).not.toHaveProperty('integrationId');
+      expect(payload).not.toHaveProperty('notificationRuleId');
+      expect(payload).not.toHaveProperty('visitedBy');
+      expect(payload).not.toHaveProperty('uidAdded');
+      expect(payload).toHaveProperty('safeField', 'keep-me');
     }
-
-    expect(deliver).toHaveBeenCalledTimes(types.length);
-  });
-
-  it('should only have { type, payload } keys at root level', async () => {
-    const provider = new WebhookProvider();
-
-    await provider.send(webhookEndpointSample, EventNotifyMock);
-
-    const delivery = deliver.mock.calls[0][1];
-
-    expect(Object.keys(delivery).sort()).toEqual(['payload', 'type']);
   });
 });
