@@ -54,6 +54,26 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
  */
 const MAX_CODE_LINE_LENGTH = 140;
 
+const MB_IN_BYTES = 1_048_576;
+const HUNDRED = 100;
+const DEFAULT_MEMORY_LOG_EVERY_TASKS = 50;
+const DEFAULT_MEMORY_GROWTH_WINDOW_TASKS = 200;
+const DEFAULT_MEMORY_GROWTH_WARN_MB = 64;
+const DEFAULT_MEMORY_HANDLE_GROWTH_WARN_MB = 16;
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const METRICS_SIZE_BUCKETS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000];
+
+function asPositiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const MEMORY_LOG_EVERY_TASKS = asPositiveNumber(process.env.GROUPER_MEMORY_LOG_EVERY_TASKS, DEFAULT_MEMORY_LOG_EVERY_TASKS);
+const MEMORY_GROWTH_WINDOW_TASKS = asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WINDOW_TASKS, DEFAULT_MEMORY_GROWTH_WINDOW_TASKS);
+const MEMORY_GROWTH_WARN_MB = asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WARN_MB, DEFAULT_MEMORY_GROWTH_WARN_MB);
+const MEMORY_HANDLE_GROWTH_WARN_MB = asPositiveNumber(process.env.GROUPER_MEMORY_HANDLE_GROWTH_WARN_MB, DEFAULT_MEMORY_HANDLE_GROWTH_WARN_MB);
+
 /**
  * Worker for handling Javascript events
  */
@@ -115,14 +135,14 @@ export default class GrouperWorker extends Worker {
   private metricsDeltaSize = new client.Histogram({
     name: 'hawk_grouper_delta_size_bytes',
     help: 'Size of computed repetition delta in bytes',
-    buckets: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000],
+    buckets: METRICS_SIZE_BUCKETS,
     registers: [register],
   });
 
   private metricsPayloadSize = new client.Histogram({
     name: 'hawk_grouper_payload_size_bytes',
     help: 'Size of incoming event payload in bytes',
-    buckets: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000],
+    buckets: METRICS_SIZE_BUCKETS,
     registers: [register],
   });
 
@@ -136,6 +156,17 @@ export default class GrouperWorker extends Worker {
    * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
    */
   private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Number of handled tasks in current worker process.
+   */
+  private handledTasksCount = 0;
+
+  /**
+   * Baseline for memory growth checks.
+   */
+  private memoryCheckpointTask = 0;
+  private memoryCheckpointHeapUsed = 0;
 
   /**
    * Start consuming messages
@@ -158,6 +189,11 @@ export default class GrouperWorker extends Worker {
     this.cacheCleanupInterval = setInterval(() => {
       this.clearCache();
     }, CACHE_CLEANUP_INTERVAL_MINUTES * TimeMs.MINUTE);
+    const startupMemory = process.memoryUsage();
+
+    this.memoryCheckpointTask = 0;
+    this.memoryCheckpointHeapUsed = startupMemory.heapUsed;
+    this.logMemoryCheckpoint('startup', startupMemory, this.handledTasksCount);
 
     await super.start();
   }
@@ -174,6 +210,7 @@ export default class GrouperWorker extends Worker {
       this.cacheCleanupInterval = null;
     }
 
+    this.logMemoryCheckpoint('shutdown', process.memoryUsage(), this.handledTasksCount);
     await super.finish();
     this.prepareCache();
     await this.eventsDb.close();
@@ -195,6 +232,7 @@ export default class GrouperWorker extends Worker {
     } catch (error) {
       endTimer();
       this.metricsErrorsTotal.inc();
+      this.logMemoryCheckpoint('handle-error', process.memoryUsage(), this.handledTasksCount, `title="${task.payload?.title}"`);
       throw error;
     }
   }
@@ -206,8 +244,14 @@ export default class GrouperWorker extends Worker {
    */
   private async handleInternal(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     const taskPayloadSize = Buffer.byteLength(JSON.stringify(task.payload));
+    const handledTasksCount = ++this.handledTasksCount;
+    const memoryBeforeHandle = process.memoryUsage();
 
     this.metricsPayloadSize.observe(taskPayloadSize);
+
+    if (handledTasksCount === 1 || handledTasksCount % MEMORY_LOG_EVERY_TASKS === 0) {
+      this.logMemoryCheckpoint('before-handle', memoryBeforeHandle, handledTasksCount, `payloadSize=${taskPayloadSize}b`);
+    }
 
     this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
 
@@ -382,9 +426,21 @@ export default class GrouperWorker extends Worker {
       incrementDailyAffectedUsers
     );
 
-    const mem = process.memoryUsage();
+    const memoryAfterHandle = process.memoryUsage();
+    const heapDeltaBytes = memoryAfterHandle.heapUsed - memoryBeforeHandle.heapUsed;
+    const heapDeltaMb = this.bytesToMegabytes(heapDeltaBytes);
 
-    this.logger.info(`[handle] done, heapUsed=${Math.round(mem.heapUsed / 1024 / 1024)}MB heapTotal=${Math.round(mem.heapTotal / 1024 / 1024)}MB rss=${Math.round(mem.rss / 1024 / 1024)}MB`);
+    this.logger.info(
+      `[handle] done, ${this.formatMemoryUsage(memoryAfterHandle)} heapDelta=${heapDeltaMb}MB handled=${handledTasksCount}`
+    );
+
+    if (heapDeltaBytes > MEMORY_HANDLE_GROWTH_WARN_MB * MB_IN_BYTES) {
+      this.logger.warn(
+        `[memory] high heap growth in single handle: heapDelta=${heapDeltaMb}MB payloadSize=${taskPayloadSize}b title="${task.payload.title}" project=${task.projectId}`
+      );
+    }
+
+    this.checkMemoryGrowthWindow(memoryAfterHandle, handledTasksCount);
 
     /**
      * Add task for NotifierWorker only if event is not ignored
@@ -638,6 +694,56 @@ export default class GrouperWorker extends Worker {
     shouldIncrementDailyAffectedUsers = isDailyEventLocked ? false : shouldIncrementDailyAffectedUsers;
 
     return [shouldIncrementRepetitionAffectedUsers, shouldIncrementDailyAffectedUsers];
+  }
+
+  /**
+   * Logs sustained heap growth over a configurable number of handled tasks.
+   */
+  private checkMemoryGrowthWindow(memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number): void {
+    const tasksInWindow = handledTasksCount - this.memoryCheckpointTask;
+
+    if (tasksInWindow < MEMORY_GROWTH_WINDOW_TASKS) {
+      return;
+    }
+
+    const heapGrowthBytes = memoryUsage.heapUsed - this.memoryCheckpointHeapUsed;
+    const heapGrowthMb = this.bytesToMegabytes(heapGrowthBytes);
+
+    this.logger.info(
+      `[memory] growth window tasks=${tasksInWindow} handled=${this.memoryCheckpointTask + 1}-${handledTasksCount} heapGrowth=${heapGrowthMb}MB heapUsedNow=${this.bytesToMegabytes(memoryUsage.heapUsed)}MB`
+    );
+
+    if (heapGrowthBytes > MEMORY_GROWTH_WARN_MB * MB_IN_BYTES) {
+      this.logger.warn(
+        `[memory] possible leak detected: heap grew by ${heapGrowthMb}MB in ${tasksInWindow} handled tasks`
+      );
+    }
+
+    this.memoryCheckpointTask = handledTasksCount;
+    this.memoryCheckpointHeapUsed = memoryUsage.heapUsed;
+  }
+
+  /**
+   * Format memory usage for consistent logs.
+   */
+  private formatMemoryUsage(memoryUsage: NodeJS.MemoryUsage): string {
+    return `heapUsed=${this.bytesToMegabytes(memoryUsage.heapUsed)}MB heapTotal=${this.bytesToMegabytes(memoryUsage.heapTotal)}MB rss=${this.bytesToMegabytes(memoryUsage.rss)}MB external=${this.bytesToMegabytes(memoryUsage.external)}MB arrayBuffers=${this.bytesToMegabytes(memoryUsage.arrayBuffers)}MB`;
+  }
+
+  /**
+   * Writes one memory checkpoint record.
+   */
+  private logMemoryCheckpoint(stage: string, memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, suffix = ''): void {
+    const extra = suffix ? ` ${suffix}` : '';
+
+    this.logger.info(`[memory] stage=${stage} handled=${handledTasksCount} ${this.formatMemoryUsage(memoryUsage)}${extra}`);
+  }
+
+  /**
+   * Convert bytes to megabytes with two fractional digits.
+   */
+  private bytesToMegabytes(bytes: number): number {
+    return Math.round((bytes / MB_IN_BYTES) * HUNDRED) / HUNDRED;
   }
 
   /**
