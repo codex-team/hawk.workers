@@ -2,9 +2,18 @@ import { Notification } from 'hawk-worker-sender/types/template-variables';
 import { WebhookDelivery } from '../../types/template';
 
 /**
- * List of internal fields that should not be exposed in webhook payload
+ * Internal/sensitive fields stripped from webhook payload at any nesting level
  */
-const INTERNAL_FIELDS = new Set(['host', 'hostOfStatic']);
+const INTERNAL_FIELDS = new Set([
+  'host',
+  'hostOfStatic',
+  'token',
+  'notifications',
+  'integrationId',
+  'notificationRuleId',
+  'visitedBy',
+  'uidAdded',
+]);
 
 /**
  * Recursively converts MongoDB ObjectIds and other non-JSON-safe values to strings

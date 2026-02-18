@@ -61,16 +61,28 @@ describe('WebhookProvider', () => {
     expect(deliver.mock.calls[0][1].type).toBe('assignee');
   });
 
-  it('should strip internal fields (host, hostOfStatic) from payload', async () => {
+  it('should strip all internal/sensitive fields from payload', async () => {
     const provider = new WebhookProvider();
 
     await provider.send(webhookEndpointSample, {
-      type: 'payment-failed',
+      type: 'event',
       payload: {
         host: 'https://garage.hawk.so',
         hostOfStatic: 'https://api.hawk.so',
-        workspace: { name: 'Workspace' },
-        reason: 'Insufficient funds',
+        notificationRuleId: '123',
+        project: {
+          name: 'My Project',
+          token: 'secret-token',
+          integrationId: 'uuid',
+          uidAdded: 'user-id',
+          notifications: [{ rule: 'data' }],
+        },
+        events: [{
+          event: {
+            groupHash: 'abc',
+            visitedBy: ['user1'],
+          },
+        }],
       },
     } as any);
 
@@ -78,7 +90,14 @@ describe('WebhookProvider', () => {
 
     expect(delivery.payload).not.toHaveProperty('host');
     expect(delivery.payload).not.toHaveProperty('hostOfStatic');
-    expect(delivery.payload).toHaveProperty('reason', 'Insufficient funds');
+    expect(delivery.payload).not.toHaveProperty('notificationRuleId');
+    expect(delivery.payload.project).not.toHaveProperty('token');
+    expect(delivery.payload.project).not.toHaveProperty('integrationId');
+    expect(delivery.payload.project).not.toHaveProperty('uidAdded');
+    expect(delivery.payload.project).not.toHaveProperty('notifications');
+    expect(delivery.payload.project).toHaveProperty('name', 'My Project');
+    expect((delivery.payload.events as any[])[0].event).not.toHaveProperty('visitedBy');
+    expect((delivery.payload.events as any[])[0].event).toHaveProperty('groupHash', 'abc');
   });
 
   it('should handle all known notification types without throwing', async () => {
