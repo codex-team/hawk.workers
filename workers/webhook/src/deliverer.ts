@@ -5,9 +5,14 @@ import { WebhookDelivery } from '../types/template';
 import { HttpStatusCode, MS_IN_SEC } from '../../../lib/utils/consts';
 
 /**
+ * How many seconds to wait for a webhook response before aborting
+ */
+const DELIVERY_TIMEOUT_SEC = 10;
+
+/**
  * Timeout for webhook delivery in milliseconds
  */
-const DELIVERY_TIMEOUT_MS = MS_IN_SEC * 10;
+const DELIVERY_TIMEOUT_MS = MS_IN_SEC * DELIVERY_TIMEOUT_SEC;
 
 /**
  * Deliverer sends JSON POST requests to external webhook endpoints.
