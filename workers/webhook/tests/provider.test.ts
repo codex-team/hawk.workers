@@ -18,19 +18,11 @@ const deliver = jest.fn();
  * Webhook Deliverer mock
  */
 jest.mock('./../src/deliverer.ts', () => {
-  const original = jest.requireActual('./../src/deliverer.ts');
-
-  const MockDeliverer = jest.fn().mockImplementation(() => {
+  return jest.fn().mockImplementation(() => {
     return {
       deliver: deliver,
     };
   });
-
-  return {
-    __esModule: true,
-    default: MockDeliverer,
-    isPrivateIP: original.isPrivateIP,
-  };
 });
 
 /**
