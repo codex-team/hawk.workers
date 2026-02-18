@@ -47,8 +47,23 @@ export default class WebhookDeliverer {
    * @param delivery - webhook delivery { type, payload }
    */
   public async deliver(endpoint: string, delivery: WebhookDelivery): Promise<void> {
+    let url: URL;
+
+    try {
+      url = new URL(endpoint);
+    } catch {
+      this.logger.log('error', `Webhook delivery skipped — invalid URL: ${endpoint}`);
+
+      return;
+    }
+
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      this.logger.log('error', `Webhook delivery skipped — unsupported protocol: ${url.protocol}`);
+
+      return;
+    }
+
     const body = JSON.stringify(delivery);
-    const url = new URL(endpoint);
     const transport = url.protocol === 'https:' ? https : http;
 
     return new Promise<void>((resolve) => {

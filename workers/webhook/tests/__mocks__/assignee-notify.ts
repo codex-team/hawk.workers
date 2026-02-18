@@ -28,6 +28,10 @@ export default {
       name: 'John Doe',
       email: 'john@example.com',
     },
+    assignee: {
+      name: 'Jane Smith',
+      email: 'jane@example.com',
+    },
     daysRepeated: 3,
   },
 } as AssigneeNotification;

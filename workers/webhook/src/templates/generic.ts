@@ -120,7 +120,8 @@ const projectors: Record<string, PayloadProjector> = {
   'assignee': (p) => ({
     project: p.project ? projectDTO(p.project as ProjectDBScheme) : null,
     event: p.event ? eventDTO(p.event as DecodedGroupedEvent) : null,
-    whoAssigned: p.whoAssigned ? userDTO(p.whoAssigned as UserDBScheme) : null,
+    assignedBy: p.whoAssigned ? userDTO(p.whoAssigned as UserDBScheme) : null,
+    assignee: p.assignee ? userDTO(p.assignee as UserDBScheme) : null,
     daysRepeated: p.daysRepeated ?? null,
   }),
 

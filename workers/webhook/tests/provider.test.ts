@@ -283,16 +283,20 @@ describe('WebhookProvider', () => {
       });
     });
 
-    it('should include whoAssigned DTO for "assignee"', async () => {
+    it('should include assignedBy, assignee and event DTOs for "assignee"', async () => {
       const provider = new WebhookProvider();
 
       await provider.send(webhookEndpointSample, AssigneeNotifyMock);
 
       const payload = getDeliveredPayload();
-      const who = payload.whoAssigned as Record<string, unknown>;
+      const assignedBy = payload.assignedBy as Record<string, unknown>;
+      const assignee = payload.assignee as Record<string, unknown>;
 
-      expect(who).toHaveProperty('name', 'John Doe');
-      expect(who).toHaveProperty('email', 'john@example.com');
+      expect(assignedBy).toHaveProperty('name', 'John Doe');
+      expect(assignedBy).toHaveProperty('email', 'john@example.com');
+      expect(assignee).toHaveProperty('name', 'Jane Smith');
+      expect(assignee).toHaveProperty('email', 'jane@example.com');
+      expect(payload).toHaveProperty('event');
       expect(payload).toHaveProperty('daysRepeated', 3);
     });
 
