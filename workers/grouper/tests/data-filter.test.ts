@@ -327,5 +327,39 @@ describe('GrouperWorker', () => {
       expect(event.context['secret']).toBe('[filtered]');
       expect(event.context['auth']).toBe('[filtered]');
     });
+
+    test('should handle deeply nested objects (>20 levels) without excessive memory allocations', () => {
+      // Create an object nested deeper than the cap (>20 levels)
+      let deeplyNested: any = { value: 'leaf', secret: 'should-be-filtered' };
+
+      for (let i = 0; i < 25; i++) {
+        deeplyNested = { [`level${i}`]: deeplyNested, password: `sensitive${i}` };
+      }
+
+      const event = generateEvent({
+        context: deeplyNested,
+      });
+
+      // This should not throw or cause memory issues
+      dataFilter.processEvent(event);
+
+      // Verify that filtering still works at various depths
+      expect(event.context['password']).toBe('[filtered]');
+
+      // Navigate to a mid-level and check filtering
+      let current = event.context['level24'] as any;
+      for (let i = 24; i > 15; i--) {
+        expect(current['password']).toBe('[filtered]');
+        current = current[`level${i - 1}`];
+      }
+
+      // At the leaf level, the secret should still be filtered
+      // (though path tracking may be capped, filtering should still work)
+      let leaf = event.context;
+      for (let i = 24; i >= 0; i--) {
+        leaf = leaf[`level${i}`] as any;
+      }
+      expect(leaf['secret']).toBe('[filtered]');
+    });
   });
 });

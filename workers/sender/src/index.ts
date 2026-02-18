@@ -253,6 +253,7 @@ export default abstract class SenderWorker extends Worker {
         project,
         event,
         whoAssigned,
+        assignee,
         daysRepeated,
       },
     } as AssigneeNotification);

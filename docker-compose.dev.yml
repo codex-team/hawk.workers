@@ -158,6 +158,18 @@ services:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
 
+  hawk-worker-webhook:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: yarn run-webhook
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
 volumes:
   workers-deps:
 

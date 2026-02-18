@@ -19,11 +19,16 @@ import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+
+/**
+ * eslint does not count decorators as a variable usage
+ */
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 import { register, client } from '../../../lib/metrics';
@@ -32,7 +37,12 @@ import { register, client } from '../../../lib/metrics';
  * eslint does not count decorators as a variable usage
  */
 /* eslint-disable-next-line no-unused-vars */
-const MEMOIZATION_TTL = Number(process.env.MEMOIZATION_TTL ?? 0);
+const MEMOIZATION_TTL = 600_000;
+
+/**
+ * Cache cleanup interval in minutes
+ */
+const CACHE_CLEANUP_INTERVAL_MINUTES = 5;
 
 /**
  * Error code of MongoDB key duplication error
@@ -123,6 +133,11 @@ export default class GrouperWorker extends Worker {
   });
 
   /**
+   * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
+   */
+  private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -135,6 +150,15 @@ export default class GrouperWorker extends Worker {
 
     await this.redis.initialize();
     console.log('redis initialized');
+
+    /**
+     * Start periodic cache cleanup to prevent memory leaks from unbounded cache growth
+     * Runs every 5 minutes to clear old cache entries
+     */
+    this.cacheCleanupInterval = setInterval(() => {
+      this.clearCache();
+    }, CACHE_CLEANUP_INTERVAL_MINUTES * TimeMs.MINUTE);
+
     await super.start();
   }
 
@@ -142,6 +166,14 @@ export default class GrouperWorker extends Worker {
    * Finish everything
    */
   public async finish(): Promise<void> {
+    /**
+     * Clear cache cleanup interval to prevent resource leaks
+     */
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
+
     await super.finish();
     this.prepareCache();
     await this.eventsDb.close();
@@ -198,7 +230,7 @@ export default class GrouperWorker extends Worker {
     const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
     if (similarEvent) {
-      this.logger.info(`similar event: ${JSON.stringify(similarEvent)}`);
+      this.logger.info(`[handle] similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
 
       /**
        * Override group hash with found event's group hash
@@ -331,6 +363,12 @@ export default class GrouperWorker extends Worker {
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
+
+      /**
+       * Clear the large event payload references to allow garbage collection
+       * This prevents memory leaks from retaining full event objects after delta is computed
+       */
+      delta = undefined;
     }
 
     /**
@@ -432,7 +470,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - where to find
    * @param title - title of the event to find similar one
    */
-  @memoize({ max: 200, ttl: MEMOIZATION_TTL, strategy: 'hash', skipCache: [undefined] })
+  @memoize({ max: 50, ttl: MEMOIZATION_TTL, strategy: 'hash', skipCache: [undefined] })
   private async findSimilarEvent(projectId: string, title: string): Promise<GroupedEventDBScheme | undefined> {
     /**
      * If no match by Levenshtein, try matching by patterns
@@ -446,9 +484,7 @@ export default class GrouperWorker extends Worker {
         try {
           const originalEvent = await this.findFirstEventByPattern(matchingPattern.pattern, projectId);
 
-          const originalEventSize = Buffer.byteLength(JSON.stringify(originalEvent));
-
-          this.logger.info(`[findSimilarEvent] found by pattern, originalEventSize=${originalEventSize}b`);
+          this.logger.info(`[findSimilarEvent] found by pattern, groupHash=${originalEvent?.groupHash} title="${originalEvent?.payload?.title}"`);
 
           if (originalEvent) {
             return originalEvent;
