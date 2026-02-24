@@ -41,7 +41,6 @@ export default class SentryEventWorker extends Worker {
 
       if (items.length === 0) {
         this.logger.warn('Received envelope with no items');
-
         return;
       }
 
@@ -50,7 +49,6 @@ export default class SentryEventWorker extends Worker {
 
       for (const item of items) {
         const result = await this.handleEnvelopeItem(headers, item, event.projectId);
-
         if (result === 'processed') {
           processedCount++;
         } else if (result === 'skipped') {
@@ -249,15 +247,16 @@ export default class SentryEventWorker extends Worker {
       if (!taskSent) {
         /**
          * If addTask returns false, the message was not queued (queue full or channel closed)
+         * This is a critical error that should be logged and thrown
          */
         const error = new Error(`Failed to queue event to ${workerName} worker. Queue may be full or channel closed.`);
-
         this.logger.error(error.message);
         this.logger.info('👇 Here is the event that failed to queue:');
         this.logger.json(hawkEvent);
         throw error;
       }
 
+      this.logger.verbose(`Successfully queued event to ${workerName} worker`);
       return 'processed';
     } catch (error) {
       this.logger.error('Error handling envelope item:', error);
