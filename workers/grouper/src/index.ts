@@ -31,7 +31,6 @@ import { hasValue } from '../../../lib/utils/hasValue';
  */
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
-import TimeMs from '../../../lib/utils/time';
 
 /**
  * eslint does not count decorators as a variable usage
