@@ -41,9 +41,9 @@ class WorkerRunner {
   // private gateway?: promClient.Pushgateway;
 
   /**
-   * number returned by setInterval() of metrics push function
+   * Metrics push cleanup callback.
    */
-  private pushIntervalNumber?: ReturnType<typeof setInterval>;
+  private stopMetricsPushing?: () => void;
 
   /**
    * Create runner instance
@@ -86,9 +86,21 @@ class WorkerRunner {
       return;
     }
 
-    this.workers.forEach((worker) => {
-      startMetricsPushing(worker.type.replace('/', '_'));
-    });
+    if (this.workers.length === 0) {
+      return;
+    }
+
+    const workerTypes = Array.from(new Set(this.workers.map((worker) => {
+      return worker.type.replace('/', '_');
+    })));
+
+    const workerTypeForMetrics = workerTypes.length === 1 ? workerTypes[0] : 'multi_worker_process';
+
+    if (workerTypes.length > 1) {
+      console.warn(`[metrics] ${workerTypes.length} workers are running in one process; pushing metrics as "${workerTypeForMetrics}" to avoid duplicated attribution`);
+    }
+
+    this.stopMetricsPushing = startMetricsPushing(workerTypeForMetrics);
   }
 
   /**
@@ -224,7 +236,8 @@ class WorkerRunner {
   private async stopWorker(worker: Worker): Promise<void> {
     try {
       // stop pushing metrics
-      clearInterval(this.pushIntervalNumber);
+      this.stopMetricsPushing?.();
+      this.stopMetricsPushing = undefined;
       await worker.finish();
 
       console.log(
