@@ -386,6 +386,17 @@
     protobufjs "^7.5.3"
     yargs "^17.7.2"
 
+"@hawk.so/github-sdk@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@hawk.so/github-sdk/-/github-sdk-1.0.2.tgz#7c8831d18d29340989224f2a79f2a3bed76ab8ec"
+  integrity sha512-MG2vDMmI3eMLeBXNZfWwKUDtSTV2zby0SPqxH0RQwi36nkGSzFUYqx3o6a8byEH18YWY0MFtV4iLgpOf4924IA==
+  dependencies:
+    "@hawk.so/utils" "workspace:*"
+    "@octokit/oauth-methods" "^4.0.0"
+    "@octokit/rest" "^22.0.1"
+    "@octokit/types" "^16.0.0"
+    jsonwebtoken "^9.0.3"
+
 "@hawk.so/nodejs@^3.1.1":
   version "3.1.1"
   resolved "https://registry.npmjs.org/@hawk.so/nodejs/-/nodejs-3.1.1.tgz"
@@ -408,6 +419,11 @@
   integrity sha512-ccKVQkFcgTpIe9VVQiz94mCXvGk0Zn6uDyHONlXpS3E0j037eISaw2wUsddzAzKntXYbnFQbxah+zmx35KkVtA==
   dependencies:
     bson "^7.0.0"
+
+"@hawk.so/utils@^1.0.0", "@hawk.so/utils@workspace:*":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@hawk.so/utils/-/utils-1.0.0.tgz#08164d0bdff966a414aabcfb90311174d495d127"
+  integrity sha512-iqAHgoKGc9rU9LnuFa8wMAaiaKaZ0U8Hxeja0qxBuQPGSyBJuI/1AfdFG9z0yA9KQQlIGXv+ij1MO5a++bUpAA==
 
 "@humanwhocodes/config-array@^0.5.0":
   version "0.5.0"
@@ -1160,13 +1176,6 @@
   version "0.0.29"
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
-
-"@types/jsonwebtoken@^8.3.5":
-  version "8.5.9"
-  resolved "https://registry.yarnpkg.com/@types/jsonwebtoken/-/jsonwebtoken-8.5.9.tgz#2c064ecb0b3128d837d2764aa0b117b0ff6e4586"
-  integrity sha512-272FMnFGzAVMGtu9tkr29hRL6bZj4Zs1KZNeHLnKqAvp06tAIcarTMwOh8/8bz4FmKRcMxZhZNeUAQsNLoiPhg==
-  dependencies:
-    "@types/node" "*"
 
 "@types/mongodb@^3.5.15", "@types/mongodb@^3.5.34":
   version "3.6.20"

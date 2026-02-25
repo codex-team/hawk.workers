@@ -12,7 +12,7 @@ import { DatabaseController } from '../../../lib/db/controller';
 import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import './env';
-import TimeMs from '../../../lib/utils/time';
+import { TimeMs } from '@hawk.so/utils';
 
 import { PasswordResetNotification, PaymentSuccessNotification, TemplateEventData, WorkspaceInviteNotification } from '../types/template-variables/';
 import NotificationsProvider from './provider';
@@ -310,7 +310,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Send message not often than once per day
      */
-    const throttleInterval = TimeMs.DAY;
+    const throttleInterval = TimeMs.Day;
 
     const { workspaceId, daysAfterBlock } = task.payload;
 
@@ -372,7 +372,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Send message not often than once per day
      */
-    const throttleInterval = TimeMs.DAY;
+    const throttleInterval = TimeMs.Day;
 
     const { workspaceId, daysLeft } = task.payload;
 
@@ -437,7 +437,7 @@ export default abstract class SenderWorker extends Worker {
     /**
      * Send message not often than once per day
      */
-    const throttleInterval = TimeMs.DAY;
+    const throttleInterval = TimeMs.Day;
 
     const { workspaceId, eventsCount, eventsLimit } = task.payload;
 

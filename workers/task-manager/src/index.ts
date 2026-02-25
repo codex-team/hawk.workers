@@ -7,14 +7,29 @@ import type { TaskManagerWorkerTask } from '../types/task-manager-worker-task';
 import type {
   ProjectDBScheme,
   GroupedEventDBScheme,
-  ProjectTaskManagerConfig
+  ProjectTaskManagerConfig,
+  WorkspaceDBScheme,
+  UserDBScheme,
+  GitHubAuthorization,
+  GitHubInstallation
 } from '@hawk.so/types';
 import type { TaskManagerItem } from '@hawk.so/types/src/base/event/taskManagerItem';
 import HawkCatcher from '@hawk.so/nodejs';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
-import { GitHubService } from './GithubService';
+import { GitHubService } from '@hawk.so/github-sdk';
 import { formatIssueFromEvent } from './utils/issue';
-import TimeMs from '../../../lib/utils/time';
+import { TimeMs } from '@hawk.so/utils';
+
+/**
+ * Resolved delegate information for Copilot assignment
+ */
+interface DelegateInfo {
+  hawkUserId: string;
+  githubUserId: number;
+  githubLogin: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: Date | null;
+}
 
 /**
  * Default maximum number of auto-created tasks per project per day
@@ -48,7 +63,29 @@ export default class TaskManagerWorker extends Worker {
   /**
    * GitHub Service for creating issues
    */
-  private githubService: GitHubService = new GitHubService();
+  private githubService: GitHubService;
+
+  constructor() {
+    super();
+
+    if (
+      !process.env.GITHUB_APP_ID || 
+      !process.env.GITHUB_PRIVATE_KEY || 
+      !process.env.GITHUB_APP_SLUG || 
+      !process.env.GITHUB_APP_CLIENT_ID ||
+      !process.env.GITHUB_APP_CLIENT_SECRET
+    ) {
+      throw new Error('Some required environment variable in not set');
+    }
+
+    this.githubService = new GitHubService({
+      appId: process.env.GITHUB_APP_ID,
+      privateKey: process.env.GITHUB_PRIVATE_KEY,
+      appSlug: process.env.GITHUB_APP_SLUG,
+      clientId: process.env.GITHUB_APP_CLIENT_ID,
+      clientSecret: process.env.GITHUB_APP_CLIENT_SECRET,
+    });
+  }
 
   /**
    * Start consuming messages
@@ -297,33 +334,31 @@ export default class TaskManagerWorker extends Worker {
 
     /**
      * Save taskManagerItem to event (independent of Copilot assignment)
-     * We determine assignee status based on whether assignAgent is enabled,
-     * not whether assignment actually succeeded
+     * We determine assignee status based on whether assignment actually succeeded
      */
     let copilotAssigned = false;
 
     /**
-     * Step 2: Assign Copilot agent if enabled (using user-to-server OAuth token)
+     * Step 2: Assign Copilot agent if enabled.
+     * Delegate is resolved from workspace installation → user.githubAuthorizations.
      */
-    if (taskManager.assignAgent && taskManager.config.delegatedUser?.accessToken) {
+    if (taskManager.assignAgent) {
       try {
-        await this.executeWithTokenRefresh({
-          projectId,
-          taskManager,
-          operationName: 'assign Copilot',
-          operation: async (token) => {
-            await this.githubService.assignCopilot(
-              taskManager.config.repoFullName,
-              githubIssue.number,
-              token
-            );
-          },
-        });
-        copilotAssigned = true;
+        const delegate = await this.findDelegate(project.workspaceId.toString(), taskManager.config.installationId);
+
+        if (delegate) {
+          const accessToken = await this.getAccessTokenForDelegate(delegate);
+
+          await this.githubService.assignCopilot(
+            taskManager.config.repoFullName,
+            githubIssue.number,
+            accessToken
+          );
+          copilotAssigned = true;
+        } else {
+          this.logger.warn(`No active delegate found for project ${projectId}, skipping Copilot assignment`);
+        }
       } catch (error) {
-        /**
-         * Log error but don't fail the whole operation - issue was created successfully
-         */
         this.logger.warn(`Failed to assign Copilot to issue #${githubIssue.number}: ${error instanceof Error ? error.message : String(error)}`);
         copilotAssigned = false;
       }
@@ -351,191 +386,114 @@ export default class TaskManagerWorker extends Worker {
   }
 
   /**
-   * Update delegatedUser tokens in project
+   * Find a delegate user for Copilot assignment.
    *
-   * @param {string} projectId - Project ID
-   * @param {Object} tokenData - New token data
-   * @returns {Promise<void>}
+   * Resolution chain:
+   *   project.workspaceId → workspace.integrations.github.installations[installationId]
+   *     → delegatedUser.hawkUserId → user.githubAuthorizations[].refreshToken
+   *
+   * @param workspaceId - Workspace ID
+   * @param installationId - GitHub App installation ID (string, from project config)
+   * @returns DelegateInfo or null if no active delegate found
    */
-  private async updateDelegatedUserTokens(
-    projectId: string,
-    tokenData: {
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: Date | null;
-      refreshTokenExpiresAt: Date | null;
-      tokenLastValidatedAt: Date;
-    }
-  ): Promise<void> {
+  private async findDelegate(workspaceId: string, installationId: string): Promise<DelegateInfo | null> {
     const connection = await this.accountsDb.getConnection();
-    const projectsCollection = connection.collection<ProjectDBScheme>('projects');
-
-    await projectsCollection.updateOne(
-      { _id: new ObjectId(projectId) },
-      {
-        $set: {
-          'taskManager.config.delegatedUser.accessToken': tokenData.accessToken,
-          'taskManager.config.delegatedUser.refreshToken': tokenData.refreshToken,
-          'taskManager.config.delegatedUser.accessTokenExpiresAt': tokenData.expiresAt,
-          'taskManager.config.delegatedUser.refreshTokenExpiresAt': tokenData.refreshTokenExpiresAt,
-          'taskManager.config.delegatedUser.tokenLastValidatedAt': tokenData.tokenLastValidatedAt,
-          'taskManager.updatedAt': new Date(),
-        },
-      }
-    );
-  }
-
-  /**
-   * Execute a GitHub API operation with automatic token refresh on 401 errors
-   * This function handles token refresh and retry logic for operations that may fail with 401
-   *
-   * @param {Object} params - Parameters for the operation
-   * @param {string} params.projectId - Project ID
-   * @param {ProjectTaskManagerConfig} params.taskManager - Task manager configuration
-   * @param {Function} params.operation - Async function that performs the GitHub API operation
-   * @param {string} params.operationName - Name of the operation for logging (e.g., "create issue")
-   * @returns {Promise<T>} Result of the operation
-   * @throws {Error} If operation fails and token refresh doesn't help
-   */
-  private async executeWithTokenRefresh<T>(params: {
-    projectId: string;
-    taskManager: ProjectTaskManagerConfig;
-    operation: (token: string | null) => Promise<T>;
-    operationName: string;
-  }): Promise<T> {
-    const { projectId, taskManager, operation, operationName } = params;
 
     /**
-     * Get valid access token with automatic refresh if needed
+     * Step 1: Find workspace and its installation
      */
-    let delegatedUserToken: string | null = null;
+    const workspacesCollection = connection.collection<WorkspaceDBScheme>('workspaces');
+    const workspace = await workspacesCollection.findOne({ _id: new ObjectId(workspaceId) });
 
-    if (taskManager.config.delegatedUser?.status === 'active') {
-      const delegatedUser = taskManager.config.delegatedUser;
+    if (!workspace) {
+      this.logger.warn(`Workspace ${workspaceId} not found`);
 
-      try {
-        /**
-         * Get valid access token with automatic refresh if needed
-         */
-        delegatedUserToken = await this.githubService.getValidAccessToken(
-          {
-            accessToken: delegatedUser.accessToken,
-            refreshToken: delegatedUser.refreshToken,
-            accessTokenExpiresAt: delegatedUser.accessTokenExpiresAt
-              ? new Date(delegatedUser.accessTokenExpiresAt)
-              : null,
-            refreshTokenExpiresAt: delegatedUser.refreshTokenExpiresAt
-              ? new Date(delegatedUser.refreshTokenExpiresAt)
-              : null,
-          },
-          /**
-           * Callback to save refreshed tokens in database
-           *
-           * @param newTokens
-           */
-          async (newTokens) => {
-            await this.updateDelegatedUserTokens(projectId, {
-              ...newTokens,
-              tokenLastValidatedAt: new Date(),
-            });
+      return null;
+    }
 
-            this.logger.info(`Refreshed and saved new tokens for project ${projectId}`);
-          }
-        );
-      } catch (refreshError) {
-        /**
-         * Log error message only, not the full error object to avoid logging tokens
-         */
-        this.logger.warn(`Failed to refresh token for project ${projectId}, falling back to installation token: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`);
+    const installIdNum = parseInt(installationId, 10);
+    const installation = workspace.integrations?.github?.installations?.find(
+      (i: GitHubInstallation) => i.installationId === installIdNum
+    );
 
-        /**
-         * If refresh fails, fall back to installation token
-         */
-        delegatedUserToken = null;
-      }
+    if (!installation) {
+      this.logger.warn(`Installation ${installationId} not found in workspace ${workspaceId}`);
+
+      return null;
     }
 
     /**
-     * Try to execute the operation
+     * Step 2: Check delegatedUser status
      */
-    try {
-      return await operation(delegatedUserToken);
-    } catch (error) {
-      /**
-       * Check if error is 401 (unauthorized) - token might be revoked
-       * Try to refresh token and retry once
-       */
-      const HTTP_UNAUTHORIZED = 401;
+    if (!installation.delegatedUser || installation.delegatedUser.status !== 'active') {
+      this.logger.warn(`No active delegate for installation ${installationId} in workspace ${workspaceId}`);
 
-      if (error?.status === HTTP_UNAUTHORIZED && taskManager.config.delegatedUser?.status === 'active') {
-        const delegatedUser = taskManager.config.delegatedUser;
-
-        this.logger.warn(`Received 401 error for project ${projectId} during ${operationName}, attempting token refresh...`);
-
-        try {
-          /**
-           * Refresh token
-           */
-          const newTokens = await this.githubService.refreshUserToken(delegatedUser.refreshToken);
-
-          /**
-           * Save refreshed tokens
-           */
-          await this.updateDelegatedUserTokens(projectId, {
-            ...newTokens,
-            tokenLastValidatedAt: new Date(),
-          });
-
-          /**
-           * Retry operation with new token
-           */
-          const result = await operation(newTokens.accessToken);
-
-          this.logger.info(`Successfully refreshed token and completed ${operationName} for project ${projectId}`);
-
-          return result;
-        } catch (refreshError) {
-          /**
-           * Refresh failed, mark token as revoked
-           * Log error message only, not the full error object to avoid logging tokens
-           */
-          this.logger.error(`Failed to refresh token for project ${projectId}: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`);
-
-          await this.markDelegatedUserAsRevoked(projectId);
-
-          /**
-           * Re-throw original error
-           */
-          throw error;
-        }
-      } else {
-        /**
-         * Not a 401 error or no delegatedUser, re-throw original error
-         */
-        throw error;
-      }
+      return null;
     }
+
+    /**
+     * Step 3: Find user and their GitHub authorization
+     */
+    const usersCollection = connection.collection<UserDBScheme>('users');
+    const user = await usersCollection.findOne({ _id: new ObjectId(installation.delegatedUser.hawkUserId) });
+
+    if (!user) {
+      this.logger.warn(`Delegate user ${installation.delegatedUser.hawkUserId} not found`);
+
+      return null;
+    }
+
+    const authorization = user.githubAuthorizations?.find(
+      (a: GitHubAuthorization) => a.githubUserId === installation.delegatedUser.githubUserId && a.status === 'active'
+    );
+
+    if (!authorization) {
+      this.logger.warn(`No active GitHub authorization for user ${installation.delegatedUser.hawkUserId} (githubUserId: ${installation.delegatedUser.githubUserId})`);
+
+      return null;
+    }
+
+    return {
+      hawkUserId: installation.delegatedUser.hawkUserId,
+      githubUserId: authorization.githubUserId,
+      githubLogin: authorization.githubLogin,
+      refreshToken: authorization.refreshToken,
+      refreshTokenExpiresAt: authorization.refreshTokenExpiresAt,
+    };
   }
 
   /**
-   * Mark delegatedUser as revoked
+   * Get a fresh access token for a delegate by refreshing their OAuth token.
+   * Also persists the new refreshToken back to user.githubAuthorizations[].
    *
-   * @param {string} projectId - Project ID
-   * @returns {Promise<void>}
+   * @param delegate - delegate info with refreshToken
+   * @returns Fresh access token
    */
-  private async markDelegatedUserAsRevoked(projectId: string): Promise<void> {
-    const connection = await this.accountsDb.getConnection();
-    const projectsCollection = connection.collection<ProjectDBScheme>('projects');
+  private async getAccessTokenForDelegate(delegate: DelegateInfo): Promise<string> {
+    const newTokens = await this.githubService.refreshUserToken(delegate.refreshToken);
 
-    await projectsCollection.updateOne(
-      { _id: new ObjectId(projectId) },
+    /**
+     * Persist updated refreshToken back to user document
+     * (GitHub may rotate the refreshToken during refresh)
+     */
+    const connection = await this.accountsDb.getConnection();
+    const usersCollection = connection.collection<UserDBScheme>('users');
+
+    await usersCollection.updateOne(
+      {
+        _id: new ObjectId(delegate.hawkUserId),
+        'githubAuthorizations.githubUserId': delegate.githubUserId,
+      },
       {
         $set: {
-          'taskManager.config.delegatedUser.status': 'revoked',
-          'taskManager.updatedAt': new Date(),
+          'githubAuthorizations.$.refreshToken': newTokens.refreshToken,
+          'githubAuthorizations.$.refreshTokenExpiresAt': newTokens.refreshTokenExpiresAt,
+          'githubAuthorizations.$.tokenLastValidatedAt': new Date(),
         },
       }
     );
+
+    return newTokens.accessToken;
   }
 
   /**
@@ -618,7 +576,7 @@ export default class TaskManagerWorker extends Worker {
     /**
      * Convert connectedAt to timestamp (seconds)
      */
-    const connectedAtTimestamp = Math.floor(connectedAt.getTime() / TimeMs.SECOND);
+    const connectedAtTimestamp = Math.floor(connectedAt.getTime() / TimeMs.Second);
 
     const events = await eventsCollection
       .find({

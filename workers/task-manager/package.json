@@ -5,12 +5,6 @@
   "license": "MIT",
   "workerType": "cron-tasks/task-manager",
   "dependencies": {
-    "@octokit/oauth-methods": "^4.0.0",
-    "@octokit/rest": "^22.0.1",
-    "@octokit/types": "^16.0.0",
-    "jsonwebtoken": "^9.0.3"
-  },
-  "devDependencies": {
-    "@types/jsonwebtoken": "^8.3.5"
+    "@hawk.so/github-sdk": "^1.0.2"
   }
 }

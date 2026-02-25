@@ -1,7 +1,7 @@
 import type { GroupedEventDBScheme, ProjectDBScheme } from '@hawk.so/types';
 import { decodeUnsafeFields } from '../../../../lib/utils/unsafeFields';
-import TimeMs from '../../../../lib/utils/time';
-import type { IssueData } from '../GithubService';
+import { TimeMs } from '@hawk.so/utils';
+import type { IssueData } from '@hawk.so/github-sdk';
 
 /**
  * Width used for padding date/time parts.
@@ -20,7 +20,7 @@ const JSON_INDENT_SPACES = 2;
  * @returns {string} Formatted date string (e.g., "23 Feb 2025 14:40:21")
  */
 function formatDate(timestamp: number): string {
-  const date = new Date(timestamp * TimeMs.SECOND);
+  const date = new Date(timestamp * TimeMs.Second);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const day = date.getUTCDate();
   const month = months[date.getUTCMonth()];
@@ -43,8 +43,8 @@ function formatDate(timestamp: number): string {
  */
 function calculateDaysRepeating(timestamp: number): number {
   const now = Date.now();
-  const eventTimestamp = timestamp * TimeMs.SECOND;
-  const differenceInDays = (now - eventTimestamp) / TimeMs.DAY;
+  const eventTimestamp = timestamp * TimeMs.Second;
+  const differenceInDays = (now - eventTimestamp) / TimeMs.Day;
 
   return Math.round(differenceInDays);
 }
