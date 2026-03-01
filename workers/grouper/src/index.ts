@@ -31,6 +31,7 @@ import { hasValue } from '../../../lib/utils/hasValue';
  */
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -136,6 +137,7 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - event to handle
    */
+  @catchAndReport()
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     let uniqueEventHash = await this.getUniqueEventHash(task);
 

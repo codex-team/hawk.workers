@@ -11,6 +11,7 @@ import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
 import TimeMs from '../../../lib/utils/time';
 import RedisHelper from './redisHelper';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * Worker to buffer events before sending notifications about them
@@ -56,6 +57,7 @@ export default class NotifierWorker extends Worker {
    *
    * @param task — notifier task to handle
    */
+  @catchAndReport()
   public async handle(task: NotifierWorkerTask): Promise<void> {
     try {
       const { projectId, event } = task;

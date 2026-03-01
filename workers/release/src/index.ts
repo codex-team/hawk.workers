@@ -11,6 +11,7 @@ import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
 import { Collection, MongoClient, MongoError } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * Error code of MongoDB key duplication error
@@ -73,6 +74,7 @@ export default class ReleaseWorker extends Worker {
    *
    * @param task - Message object from consume method
    */
+  @catchAndReport()
   public async handle(task: ReleaseWorkerTask): Promise<void> {
     switch (task.type) {
       case 'add-release': await this.saveRelease(task.projectId, task.payload as ReleaseWorkerAddReleasePayload); break;

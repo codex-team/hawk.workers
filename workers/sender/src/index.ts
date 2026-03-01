@@ -34,6 +34,7 @@ import {
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification, SignUpNotification } from '../types/template-variables';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * Worker to send email notifications
@@ -98,6 +99,7 @@ export default abstract class SenderWorker extends Worker {
    *
    * @param task - task to handle
    */
+  @catchAndReport()
   public async handle<T extends SenderWorkerTask>(task: T): Promise<void> {
     if (!this.channelType) {
       throw new Error('channelType for Sender worker is not set');

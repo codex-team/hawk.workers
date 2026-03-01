@@ -9,6 +9,7 @@ import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
 import { ProjectDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -77,6 +78,7 @@ export default class ArchiverWorker extends Worker {
   /**
    * Task handling function
    */
+  @catchAndReport()
   public async handle(): Promise<void> {
     const dbSizeOnStart = (await this.eventsDbConnection.stats()).dataSize;
 

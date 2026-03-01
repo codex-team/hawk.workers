@@ -10,6 +10,7 @@ import axios from 'axios';
 import * as WorkerNames from '../../../lib/workerNames';
 import HawkCatcher from '@hawk.so/nodejs';
 import { countDaysBeforePayday, countDaysAfterPayday, countDaysAfterBlock } from '../../../lib/utils/payday';
+import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({
   path: path.resolve(__dirname, '../.env'),
@@ -136,6 +137,7 @@ export default class PaymasterWorker extends Worker {
    *
    * @param event - event to handle
    */
+  @catchAndReport()
   public async handle(event: PaymasterEvent): Promise<void> {
     switch (event.type) {
       case EventType.WorkspaceSubscriptionCheck:
