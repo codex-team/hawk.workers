@@ -2,6 +2,7 @@ import { ErrorsCatcherType } from '@hawk.so/types';
 import { EventWorker } from '../../../lib/event-worker';
 import * as pkg from '../package.json';
 import { DefaultEventWorkerTask } from '../types/default-event-worker-task';
+// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**

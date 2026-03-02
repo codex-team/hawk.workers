@@ -194,7 +194,7 @@ class WorkerRunner {
           utils.sendReport(worker.constructor.name + ' started');
         } catch (startingError) {
           this.exceptionHandler(startingError, {
-            workerType: worker.type
+            workerType: worker.type,
           });
 
           utils.sendReport(worker.constructor.name + ' failed to start');
@@ -211,6 +211,7 @@ class WorkerRunner {
    * - Unhandled Promise Rejection at Runner work
    *
    * @param error - error to handle
+   * @param context
    */
   private exceptionHandler(error: Error, context?: EventContext): void {
     HawkCatcher.send(error, context);
@@ -289,7 +290,7 @@ class WorkerRunner {
       );
     } catch (finishingError) {
       HawkCatcher.send(finishingError, {
-        workerType: worker.type
+        workerType: worker.type,
       });
       console.error('Error while finishing Worker: ', finishingError);
     }

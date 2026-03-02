@@ -11,6 +11,7 @@ import { SenderWorkerTask } from 'hawk-worker-sender/types/sender-task';
 import RuleValidator from './validator';
 import TimeMs from '../../../lib/utils/time';
 import RedisHelper from './redisHelper';
+// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**

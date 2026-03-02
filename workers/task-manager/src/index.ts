@@ -15,6 +15,7 @@ import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { GitHubService } from './GithubService';
 import { formatIssueFromEvent } from './utils/issue';
 import TimeMs from '../../../lib/utils/time';
+// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
