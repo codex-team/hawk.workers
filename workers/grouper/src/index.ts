@@ -306,6 +306,74 @@ export default class GrouperWorker extends Worker {
         });
       }
     }
+
+    await this.recordProjectMetrics(task.projectId, 'events-accepted');
+  }
+
+  /**
+   * Build RedisTimeSeries key for project metrics.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   * @param granularity - time granularity
+   */
+  private getTimeSeriesKey(
+    projectId: string,
+    metricType: string,
+    granularity: 'minutely' | 'hourly' | 'daily'
+  ): string {
+    return `ts:project-${metricType}:${projectId}:${granularity}`;
+  }
+
+  /**
+   * Record project metrics to Redis TimeSeries.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   */
+  private async recordProjectMetrics(projectId: string, metricType: string): Promise<void> {
+    const minutelyKey = this.getTimeSeriesKey(projectId, metricType, 'minutely');
+    const hourlyKey = this.getTimeSeriesKey(projectId, metricType, 'hourly');
+    const dailyKey = this.getTimeSeriesKey(projectId, metricType, 'daily');
+
+    const labels: Record<string, string> = {
+      type: 'error',
+      status: metricType,
+      project: projectId,
+    };
+
+    const series = [
+      {
+        key: minutelyKey,
+        label: 'minutely',
+        retentionMs: TimeMs.DAY,
+      },
+      {
+        key: hourlyKey,
+        label: 'hourly',
+        retentionMs: TimeMs.WEEK,
+      },
+      {
+        key: dailyKey,
+        label: 'daily',
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        retentionMs: 90 * TimeMs.DAY,
+      },
+    ];
+
+    const operations = series.map(({ key, label, retentionMs }) => ({
+      label,
+      promise: this.redis.safeTsAdd(key, 1, labels, retentionMs),
+    }));
+
+    const results = await Promise.allSettled(operations.map((op) => op.promise));
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const { label } = operations[index];
+        this.logger.error(`Failed to add ${label} TS for ${metricType}`, result.reason);
+      }
+    });
   }
 
   /**
