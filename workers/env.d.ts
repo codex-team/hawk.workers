@@ -19,5 +19,16 @@ declare namespace NodeJS {
      * How long to store events (in days)
      */
     MAX_DAYS_NUMBER: string;
+
+    /**
+     * If true, dual-write to unified events/repetitions collections (events, repetitions with projectId)
+     * @default 'false'
+     */
+    USE_UNIFIED_EVENTS_COLLECTIONS?: string;
+
+    /**
+     * Comma-separated project ObjectIds for dual-write. If empty/not set, dual-write disabled
+     */
+    UNIFIED_EVENTS_PROJECT_IDS?: string;
   }
 }

@@ -18,6 +18,11 @@ import type {
 import type { RepetitionDBScheme } from '../types/repetition';
 import { DatabaseReadWriteError, DiffCalculationError, ValidationError } from '../../../lib/workerErrors';
 import { decodeUnsafeFields, encodeUnsafeFields } from '../../../lib/utils/unsafeFields';
+import {
+  writeEventToUnified,
+  writeRepetitionToUnified,
+  ensureEventAndIncrementUnified,
+} from './unified/dualWriteEvents';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
@@ -200,14 +205,21 @@ export default class GrouperWorker extends Worker {
         /**
          * Insert new event
          */
-        await this.saveEvent(task.projectId, {
+        const groupedEventData = {
           groupHash: uniqueEventHash,
           totalCount: 1,
           catcherType: task.catcherType,
           payload: task.payload,
           timestamp: task.timestamp,
           usersAffected: incrementAffectedUsers ? 1 : 0,
-        } as GroupedEventDBScheme);
+        } as GroupedEventDBScheme;
+        const insertedId = await this.saveEvent(task.projectId, groupedEventData);
+        await writeEventToUnified(
+          this.eventsDb.getConnection(),
+          task.projectId,
+          groupedEventData as unknown as Record<string, unknown>,
+          insertedId
+        );
 
         const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
 
@@ -244,6 +256,13 @@ export default class GrouperWorker extends Worker {
       await this.incrementEventCounterAndAffectedUsers(task.projectId, {
         groupHash: uniqueEventHash,
       }, incrementAffectedUsers);
+      await ensureEventAndIncrementUnified(
+        this.eventsDb.getConnection(),
+        task.projectId,
+        uniqueEventHash,
+        existedEvent as unknown as Record<string, unknown>,
+        incrementAffectedUsers
+      );
 
       /**
        * Decode existed event to calculate diffs correctly
@@ -269,6 +288,12 @@ export default class GrouperWorker extends Worker {
       } as RepetitionDBScheme;
 
       repetitionId = await this.saveRepetition(task.projectId, newRepetition);
+      await writeRepetitionToUnified(
+        this.eventsDb.getConnection(),
+        task.projectId,
+        newRepetition as unknown as Record<string, unknown>,
+        repetitionId
+      );
 
       /**
        * Clear the large event payload references to allow garbage collection
