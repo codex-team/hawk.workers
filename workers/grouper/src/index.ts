@@ -163,7 +163,7 @@ export default class GrouperWorker extends Worker {
       });
     } catch (error) {
       this.grouperMetrics.incrementErrorsTotal();
-      this.memoryMonitor.logHandleError(this.handledTasksCount, task.payload?.title);
+      this.memoryMonitor.logHandleError(this.handledTasksCount, task.payload?.title, task.projectId);
       throw error;
     }
   }
@@ -179,7 +179,7 @@ export default class GrouperWorker extends Worker {
     const memoryBeforeHandle = process.memoryUsage();
 
     this.grouperMetrics.observePayloadSize(taskPayloadSize);
-    this.memoryMonitor.logBeforeHandle(memoryBeforeHandle, handledTasksCount, taskPayloadSize);
+    this.memoryMonitor.logBeforeHandle(memoryBeforeHandle, handledTasksCount, taskPayloadSize, task.projectId);
 
     this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
 
@@ -208,6 +208,10 @@ export default class GrouperWorker extends Worker {
      */
     this.dataFilter.processEvent(task.payload);
 
+    /**
+     * Retry loop for duplicate-key races:
+     * another worker may save the first occurrence between `getEvent()` and `saveEvent()`.
+     */
     while (true) {
       uniqueEventHash = await this.getUniqueEventHash(task);
 
@@ -217,7 +221,7 @@ export default class GrouperWorker extends Worker {
       const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
 
       if (similarEvent) {
-        this.logger.info(`[handle] similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
+        this.logger.info(`[handle] project=${task.projectId} title="${task.payload.title}" similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
 
         /**
          * Override group hash with found event's group hash
@@ -227,7 +231,7 @@ export default class GrouperWorker extends Worker {
         existedEvent = similarEvent;
       } else {
         /**
-         * If we couldn't group by grouping pattern вЂ” try grouping by hash (title)
+         * If we couldn't group by grouping pattern - try grouping by hash (title).
          */
         /**
          * Find event by group hash.
@@ -244,7 +248,7 @@ export default class GrouperWorker extends Worker {
         try {
           const incrementAffectedUsers = !!task.payload.user;
 
-          this.logger.info(`[saveEvent] new event, payloadSize=${taskPayloadSize}b`);
+          this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" new event, payloadSize=${taskPayloadSize}b`);
 
           /**
            * Insert new event
@@ -277,7 +281,7 @@ export default class GrouperWorker extends Worker {
            */
           if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
             this.grouperMetrics.incrementDuplicateRetriesTotal();
-            this.logger.info(`[saveEvent] duplicate key, retrying as repetition`);
+            this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
 
             continue;
           }
@@ -306,7 +310,7 @@ export default class GrouperWorker extends Worker {
 
       const existedPayloadSize = Buffer.byteLength(JSON.stringify(existedEvent.payload));
 
-      this.logger.info(`[computeDelta] existedPayloadSize=${existedPayloadSize}b taskPayloadSize=${taskPayloadSize}b`);
+      this.logger.info(`[computeDelta] project=${task.projectId} title="${task.payload.title}" existedPayloadSize=${existedPayloadSize}b taskPayloadSize=${taskPayloadSize}b`);
 
       try {
         /**
@@ -323,7 +327,7 @@ export default class GrouperWorker extends Worker {
 
       this.grouperMetrics.observeDeltaSize(deltaSize);
 
-      this.logger.info(`[computeDelta] deltaSize=${deltaSize}b`);
+      this.logger.info(`[computeDelta] project=${task.projectId} title="${task.payload.title}" deltaSize=${deltaSize}b`);
 
       const newRepetition = {
         groupHash: uniqueEventHash,

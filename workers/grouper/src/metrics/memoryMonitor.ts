@@ -6,6 +6,10 @@ interface LoggerLike {
 }
 
 const ROUND_PRECISION = 100;
+
+/**
+ * Number of bytes in one mebibyte.
+ */
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
 const BYTES_IN_MEBIBYTE = 1024 * 1024;
 
@@ -15,7 +19,15 @@ const BYTES_IN_MEBIBYTE = 1024 * 1024;
 export default class GrouperMemoryMonitor {
   private readonly logger: LoggerLike;
   private readonly config: GrouperMemoryConfig;
+
+  /**
+   * Task number of the last sustained-growth checkpoint.
+   */
   private memoryCheckpointTask = 0;
+
+  /**
+   * Heap usage (bytes) saved at the last sustained-growth checkpoint.
+   */
   private memoryCheckpointHeapUsed = 0;
 
   /**
@@ -54,11 +66,12 @@ export default class GrouperMemoryMonitor {
    *
    * @param handledTasksCount - currently handled tasks count.
    * @param title - event title if available.
+   * @param projectId - project identifier.
    */
-  public logHandleError(handledTasksCount: number, title: string | undefined): void {
+  public logHandleError(handledTasksCount: number, title: string | undefined, projectId: string): void {
     const suffix = title ? `title="${title}"` : '';
 
-    this.logCheckpoint('handle-error', process.memoryUsage(), handledTasksCount, suffix);
+    this.logCheckpoint('handle-error', process.memoryUsage(), handledTasksCount, projectId, suffix);
   }
 
   /**
@@ -67,17 +80,18 @@ export default class GrouperMemoryMonitor {
    * @param memoryUsage - process memory usage.
    * @param handledTasksCount - currently handled tasks count.
    * @param payloadSizeBytes - task payload size.
+   * @param projectId - project identifier.
    */
-  public logBeforeHandle(memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, payloadSizeBytes: number): void {
+  public logBeforeHandle(memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, payloadSizeBytes: number, projectId: string): void {
     if (handledTasksCount !== 1 && handledTasksCount % this.config.logEveryTasks !== 0) {
       return;
     }
 
-    this.logCheckpoint('before-handle', memoryUsage, handledTasksCount, `payloadSize=${payloadSizeBytes}b`);
+    this.logCheckpoint('before-handle', memoryUsage, handledTasksCount, projectId, `payloadSize=${payloadSizeBytes}b`);
   }
 
   /**
-   * Log handle() completion memory details and growth checks.
+   * Log post-handle memory stats and emit warnings on suspicious growth.
    *
    * @param memoryBeforeHandle - memory usage before handling.
    * @param handledTasksCount - currently handled tasks count.
@@ -97,16 +111,16 @@ export default class GrouperMemoryMonitor {
     const heapDeltaMb = Math.round((heapDeltaBytes / BYTES_IN_MEBIBYTE) * ROUND_PRECISION) / ROUND_PRECISION;
 
     this.logger.info(
-      `[handle] done, ${this.formatMemoryUsage(memoryAfterHandle)} heapDelta=${heapDeltaMb}MB handled=${handledTasksCount}`
+      `[memory][project=${projectId}] [handle] done, ${this.formatMemoryUsage(memoryAfterHandle)} heapDelta=${heapDeltaMb}MB handled=${handledTasksCount}`
     );
 
     if (heapDeltaBytes > this.config.handleGrowthWarnMb * BYTES_IN_MEBIBYTE) {
       this.logger.warn(
-        `[memory] high heap growth in single handle: heapDelta=${heapDeltaMb}MB payloadSize=${payloadSizeBytes}b title="${title}" project=${projectId}`
+        `[memory][project=${projectId}] high heap growth in single handle: heapDelta=${heapDeltaMb}MB payloadSize=${payloadSizeBytes}b title="${title}"`
       );
     }
 
-    this.checkMemoryGrowthWindow(memoryAfterHandle, handledTasksCount);
+    this.checkMemoryGrowthWindow(memoryAfterHandle, handledTasksCount, projectId);
   }
 
   /**
@@ -114,8 +128,9 @@ export default class GrouperMemoryMonitor {
    *
    * @param memoryUsage - current process memory usage.
    * @param handledTasksCount - currently handled tasks count.
+   * @param projectId - project identifier.
    */
-  private checkMemoryGrowthWindow(memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number): void {
+  private checkMemoryGrowthWindow(memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, projectId: string): void {
     const tasksInWindow = handledTasksCount - this.memoryCheckpointTask;
 
     if (tasksInWindow < this.config.growthWindowTasks) {
@@ -127,12 +142,12 @@ export default class GrouperMemoryMonitor {
     const heapUsedNowMb = Math.round((memoryUsage.heapUsed / BYTES_IN_MEBIBYTE) * ROUND_PRECISION) / ROUND_PRECISION;
 
     this.logger.info(
-      `[memory] growth window tasks=${tasksInWindow} handled=${this.memoryCheckpointTask + 1}-${handledTasksCount} heapGrowth=${heapGrowthMb}MB heapUsedNow=${heapUsedNowMb}MB`
+      `[memory][project=${projectId}] growth window tasks=${tasksInWindow} handled=${this.memoryCheckpointTask + 1}-${handledTasksCount} heapGrowth=${heapGrowthMb}MB heapUsedNow=${heapUsedNowMb}MB`
     );
 
     if (heapGrowthBytes > this.config.growthWarnMb * BYTES_IN_MEBIBYTE) {
       this.logger.warn(
-        `[memory] possible leak detected: heap grew by ${heapGrowthMb}MB in ${tasksInWindow} handled tasks`
+        `[memory][project=${projectId}] possible leak detected: heap grew by ${heapGrowthMb}MB in ${tasksInWindow} handled tasks`
       );
     }
 
@@ -161,11 +176,13 @@ export default class GrouperMemoryMonitor {
    * @param stage - lifecycle stage.
    * @param memoryUsage - current process memory usage.
    * @param handledTasksCount - currently handled tasks count.
+   * @param projectId - optional project identifier.
    * @param suffix - optional extra suffix.
    */
-  private logCheckpoint(stage: string, memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, suffix = ''): void {
+  private logCheckpoint(stage: string, memoryUsage: NodeJS.MemoryUsage, handledTasksCount: number, projectId?: string, suffix = ''): void {
     const extra = suffix ? ` ${suffix}` : '';
+    const prefix = projectId ? `[memory][project=${projectId}]` : '[memory]';
 
-    this.logger.info(`[memory] stage=${stage} handled=${handledTasksCount} ${this.formatMemoryUsage(memoryUsage)}${extra}`);
+    this.logger.info(`${prefix} stage=${stage} handled=${handledTasksCount} ${this.formatMemoryUsage(memoryUsage)}${extra}`);
   }
 }

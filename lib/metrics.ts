@@ -72,7 +72,7 @@ export function startMetricsPushing(workerName: string): () => void {
   const interval = getPushIntervalMs();
   const hostname = os.hostname();
   const id = nanoid(ID_SIZE);
-  const gateway = new client.Pushgateway(url, [], register);
+  const gateway = new client.Pushgateway(url, undefined, register);
 
   currentWorkerName = workerName;
 
