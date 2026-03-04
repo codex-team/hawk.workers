@@ -9,6 +9,7 @@ import * as utils from './lib/utils';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
+import { startMetricsPushing } from './lib/metrics';
 
 dotenv.config();
 
@@ -40,9 +41,9 @@ class WorkerRunner {
   // private gateway?: promClient.Pushgateway;
 
   /**
-   * number returned by setInterval() of metrics push function
+   * Metrics push cleanup callback.
    */
-  private pushIntervalNumber?: ReturnType<typeof setInterval>;
+  private stopMetricsPushing?: () => void;
 
   /**
    * Create runner instance
@@ -57,18 +58,16 @@ class WorkerRunner {
       .then((workerConstructors) => {
         this.constructWorkers(workerConstructors);
       })
-      // .then(() => {
-      //   try {
-      //     this.startMetrics();
-      //   } catch (e) {
-      //     HawkCatcher.send(e);
-      //     console.error(`Metrics not started: ${e}`);
-      //   }
-      //
-      //   return Promise.resolve();
-      // })
       .then(() => {
         return this.startWorkers();
+      })
+      .then(() => {
+        try {
+          this.startMetrics();
+        } catch (e) {
+          HawkCatcher.send(e);
+          console.error(`Metrics not started: ${e}`);
+        }
       })
       .then(() => {
         this.observeProcess();
@@ -82,67 +81,27 @@ class WorkerRunner {
   /**
    * Run metrics exporter
    */
-  // private startMetrics(): void {
-  //   if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
-  //     return;
-  //   }
-  //
-  //   const PUSH_INTERVAL = parseInt(process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL);
-  //
-  //   if (isNaN(PUSH_INTERVAL)) {
-  //     throw new Error('PROMETHEUS_PUSHGATEWAY_INTERVAL is invalid or not set');
-  //   }
-  //
-  //   const collectDefaultMetrics = promClient.collectDefaultMetrics;
-  //   const Registry = promClient.Registry;
-  //
-  //   const register = new Registry();
-  //   const startGcStats = gcStats(register);
-  //
-  //   const hostname = os.hostname();
-  //
-  //   const ID_SIZE = 5;
-  //   const id = nanoid(ID_SIZE);
-  //
-  //   // eslint-disable-next-line node/no-deprecated-api
-  //   const instance = url.parse(process.env.PROMETHEUS_PUSHGATEWAY_URL).host;
-  //
-  //   // Initialize metrics for workers
-  //   this.workers.forEach((worker) => {
-  //     // worker.initMetrics();
-  //     worker.getMetrics().forEach((metric: promClient.Counter<string>) => register.registerMetric(metric));
-  //   });
-  //
-  //   collectDefaultMetrics({ register });
-  //   startGcStats();
-  //
-  //   this.gateway = new promClient.Pushgateway(process.env.PROMETHEUS_PUSHGATEWAY_URL, null, register);
-  //
-  //   console.log(`Start pushing metrics to ${process.env.PROMETHEUS_PUSHGATEWAY_URL}`);
-  //
-  //   // Pushing metrics to the pushgateway every PUSH_INTERVAL
-  //   this.pushIntervalNumber = setInterval(() => {
-  //     this.workers.forEach((worker) => {
-  //       if (!this.gateway || !instance) {
-  //         return;
-  //       }
-  //       // Use pushAdd not to overwrite previous metrics
-  //       this.gateway.pushAdd({
-  //         jobName: 'workers',
-  //         groupings: {
-  //           worker: worker.type.replace('/', '_'),
-  //           host: hostname,
-  //           id,
-  //         },
-  //       }, (err?: Error) => {
-  //         if (err) {
-  //           HawkCatcher.send(err);
-  //           console.log(`Error of pushing metrics to gateway: ${err}`);
-  //         }
-  //       });
-  //     });
-  //   }, PUSH_INTERVAL);
-  // }
+  private startMetrics(): void {
+    if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
+      return;
+    }
+
+    if (this.workers.length === 0) {
+      return;
+    }
+
+    const workerTypes = Array.from(new Set(this.workers.map((worker) => {
+      return worker.type.replace('/', '_');
+    })));
+
+    const workerTypeForMetrics = workerTypes.length === 1 ? workerTypes[0] : 'multi_worker_process';
+
+    if (workerTypes.length > 1) {
+      console.warn(`[metrics] ${workerTypes.length} workers are running in one process; pushing metrics as "${workerTypeForMetrics}" to avoid duplicated attribution`);
+    }
+
+    this.stopMetricsPushing = startMetricsPushing(workerTypeForMetrics);
+  }
 
   /**
    * Dynamically loads workers through the yarn workspaces
@@ -277,7 +236,8 @@ class WorkerRunner {
   private async stopWorker(worker: Worker): Promise<void> {
     try {
       // stop pushing metrics
-      clearInterval(this.pushIntervalNumber);
+      this.stopMetricsPushing?.();
+      this.stopMetricsPushing = undefined;
       await worker.finish();
 
       console.log(
