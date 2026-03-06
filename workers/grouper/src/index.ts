@@ -36,7 +36,7 @@ import { memoize } from '../../../lib/memoize';
  * eslint does not count decorators as a variable usage
  */
 /* eslint-disable-next-line no-unused-vars */
-const MEMOIZATION_TTL = 300_000;
+const MEMOIZATION_TTL = 60_000;
 
 /**
  * Cache cleanup interval in seconds
