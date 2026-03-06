@@ -226,6 +226,14 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          /**
+           * Invalidate cached null from getEvent so the retry
+           * fetches the now-existing document from the database
+           */
+          const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
+
+          this.cache.del(eventCacheKey);
+
           await this.handle(task);
 
           return;
