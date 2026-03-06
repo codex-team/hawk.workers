@@ -10,6 +10,7 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import TimeMs from '../../../lib/utils/time';
 import * as mongodb from 'mongodb';
 import { patch } from '@n1ru4l/json-patch-plus';
+import * as crypto from 'crypto';
 
 jest.mock('amqplib');
 
@@ -330,6 +331,76 @@ describe('GrouperWorker', () => {
       await worker.handle(task);
 
       expect((await eventsCollection.findOne({})).payload.context).toBe(null);
+    });
+
+    test('should invalidate stale null cache and process event as repetition when duplicate-key error occurs', async () => {
+      /**
+       * This is a regression test for the race condition where:
+       * 1. Worker A calls getEvent → DB miss → caches null
+       * 2. Worker B inserts the same event first
+       * 3. Worker A tries to insertOne → duplicate-key error (E11000)
+       * 4. Worker A must invalidate the stale null and retry;
+       *    without the cache.del call the retry would see null again → infinite recursion
+       */
+      const RealCacheController = jest.requireActual('../../../lib/cache/controller').default;
+      const realCache = new RealCacheController();
+
+      (worker as any).cache = realCache;
+
+      try {
+        const task = generateTask({ title: 'Stale cache duplicate key regression test' });
+
+        /**
+         * Pre-compute the group hash to know which cache key to poison with null
+         */
+        const groupHash = crypto
+          .createHmac('sha256', process.env.EVENT_SECRET)
+          .update(task.catcherType + task.payload.title)
+          .digest('hex');
+
+        const eventCacheKey = `${task.projectId}:${JSON.stringify({ groupHash })}`;
+
+        /**
+         * Pre-insert the event as if Worker B already wrote it to the database
+         */
+        await eventsCollection.insertOne({
+          groupHash,
+          totalCount: 1,
+          catcherType: task.catcherType,
+          payload: task.payload,
+          timestamp: task.timestamp,
+          usersAffected: 0,
+        });
+
+        /**
+         * Poison the cache with null — simulating Worker A having cached "not found"
+         * before Worker B's insert completed
+         */
+        realCache.set(eventCacheKey, null);
+
+        const delSpy = jest.spyOn(realCache, 'del');
+
+        await worker.handle(task);
+
+        /**
+         * cache.del must have been called with the event cache key to evict the stale null
+         */
+        expect(delSpy).toHaveBeenCalledWith(eventCacheKey);
+
+        /**
+         * The retry must have found the pre-inserted event and incremented its counter
+         */
+        const savedEvent = await eventsCollection.findOne({ groupHash });
+
+        expect(savedEvent.totalCount).toBe(2);
+
+        delSpy.mockRestore();
+      } finally {
+        /**
+         * Restore the globally mocked CacheController so subsequent tests are unaffected
+         */
+        (worker as any).prepareCache();
+      }
     });
   });
 
