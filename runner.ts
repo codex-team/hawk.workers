@@ -12,10 +12,6 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-if (process.env.HAWK_CATCHER_TOKEN) {
-  HawkCatcher.init(process.env.HAWK_CATCHER_TOKEN);
-}
-
 type WorkerConstructor = new () => Worker;
 
 const BEGINNING_OF_ARGS = 2;
@@ -26,6 +22,18 @@ const BEGINNING_OF_ARGS = 2;
  * @example ts-node runner.ts hawk-worker-javascript hawk-worker-nodejs
  */
 const workerNames = process.argv.slice(BEGINNING_OF_ARGS);
+
+/** 
+ * Initialize HawkCatcher
+*/
+if (process.env.HAWK_CATCHER_TOKEN) {
+  HawkCatcher.init({
+    token: process.env.HAWK_CATCHER_TOKEN,
+    context: {
+      workerTypes: workerNames.join(","),
+    }
+  });
+}
 
 /**
  * Workers dispatcher.
