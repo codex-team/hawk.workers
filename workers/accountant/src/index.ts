@@ -5,7 +5,6 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import { AccountantEvent, EventType, IncomeTransactionPayload, TransactionEvent, TransactionType } from '../types/accountant-worker-events';
 import { WorkspaceDBScheme } from '@hawk.so/types';
-import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * Worker for managing workspaces balance
@@ -64,7 +63,6 @@ export default class AccountantWorker extends Worker {
    *
    * @param event
    */
-  @catchAndReport()
   public async handle(event: AccountantEvent): Promise<void> {
     switch (event.type) {
       case EventType.Transaction:

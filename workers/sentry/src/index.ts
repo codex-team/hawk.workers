@@ -9,7 +9,6 @@ import { b64decode } from './utils/base64';
 import { CatcherMessagePayload } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
-import { catchAndReport } from '../../../lib/utils/catchAndReport';
 /**
  * Worker for handling Sentry events
  */
@@ -24,7 +23,6 @@ export default class SentryEventWorker extends Worker {
    *
    * @param event - event to handle
    */
-  @catchAndReport()
   public async handle(event: SentryEventWorkerTask): Promise<void> {
     /**
      * Define  event type

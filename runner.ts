@@ -1,4 +1,3 @@
-import { EventContext } from '@hawk.so/types';
 import * as utils from './lib/utils';
 
 /* Prometheus client for pushing metrics to the pushgateway */
@@ -193,9 +192,7 @@ class WorkerRunner {
 
           utils.sendReport(worker.constructor.name + ' started');
         } catch (startingError) {
-          this.exceptionHandler(startingError, {
-            workerType: worker.type
-          });
+          this.exceptionHandler(startingError);
 
           utils.sendReport(worker.constructor.name + ' failed to start');
 
@@ -212,8 +209,8 @@ class WorkerRunner {
    *
    * @param error - error to handle
    */
-  private exceptionHandler(error: Error, context?: EventContext): void {
-    HawkCatcher.send(error, context);
+  private exceptionHandler(error: Error): void {
+    HawkCatcher.send(error);
 
     console.log(
       '\x1b[41m%s\x1b[0m',
@@ -288,9 +285,7 @@ class WorkerRunner {
         `\n\n Worker ${worker.constructor.name} stopped \n`
       );
     } catch (finishingError) {
-      HawkCatcher.send(finishingError, {
-        workerType: worker.type
-      });
+      HawkCatcher.send(finishingError);
       console.error('Error while finishing Worker: ', finishingError);
     }
   }

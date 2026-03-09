@@ -14,7 +14,6 @@ import { beautifyUserAgent, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
-import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -71,7 +70,6 @@ export default class JavascriptEventWorker extends EventWorker {
    *
    * @param event - event to handle
    */
-  @catchAndReport()
   public async handle(event: JavaScriptEventWorkerTask): Promise<void> {
     if (event.payload.release && event.payload.backtrace) {
       this.logger.info('beautifyBacktrace called');

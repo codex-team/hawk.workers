@@ -13,7 +13,6 @@ import { WorkspaceWithTariffPlan } from '../types';
 import * as WorkerNames from '../../../lib/workerNames';
 import { DbHelper } from './dbHelper';
 import * as telegram from '../../../lib/utils/telegram';
-import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -92,7 +91,6 @@ export default class LimiterWorker extends Worker {
    *
    * @param event - worker event to handle
    */
-  @catchAndReport()
   public async handle(event: LimiterEvent): Promise<void> {
     switch (event.type) {
       case 'regular-workspaces-check':

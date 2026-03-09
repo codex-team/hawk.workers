@@ -15,7 +15,6 @@ import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { GitHubService } from './GithubService';
 import { formatIssueFromEvent } from './utils/issue';
 import TimeMs from '../../../lib/utils/time';
-import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**
  * Default maximum number of auto-created tasks per project per day
@@ -76,7 +75,6 @@ export default class TaskManagerWorker extends Worker {
    *
    * @param task - task manager task to handle
    */
-  @catchAndReport()
   public async handle(task: TaskManagerWorkerTask): Promise<void> {
     try {
       this.logger.info('Starting task manager worker', { taskType: task.type });
