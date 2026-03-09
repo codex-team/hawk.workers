@@ -34,7 +34,6 @@ import {
 } from '../types/sender-task';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';
 import { Notification, EventNotification, SeveralEventsNotification, PaymentFailedNotification, AssigneeNotification, SignUpNotification } from '../types/template-variables';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**

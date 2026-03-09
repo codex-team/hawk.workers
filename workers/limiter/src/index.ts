@@ -13,7 +13,6 @@ import { WorkspaceWithTariffPlan } from '../types';
 import * as WorkerNames from '../../../lib/workerNames';
 import { DbHelper } from './dbHelper';
 import * as telegram from '../../../lib/utils/telegram';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

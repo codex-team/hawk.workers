@@ -14,7 +14,6 @@ import { beautifyUserAgent, getFunctionContext } from './utils';
 import { Collection } from 'mongodb';
 /* eslint-disable-next-line no-unused-vars */
 import { memoize } from '../../../lib/memoize';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 /**

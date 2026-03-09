@@ -9,7 +9,6 @@ import * as dotenv from 'dotenv';
 import prettysize from 'prettysize';
 import { ProjectDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

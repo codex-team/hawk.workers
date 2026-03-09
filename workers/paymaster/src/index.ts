@@ -10,7 +10,6 @@ import axios from 'axios';
 import * as WorkerNames from '../../../lib/workerNames';
 import HawkCatcher from '@hawk.so/nodejs';
 import { countDaysBeforePayday, countDaysAfterPayday, countDaysAfterBlock } from '../../../lib/utils/payday';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 
 dotenv.config({

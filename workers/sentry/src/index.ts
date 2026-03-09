@@ -9,7 +9,6 @@ import { b64decode } from './utils/base64';
 import { CatcherMessagePayload } from '@hawk.so/types';
 import { TextDecoder } from 'util';
 import { JavaScriptEventWorkerTask } from '../../javascript/types/javascript-event-worker-task';
-// eslint-disable-next-line no-unused-vars
 import { catchAndReport } from '../../../lib/utils/catchAndReport';
 /**
  * Worker for handling Sentry events
