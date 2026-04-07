@@ -193,17 +193,11 @@ export default class RedisHelper {
   ): Promise<void> {
     const timestamp = Date.now();
 
-    try {
-      await this.tsIncrBy(key, value, timestamp, labels);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('TSDB: key does not exist')) {
-        this.logger.warn(`TS key ${key} does not exist, creating it...`);
-        await this.tsCreateIfNotExists(key, labels, retentionMs);
-        await this.tsIncrBy(key, value, timestamp, labels);
-      } else {
-        throw error;
-      }
-    }
+    /**
+     * Create key if not exists — then call increment
+     */
+    await this.tsCreateIfNotExists(key, labels, retentionMs);
+    await this.tsIncrBy(key, value, timestamp, labels);
   }
 
   /**
@@ -252,17 +246,11 @@ export default class RedisHelper {
   ): Promise<void> {
     const timestamp = Date.now();
 
-    try {
-      await this.tsAdd(key, value, timestamp, labels);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('TSDB: key does not exist')) {
-        this.logger.warn(`TS key ${key} does not exist, creating it...`);
-        await this.tsCreateIfNotExists(key, labels, retentionMs);
-        await this.tsAdd(key, value, timestamp, labels);
-      } else {
-        throw error;
-      }
-    }
+    /**
+     * Create key if not exists — then call increment
+     */
+    await this.tsCreateIfNotExists(key, labels, retentionMs);
+    await this.tsAdd(key, value, timestamp, labels);
   }
 
   /**
