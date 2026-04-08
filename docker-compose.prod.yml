@@ -84,3 +84,11 @@ services:
       - workers/telegram/.env
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
+
+  hawk-worker-webhook:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-webhook
