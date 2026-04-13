@@ -21,6 +21,14 @@ describe('converter utils', () => {
 
       expect(composeTitle(event)).toBe('Unknown: ');
     });
+
+    it('should compose title from message', () => {
+      const event: SentryEvent = {
+        message: 'message'
+      };
+
+      expect(composeTitle(event)).toBe('message');
+    });
   });
 
   describe('composeBacktrace()', () => {
