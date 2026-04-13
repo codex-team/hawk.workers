@@ -22,12 +22,26 @@ describe('converter utils', () => {
       expect(composeTitle(event)).toBe('Unknown: ');
     });
 
-    it('should compose title from message', () => {
+    it('should compose title from message if exception is missing', () => {
       const event: SentryEvent = {
         message: 'message'
       };
 
       expect(composeTitle(event)).toBe('message');
+    });
+
+    it('should compose title from exception type and value even if message is present', () => {
+      const event: SentryEvent = {
+        exception: {
+          values: [ {
+            type: 'Error',
+            value: 'Something went wrong',
+          } ],
+        },
+        message: 'message'
+      };
+
+      expect(composeTitle(event)).toBe('Error: Something went wrong');
     });
   });
 
