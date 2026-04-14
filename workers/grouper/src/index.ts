@@ -50,6 +50,11 @@ const CACHE_CLEANUP_INTERVAL_SECONDS = 30;
 const DB_DUPLICATE_KEY_ERROR = '11000';
 
 /**
+ * Retention period for daily Redis TimeSeries metrics in days
+ */
+const DAILY_METRICS_RETENTION_DAYS = 90;
+
+/**
  * Maximum length for backtrace code line or title
  */
 const MAX_CODE_LINE_LENGTH = 140;
@@ -346,7 +351,7 @@ export default class GrouperWorker extends Worker {
     const series = [
       { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY,        timestampMs: bucketTimestampMs('minutely') },
       { key: hourlyKey,   label: 'hourly',   retentionMs: TimeMs.WEEK,       timestampMs: bucketTimestampMs('hourly') },
-      { key: dailyKey,    label: 'daily',    retentionMs: 90 * TimeMs.DAY,   timestampMs: bucketTimestampMs('daily') },
+      { key: dailyKey,    label: 'daily',    retentionMs: DAILY_METRICS_RETENTION_DAYS * TimeMs.DAY,   timestampMs: bucketTimestampMs('daily') },
     ];
 
     for (const { key, label, retentionMs, timestampMs } of series) {
