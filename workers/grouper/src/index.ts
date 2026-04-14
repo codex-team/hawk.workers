@@ -23,6 +23,7 @@ import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
+import { bucketTimestampMs } from './utils/bucketTimestamp';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
 
@@ -326,20 +327,6 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Returns the current time truncated to the start of the given granularity
-   * bucket in milliseconds. All events within the same bucket share one
-   * timestamp so ON_DUPLICATE SUM accumulates them into a single sample.
-   */
-  private bucketTimestampMs(granularity: 'minutely' | 'hourly' | 'daily'): number {
-    const now = Date.now();
-    switch (granularity) {
-      case 'hourly': return now - (now % TimeMs.HOUR);
-      case 'daily':  return now - (now % TimeMs.DAY);
-      default:       return now - (now % TimeMs.MINUTE); // minutely
-    }
-  }
-
-  /**
    * Record project metrics to Redis TimeSeries.
    *
    * @param projectId - id of the project
@@ -357,9 +344,9 @@ export default class GrouperWorker extends Worker {
     };
 
     const series = [
-      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY,        timestampMs: this.bucketTimestampMs('minutely') },
-      { key: hourlyKey,   label: 'hourly',   retentionMs: TimeMs.WEEK,       timestampMs: this.bucketTimestampMs('hourly') },
-      { key: dailyKey,    label: 'daily',    retentionMs: 90 * TimeMs.DAY,   timestampMs: this.bucketTimestampMs('daily') },
+      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY,        timestampMs: bucketTimestampMs('minutely') },
+      { key: hourlyKey,   label: 'hourly',   retentionMs: TimeMs.WEEK,       timestampMs: bucketTimestampMs('hourly') },
+      { key: dailyKey,    label: 'daily',    retentionMs: 90 * TimeMs.DAY,   timestampMs: bucketTimestampMs('daily') },
     ];
 
     for (const { key, label, retentionMs, timestampMs } of series) {
