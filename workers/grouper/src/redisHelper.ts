@@ -237,14 +237,16 @@ export default class RedisHelper {
    * @param value - value to add
    * @param labels - labels to attach to the time series
    * @param retentionMs - optional retention in milliseconds
+   * @param timestampMs - timestamp in milliseconds; defaults to current time
    */
   public async safeTsAdd(
     key: string,
     value: number,
     labels: Record<string, string>,
-    retentionMs = 0
+    retentionMs = 0,
+    timestampMs = 0
   ): Promise<void> {
-    const timestamp = Date.now();
+    const timestamp = timestampMs === 0 ? Date.now() : timestampMs;
 
     /**
      * Create key if not exists — then call increment

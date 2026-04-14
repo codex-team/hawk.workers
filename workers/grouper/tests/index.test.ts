@@ -763,21 +763,24 @@ describe('GrouperWorker', () => {
           `ts:project-events-accepted:${projectIdMock}:minutely`,
           1,
           expectedLabels,
-          TimeMs.DAY
+          TimeMs.DAY,
+          expect.any(Number),
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           2,
           `ts:project-events-accepted:${projectIdMock}:hourly`,
           1,
           expectedLabels,
-          TimeMs.WEEK
+          TimeMs.WEEK,
+          expect.any(Number),
         );
         expect(safeTsAddSpy).toHaveBeenNthCalledWith(
           3,
           `ts:project-events-accepted:${projectIdMock}:daily`,
           1,
           expectedLabels,
-          90 * TimeMs.DAY
+          90 * TimeMs.DAY,
+          expect.any(Number),
         );
       } finally {
         safeTsAddSpy.mockRestore();
