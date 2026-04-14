@@ -326,6 +326,20 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
+   * Returns the current time truncated to the start of the given granularity
+   * bucket in milliseconds. All events within the same bucket share one
+   * timestamp so ON_DUPLICATE SUM accumulates them into a single sample.
+   */
+  private bucketTimestampMs(granularity: 'minutely' | 'hourly' | 'daily'): number {
+    const now = Date.now();
+    switch (granularity) {
+      case 'hourly': return now - (now % TimeMs.HOUR);
+      case 'daily':  return now - (now % TimeMs.DAY);
+      default:       return now - (now % TimeMs.MINUTE); // minutely
+    }
+  }
+
+  /**
    * Record project metrics to Redis TimeSeries.
    *
    * @param projectId - id of the project
@@ -343,37 +357,18 @@ export default class GrouperWorker extends Worker {
     };
 
     const series = [
-      {
-        key: minutelyKey,
-        label: 'minutely',
-        retentionMs: TimeMs.DAY,
-      },
-      {
-        key: hourlyKey,
-        label: 'hourly',
-        retentionMs: TimeMs.WEEK,
-      },
-      {
-        key: dailyKey,
-        label: 'daily',
-        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-        retentionMs: 90 * TimeMs.DAY,
-      },
+      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY,        timestampMs: this.bucketTimestampMs('minutely') },
+      { key: hourlyKey,   label: 'hourly',   retentionMs: TimeMs.WEEK,       timestampMs: this.bucketTimestampMs('hourly') },
+      { key: dailyKey,    label: 'daily',    retentionMs: 90 * TimeMs.DAY,   timestampMs: this.bucketTimestampMs('daily') },
     ];
 
-    const operations = series.map(({ key, label, retentionMs }) => ({
-      label,
-      promise: this.redis.safeTsAdd(key, 1, labels, retentionMs),
-    }));
-
-    const results = await Promise.allSettled(operations.map((op) => op.promise));
-
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        const { label } = operations[index];
-        this.logger.error(`Failed to add ${label} TS for ${metricType}`, result.reason);
+    for (const { key, label, retentionMs, timestampMs } of series) {
+      try {
+        await this.redis.safeTsAdd(key, 1, labels, retentionMs, timestampMs);
+      } catch (error) {
+        this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
       }
-    });
+    }
   }
 
   /**
