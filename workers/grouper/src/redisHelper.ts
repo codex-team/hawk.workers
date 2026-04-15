@@ -111,6 +111,166 @@ export default class RedisHelper {
   }
 
   /**
+   * Creates a RedisTimeSeries key if it doesn't exist.
+   *
+   * @param key - time series key
+   * @param labels - labels to attach to the time series
+   * @param retentionMs - optional retention in milliseconds
+   */
+  public async tsCreateIfNotExists(
+    key: string,
+    labels: Record<string, string>,
+    retentionMs = 0
+  ): Promise<void> {
+    const script = `
+      if redis.call('EXISTS', KEYS[1]) == 1 then
+        return 0
+      end
+
+      redis.call('TS.CREATE', KEYS[1], unpack(ARGV))
+      return 1
+    `;
+
+    const args: string[] = [];
+
+    if (retentionMs > 0) {
+      args.push('RETENTION', Math.floor(retentionMs).toString());
+    }
+
+    args.push(...this.buildLabelArguments(labels));
+
+    await this.redisClient.eval(
+      script,
+      {
+        keys: [key],
+        arguments: args,
+      }
+    );
+  }
+
+  /**
+   * Increments a RedisTimeSeries key with labels and timestamp.
+   *
+   * @param key - time series key
+   * @param value - value to increment by
+   * @param timestampMs - timestamp in milliseconds, defaults to current time
+   * @param labels - labels to attach to the sample
+   */
+  public async tsIncrBy(
+    key: string,
+    value: number,
+    timestampMs = 0,
+    labels: Record<string, string> = {}
+  ): Promise<void> {
+    const labelArgs = this.buildLabelArguments(labels);
+    const timestamp = timestampMs === 0 ? Date.now() : timestampMs;
+
+    const args: string[] = [
+      'TS.INCRBY',
+      key,
+      value.toString(),
+      'TIMESTAMP',
+      Math.floor(timestamp).toString(),
+      ...labelArgs,
+    ];
+
+    await this.redisClient.sendCommand(args);
+  }
+
+  /**
+   * Ensures that a RedisTimeSeries key exists and increments it safely.
+   *
+   * @param key - time series key
+   * @param value - value to increment by
+   * @param labels - labels to attach to the time series
+   * @param retentionMs - optional retention in milliseconds
+   */
+  public async safeTsIncrBy(
+    key: string,
+    value: number,
+    labels: Record<string, string>,
+    retentionMs = 0
+  ): Promise<void> {
+    const timestamp = Date.now();
+
+    /**
+     * Create key if not exists - then call increment
+     */
+    await this.tsCreateIfNotExists(key, labels, retentionMs);
+    await this.tsIncrBy(key, value, timestamp, labels);
+  }
+
+  /**
+   * Adds a sample to a RedisTimeSeries key.
+   *
+   * @param key - time series key
+   * @param value - value to add
+   * @param timestampMs - timestamp in milliseconds, defaults to current time
+   * @param labels - labels to attach to the sample
+   */
+  public async tsAdd(
+    key: string,
+    value: number,
+    timestampMs = 0,
+    labels: Record<string, string> = {}
+  ): Promise<void> {
+    const labelArgs = this.buildLabelArguments(labels);
+    const timestamp = timestampMs === 0 ? Date.now() : timestampMs;
+
+    const args: string[] = [
+      'TS.ADD',
+      key,
+      Math.floor(timestamp).toString(),
+      value.toString(),
+      'ON_DUPLICATE',
+      'SUM',
+      ...labelArgs,
+    ];
+
+    await this.redisClient.sendCommand(args);
+  }
+
+  /**
+   * Ensures that a RedisTimeSeries key exists and adds a sample safely.
+   *
+   * @param key - time series key
+   * @param value - value to add
+   * @param labels - labels to attach to the time series
+   * @param retentionMs - optional retention in milliseconds
+   * @param timestampMs - timestamp in milliseconds; defaults to current time
+   */
+  public async safeTsAdd(
+    key: string,
+    value: number,
+    labels: Record<string, string>,
+    retentionMs = 0,
+    timestampMs = 0
+  ): Promise<void> {
+    const timestamp = timestampMs === 0 ? Date.now() : timestampMs;
+
+    /**
+     * Create key if not exists - then call increment
+     */
+    await this.tsCreateIfNotExists(key, labels, retentionMs);
+    await this.tsAdd(key, value, timestamp, labels);
+  }
+
+  /**
+   * Build label arguments for RedisTimeSeries commands
+   *
+   * @param labels - labels to attach to the time series
+   */
+  private buildLabelArguments(labels: Record<string, string>): string[] {
+    const labelArgs: string[] = [ 'LABELS' ];
+
+    for (const [labelKey, labelValue] of Object.entries(labels)) {
+      labelArgs.push(labelKey, labelValue);
+    }
+
+    return labelArgs;
+  }
+
+  /**
    * Creates callback function for Redis operations
    *
    * @param resolve - callback that will be called if no errors occurred

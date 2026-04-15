@@ -23,6 +23,7 @@ import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
+import { bucketTimestampMs } from './utils/bucketTimestamp';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
 import GrouperMetrics from './metrics/grouperMetrics';
@@ -39,17 +40,22 @@ import { memoize } from '../../../lib/memoize';
  * eslint does not count decorators as a variable usage
  */
 /* eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars */
-const MEMOIZATION_TTL = 600_000;
+const MEMOIZATION_TTL = 60_000;
 
 /**
- * Cache cleanup interval in minutes
+ * Cache cleanup interval in seconds
  */
-const CACHE_CLEANUP_INTERVAL_MINUTES = 5;
+const CACHE_CLEANUP_INTERVAL_SECONDS = 30;
 
 /**
  * Error code of MongoDB key duplication error
  */
 const DB_DUPLICATE_KEY_ERROR = '11000';
+
+/**
+ * Retention period for daily Redis TimeSeries metrics in days
+ */
+const DAILY_METRICS_RETENTION_DAYS = 90;
 
 /**
  * Maximum length for backtrace code line or title
@@ -121,11 +127,11 @@ export default class GrouperWorker extends Worker {
 
     /**
      * Start periodic cache cleanup to prevent memory leaks from unbounded cache growth
-     * Runs every 5 minutes to clear old cache entries
+     * Runs every 30 seconds to clear old cache entries
      */
     this.cacheCleanupInterval = setInterval(() => {
       this.clearCache();
-    }, CACHE_CLEANUP_INTERVAL_MINUTES * TimeMs.MINUTE);
+    }, CACHE_CLEANUP_INTERVAL_SECONDS * TimeMs.SECOND);
     this.memoryMonitor.initialize(this.handledTasksCount);
 
     await super.start();
@@ -193,7 +199,7 @@ export default class GrouperWorker extends Worker {
     }
 
     let uniqueEventHash = '';
-    let existedEvent: GroupedEventDBScheme;
+    let existedEvent: GroupedEventDBScheme | null = null;
     let isFirstOccurrence = false;
     let repetitionId = null;
     let incrementDailyAffectedUsers = false;
@@ -214,6 +220,7 @@ export default class GrouperWorker extends Worker {
      */
     while (true) {
       uniqueEventHash = await this.getUniqueEventHash(task);
+      const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
 
       /**
        * Find similar events by grouping pattern
@@ -242,7 +249,7 @@ export default class GrouperWorker extends Worker {
       /**
        * Event happened for the first time
        */
-      isFirstOccurrence = !existedEvent && !similarEvent;
+      isFirstOccurrence = existedEvent === null;
 
       if (isFirstOccurrence) {
         try {
@@ -262,8 +269,6 @@ export default class GrouperWorker extends Worker {
             usersAffected: incrementAffectedUsers ? 1 : 0,
           } as GroupedEventDBScheme);
 
-          const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
-
           /**
            * If event is saved, then cached event state is no longer actual, so we should remove it
            */
@@ -282,12 +287,17 @@ export default class GrouperWorker extends Worker {
           if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
             this.grouperMetrics.incrementDuplicateRetriesTotal();
             this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
+            this.cache.del(eventCacheKey);
 
             continue;
           }
 
           throw e;
         }
+      }
+
+      if (!existedEvent) {
+        throw new ValidationError(`GrouperWorker.handleInternal: Expected existed event for group hash ${uniqueEventHash}`);
       }
 
       const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
@@ -385,6 +395,60 @@ export default class GrouperWorker extends Worker {
             repetitionId: repetitionId ? repetitionId.toString() : null,
           },
         });
+      }
+    }
+
+    await this.recordProjectMetrics(task.projectId, 'events-accepted');
+  }
+
+  /**
+   * Build RedisTimeSeries key for project metrics.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   * @param granularity - time granularity
+   */
+  private getTimeSeriesKey(
+    projectId: string,
+    metricType: string,
+    granularity: 'minutely' | 'hourly' | 'daily'
+  ): string {
+    return `ts:project-${metricType}:${projectId}:${granularity}`;
+  }
+
+  /**
+   * Record project metrics to Redis TimeSeries.
+   *
+   * @param projectId - id of the project
+   * @param metricType - metric type identifier
+   */
+  private async recordProjectMetrics(projectId: string, metricType: string): Promise<void> {
+    const minutelyKey = this.getTimeSeriesKey(projectId, metricType, 'minutely');
+    const hourlyKey = this.getTimeSeriesKey(projectId, metricType, 'hourly');
+    const dailyKey = this.getTimeSeriesKey(projectId, metricType, 'daily');
+
+    const labels: Record<string, string> = {
+      type: 'error',
+      status: metricType,
+      project: projectId,
+    };
+
+    const series = [
+      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY, timestampMs: bucketTimestampMs('minutely') },
+      { key: hourlyKey, label: 'hourly', retentionMs: TimeMs.WEEK, timestampMs: bucketTimestampMs('hourly') },
+      {
+        key: dailyKey,
+        label: 'daily',
+        retentionMs: DAILY_METRICS_RETENTION_DAYS * TimeMs.DAY,
+        timestampMs: bucketTimestampMs('daily'),
+      },
+    ];
+
+    for (const { key, label, retentionMs, timestampMs } of series) {
+      try {
+        await this.redis.safeTsAdd(key, 1, labels, retentionMs, timestampMs);
+      } catch (error) {
+        this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
       }
     }
   }
@@ -629,7 +693,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - project's identifier
    * @param groupHash - group hash of the event
    */
-  private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme> {
+  private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme | null> {
     if (!mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
