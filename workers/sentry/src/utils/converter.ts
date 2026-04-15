@@ -54,7 +54,13 @@ function flattenObject(obj: unknown, prefix = ''): string[] {
  * @param eventPayload - Sentry event payload
  */
 export function composeTitle(eventPayload: SentryEvent): string {
-  return `${eventPayload.exception?.values?.[0]?.type || 'Unknown'}: ${eventPayload.exception?.values?.[0]?.value || ''}`;
+  const exception = eventPayload.exception?.values?.[0];
+
+  if (exception) {
+    return `${exception.type || 'Unknown'}: ${exception.value || ''}`;
+  }
+
+  return eventPayload.message || 'Unknown: ';
 }
 
 /**
