@@ -12,6 +12,6 @@ export function bucketTimestampMs(granularity: 'minutely' | 'hourly' | 'daily', 
   switch (granularity) {
     case 'hourly': return now - (now % TimeMs.HOUR);
     case 'daily': return now - (now % TimeMs.DAY);
-    default: return now - (now % TimeMs.MINUTE);
+    default: return now - (now % TimeMs.MINUTE); // minutely
   }
 }

@@ -116,7 +116,6 @@ describe('GrouperWorker', () => {
   let projectsCollection: Collection;
   let redisClient: RedisClientType;
   let worker: GrouperWorker;
-
   beforeAll(async () => {
     worker = new GrouperWorker();
 
