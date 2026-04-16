@@ -304,7 +304,7 @@ describe('SentryEventWorker', () => {
               },
             },
             catcherVersion: '1.0.1',
-            title: 'Unknown: ',
+            title: 'Test timestamp',
             type: 'error',
           },
         }));
