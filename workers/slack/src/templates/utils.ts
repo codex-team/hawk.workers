@@ -32,9 +32,12 @@ export function getEventLocation(event: DecodedGroupedEvent): string {
  * @param host - garage host. Also, can be accessed from process.env.GARAGE_URL
  * @param project - parent project
  * @param event - event to compose its URL
+ * @param repetitionId - id of the specific repetition that triggered the notification
  */
-export function getEventUrl(host: string, project: ProjectDBScheme, event: GroupedEventDBScheme): string {
-  return host + '/project/' + project._id + '/event/' + event._id + '/';
+export function getEventUrl(host: string, project: ProjectDBScheme, event: GroupedEventDBScheme, repetitionId?: string | null): string {
+  const base = host + '/project/' + project._id + '/event/' + event._id + '/';
+
+  return repetitionId ? base + repetitionId + '/overview' : base;
 }
 
 /**

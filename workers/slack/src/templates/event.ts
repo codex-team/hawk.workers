@@ -45,7 +45,7 @@ function renderBacktrace(event: GroupedEventDBScheme): string {
 export default function render(tplData: EventsTemplateVariables): IncomingWebhookSendArguments {
   const eventInfo = tplData.events[0] as TemplateEventData;
   const event = eventInfo.event;
-  const eventURL = getEventUrl(tplData.host, tplData.project, event);
+  const eventURL = getEventUrl(tplData.host, tplData.project, event, eventInfo.repetitionId);
   const location = getEventLocation(event);
 
   const blocks = [
