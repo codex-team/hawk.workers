@@ -24,9 +24,9 @@ export interface GrouperMemoryConfig {
 }
 
 /**
- * Default memory checkpoint interval in handled tasks.
+ * Default memory checkpoint interval in tasks.
  */
-const DEFAULT_MEMORY_LOG_EVERY_TASKS = 50;
+const DEFAULT_MEMORY_LOG_INTERVAL_TASKS = 50;
 
 /**
  * Default sustained-growth window size in handled tasks.
@@ -65,7 +65,7 @@ function asPositiveNumber(value: string | undefined, fallback: number): number {
  * Memory monitoring config from environment.
  */
 export const grouperMemoryConfig: GrouperMemoryConfig = {
-  logEveryTasks: asPositiveNumber(process.env.GROUPER_MEMORY_LOG_EVERY_TASKS, DEFAULT_MEMORY_LOG_EVERY_TASKS),
+  logEveryTasks: asPositiveNumber(process.env.GROUPER_MEMORY_LOG_EVERY_TASKS, DEFAULT_MEMORY_LOG_INTERVAL_TASKS),
   growthWindowTasks: asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WINDOW_TASKS, DEFAULT_MEMORY_GROWTH_WINDOW_TASKS),
   growthWarnMb: asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WARN_MB, DEFAULT_MEMORY_GROWTH_WARN_MB),
   handleGrowthWarnMb: asPositiveNumber(process.env.GROUPER_MEMORY_HANDLE_GROWTH_WARN_MB, DEFAULT_MEMORY_HANDLE_GROWTH_WARN_MB),

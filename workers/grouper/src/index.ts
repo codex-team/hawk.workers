@@ -198,9 +198,8 @@ export default class GrouperWorker extends Worker {
       };
     }
 
-    let uniqueEventHash = '';
-    let existedEvent: GroupedEventDBScheme | null = null;
-    let isFirstOccurrence = false;
+    let uniqueEventHash = await this.getUniqueEventHash(task);
+    let existedEvent: GroupedEventDBScheme;
     let repetitionId = null;
     let incrementDailyAffectedUsers = false;
 
@@ -215,91 +214,80 @@ export default class GrouperWorker extends Worker {
     this.dataFilter.processEvent(task.payload);
 
     /**
-     * Retry loop for duplicate-key races:
-     * another worker may save the first occurrence between `getEvent()` and `saveEvent()`.
+     * Find similar events by grouping pattern
      */
-    while (true) {
-      uniqueEventHash = await this.getUniqueEventHash(task);
-      const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
+    const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
+
+    if (similarEvent) {
+      this.logger.info(`[handle] project=${task.projectId} title="${task.payload.title}" similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
 
       /**
-       * Find similar events by grouping pattern
+       * Override group hash with found event's group hash
        */
-      const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
+      uniqueEventHash = similarEvent.groupHash;
 
-      if (similarEvent) {
-        this.logger.info(`[handle] project=${task.projectId} title="${task.payload.title}" similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
-
-        /**
-         * Override group hash with found event's group hash
-         */
-        uniqueEventHash = similarEvent.groupHash;
-
-        existedEvent = similarEvent;
-      } else {
-        /**
-         * If we couldn't group by grouping pattern - try grouping by hash (title).
-         */
-        /**
-         * Find event by group hash.
-         */
-        existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
-      }
-
+      existedEvent = similarEvent;
+    } else {
       /**
-       * Event happened for the first time
+       * If we couldn't group by grouping pattern - try grouping by hash (title).
        */
-      isFirstOccurrence = existedEvent === null;
+      /**
+       * Find event by group hash.
+       */
+      existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
+    }
 
-      if (isFirstOccurrence) {
-        try {
-          const incrementAffectedUsers = !!task.payload.user;
+    /**
+     * Event happened for the first time
+     */
+    const isFirstOccurrence = !existedEvent && !similarEvent;
 
-          this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" new event, payloadSize=${taskPayloadSize}b`);
+    if (isFirstOccurrence) {
+      try {
+        const incrementAffectedUsers = !!task.payload.user;
 
-          /**
-           * Insert new event
-           */
-          await this.saveEvent(task.projectId, {
-            groupHash: uniqueEventHash,
-            totalCount: 1,
-            catcherType: task.catcherType,
-            payload: task.payload,
-            timestamp: task.timestamp,
-            usersAffected: incrementAffectedUsers ? 1 : 0,
-          } as GroupedEventDBScheme);
+        this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" new event, payloadSize=${taskPayloadSize}b`);
 
-          /**
-           * If event is saved, then cached event state is no longer actual, so we should remove it
-           */
-          this.cache.del(eventCacheKey);
+        /**
+         * Insert new event
+         */
+        await this.saveEvent(task.projectId, {
+          groupHash: uniqueEventHash,
+          totalCount: 1,
+          catcherType: task.catcherType,
+          payload: task.payload,
+          timestamp: task.timestamp,
+          usersAffected: incrementAffectedUsers ? 1 : 0,
+        } as GroupedEventDBScheme);
 
-          /**
-           * Increment daily affected users for the first event
-           */
-          incrementDailyAffectedUsers = incrementAffectedUsers;
-          break;
-        } catch (e) {
-          /**
-           * If we caught Database duplication error, then another worker thread has already saved it to the database
-           * and we need to process this event as repetition
-           */
-          if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
-            this.grouperMetrics.incrementDuplicateRetriesTotal();
-            this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
-            this.cache.del(eventCacheKey);
+        const eventCacheKey = await this.getEventCacheKey(task.projectId, uniqueEventHash);
 
-            continue;
-          }
+        /**
+         * If event is saved, then cached event state is no longer actual, so we should remove it
+         */
+        this.cache.del(eventCacheKey);
 
-          throw e;
+        /**
+         * Increment daily affected users for the first event
+         */
+        incrementDailyAffectedUsers = incrementAffectedUsers;
+      } catch (e) {
+        /**
+         * If we caught Database duplication error, then another worker thread has already saved it to the database
+         * and we need to process this event as repetition
+         */
+        if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          this.grouperMetrics.incrementDuplicateRetriesTotal();
+          this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
+
+          await this.handle(task);
+
+          return;
         }
-      }
 
-      if (!existedEvent) {
-        throw new ValidationError(`GrouperWorker.handleInternal: Expected existed event for group hash ${uniqueEventHash}`);
+        throw e;
       }
-
+    } else {
       const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
 
       incrementDailyAffectedUsers = shouldIncrementDailyAffectedUsers;
@@ -352,7 +340,6 @@ export default class GrouperWorker extends Worker {
        * This prevents memory leaks from retaining full event objects after delta is computed
        */
       delta = undefined;
-      break;
     }
 
     /**
@@ -693,7 +680,7 @@ export default class GrouperWorker extends Worker {
    * @param projectId - project's identifier
    * @param groupHash - group hash of the event
    */
-  private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme | null> {
+  private async getEvent(projectId: string, groupHash: string): Promise<GroupedEventDBScheme> {
     if (!mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
