@@ -39,7 +39,8 @@ function renderBacktrace(event: GroupedEventDBScheme): string {
 export default function render(tplData: EventsTemplateVariables): string {
   const eventInfo = tplData.events[0] as TemplateEventData;
   const event = eventInfo.event;
-  const eventURL = tplData.host + '/project/' + tplData.project._id + '/event/' + event._id + '/';
+  const repetitionId = eventInfo.repetitionId;
+  const eventURL = tplData.host + '/project/' + tplData.project._id + '/event/' + event._id + '/' + (repetitionId ? repetitionId + '/overview' : '');
   let location = 'Неизвестное место';
 
   if (event.payload.backtrace && event.payload.backtrace.length > 0) {

@@ -2,6 +2,7 @@ import { EventNotification, SeveralEventsNotification } from 'hawk-worker-sender
 import { DecodedGroupedEvent, ProjectDBScheme } from '@hawk.so/types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
+import EventTpl from '../src/templates/event';
 import { ObjectId } from 'mongodb';
 
 /**
@@ -64,6 +65,54 @@ describe('TelegramProvider', () => {
 
       expect(message).toBeDefined();
     });
+    /**
+     * Event URL should include repetitionId when provided
+     */
+    describe('event URL contains correct repetitionId', () => {
+      const eventId = new ObjectId('5d206f7f9aaf7c0071d64597');
+      const projectId = new ObjectId('5d206f7f9aaf7c0071d64596');
+      const host = 'https://garage.hawk.so';
+
+      const basePayload = {
+        events: [ {
+          event: {
+            _id: eventId,
+            totalCount: 1,
+            timestamp: Date.now(),
+            payload: { title: 'Err', backtrace: [] },
+          } as DecodedGroupedEvent,
+          daysRepeated: 1,
+          newCount: 1,
+        } ],
+        period: 60,
+        host,
+        hostOfStatic: '',
+        project: {
+          _id: projectId,
+          token: 'tok',
+          name: 'P',
+          workspaceId: projectId,
+          uidAdded: projectId,
+          notifications: [],
+        } as ProjectDBScheme,
+      };
+
+      it('should include repetitionId and /overview in URL when repetitionId is set', () => {
+        const repetitionId = '5d206f7f9aaf7c0071d64599';
+        const payload = { ...basePayload, events: [ { ...basePayload.events[0], repetitionId } ] };
+        const message = EventTpl(payload);
+
+        expect(message).toContain(`/event/${eventId}/${repetitionId}/overview`);
+      });
+
+      it('should omit repetitionId from URL when repetitionId is not set', () => {
+        const message = EventTpl(basePayload);
+
+        expect(message).toContain(`/event/${eventId}/`);
+        expect(message).not.toContain('/overview');
+      });
+    });
+
     /**
      * Check that rendering of a several events message works without errors
      */
