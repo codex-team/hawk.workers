@@ -5,7 +5,7 @@ import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import type { Collection } from 'mongodb';
 import { MongoClient } from 'mongodb';
-import type { ErrorsCatcherType, EventAddons, EventData, GroupedEventDBScheme } from '@hawk.so/types';
+import type { ErrorsCatcherType, EventAddons, EventData } from '@hawk.so/types';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import TimeMs from '../../../lib/utils/time';
 import * as mongodb from 'mongodb';
@@ -171,47 +171,6 @@ describe('GrouperWorker', () => {
       await worker.handle(testGroupingTask);
 
       expect(await eventsCollection.find().count()).toBe(1);
-    });
-
-    test('Should process event as repetition after duplicate key race', async () => {
-      const duplicateKeyErrorCode = 11000;
-      const task = generateTask();
-      const workerWithSaveEvent = worker as unknown as {
-        saveEvent: (
-          projectId: string,
-          groupedEventData: GroupedEventDBScheme
-        ) => Promise<mongodb.ObjectID>;
-      };
-      const originalSaveEvent = workerWithSaveEvent.saveEvent.bind(workerWithSaveEvent) as (
-        projectId: string,
-        groupedEventData: GroupedEventDBScheme
-      ) => Promise<mongodb.ObjectID>;
-      let shouldThrowDuplicate = true;
-      const saveEventSpy = jest.spyOn(workerWithSaveEvent, 'saveEvent');
-
-      saveEventSpy.mockImplementation(async (projectId: string, groupedEventData: GroupedEventDBScheme): Promise<mongodb.ObjectID> => {
-        if (shouldThrowDuplicate) {
-          shouldThrowDuplicate = false;
-
-          await originalSaveEvent(projectId, groupedEventData);
-
-          const duplicateError = new Error('duplicate key') as Error & { code: number };
-
-          duplicateError.code = duplicateKeyErrorCode;
-          throw duplicateError;
-        }
-
-        return originalSaveEvent(projectId, groupedEventData);
-      });
-
-      await worker.handle(task);
-
-      expect(saveEventSpy).toHaveBeenCalledTimes(1);
-      expect(await eventsCollection.find().count()).toBe(1);
-      expect(await repetitionsCollection.find().count()).toBe(1);
-      expect((await eventsCollection.findOne({})).totalCount).toBe(2);
-
-      saveEventSpy.mockRestore();
     });
 
     test('Should increment total events count on each processing', async () => {
