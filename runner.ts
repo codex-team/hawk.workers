@@ -15,13 +15,16 @@ dotenv.config();
 type WorkerConstructor = new () => Worker;
 
 const BEGINNING_OF_ARGS = 2;
+const INSPECT_FLAG_PATTERN = /^--inspect(?:-brk)?(?:=.*)?$/;
 /**
  * Get worker name(s) from command line arguments
  *
  * @example ts-node runner.ts hawk-worker-javascript
  * @example ts-node runner.ts hawk-worker-javascript hawk-worker-nodejs
  */
-const workerNames = process.argv.slice(BEGINNING_OF_ARGS);
+const workerNames = process.argv
+  .slice(BEGINNING_OF_ARGS)
+  .filter((argument) => !INSPECT_FLAG_PATTERN.test(argument));
 
 /** 
  * Initialize HawkCatcher

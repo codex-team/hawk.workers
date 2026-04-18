@@ -10,7 +10,7 @@
     ],
     "scripts": {
         "build": "tsc",
-        "worker": "ts-node -T ./runner.ts",
+        "worker": "node --inspect -r ts-node/register/transpile-only ./runner.ts",
         "migration-add": "migrate-mongo create",
         "migrate:up": "migrate-mongo up",
         "migrate:down": "migrate-mongo down",
