@@ -26,17 +26,20 @@ import { computeDelta } from './utils/repetitionDiff';
 import { bucketTimestampMs } from './utils/bucketTimestamp';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+import GrouperMetrics from './metrics/grouperMetrics';
+import GrouperMemoryMonitor from './metrics/memoryMonitor';
+import { grouperMemoryConfig } from './metrics/config';
 
 /**
  * eslint does not count decorators as a variable usage
  */
-/* eslint-disable-next-line no-unused-vars */
+/* eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars */
 import { memoize } from '../../../lib/memoize';
 
 /**
  * eslint does not count decorators as a variable usage
  */
-/* eslint-disable-next-line no-unused-vars */
+/* eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars */
 const MEMOIZATION_TTL = 60_000;
 
 /**
@@ -89,9 +92,24 @@ export default class GrouperWorker extends Worker {
   private redis = new RedisHelper();
 
   /**
+   * Prometheus metrics facade.
+   */
+  private grouperMetrics = new GrouperMetrics();
+
+  /**
+   * Memory leak monitoring helper.
+   */
+  private memoryMonitor = new GrouperMemoryMonitor(this.logger, grouperMemoryConfig);
+
+  /**
    * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
    */
   private cacheCleanupInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Number of handled tasks in current worker process.
+   */
+  private handledTasksCount = 0;
 
   /**
    * Start consuming messages
@@ -114,6 +132,7 @@ export default class GrouperWorker extends Worker {
     this.cacheCleanupInterval = setInterval(() => {
       this.clearCache();
     }, CACHE_CLEANUP_INTERVAL_SECONDS * TimeMs.SECOND);
+    this.memoryMonitor.initialize(this.handledTasksCount);
 
     await super.start();
   }
@@ -130,6 +149,7 @@ export default class GrouperWorker extends Worker {
       this.cacheCleanupInterval = null;
     }
 
+    this.memoryMonitor.logShutdown(this.handledTasksCount);
     await super.finish();
     this.prepareCache();
     await this.eventsDb.close();
@@ -143,7 +163,31 @@ export default class GrouperWorker extends Worker {
    * @param task - event to handle
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
-    let uniqueEventHash = await this.getUniqueEventHash(task);
+    try {
+      await this.grouperMetrics.observeHandleDuration(async () => {
+        await this.handleInternal(task);
+      });
+    } catch (error) {
+      this.grouperMetrics.incrementErrorsTotal();
+      this.memoryMonitor.logHandleError(this.handledTasksCount, task.payload?.title, task.projectId);
+      throw error;
+    }
+  }
+
+  /**
+   * Internal task handling function
+   *
+   * @param task - event to handle
+   */
+  private async handleInternal(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
+    const taskPayloadSize = Buffer.byteLength(JSON.stringify(task.payload));
+    const handledTasksCount = ++this.handledTasksCount;
+    const memoryBeforeHandle = process.memoryUsage();
+
+    this.grouperMetrics.observePayloadSize(taskPayloadSize);
+    this.memoryMonitor.logBeforeHandle(memoryBeforeHandle, handledTasksCount, taskPayloadSize, task.projectId);
+
+    this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
 
     // FIX RELEASE TYPE
     // TODO: REMOVE AFTER 01.01.2026, after the most of the users update to new js catcher
@@ -154,39 +198,9 @@ export default class GrouperWorker extends Worker {
       };
     }
 
+    let uniqueEventHash = await this.getUniqueEventHash(task);
     let existedEvent: GroupedEventDBScheme;
-
-    /**
-     * Find similar events by grouping pattern
-     */
-    const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
-
-    if (similarEvent) {
-      this.logger.info(`[handle] similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
-
-      /**
-       * Override group hash with found event's group hash
-       */
-      uniqueEventHash = similarEvent.groupHash;
-
-      existedEvent = similarEvent;
-    } else {
-      /**
-       * If we couldn't group by grouping pattern — try grouping by hash (title)
-       */
-      /**
-       * Find event by group hash.
-       */
-      existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
-    }
-
-    /**
-     * Event happened for the first time
-     */
-    const isFirstOccurrence = !existedEvent && !similarEvent;
-
     let repetitionId = null;
-
     let incrementDailyAffectedUsers = false;
 
     /**
@@ -199,9 +213,40 @@ export default class GrouperWorker extends Worker {
      */
     this.dataFilter.processEvent(task.payload);
 
+    /**
+     * Find similar events by grouping pattern
+     */
+    const similarEvent = await this.findSimilarEvent(task.projectId, task.payload.title);
+
+    if (similarEvent) {
+      this.logger.info(`[handle] project=${task.projectId} title="${task.payload.title}" similar event found, groupHash=${similarEvent.groupHash} totalCount=${similarEvent.totalCount}`);
+
+      /**
+       * Override group hash with found event's group hash
+       */
+      uniqueEventHash = similarEvent.groupHash;
+
+      existedEvent = similarEvent;
+    } else {
+      /**
+       * If we couldn't group by grouping pattern - try grouping by hash (title).
+       */
+      /**
+       * Find event by group hash.
+       */
+      existedEvent = await this.getEvent(task.projectId, uniqueEventHash);
+    }
+
+    /**
+     * Event happened for the first time
+     */
+    const isFirstOccurrence = !existedEvent && !similarEvent;
+
     if (isFirstOccurrence) {
       try {
         const incrementAffectedUsers = !!task.payload.user;
+
+        this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" new event, payloadSize=${taskPayloadSize}b`);
 
         /**
          * Insert new event
@@ -232,12 +277,15 @@ export default class GrouperWorker extends Worker {
          * and we need to process this event as repetition
          */
         if (e.code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+          this.grouperMetrics.incrementDuplicateRetriesTotal();
+          this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
+
           await this.handle(task);
 
           return;
-        } else {
-          throw e;
         }
+
+        throw e;
       }
     } else {
       const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.shouldIncrementAffectedUsers(task, existedEvent);
@@ -258,6 +306,10 @@ export default class GrouperWorker extends Worker {
 
       let delta: RepetitionDelta;
 
+      const existedPayloadSize = Buffer.byteLength(JSON.stringify(existedEvent.payload));
+
+      this.logger.info(`[computeDelta] project=${task.projectId} title="${task.payload.title}" existedPayloadSize=${existedPayloadSize}b taskPayloadSize=${taskPayloadSize}b`);
+
       try {
         /**
          * Calculate delta between original event and repetition
@@ -268,9 +320,16 @@ export default class GrouperWorker extends Worker {
         throw new DiffCalculationError(e, existedEvent.payload, task.payload);
       }
 
+      const deltaStr = JSON.stringify(delta);
+      const deltaSize = deltaStr != null ? Buffer.byteLength(deltaStr) : 0;
+
+      this.grouperMetrics.observeDeltaSize(deltaSize);
+
+      this.logger.info(`[computeDelta] project=${task.projectId} title="${task.payload.title}" deltaSize=${deltaSize}b`);
+
       const newRepetition = {
         groupHash: uniqueEventHash,
-        delta: JSON.stringify(delta),
+        delta: deltaStr,
         timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
@@ -284,6 +343,11 @@ export default class GrouperWorker extends Worker {
     }
 
     /**
+     * Increment metrics counter once per handled task
+     */
+    this.grouperMetrics.incrementEventsTotal(isFirstOccurrence ? 'new' : 'repeated');
+
+    /**
      * Store events counter by days
      */
     await this.saveDailyEvents(
@@ -292,6 +356,14 @@ export default class GrouperWorker extends Worker {
       task.timestamp,
       repetitionId,
       incrementDailyAffectedUsers
+    );
+
+    this.memoryMonitor.logHandleCompletion(
+      memoryBeforeHandle,
+      handledTasksCount,
+      taskPayloadSize,
+      task.payload.title,
+      task.projectId
     );
 
     /**
@@ -349,9 +421,14 @@ export default class GrouperWorker extends Worker {
     };
 
     const series = [
-      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY,        timestampMs: bucketTimestampMs('minutely') },
-      { key: hourlyKey,   label: 'hourly',   retentionMs: TimeMs.WEEK,       timestampMs: bucketTimestampMs('hourly') },
-      { key: dailyKey,    label: 'daily',    retentionMs: DAILY_METRICS_RETENTION_DAYS * TimeMs.DAY,   timestampMs: bucketTimestampMs('daily') },
+      { key: minutelyKey, label: 'minutely', retentionMs: TimeMs.DAY, timestampMs: bucketTimestampMs('minutely') },
+      { key: hourlyKey, label: 'hourly', retentionMs: TimeMs.WEEK, timestampMs: bucketTimestampMs('hourly') },
+      {
+        key: dailyKey,
+        label: 'daily',
+        retentionMs: DAILY_METRICS_RETENTION_DAYS * TimeMs.DAY,
+        timestampMs: bucketTimestampMs('daily'),
+      },
     ];
 
     for (const { key, label, retentionMs, timestampMs } of series) {
@@ -611,14 +688,16 @@ export default class GrouperWorker extends Worker {
     const eventCacheKey = await this.getEventCacheKey(projectId, groupHash);
 
     return this.cache.get(eventCacheKey, async () => {
-      return this.eventsDb.getConnection()
-        .collection(`events:${projectId}`)
-        .findOne({
-          groupHash,
-        })
-        .catch((err) => {
-          throw new DatabaseReadWriteError(err);
-        });
+      return this.grouperMetrics.observeMongoDuration('getEvent', async () => {
+        return this.eventsDb.getConnection()
+          .collection(`events:${projectId}`)
+          .findOne({
+            groupHash,
+          })
+          .catch((err) => {
+            throw new DatabaseReadWriteError(err);
+          });
+      });
     });
   }
 
@@ -646,12 +725,14 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    const collection = this.eventsDb.getConnection().collection(`events:${projectId}`);
+    return this.grouperMetrics.observeMongoDuration('saveEvent', async () => {
+      const collection = this.eventsDb.getConnection().collection(`events:${projectId}`);
 
-    encodeUnsafeFields(groupedEventData);
+      encodeUnsafeFields(groupedEventData);
 
-    return (await collection
-      .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
+      return (await collection
+        .insertOne(groupedEventData)).insertedId as mongodb.ObjectID;
+    });
   }
 
   /**
@@ -665,18 +746,20 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveRepetition: Project ID is invalid or missing');
     }
 
-    try {
-      const collection = this.eventsDb.getConnection().collection(`repetitions:${projectId}`);
+    return this.grouperMetrics.observeMongoDuration('saveRepetition', async () => {
+      try {
+        const collection = this.eventsDb.getConnection().collection(`repetitions:${projectId}`);
 
-      encodeUnsafeFields(repetition);
+        encodeUnsafeFields(repetition);
 
-      return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
-    } catch (err) {
-      throw new DatabaseReadWriteError(err, {
-        repetition: repetition as unknown as Record<string, never>,
-        projectId,
-      });
-    }
+        return (await collection.insertOne(repetition)).insertedId as mongodb.ObjectID;
+      } catch (err) {
+        throw new DatabaseReadWriteError(err, {
+          repetition: repetition as unknown as Record<string, never>,
+          projectId,
+        });
+      }
+    });
   }
 
   /**
@@ -691,26 +774,28 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
 
-    try {
-      const updateQuery = incrementAffected
-        ? {
-          $inc: {
-            totalCount: 1,
-            usersAffected: 1,
-          },
-        }
-        : {
-          $inc: {
-            totalCount: 1,
-          },
-        };
+    return this.grouperMetrics.observeMongoDuration('incrementCounter', async () => {
+      try {
+        const updateQuery = incrementAffected
+          ? {
+            $inc: {
+              totalCount: 1,
+              usersAffected: 1,
+            },
+          }
+          : {
+            $inc: {
+              totalCount: 1,
+            },
+          };
 
-      return (await this.eventsDb.getConnection()
-        .collection(`events:${projectId}`)
-        .updateOne(query, updateQuery)).modifiedCount;
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
-    }
+        return (await this.eventsDb.getConnection()
+          .collection(`events:${projectId}`)
+          .updateOne(query, updateQuery)).modifiedCount;
+      } catch (err) {
+        throw new DatabaseReadWriteError(err);
+      }
+    });
   }
 
   /**
@@ -734,32 +819,34 @@ export default class GrouperWorker extends Worker {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
     }
 
-    try {
-      const midnight = this.getMidnightByEventTimestamp(eventTimestamp);
+    await this.grouperMetrics.observeMongoDuration('saveDailyEvents', async () => {
+      try {
+        const midnight = this.getMidnightByEventTimestamp(eventTimestamp);
 
-      await this.eventsDb.getConnection()
-        .collection(`dailyEvents:${projectId}`)
-        .updateOne(
-          {
-            groupHash: eventHash,
-            groupingTimestamp: midnight,
-          },
-          {
-            $set: {
+        await this.eventsDb.getConnection()
+          .collection(`dailyEvents:${projectId}`)
+          .updateOne(
+            {
               groupHash: eventHash,
               groupingTimestamp: midnight,
-              lastRepetitionTime: eventTimestamp,
-              lastRepetitionId: repetitionId,
             },
-            $inc: {
-              count: 1,
-              affectedUsers: shouldIncrementAffectedUsers ? 1 : 0,
+            {
+              $set: {
+                groupHash: eventHash,
+                groupingTimestamp: midnight,
+                lastRepetitionTime: eventTimestamp,
+                lastRepetitionId: repetitionId,
+              },
+              $inc: {
+                count: 1,
+                affectedUsers: shouldIncrementAffectedUsers ? 1 : 0,
+              },
             },
-          },
-          { upsert: true });
-    } catch (err) {
-      throw new DatabaseReadWriteError(err);
-    }
+            { upsert: true });
+      } catch (err) {
+        throw new DatabaseReadWriteError(err);
+      }
+    });
   }
 
   /**

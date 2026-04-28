@@ -194,7 +194,7 @@ export default class RedisHelper {
     const timestamp = Date.now();
 
     /**
-     * Create key if not exists — then call increment
+     * Create key if not exists - then call increment
      */
     await this.tsCreateIfNotExists(key, labels, retentionMs);
     await this.tsIncrBy(key, value, timestamp, labels);
@@ -249,7 +249,7 @@ export default class RedisHelper {
     const timestamp = timestampMs === 0 ? Date.now() : timestampMs;
 
     /**
-     * Create key if not exists — then call increment
+     * Create key if not exists - then call increment
      */
     await this.tsCreateIfNotExists(key, labels, retentionMs);
     await this.tsAdd(key, value, timestamp, labels);

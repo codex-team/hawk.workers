@@ -11,7 +11,7 @@ import TimeMs from '../../../../lib/utils/time';
 export function bucketTimestampMs(granularity: 'minutely' | 'hourly' | 'daily', now = Date.now()): number {
   switch (granularity) {
     case 'hourly': return now - (now % TimeMs.HOUR);
-    case 'daily':  return now - (now % TimeMs.DAY);
-    default:       return now - (now % TimeMs.MINUTE); // minutely
+    case 'daily': return now - (now % TimeMs.DAY);
+    default: return now - (now % TimeMs.MINUTE); // minutely
   }
 }
