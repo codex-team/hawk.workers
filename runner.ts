@@ -1,15 +1,8 @@
 import * as utils from './lib/utils';
-
-/* Prometheus client for pushing metrics to the pushgateway */
-// import os from 'os';
-// import * as promClient from 'prom-client';
-// import gcStats from 'prometheus-gc-stats';
-// import { nanoid } from 'nanoid';
-// import * as url from 'url';
 import { Worker } from './lib/worker';
 import HawkCatcher from '@hawk.so/nodejs';
 import * as dotenv from 'dotenv';
-import { startMetricsPushing } from './lib/metrics';
+import { startMetricsServer } from './lib/metrics';
 
 dotenv.config();
 
@@ -24,15 +17,15 @@ const BEGINNING_OF_ARGS = 2;
  */
 const workerNames = process.argv.slice(BEGINNING_OF_ARGS);
 
-/** 
+/**
  * Initialize HawkCatcher
-*/
+ */
 if (process.env.HAWK_CATCHER_TOKEN) {
   HawkCatcher.init({
     token: process.env.HAWK_CATCHER_TOKEN,
     context: {
-      workerTypes: workerNames.join(","),
-    }
+      workerTypes: workerNames.join(','),
+    },
   });
 }
 
@@ -46,12 +39,10 @@ class WorkerRunner {
    */
   private workers: Worker[] = [];
 
-  // private gateway?: promClient.Pushgateway;
-
   /**
-   * Metrics push cleanup callback.
+   * Metrics endpoint cleanup callback.
    */
-  private stopMetricsPushing?: () => void;
+  private stopMetricsServer?: () => void;
 
   /**
    * Create runner instance
@@ -90,7 +81,7 @@ class WorkerRunner {
    * Run metrics exporter
    */
   private startMetrics(): void {
-    if (!process.env.PROMETHEUS_PUSHGATEWAY_URL) {
+    if (!process.env.PROMETHEUS_METRICS_PORT && !process.env.PROMETHEUS_PUSHGATEWAY_URL) {
       return;
     }
 
@@ -105,10 +96,10 @@ class WorkerRunner {
     const workerTypeForMetrics = workerTypes.length === 1 ? workerTypes[0] : 'multi_worker_process';
 
     if (workerTypes.length > 1) {
-      console.warn(`[metrics] ${workerTypes.length} workers are running in one process; pushing metrics as "${workerTypeForMetrics}" to avoid duplicated attribution`);
+      console.warn(`[metrics] ${workerTypes.length} workers are running in one process; exposing metrics as "${workerTypeForMetrics}"`);
     }
 
-    this.stopMetricsPushing = startMetricsPushing(workerTypeForMetrics);
+    this.stopMetricsServer = startMetricsServer(workerTypeForMetrics);
   }
 
   /**
@@ -243,9 +234,8 @@ class WorkerRunner {
    */
   private async stopWorker(worker: Worker): Promise<void> {
     try {
-      // stop pushing metrics
-      this.stopMetricsPushing?.();
-      this.stopMetricsPushing = undefined;
+      this.stopMetricsServer?.();
+      this.stopMetricsServer = undefined;
       await worker.finish();
 
       console.log(

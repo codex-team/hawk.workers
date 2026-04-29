@@ -1,16 +1,17 @@
 import * as client from 'prom-client';
-import os from 'os';
-import { nanoid } from 'nanoid';
+import * as http from 'http';
 import createLogger from './logger';
 
 const register = new client.Registry();
 const logger = createLogger();
 
-const DEFAULT_PUSH_INTERVAL_MS = 10_000;
-const ID_SIZE = 5;
-const METRICS_JOB_NAME = 'workers';
+const DEFAULT_METRICS_HOST = '0.0.0.0';
+const DEFAULT_METRICS_PATH = '/metrics';
+const HTTP_OK = 200;
+const HTTP_NOT_FOUND = 404;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
 
-let pushInterval: NodeJS.Timeout | null = null;
+let metricsServer: http.Server | null = null;
 let currentWorkerName = '';
 
 client.collectDefaultMetrics({ register });
@@ -18,80 +19,113 @@ client.collectDefaultMetrics({ register });
 export { register, client };
 
 /**
- * Parse push interval from environment.
+ * Parse metrics endpoint port from environment.
  */
-function getPushIntervalMs(): number {
-  const rawInterval = process.env.PROMETHEUS_PUSHGATEWAY_INTERVAL;
-  const parsedInterval = rawInterval === undefined
-    ? DEFAULT_PUSH_INTERVAL_MS
-    : Number(rawInterval);
+function getMetricsPort(): number | null {
+  const rawPort = process.env.PROMETHEUS_METRICS_PORT;
 
-  const interval = Number.isFinite(parsedInterval) && parsedInterval > 0
-    ? parsedInterval
-    : DEFAULT_PUSH_INTERVAL_MS;
-
-  if (rawInterval !== undefined && interval !== parsedInterval) {
-    logger.warn(`[metrics] invalid PROMETHEUS_PUSHGATEWAY_INTERVAL="${rawInterval}", fallback to ${DEFAULT_PUSH_INTERVAL_MS}ms`);
+  if (!rawPort) {
+    return null;
   }
 
-  return interval;
+  const port = Number(rawPort);
+
+  return port;
 }
 
 /**
- * Stop periodic push to pushgateway.
+ * Read metrics endpoint path from environment.
  */
-export function stopMetricsPushing(): void {
-  if (!pushInterval) {
+function getMetricsPath(): string {
+  const path = process.env.PROMETHEUS_METRICS_PATH || DEFAULT_METRICS_PATH;
+
+  return path;
+}
+
+/**
+ * Stop HTTP metrics endpoint.
+ */
+export function stopMetricsServer(): void {
+  if (!metricsServer) {
     return;
   }
 
-  clearInterval(pushInterval);
-  pushInterval = null;
-  logger.info(`[metrics] stopped pushing metrics for worker=${currentWorkerName}`);
+  const stoppedWorkerName = currentWorkerName;
+
+  metricsServer.close((error) => {
+    if (error) {
+      logger.error(`[metrics] failed to stop endpoint for worker=${stoppedWorkerName}: ${error.message}`);
+
+      return;
+    }
+
+    logger.info(`[metrics] stopped endpoint for worker=${stoppedWorkerName}`);
+  });
+
+  metricsServer = null;
   currentWorkerName = '';
 }
 
 /**
- * Start periodic push to pushgateway.
+ * Start HTTP metrics endpoint for scraper-based monitoring.
  *
- * @param workerName - name of the worker for grouping.
+ * @param workerName - name of the worker for default metric labels.
  */
-export function startMetricsPushing(workerName: string): () => void {
-  const url = process.env.PROMETHEUS_PUSHGATEWAY_URL;
+export function startMetricsServer(workerName: string): () => void {
+  const port = getMetricsPort();
 
-  if (!url) {
-    return stopMetricsPushing;
+  if (!port) {
+    return stopMetricsServer;
   }
 
-  if (pushInterval) {
-    logger.warn(`[metrics] pushing is already started for worker=${currentWorkerName}, skip duplicate start for worker=${workerName}`);
+  if (metricsServer) {
+    logger.warn(`[metrics] endpoint is already started for worker=${currentWorkerName}, skip duplicate start for worker=${workerName}`);
 
-    return stopMetricsPushing;
+    return stopMetricsServer;
   }
 
-  const interval = getPushIntervalMs();
-  const hostname = os.hostname();
-  const id = nanoid(ID_SIZE);
-  const gateway = new client.Pushgateway(url, undefined, register);
+  const host = process.env.PROMETHEUS_METRICS_HOST || DEFAULT_METRICS_HOST;
+  const path = getMetricsPath();
 
   currentWorkerName = workerName;
+  register.setDefaultLabels({ worker: workerName });
 
-  logger.info(`Start pushing metrics to ${url} every ${interval}ms (host: ${hostname}, id: ${id}, worker: ${workerName})`);
+  metricsServer = http.createServer(async (request, response) => {
+    const requestPath = request.url?.split('?')[0];
 
-  pushInterval = setInterval(() => {
-    gateway.pushAdd({
-      jobName: METRICS_JOB_NAME,
-      groupings: {
-        worker: workerName,
-        host: hostname,
-        id,
-      },
-    }, (err) => {
-      if (err) {
-        logger.error(`Metrics push error: ${err.message || err}`);
-      }
-    });
-  }, interval);
+    if (requestPath === '/-/healthy') {
+      response.writeHead(HTTP_OK, { 'Content-Type': 'text/plain' });
+      response.end('ok');
 
-  return stopMetricsPushing;
+      return;
+    }
+
+    if (request.method !== 'GET' || requestPath !== path) {
+      response.writeHead(HTTP_NOT_FOUND, { 'Content-Type': 'text/plain' });
+      response.end('not found');
+
+      return;
+    }
+
+    try {
+      response.writeHead(HTTP_OK, { 'Content-Type': register.contentType });
+      response.end(await register.metrics());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      logger.error(`[metrics] failed to render metrics: ${message}`);
+      response.writeHead(HTTP_INTERNAL_SERVER_ERROR, { 'Content-Type': 'text/plain' });
+      response.end('metrics error');
+    }
+  });
+
+  metricsServer.on('error', (error) => {
+    logger.error(`[metrics] endpoint error for worker=${workerName}: ${error.message}`);
+  });
+
+  metricsServer.listen(port, host, () => {
+    logger.info(`[metrics] endpoint started for worker=${workerName} at http://${host}:${port}${path}`);
+  });
+
+  return stopMetricsServer;
 }
