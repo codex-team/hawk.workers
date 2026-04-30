@@ -7,6 +7,8 @@ const logger = createLogger();
 
 const DEFAULT_METRICS_HOST = '0.0.0.0';
 const DEFAULT_METRICS_PATH = '/metrics';
+const MIN_PORT = 1;
+const MAX_PORT = 65535;
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
 const HTTP_INTERNAL_SERVER_ERROR = 500;
@@ -30,6 +32,12 @@ function getMetricsPort(): number | null {
 
   const port = Number(rawPort);
 
+  if (!Number.isInteger(port) || port < MIN_PORT || port > MAX_PORT) {
+    logger.warn(`[metrics] invalid PROMETHEUS_METRICS_PORT="${rawPort}"; expected an integer between ${MIN_PORT} and ${MAX_PORT}`);
+
+    return null;
+  }
+
   return port;
 }
 
@@ -37,7 +45,27 @@ function getMetricsPort(): number | null {
  * Read metrics endpoint path from environment.
  */
 function getMetricsPath(): string {
-  const path = process.env.PROMETHEUS_METRICS_PATH || DEFAULT_METRICS_PATH;
+  const rawPath = process.env.PROMETHEUS_METRICS_PATH;
+
+  if (!rawPath) {
+    return DEFAULT_METRICS_PATH;
+  }
+
+  const path = rawPath.trim();
+
+  if (!path) {
+    logger.warn(`[metrics] invalid PROMETHEUS_METRICS_PATH="${rawPath}", fallback to ${DEFAULT_METRICS_PATH}`);
+
+    return DEFAULT_METRICS_PATH;
+  }
+
+  if (!path.startsWith('/')) {
+    const normalizedPath = `/${path}`;
+
+    logger.warn(`[metrics] normalized PROMETHEUS_METRICS_PATH from "${rawPath}" to "${normalizedPath}"`);
+
+    return normalizedPath;
+  }
 
   return path;
 }
@@ -50,20 +78,34 @@ export function stopMetricsServer(): void {
     return;
   }
 
+  const serverToStop = metricsServer;
   const stoppedWorkerName = currentWorkerName;
 
-  metricsServer.close((error) => {
+  if (!serverToStop.listening) {
+    logger.info(`[metrics] endpoint already stopped for worker=${stoppedWorkerName}`);
+
+    if (metricsServer === serverToStop) {
+      metricsServer = null;
+      currentWorkerName = '';
+    }
+
+    return;
+  }
+
+  serverToStop.close((error) => {
     if (error) {
       logger.error(`[metrics] failed to stop endpoint for worker=${stoppedWorkerName}: ${error.message}`);
 
       return;
     }
 
+    if (metricsServer === serverToStop) {
+      metricsServer = null;
+      currentWorkerName = '';
+    }
+
     logger.info(`[metrics] stopped endpoint for worker=${stoppedWorkerName}`);
   });
-
-  metricsServer = null;
-  currentWorkerName = '';
 }
 
 /**
@@ -87,10 +129,9 @@ export function startMetricsServer(workerName: string): () => void {
   const host = process.env.PROMETHEUS_METRICS_HOST || DEFAULT_METRICS_HOST;
   const path = getMetricsPath();
 
-  currentWorkerName = workerName;
   register.setDefaultLabels({ worker: workerName });
 
-  metricsServer = http.createServer(async (request, response) => {
+  const server = http.createServer(async (request, response) => {
     const requestPath = request.url?.split('?')[0];
 
     if (requestPath === '/-/healthy') {
@@ -119,11 +160,19 @@ export function startMetricsServer(workerName: string): () => void {
     }
   });
 
-  metricsServer.on('error', (error) => {
+  server.on('error', (error) => {
     logger.error(`[metrics] endpoint error for worker=${workerName}: ${error.message}`);
+
+    if (metricsServer === server) {
+      metricsServer = null;
+      currentWorkerName = '';
+    }
   });
 
-  metricsServer.listen(port, host, () => {
+  metricsServer = server;
+  currentWorkerName = workerName;
+
+  server.listen(port, host, () => {
     logger.info(`[metrics] endpoint started for worker=${workerName} at http://${host}:${port}${path}`);
   });
 
