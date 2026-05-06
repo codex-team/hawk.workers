@@ -26,8 +26,9 @@ import { computeDelta } from './utils/repetitionDiff';
 import { bucketTimestampMs } from './utils/bucketTimestamp';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
-import GrouperMetrics, { GrouperStep } from './metrics/grouperMetrics';
+import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
+import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
 import { grouperDiagnosticsConfig, grouperMemoryConfig } from './metrics/config';
 
 /**
@@ -100,6 +101,11 @@ export default class GrouperWorker extends Worker {
    * Memory leak monitoring helper.
    */
   private memoryMonitor = new GrouperMemoryMonitor(this.logger, grouperMemoryConfig);
+
+  /**
+   * Slow handle diagnostics helper.
+   */
+  private slowHandleDiagnostics = new SlowHandleDiagnostics(this.logger, this.grouperMetrics, grouperDiagnosticsConfig);
 
   /**
    * Interval for periodic cache cleanup to prevent memory leaks from unbounded cache growth
@@ -175,73 +181,13 @@ export default class GrouperWorker extends Worker {
   }
 
   /**
-   * Measure a Grouper handle step and keep per-handle timing for slow logs.
-   *
-   * @param step - step name.
-   * @param timings - current handle timings.
-   * @param callback - measured callback.
-   */
-  private async measureStep<T>(
-    step: GrouperStep,
-    timings: Map<GrouperStep, number>,
-    callback: () => Promise<T> | T
-  ): Promise<T> {
-    const startedAt = Date.now();
-
-    try {
-      return await this.grouperMetrics.observeStepDuration(step, callback);
-    } finally {
-      const durationMs = Date.now() - startedAt;
-      const previousDurationMs = timings.get(step) || 0;
-
-      timings.set(step, previousDurationMs + durationMs);
-    }
-  }
-
-  /**
-   * Log slow handle breakdown for finding the exact slow operation.
-   *
-   * @param startedAt - handle start timestamp.
-   * @param timings - step timings.
-   * @param task - handled task.
-   * @param type - event type.
-   * @param payloadSize - payload size in bytes.
-   * @param deltaSize - delta size in bytes.
-   */
-  private logSlowHandle(
-    startedAt: number,
-    timings: Map<GrouperStep, number>,
-    task: GroupWorkerTask<ErrorsCatcherType>,
-    type: 'new' | 'repeated',
-    payloadSize: number,
-    deltaSize: number
-  ): void {
-    const durationMs = Date.now() - startedAt;
-
-    if (durationMs < grouperDiagnosticsConfig.slowHandleWarnMs) {
-      return;
-    }
-
-    const steps = Array.from(timings.entries())
-      .sort((first, second) => second[1] - first[1])
-      .map(([step, stepDurationMs]) => `${step}=${stepDurationMs}ms`)
-      .join(' ');
-
-    this.logger.warn(
-      `[slowHandle] duration=${durationMs}ms project=${task.projectId} type=${type} ` +
-      `payloadSize=${payloadSize}b deltaSize=${deltaSize}b title="${task.payload?.title}" steps="${steps}"`
-    );
-  }
-
-  /**
    * Internal task handling function
    *
    * @param task - event to handle
    */
   private async handleInternal(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
-    const handleStartedAt = Date.now();
-    const stepTimings = new Map<GrouperStep, number>();
-    const taskPayloadSize = await this.measureStep('payloadSize', stepTimings, () => {
+    const session = this.slowHandleDiagnostics.startSession();
+    const taskPayloadSize = await session.measureStep('payloadSize', () => {
       return Buffer.byteLength(JSON.stringify(task.payload));
     });
     const handledTasksCount = ++this.handledTasksCount;
@@ -263,12 +209,12 @@ export default class GrouperWorker extends Worker {
       };
     }
 
-    let uniqueEventHash = await this.measureStep('hash', stepTimings, () => this.getUniqueEventHash(task));
+    let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
     let existedEvent: GroupedEventDBScheme;
     let repetitionId = null;
     let incrementDailyAffectedUsers = false;
 
-    await this.measureStep('preprocess', stepTimings, () => {
+    await session.measureStep('preprocess', () => {
       /**
        * Trim source code lines to prevent memory leaks
        */
@@ -283,7 +229,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Find similar events by grouping pattern
      */
-    const similarEvent = await this.measureStep('findSimilarEvent', stepTimings, () => {
+    const similarEvent = await session.measureStep('findSimilarEvent', () => {
       return this.findSimilarEvent(task.projectId, task.payload.title);
     });
 
@@ -303,7 +249,7 @@ export default class GrouperWorker extends Worker {
       /**
        * Find event by group hash.
        */
-      existedEvent = await this.measureStep('getEvent', stepTimings, () => {
+      existedEvent = await session.measureStep('getEvent', () => {
         return this.getEvent(task.projectId, uniqueEventHash);
       });
     }
@@ -324,7 +270,7 @@ export default class GrouperWorker extends Worker {
         /**
          * Insert new event
          */
-        await this.measureStep('saveNewEvent', stepTimings, () => {
+        await session.measureStep('saveNewEvent', () => {
           return this.saveEvent(task.projectId, {
             groupHash: uniqueEventHash,
             totalCount: 1,
@@ -363,8 +309,8 @@ export default class GrouperWorker extends Worker {
         throw e;
       }
     } else {
-      const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await this.measureStep('affectedUsers', stepTimings, () => {
-        return this.shouldIncrementAffectedUsers(task, existedEvent, stepTimings);
+      const [incrementAffectedUsers, shouldIncrementDailyAffectedUsers] = await session.measureStep('affectedUsers', () => {
+        return this.shouldIncrementAffectedUsers(task, existedEvent, session);
       });
 
       incrementDailyAffectedUsers = shouldIncrementDailyAffectedUsers;
@@ -372,7 +318,7 @@ export default class GrouperWorker extends Worker {
       /**
        * Increment existed task's counter
        */
-      await this.measureStep('incrementCounter', stepTimings, () => {
+      await session.measureStep('incrementCounter', () => {
         return this.incrementEventCounterAndAffectedUsers(task.projectId, {
           groupHash: uniqueEventHash,
         }, incrementAffectedUsers);
@@ -381,7 +327,7 @@ export default class GrouperWorker extends Worker {
       /**
        * Decode existed event to calculate diffs correctly
        */
-      await this.measureStep('decodeEvent', stepTimings, () => {
+      await session.measureStep('decodeEvent', () => {
         decodeUnsafeFields(existedEvent);
       });
 
@@ -395,7 +341,7 @@ export default class GrouperWorker extends Worker {
         /**
          * Calculate delta between original event and repetition
          */
-        delta = await this.measureStep('computeDelta', stepTimings, () => {
+        delta = await session.measureStep('computeDelta', () => {
           return computeDelta(existedEvent.payload, task.payload);
         });
       } catch (e) {
@@ -417,7 +363,7 @@ export default class GrouperWorker extends Worker {
         timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
-      repetitionId = await this.measureStep('saveRepetition', stepTimings, () => {
+      repetitionId = await session.measureStep('saveRepetition', () => {
         return this.saveRepetition(task.projectId, newRepetition);
       });
 
@@ -436,7 +382,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Store events counter by days
      */
-    await this.measureStep('saveDailyEvents', stepTimings, () => {
+    await session.measureStep('saveDailyEvents', () => {
       return this.saveDailyEvents(
         task.projectId,
         uniqueEventHash,
@@ -461,7 +407,7 @@ export default class GrouperWorker extends Worker {
       const isIgnored = isFirstOccurrence ? false : !!existedEvent?.marks?.ignored;
 
       if (!isIgnored) {
-        await this.measureStep('enqueueNotifier', stepTimings, () => {
+        await session.measureStep('enqueueNotifier', () => {
           return this.addTask(WorkerNames.NOTIFIER, {
             projectId: task.projectId,
             event: {
@@ -475,11 +421,17 @@ export default class GrouperWorker extends Worker {
       }
     }
 
-    await this.measureStep('recordProjectMetrics', stepTimings, () => {
+    await session.measureStep('recordProjectMetrics', () => {
       return this.recordProjectMetrics(task.projectId, 'events-accepted');
     });
 
-    this.logSlowHandle(handleStartedAt, stepTimings, task, eventType, taskPayloadSize, deltaSize);
+    session.logIfSlow({
+      projectId: task.projectId,
+      title: task.payload?.title,
+      type: eventType,
+      payloadSize: taskPayloadSize,
+      deltaSize,
+    });
   }
 
   /**
@@ -683,13 +635,13 @@ export default class GrouperWorker extends Worker {
    *
    * @param task - worker task to process
    * @param existedEvent - original event to get its user
-   * @param stepTimings - current handle timings.
+   * @param session - current slow handle diagnostics session.
    * @returns {[boolean, boolean]} - whether to increment affected users for the repetition and the daily aggregation
    */
   private async shouldIncrementAffectedUsers<Type extends ErrorsCatcherType>(
     task: GroupWorkerTask<Type>,
     existedEvent: GroupedEventDBScheme,
-    stepTimings: Map<GrouperStep, number>
+    session: SlowHandleSession
   ): Promise<[boolean, boolean]> {
     const eventUser = task.payload.user;
 
@@ -782,7 +734,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Check Redis lock - if locked, don't increment either counter
      */
-    const [isEventLocked, isDailyEventLocked] = await this.measureStep('affectedUsersRedisLocks', stepTimings, async () => {
+    const [isEventLocked, isDailyEventLocked] = await session.measureStep('affectedUsersRedisLocks', async () => {
       return [
         await this.redis.checkOrSetlockEventForAffectedUsersIncrement(existedEvent.groupHash, eventUser.id),
         await this.redis.checkOrSetlockDailyEventForAffectedUsersIncrement(existedEvent.groupHash, eventUser.id, eventMidnight),
