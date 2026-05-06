@@ -794,6 +794,54 @@ describe('PaymasterWorker', () => {
     MockDate.reset();
   });
 
+  test('Should process every workspace when there are several batches', async () => {
+    /**
+     * 50 > WORKSPACE_PROCESSING_CONCURRENCY (25), so the subscription check
+     * has to flush more than one batch.
+     */
+    const WORKSPACES_COUNT = 50;
+    const currentDate = new Date('2005-12-22');
+    const plan = createPlanMock({
+      monthlyCharge: 0,
+      isDefault: true,
+    });
+
+    const workspaces = Array.from({ length: WORKSPACES_COUNT }, () =>
+      createWorkspaceMock({
+        plan,
+        subscriptionId: null,
+        lastChargeDate: new Date('2005-11-22'),
+        isBlocked: false,
+        billingPeriodEventsCount: 0,
+      })
+    );
+
+    await tariffCollection.insertOne(plan);
+    await workspacesCollection.insertMany(workspaces);
+
+    MockDate.set(currentDate);
+
+    const worker = new PaymasterWorker();
+    const processSpy = jest
+      .spyOn(worker as any, 'processWorkspaceSubscriptionCheck')
+      .mockResolvedValue([null, false]);
+
+    await worker.start();
+    await worker.handle(WORKSPACE_SUBSCRIPTION_CHECK);
+    await worker.finish();
+
+    expect(processSpy).toHaveBeenCalledTimes(WORKSPACES_COUNT);
+
+    const calledIds = processSpy.mock.calls
+      .map((call) => (call[0] as WorkspaceDBScheme)._id.toString())
+      .sort();
+    const expectedIds = workspaces.map((w) => w._id.toString()).sort();
+
+    expect(calledIds).toEqual(expectedIds);
+
+    MockDate.reset();
+  });
+
   afterAll(async () => {
     await connection.close();
     MockDate.reset();
