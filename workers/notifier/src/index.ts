@@ -193,9 +193,12 @@ export default class NotifierWorker extends Worker {
    */
   private async getProjectNotificationRules(projectId: string): Promise<Rule[]> {
     const connection = this.accountsDb.getConnection();
-    const projects = connection.collection('projects');
+    const projects = connection.collection<{ notifications?: Rule[] }>('projects');
 
-    const project = await projects.findOne({ _id: new ObjectID(projectId) });
+    const project = await projects.findOne(
+      { _id: new ObjectID(projectId) },
+      { projection: { notifications: 1 } }
+    );
 
     if (!project) {
       throw new Error('There is no project with given id');
