@@ -242,7 +242,10 @@ describe('NotifierWorker', () => {
 
       await worker.handle(message);
 
-      expect(dbQueryMock).toBeCalledWith({ _id: new ObjectID(message.projectId) });
+      expect(dbQueryMock).toBeCalledWith(
+        { _id: new ObjectID(message.projectId) },
+        { projection: { notifications: 1 } }
+      );
     });
 
     it('should close db connection on finish', async () => {
