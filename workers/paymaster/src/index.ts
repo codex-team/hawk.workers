@@ -232,15 +232,12 @@ export default class PaymasterWorker extends Worker {
 
     let batch: WorkspaceDBScheme[] = [];
 
-    const flush = async (): Promise<void> => {
-      if (batch.length === 0) {
+    const flush = async (currentBatch: WorkspaceDBScheme[]): Promise<void> => {
+      if (currentBatch.length === 0) {
         return;
       }
 
-      const current = batch;
-
-      batch = [];
-      await Promise.all(current.map((workspace) => this.processWorkspaceSubscriptionCheck(workspace)));
+      await Promise.all(currentBatch.map((workspace) => this.processWorkspaceSubscriptionCheck(workspace)));
     };
 
     try {
@@ -258,11 +255,12 @@ export default class PaymasterWorker extends Worker {
         batch.push(workspace);
 
         if (batch.length >= WORKSPACE_PROCESSING_CONCURRENCY) {
-          await flush();
+          await flush(batch);
+          batch = [];
         }
       }
 
-      await flush();
+      await flush(batch);
     } finally {
       await cursor.close();
     }
