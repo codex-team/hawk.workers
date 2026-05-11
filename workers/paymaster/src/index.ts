@@ -35,6 +35,33 @@ const DAYS_LEFT_ALERT = [3, 2, 1];
 const DAYS_AFTER_BLOCK_TO_REMIND = [1, 2, 3, 5, 7, 30];
 
 /**
+ * Bounds concurrent updateOne / addTask calls per subscription check tick.
+ */
+const WORKSPACE_PROCESSING_CONCURRENCY = 25;
+
+const WORKSPACE_CURSOR_BATCH_SIZE = 200;
+
+/**
+ * Keep in sync with fields read by `processWorkspaceSubscriptionCheck` and its helpers.
+ */
+const WORKSPACE_SUBSCRIPTION_PROJECTION = {
+  _id: 1,
+  name: 1,
+  tariffPlanId: 1,
+  lastChargeDate: 1,
+  paidUntil: 1,
+  isDebug: 1,
+  isBlocked: 1,
+  blockedDate: 1,
+  subscriptionId: 1,
+} as const;
+
+const PLAN_PROJECTION = {
+  _id: 1,
+  monthlyCharge: 1,
+} as const;
+
+/**
  * Worker to check workspaces subscription status and ban workspaces without actual subscription
  */
 export default class PaymasterWorker extends Worker {
@@ -151,7 +178,10 @@ export default class PaymasterWorker extends Worker {
       throw new Error('Plans collection is not initialized');
     }
 
-    this.plans = await this.plansCollection.find({}).toArray();
+    this.plans = await this.plansCollection
+      .find({})
+      .project<PlanDBScheme>(PLAN_PROJECTION)
+      .toArray();
 
     if (this.plans.length === 0) {
       throw new Error('Please add tariff plans to the database');
@@ -195,28 +225,45 @@ export default class PaymasterWorker extends Worker {
    * Called periodically, enumerate through workspaces and check if today is a payday for workspace subscription
    */
   private async handleWorkspaceSubscriptionCheckEvent(): Promise<void> {
-    const workspaces = await this.workspaces.find({}).toArray();
+    const cursor = this.workspaces
+      .find({})
+      .project<WorkspaceDBScheme>(WORKSPACE_SUBSCRIPTION_PROJECTION)
+      .batchSize(WORKSPACE_CURSOR_BATCH_SIZE);
 
-    await Promise.all(workspaces
-      .filter(workspace => {
+    let batch: WorkspaceDBScheme[] = [];
+
+    const flush = async (currentBatch: WorkspaceDBScheme[]): Promise<void> => {
+      if (currentBatch.length === 0) {
+        return;
+      }
+
+      await Promise.all(currentBatch.map((workspace) => this.processWorkspaceSubscriptionCheck(workspace)));
+    };
+
+    try {
+      for await (const workspace of cursor) {
         /**
          * Skip workspace without lastChargeDate
          */
         if (!workspace.lastChargeDate) {
-          const error = new Error('[Paymaster] Workspace without lastChargeDate detected');
-
-          HawkCatcher.send(error, {
+          HawkCatcher.send(new Error('[Paymaster] Workspace without lastChargeDate detected'), {
             workspaceId: workspace._id.toString(),
           });
-
-          return false;
+          continue;
         }
 
-        return true;
-      })
-      .map(
-        (workspace) => this.processWorkspaceSubscriptionCheck(workspace)
-      ));
+        batch.push(workspace);
+
+        if (batch.length >= WORKSPACE_PROCESSING_CONCURRENCY) {
+          await flush(batch);
+          batch = [];
+        }
+      }
+
+      await flush(batch);
+    } finally {
+      await cursor.close();
+    }
   }
 
   /**
