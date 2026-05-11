@@ -198,7 +198,7 @@ export default class LimiterWorker extends Worker {
        * If workspace is already blocked - do nothing
        */
       if (workspace.isBlocked) {
-        return;
+        continue;
       }
 
       const workspaceProjects = await this.dbHelper.getProjects(workspace._id.toString());
@@ -211,7 +211,7 @@ export default class LimiterWorker extends Worker {
        * If there are no projects to update - move on to next workspace
        */
       if (projectsToUpdate.length === 0) {
-        return;
+        continue;
       }
 
       /**
@@ -226,9 +226,9 @@ export default class LimiterWorker extends Worker {
         this.redis.appendBannedProjects(projectIds);
         message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
       }
-    };
+    }
 
-    this.dbHelper.updateWorkspacesEventsCountAndIsBlocked(updatedWorkspaces);
+    await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked(updatedWorkspaces);
 
     this.sendRegularReport(message);
   }

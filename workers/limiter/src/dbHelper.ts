@@ -43,15 +43,48 @@ export class DbHelper {
    *
    * @param id - id of the workspace to fetch
    */
-  public async getWorkspacesWithTariffPlans(id: string): Promise<WorkspaceWithTariffPlan>;
+  public getWorkspacesWithTariffPlans(id: string): Promise<WorkspaceWithTariffPlan>;
+  public getWorkspacesWithTariffPlans(id?: string): AsyncGenerator<WorkspaceWithTariffPlan> | Promise<WorkspaceWithTariffPlan> {
+    if (id !== undefined) {
+      return this.getOneWorkspaceWithTariffPlan(id);
+    }
+
+    return this.yieldWorkspacesWithTariffPlans();
+  }
+
   /**
-   * Returns workspace with its tariff plan by its id
+   * Returns a single workspace with its tariff plan by id
    *
    * @param id - workspace id
    */
-  public async *getWorkspacesWithTariffPlans(id?: string): AsyncGenerator<WorkspaceWithTariffPlan> | Promise<WorkspaceWithTariffPlan> {
+  private async getOneWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
+    const pipeline = [
+      {
+        $match: {
+          _id: new ObjectId(id),
+        },
+      },
+      ...this.tariffPlanLookupPipeline(),
+    ];
+
+    return this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
+  }
+
+  /**
+   * Yields all workspaces with their tariff plans one by one
+   */
+  private async *yieldWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan> {
+    const pipeline = this.tariffPlanLookupPipeline();
+    const cursor = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline);
+
+    for await (const workspace of cursor) {
+      yield workspace;
+    }
+  }
+
   /* eslint-disable-next-line */
-    const queue: any[] = [
+  private tariffPlanLookupPipeline(): any[] {
+    return [
       {
         $lookup: {
           from: 'plans',
@@ -66,32 +99,17 @@ export class DbHelper {
         },
       },
       {
-        projection: {
+        $project: {
           _id: 1,
+          name: 1,
           isBlocked: 1,
+          blockedDate: 1,
           lastChargeDate: 1,
+          billingPeriodEventsCount: 1,
           tariffPlan: 1,
-        }
-      }
-    ];
-
-    if (id !== undefined) {
-      queue.unshift({
-        $match: {
-          _id: new ObjectId(id),
         },
-      });
-    }
-
-    const workspaces = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(queue);
-
-    if (id !== undefined) {
-      return await workspaces.next();
-    }
-
-    for await (const workspace of workspaces) {
-      yield workspace;
-    }
+      },
+    ];
   }
 
   /**
