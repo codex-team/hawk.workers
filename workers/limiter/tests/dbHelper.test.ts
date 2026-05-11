@@ -159,16 +159,22 @@ describe('DbHelper', () => {
       /**
        * Act
        */
-      const result = await dbHelper.getWorkspacesWithTariffPlans();
+      const cursor = dbHelper.getWorkspacesWithTariffPlans();
+
+      const workspaces = []
+
+      for await (const workspace of cursor) {
+        workspaces.push(workspace)
+      }
 
       /**
        * Assert
        */
-      expect(result).toHaveLength(2);
-      expect(result[0].tariffPlan).toBeDefined();
-      expect(result[1].tariffPlan).toBeDefined();
-      expect(result[0].tariffPlan.eventsLimit).toBe(10);
-      expect(result[1].tariffPlan.eventsLimit).toBe(10000);
+      expect(workspaces).toHaveLength(2);
+      expect(workspaces[0].tariffPlan).toBeDefined();
+      expect(workspaces[1].tariffPlan).toBeDefined();
+      expect(workspaces[0].tariffPlan.eventsLimit).toBe(10);
+      expect(workspaces[1].tariffPlan.eventsLimit).toBe(10000);
     });
 
     test('Should return single workspace with its tariff plan by id', async () => {

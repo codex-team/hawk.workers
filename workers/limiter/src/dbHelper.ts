@@ -35,22 +35,22 @@ export class DbHelper {
   }
 
   /**
-   * Method that returns all workspaces with their tariff plans
+   * Method that yields all workspaces with their tariff plans
    */
-  public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
+  public getWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan>;
   /**
    * Method that returns workspace with its tariff plan by its id
    *
    * @param id - id of the workspace to fetch
    */
-  public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
+  public async getWorkspacesWithTariffPlans(id: string): Promise<WorkspaceWithTariffPlan>;
   /**
    * Returns workspace with its tariff plan by its id
    *
    * @param id - workspace id
    */
-  public async getWorkspacesWithTariffPlans(id?: string):Promise<WorkspaceWithTariffPlan[] | WorkspaceWithTariffPlan> {
-    /* eslint-disable-next-line */
+  public async *getWorkspacesWithTariffPlans(id?: string): AsyncGenerator<WorkspaceWithTariffPlan> | Promise<WorkspaceWithTariffPlan> {
+  /* eslint-disable-next-line */
     const queue: any[] = [
       {
         $lookup: {
@@ -75,9 +75,15 @@ export class DbHelper {
       });
     }
 
-    const workspacesArray = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(queue).toArray();
+    const workspaces = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(queue);
 
-    return (id !== undefined) ? workspacesArray[0] : workspacesArray;
+    if (id !== undefined) {
+      return await workspaces.next();
+    }
+
+    for await (const workspace of workspaces) {
+      yield workspace;
+    }
   }
 
   /**

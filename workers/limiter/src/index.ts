@@ -189,11 +189,11 @@ export default class LimiterWorker extends Worker {
   private async handleRegularWorkspacesCheck(): Promise<void> {
     let message = '';
 
-    const workspaces = await this.dbHelper.getWorkspacesWithTariffPlans();
+    const workspaces = this.dbHelper.getWorkspacesWithTariffPlans();
 
     const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
 
-    await Promise.all(workspaces.map(async (workspace) => {
+    for await (const workspace of workspaces) {
       /**
        * If workspace is already blocked - do nothing
        */
@@ -226,7 +226,7 @@ export default class LimiterWorker extends Worker {
         this.redis.appendBannedProjects(projectIds);
         message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
       }
-    }));
+    };
 
     this.dbHelper.updateWorkspacesEventsCountAndIsBlocked(updatedWorkspaces);
 
