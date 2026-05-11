@@ -65,6 +65,14 @@ export class DbHelper {
           path: '$tariffPlan',
         },
       },
+      {
+        projection: {
+          _id: 1,
+          isBlocked: 1,
+          lastChargeDate: 1,
+          tariffPlan: 1,
+        }
+      }
     ];
 
     if (id !== undefined) {
