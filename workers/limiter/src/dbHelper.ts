@@ -2,7 +2,7 @@ import { Collection, Db, ObjectId } from 'mongodb';
 import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
-import { CriticalError } from '../../../lib/workerErrors';
+import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
 
 /**
  * Class that implements methods used for interaction between limiter and db
@@ -44,72 +44,15 @@ export class DbHelper {
    * @param id - id of the workspace to fetch
    */
   public getWorkspacesWithTariffPlans(id: string): Promise<WorkspaceWithTariffPlan>;
+  /**
+   * @param id - id of the workspace to fetch
+   */
   public getWorkspacesWithTariffPlans(id?: string): AsyncGenerator<WorkspaceWithTariffPlan> | Promise<WorkspaceWithTariffPlan> {
     if (id !== undefined) {
       return this.getOneWorkspaceWithTariffPlan(id);
     }
 
     return this.yieldWorkspacesWithTariffPlans();
-  }
-
-  /**
-   * Returns a single workspace with its tariff plan by id
-   *
-   * @param id - workspace id
-   */
-  private async getOneWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
-    const pipeline = [
-      {
-        $match: {
-          _id: new ObjectId(id),
-        },
-      },
-      ...this.tariffPlanLookupPipeline(),
-    ];
-
-    return this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
-  }
-
-  /**
-   * Yields all workspaces with their tariff plans one by one
-   */
-  private async *yieldWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan> {
-    const pipeline = this.tariffPlanLookupPipeline();
-    const cursor = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline);
-
-    for await (const workspace of cursor) {
-      yield workspace;
-    }
-  }
-
-  /* eslint-disable-next-line */
-  private tariffPlanLookupPipeline(): any[] {
-    return [
-      {
-        $lookup: {
-          from: 'plans',
-          localField: 'tariffPlanId',
-          foreignField: '_id',
-          as: 'tariffPlan',
-        },
-      },
-      {
-        $unwind: {
-          path: '$tariffPlan',
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          isBlocked: 1,
-          blockedDate: 1,
-          lastChargeDate: 1,
-          billingPeriodEventsCount: 1,
-          tariffPlan: 1,
-        },
-      },
-    ];
   }
 
   /**
@@ -203,5 +146,73 @@ export class DbHelper {
       : {};
 
     return this.projectsCollection.find(query).toArray();
+  }
+
+  /**
+   * Returns a single workspace with its tariff plan by id
+   *
+   * @param id - workspace id
+   */
+  private async getOneWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
+    const pipeline = [
+      {
+        $match: {
+          _id: new ObjectId(id),
+        },
+      },
+      ...this.tariffPlanLookupPipeline(),
+    ];
+
+    const workspace = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
+
+    if (workspace === null) {
+      throw new NonCriticalError(`Workspace ${id} not found`, {
+        workspaceId: id,
+      });
+    }
+
+    return workspace;
+  }
+
+  /**
+   * Yields all workspaces with their tariff plans one by one
+   */
+  private async * yieldWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan> {
+    const pipeline = this.tariffPlanLookupPipeline();
+    const cursor = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline);
+
+    for await (const workspace of cursor) {
+      yield workspace;
+    }
+  }
+
+  /* eslint-disable-next-line */
+  private tariffPlanLookupPipeline(): any[] {
+    return [
+      {
+        $lookup: {
+          from: 'plans',
+          localField: 'tariffPlanId',
+          foreignField: '_id',
+          as: 'tariffPlan',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tariffPlan',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          isBlocked: 1,
+          blockedDate: 1,
+          lastChargeDate: 1,
+          billingPeriodEventsCount: 1,
+          tariffPlan: 1,
+        },
+      },
+    ];
   }
 }

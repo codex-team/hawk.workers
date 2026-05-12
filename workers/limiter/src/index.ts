@@ -223,7 +223,7 @@ export default class LimiterWorker extends Worker {
         updatedWorkspace.isBlocked = true;
         updatedWorkspace.blockedDate = new Date();
 
-        this.redis.appendBannedProjects(projectIds);
+        await this.redis.appendBannedProjects(projectIds);
         message += this.formSingleWorkspaceMessage(updatedWorkspace, projectsToUpdate, 'blocked');
       }
     }

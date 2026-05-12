@@ -161,10 +161,10 @@ describe('DbHelper', () => {
        */
       const cursor = dbHelper.getWorkspacesWithTariffPlans();
 
-      const workspaces = []
+      const workspaces = [];
 
       for await (const workspace of cursor) {
-        workspaces.push(workspace)
+        workspaces.push(workspace);
       }
 
       /**
