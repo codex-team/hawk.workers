@@ -163,7 +163,7 @@ export class DbHelper {
       ...this.tariffPlanLookupPipeline(),
     ];
 
-    const workspace = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
+    const workspace = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
 
     if (workspace === null) {
       throw new NonCriticalError(`Workspace ${id} not found`, {
