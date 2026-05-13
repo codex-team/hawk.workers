@@ -2,7 +2,7 @@ import { Collection, Db, ObjectId } from 'mongodb';
 import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
-import { CriticalError } from '../../../lib/workerErrors';
+import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
 
 /**
  * Class that implements methods used for interaction between limiter and db
@@ -35,49 +35,24 @@ export class DbHelper {
   }
 
   /**
-   * Method that returns all workspaces with their tariff plans
+   * Method that yields all workspaces with their tariff plans
    */
-  public async getWorkspacesWithTariffPlans():Promise<WorkspaceWithTariffPlan[]>;
+  public getWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan>;
   /**
    * Method that returns workspace with its tariff plan by its id
    *
    * @param id - id of the workspace to fetch
    */
-  public async getWorkspacesWithTariffPlans(id: string):Promise<WorkspaceWithTariffPlan>;
+  public getWorkspacesWithTariffPlans(id: string): Promise<WorkspaceWithTariffPlan>;
   /**
-   * Returns workspace with its tariff plan by its id
-   *
-   * @param id - workspace id
+   * @param id - id of the workspace to fetch
    */
-  public async getWorkspacesWithTariffPlans(id?: string):Promise<WorkspaceWithTariffPlan[] | WorkspaceWithTariffPlan> {
-    /* eslint-disable-next-line */
-    const queue: any[] = [
-      {
-        $lookup: {
-          from: 'plans',
-          localField: 'tariffPlanId',
-          foreignField: '_id',
-          as: 'tariffPlan',
-        },
-      },
-      {
-        $unwind: {
-          path: '$tariffPlan',
-        },
-      },
-    ];
-
+  public getWorkspacesWithTariffPlans(id?: string): AsyncGenerator<WorkspaceWithTariffPlan> | Promise<WorkspaceWithTariffPlan> {
     if (id !== undefined) {
-      queue.unshift({
-        $match: {
-          _id: new ObjectId(id),
-        },
-      });
+      return this.getOneWorkspaceWithTariffPlan(id);
     }
 
-    const workspacesArray = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(queue).toArray();
-
-    return (id !== undefined) ? workspacesArray[0] : workspacesArray;
+    return this.yieldWorkspacesWithTariffPlans();
   }
 
   /**
@@ -171,5 +146,73 @@ export class DbHelper {
       : {};
 
     return this.projectsCollection.find(query).toArray();
+  }
+
+  /**
+   * Returns a single workspace with its tariff plan by id
+   *
+   * @param id - workspace id
+   */
+  private async getOneWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
+    const pipeline = [
+      {
+        $match: {
+          _id: new ObjectId(id),
+        },
+      },
+      ...this.tariffPlanLookupPipeline(),
+    ];
+
+    const workspace = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
+
+    if (workspace === null) {
+      throw new NonCriticalError(`Workspace ${id} not found`, {
+        workspaceId: id,
+      });
+    }
+
+    return workspace;
+  }
+
+  /**
+   * Yields all workspaces with their tariff plans one by one
+   */
+  private async * yieldWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan> {
+    const pipeline = this.tariffPlanLookupPipeline();
+    const cursor = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline);
+
+    for await (const workspace of cursor) {
+      yield workspace;
+    }
+  }
+
+  /* eslint-disable-next-line */
+  private tariffPlanLookupPipeline(): any[] {
+    return [
+      {
+        $lookup: {
+          from: 'plans',
+          localField: 'tariffPlanId',
+          foreignField: '_id',
+          as: 'tariffPlan',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tariffPlan',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          isBlocked: 1,
+          blockedDate: 1,
+          lastChargeDate: 1,
+          billingPeriodEventsCount: 1,
+          tariffPlan: 1,
+        },
+      },
+    ];
   }
 }
