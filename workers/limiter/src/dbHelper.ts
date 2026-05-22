@@ -1,8 +1,23 @@
 import { Collection, Db, ObjectId } from 'mongodb';
-import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
+import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
 import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
+
+const WORKSPACE_PROJECTION = {
+  _id: 1,
+  name: 1,
+  isBlocked: 1,
+  blockedDate: 1,
+  lastChargeDate: 1,
+  billingPeriodEventsCount: 1,
+  tariffPlanId: 1,
+} as const;
+
+type WorkspaceForLimiter = Pick<
+  WorkspaceDBScheme,
+  '_id' | 'name' | 'isBlocked' | 'blockedDate' | 'lastChargeDate' | 'billingPeriodEventsCount' | 'tariffPlanId'
+>;
 
 /**
  * Class that implements methods used for interaction between limiter and db
@@ -24,14 +39,42 @@ export class DbHelper {
   private workspacesCollection: Collection<WorkspaceDBScheme>;
 
   /**
+   * Collection with tariff plans
+   */
+  private plansCollection: Collection<PlanDBScheme>;
+
+  /**
+   * In-memory cache of tariff plans — avoids $lookup on the small plans collection per workspace
+   */
+  private plans: PlanDBScheme[] = [];
+
+  /**
    * @param projects - projects collection
    * @param workspaces - workspaces collection
+   * @param plans - plans collection
    * @param eventsDbConnection - connection to events DB
    */
-  constructor(projects: Collection<ProjectDBScheme>, workspaces: Collection<WorkspaceDBScheme>, eventsDbConnection: Db) {
+  constructor(
+    projects: Collection<ProjectDBScheme>,
+    workspaces: Collection<WorkspaceDBScheme>,
+    plans: Collection<PlanDBScheme>,
+    eventsDbConnection: Db
+  ) {
     this.eventsDbConnection = eventsDbConnection;
     this.projectsCollection = projects;
     this.workspacesCollection = workspaces;
+    this.plansCollection = plans;
+  }
+
+  /**
+   * Fetches tariff plans from database and keeps them cached
+   */
+  public async fetchPlans(): Promise<void> {
+    this.plans = await this.plansCollection.find({}).toArray();
+
+    if (this.plans.length === 0) {
+      throw new CriticalError('Please add tariff plans to the database');
+    }
   }
 
   /**
@@ -149,21 +192,40 @@ export class DbHelper {
   }
 
   /**
+   * Returns plan from cache, refetches once on miss
+   *
+   * @param planId - id of the plan to find
+   */
+  private async resolvePlan(planId: WorkspaceDBScheme['tariffPlanId']): Promise<PlanDBScheme | null> {
+    let plan = this.findPlanById(planId);
+
+    if (plan) {
+      return plan;
+    }
+
+    await this.fetchPlans();
+    plan = this.findPlanById(planId);
+
+    return plan ?? null;
+  }
+
+  /**
+   * @param planId - id of the plan to find
+   */
+  private findPlanById(planId: WorkspaceDBScheme['tariffPlanId']): PlanDBScheme | undefined {
+    return this.plans.find((plan) => plan._id.toString() === planId.toString());
+  }
+
+  /**
    * Returns a single workspace with its tariff plan by id
    *
    * @param id - workspace id
    */
   private async getOneWorkspaceWithTariffPlan(id: string): Promise<WorkspaceWithTariffPlan> {
-    const pipeline = [
-      {
-        $match: {
-          _id: new ObjectId(id),
-        },
-      },
-      ...this.tariffPlanLookupPipeline(),
-    ];
-
-    const workspace = await this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline).next();
+    const workspace = await this.workspacesCollection
+      .find({ _id: new ObjectId(id) })
+      .project<WorkspaceForLimiter>(WORKSPACE_PROJECTION)
+      .next();
 
     if (workspace === null) {
       throw new NonCriticalError(`Workspace ${id} not found`, {
@@ -171,48 +233,46 @@ export class DbHelper {
       });
     }
 
-    return workspace;
+    const plan = await this.resolvePlan(workspace.tariffPlanId);
+
+    if (!plan) {
+      throw new NonCriticalError(`Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${id}`, {
+        workspaceId: id,
+      });
+    }
+
+    return {
+      ...workspace,
+      tariffPlan: plan,
+    };
   }
 
   /**
    * Yields all workspaces with their tariff plans one by one
    */
   private async * yieldWorkspacesWithTariffPlans(): AsyncGenerator<WorkspaceWithTariffPlan> {
-    const pipeline = this.tariffPlanLookupPipeline();
-    const cursor = this.workspacesCollection.aggregate<WorkspaceWithTariffPlan>(pipeline);
+    const cursor = this.workspacesCollection
+      .find({})
+      .project<WorkspaceForLimiter>(WORKSPACE_PROJECTION);
 
     for await (const workspace of cursor) {
-      yield workspace;
-    }
-  }
+      const plan = await this.resolvePlan(workspace.tariffPlanId);
 
-  /* eslint-disable-next-line */
-  private tariffPlanLookupPipeline(): any[] {
-    return [
-      {
-        $lookup: {
-          from: 'plans',
-          localField: 'tariffPlanId',
-          foreignField: '_id',
-          as: 'tariffPlan',
-        },
-      },
-      {
-        $unwind: {
-          path: '$tariffPlan',
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          isBlocked: 1,
-          blockedDate: 1,
-          lastChargeDate: 1,
-          billingPeriodEventsCount: 1,
-          tariffPlan: 1,
-        },
-      },
-    ];
+      if (!plan) {
+        HawkCatcher.send(
+          new Error(`[Limiter] Tariff plan not found for workspace`),
+          {
+            workspaceId: workspace._id.toString(),
+            tariffPlanId: workspace.tariffPlanId?.toString(),
+          }
+        );
+        continue;
+      }
+
+      yield {
+        ...workspace,
+        tariffPlan: plan,
+      };
+    }
   }
 }

@@ -130,7 +130,8 @@ describe('DbHelper', () => {
     await planCollection.deleteMany({});
     await planCollection.insertMany(Object.values(mockedPlans));
 
-    dbHelper = new DbHelper(projectCollection, workspaceCollection, db);
+    dbHelper = new DbHelper(projectCollection, workspaceCollection, planCollection, db);
+    await dbHelper.fetchPlans();
   }, 30000); // 30 seconds timeout for MongoDB connection and setup
 
   beforeEach(async () => {
