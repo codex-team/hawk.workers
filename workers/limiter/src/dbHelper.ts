@@ -49,6 +49,11 @@ export class DbHelper {
   private plans: PlanDBScheme[] = [];
 
   /**
+   * Plan ids that were still missing after a cache refresh — don't trigger more refreshes for them
+   */
+  private knownMissingPlanIds: Set<string> = new Set();
+
+  /**
    * @param projects - projects collection
    * @param workspaces - workspaces collection
    * @param plans - plans collection
@@ -71,6 +76,7 @@ export class DbHelper {
    */
   public async fetchPlans(): Promise<void> {
     this.plans = await this.plansCollection.find({}).toArray();
+    this.knownMissingPlanIds.clear();
 
     if (this.plans.length === 0) {
       throw new CriticalError('Please add tariff plans to the database');
@@ -203,8 +209,18 @@ export class DbHelper {
       return plan;
     }
 
+    const planIdStr = planId.toString();
+
+    if (this.knownMissingPlanIds.has(planIdStr)) {
+      return null;
+    }
+
     await this.fetchPlans();
     plan = this.findPlanById(planId);
+
+    if (!plan) {
+      this.knownMissingPlanIds.add(planIdStr);
+    }
 
     return plan ?? null;
   }
