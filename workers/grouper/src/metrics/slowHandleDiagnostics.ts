@@ -2,8 +2,20 @@ import type { GrouperDiagnosticsConfig } from './config';
 import type GrouperMetrics from './grouperMetrics';
 import type { GrouperStep } from './grouperMetrics';
 
+const NS_PER_MS = 1_000_000n;
+
 interface LoggerLike {
   warn(message: string): void;
+}
+
+/**
+ * Frame on the active measurement stack. childTimeNs accumulates the duration
+ * of nested measureStep() calls so the parent step records exclusive time.
+ */
+interface StepFrame {
+  step: GrouperStep;
+  startedAt: bigint;
+  childTimeNs: bigint;
 }
 
 /**
@@ -22,8 +34,9 @@ export interface SlowHandleContext {
  * measures Grouper handle steps and emits a slow handle warning on demand.
  */
 export class SlowHandleSession {
-  private readonly startedAt: number = Date.now();
+  private readonly startedAt: bigint = process.hrtime.bigint();
   private readonly timings: Map<GrouperStep, number> = new Map();
+  private readonly stack: StepFrame[] = [];
   private readonly logger: LoggerLike;
   private readonly metrics: GrouperMetrics;
   private readonly config: GrouperDiagnosticsConfig;
@@ -40,21 +53,38 @@ export class SlowHandleSession {
   }
 
   /**
-   * Measure a Grouper handle step and accumulate its duration in the session.
+   * Measure a Grouper handle step and accumulate its exclusive duration
+   * (time not spent inside nested measureStep calls) in the session.
    *
    * @param step - step name.
    * @param callback - measured callback.
    */
   public async measureStep<T>(step: GrouperStep, callback: () => Promise<T> | T): Promise<T> {
-    const stepStartedAt = Date.now();
+    const frame: StepFrame = {
+      step,
+      startedAt: process.hrtime.bigint(),
+      childTimeNs: 0n,
+    };
+
+    this.stack.push(frame);
 
     try {
       return await this.metrics.observeStepDuration(step, callback);
     } finally {
-      const durationMs = Date.now() - stepStartedAt;
-      const previousDurationMs = this.timings.get(step) || 0;
+      const elapsedNs = process.hrtime.bigint() - frame.startedAt;
 
-      this.timings.set(step, previousDurationMs + durationMs);
+      this.stack.pop();
+
+      const parent = this.stack[this.stack.length - 1];
+
+      if (parent) {
+        parent.childTimeNs += elapsedNs;
+      }
+
+      const exclusiveMs = Number((elapsedNs - frame.childTimeNs) / NS_PER_MS);
+      const previousMs = this.timings.get(step) || 0;
+
+      this.timings.set(step, previousMs + exclusiveMs);
     }
   }
 
@@ -64,7 +94,7 @@ export class SlowHandleSession {
    * @param context - handled task context.
    */
   public logIfSlow(context: SlowHandleContext): void {
-    const durationMs = Date.now() - this.startedAt;
+    const durationMs = Number((process.hrtime.bigint() - this.startedAt) / NS_PER_MS);
 
     if (durationMs < this.config.slowHandleWarnMs) {
       return;
@@ -75,9 +105,13 @@ export class SlowHandleSession {
       .map(([step, stepDurationMs]) => `${step}=${stepDurationMs}ms`)
       .join(' ');
 
+    const titleField = context.title !== undefined
+      ? ` title=${JSON.stringify(context.title)}`
+      : '';
+
     this.logger.warn(
       `[slowHandle] duration=${durationMs}ms project=${context.projectId} type=${context.type} ` +
-      `payloadSize=${context.payloadSize}b deltaSize=${context.deltaSize}b title="${context.title}" steps="${steps}"`
+      `payloadSize=${context.payloadSize}b deltaSize=${context.deltaSize}b${titleField} steps="${steps}"`
     );
   }
 }

@@ -427,7 +427,7 @@ export default class GrouperWorker extends Worker {
 
     session.logIfSlow({
       projectId: task.projectId,
-      title: task.payload?.title,
+      title: task.payload.title,
       type: eventType,
       payloadSize: taskPayloadSize,
       deltaSize,
