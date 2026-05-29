@@ -4,6 +4,8 @@ import { GroupedEventDBScheme, PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme 
 import { DbHelper } from '../src/dbHelper';
 import { mockedPlans } from './plans.mock';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
+import HawkCatcher from '@hawk.so/nodejs';
 
 /**
  * Constant of last charge date in all workspaces for tests
@@ -201,6 +203,180 @@ describe('DbHelper', () => {
       expect(result).toBeDefined();
       expect(result.tariffPlan).toBeDefined();
       expect(result.tariffPlan.eventsLimit).toBe(10);
+    });
+  });
+
+  describe('plans caching', () => {
+    /**
+     * Restore the default plans cache after tests that mutate the plans collection or the cache
+     */
+    afterEach(async () => {
+      jest.restoreAllMocks();
+      await planCollection.deleteMany({});
+      await planCollection.insertMany(Object.values(mockedPlans));
+      await dbHelper.fetchPlans();
+    });
+
+    test('Should serve plans from the in-memory cache without reading the plans collection per workspace', async () => {
+      /**
+       * Arrange
+       */
+      const workspace1 = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const workspace2 = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      await workspaceCollection.insertMany([workspace1, workspace2]);
+
+      /**
+       * Cache is already loaded in beforeAll — start watching the plans collection from now on
+       */
+      const findSpy = jest.spyOn(planCollection, 'find');
+
+      /**
+       * Act
+       */
+      const workspaces = [];
+
+      for await (const workspace of dbHelper.getWorkspacesWithTariffPlans()) {
+        workspaces.push(workspace);
+      }
+
+      /**
+       * Assert — both plans are resolved from the cache, the plans collection is never read
+       */
+      expect(workspaces).toHaveLength(2);
+      expect(workspaces[0].tariffPlan.eventsLimit).toBe(10);
+      expect(workspaces[1].tariffPlan.eventsLimit).toBe(10000);
+      expect(findSpy).not.toHaveBeenCalled();
+    });
+
+    test('Should refetch plans once on a cache miss and resolve a plan added after startup', async () => {
+      /**
+       * Arrange — a plan that exists in the database but not in the already-loaded cache
+       */
+      const freshPlan: PlanDBScheme = {
+        _id: new ObjectId(),
+        name: 'Fresh plan',
+        monthlyCharge: 10,
+        monthlyChargeCurrency: 'RUB',
+        eventsLimit: 500,
+        isDefault: false,
+      };
+
+      await planCollection.insertOne(freshPlan);
+
+      const workspace = createWorkspaceMock({
+        plan: freshPlan,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      await workspaceCollection.insertOne(workspace);
+
+      const findSpy = jest.spyOn(planCollection, 'find');
+
+      /**
+       * Act
+       */
+      const result = await dbHelper.getWorkspacesWithTariffPlans(workspace._id.toString());
+
+      /**
+       * Assert — the miss triggered exactly one refetch and the plan resolved from the refreshed cache
+       */
+      expect(result.tariffPlan.eventsLimit).toBe(500);
+      expect(findSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('Should reload the plans collection only once for repeated misses of the same plan id', async () => {
+      /**
+       * Arrange — two workspaces referencing the same non-existent plan
+       */
+      const missingPlanId = new ObjectId();
+
+      const workspace1 = createWorkspaceMock({
+        plan: {
+          ...mockedPlans.eventsLimit10,
+          _id: missingPlanId,
+        },
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const workspace2 = createWorkspaceMock({
+        plan: {
+          ...mockedPlans.eventsLimit10,
+          _id: missingPlanId,
+        },
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      await workspaceCollection.insertMany([workspace1, workspace2]);
+
+      const findSpy = jest.spyOn(planCollection, 'find');
+      const hawkCatcherSpy = jest.spyOn(HawkCatcher, 'send').mockImplementation(() => undefined);
+
+      /**
+       * Act
+       */
+      const workspaces = [];
+
+      for await (const workspace of dbHelper.getWorkspacesWithTariffPlans()) {
+        workspaces.push(workspace);
+      }
+
+      /**
+       * Assert — workspaces with a dangling plan are skipped and reported, and the missing id is
+       * memoized so the collection is reloaded only once despite two misses
+       */
+      expect(workspaces).toHaveLength(0);
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      expect(hawkCatcherSpy).toHaveBeenCalledTimes(2);
+    });
+
+    test('Should throw NonCriticalError when a single workspace references a non-existent plan', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: {
+          ...mockedPlans.eventsLimit10,
+          _id: new ObjectId(),
+        },
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      await workspaceCollection.insertOne(workspace);
+
+      /**
+       * Act & Assert
+       */
+      await expect(
+        dbHelper.getWorkspacesWithTariffPlans(workspace._id.toString())
+      ).rejects.toThrow(NonCriticalError);
+    });
+
+    test('fetchPlans should throw CriticalError when the plans collection is empty', async () => {
+      /**
+       * Arrange — a helper pointed at an empty plans collection
+       */
+      const emptyPlanCollection = db.collection<PlanDBScheme>('plans_empty_for_test');
+
+      await emptyPlanCollection.deleteMany({});
+
+      const helperWithoutPlans = new DbHelper(projectCollection, workspaceCollection, emptyPlanCollection, db);
+
+      /**
+       * Act & Assert
+       */
+      await expect(helperWithoutPlans.fetchPlans()).rejects.toThrow(CriticalError);
     });
   });
 
