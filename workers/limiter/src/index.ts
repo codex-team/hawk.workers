@@ -3,7 +3,7 @@ import { Worker } from '../../../lib/worker';
 import * as pkg from '../package.json';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
+import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types';
 import HawkCatcher from '@hawk.so/nodejs';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
 import LimiterEvent, { BlockWorkspaceEvent, UnblockWorkspaceEvent } from '../types/eventTypes';
@@ -68,8 +68,11 @@ export default class LimiterWorker extends Worker {
 
     const projectsCollection = accountDbConnection.collection<ProjectDBScheme>('projects');
     const workspacesCollection = accountDbConnection.collection<WorkspaceDBScheme>('workspaces');
+    const plansCollection = accountDbConnection.collection<PlanDBScheme>('plans');
 
-    this.dbHelper = new DbHelper(projectsCollection, workspacesCollection, eventsDbConnection);
+    this.dbHelper = new DbHelper(projectsCollection, workspacesCollection, plansCollection, eventsDbConnection);
+
+    await this.dbHelper.fetchPlans();
 
     await this.redis.initialize();
 

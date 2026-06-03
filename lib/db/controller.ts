@@ -21,6 +21,11 @@ export class DatabaseController {
   private readonly connectionUri: string;
 
   /**
+   * Sent to MongoDB on handshake; overrides any `appName` query param in the URI
+   */
+  private readonly appName?: string;
+
+  /**
    * GridFSBucket object
    * Used to store files in GridFS
    */
@@ -30,12 +35,14 @@ export class DatabaseController {
    * Creates controller instance
    *
    * @param connectionUri - mongo URI for connection
+   * @param appName - MongoDB appName, defaults to `process.env.MONGO_APP_NAME`
    */
-  constructor(connectionUri: string) {
+  constructor(connectionUri: string, appName?: string) {
     if (!connectionUri) {
       throw new DatabaseConnectionError('Connection URI is not specified. Check .env');
     }
     this.connectionUri = connectionUri;
+    this.appName = appName ?? process.env.MONGO_APP_NAME;
   }
 
   /**
@@ -53,6 +60,7 @@ export class DatabaseController {
       this.connection = await connect(this.connectionUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
+        ...(this.appName ? { appName: this.appName } : {}),
       });
       this.db = await this.connection.db();
 
