@@ -2,6 +2,22 @@ import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
 import { DatabaseConnectionError } from '../workerErrors';
 
 /**
+ * How many times to retry the initial Mongo handshake before giving up
+ */
+const DEFAULT_RECONNECT_TRIES = 60;
+
+/**
+ * Delay between initial-handshake retries, in ms
+ */
+const DEFAULT_RECONNECT_INTERVAL_MS = 3000;
+
+/**
+ * Bounds how long a single attempt waits for an available server, so a retry
+ * fails fast during an outage instead of hanging on the 30s driver default
+ */
+const SERVER_SELECTION_TIMEOUT_MS = 10000;
+
+/**
  * Database connection singleton
  */
 export class DatabaseController {
@@ -46,28 +62,49 @@ export class DatabaseController {
   }
 
   /**
-   * Connect to database
-   * Requires `MONGO_DSN` environment variable to be set
+   * Connect to the database, retrying with a fixed backoff while the server is
+   * unreachable so a worker booting during a Mongo outage waits instead of
+   * crash-looping. The driver auto-recovers already-open connections on its
+   * own, so this retry covers the initial handshake only.
    *
-   * @throws {Error} if `MONGO_DSN` is not set
+   * Tunable via MONGO_RECONNECT_TRIES (default 60) and
+   * MONGO_RECONNECT_INTERVAL in ms (default 3000).
+   *
+   * @throws {DatabaseConnectionError} if every attempt fails
    */
   public async connect(): Promise<Db> {
     if (this.db) {
-      return;
-    }
-
-    try {
-      this.connection = await connect(this.connectionUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        ...(this.appName ? { appName: this.appName } : {}),
-      });
-      this.db = await this.connection.db();
-
       return this.db;
-    } catch (err) {
-      throw new DatabaseConnectionError(err);
     }
+
+    const tries = Number(process.env.MONGO_RECONNECT_TRIES) || DEFAULT_RECONNECT_TRIES;
+    const intervalMs = Number(process.env.MONGO_RECONNECT_INTERVAL) || DEFAULT_RECONNECT_INTERVAL_MS;
+
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      try {
+        this.connection = await connect(this.connectionUri, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+          serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
+          ...(this.appName ? { appName: this.appName } : {}),
+        });
+        this.db = await this.connection.db();
+
+        return this.db;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+
+        console.warn(`[Mongo] connect attempt ${attempt}/${tries} failed: ${message}`);
+
+        if (attempt >= tries) {
+          throw new DatabaseConnectionError(err);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
+    }
+
+    throw new DatabaseConnectionError('Failed to connect to MongoDB');
   }
 
   /**
