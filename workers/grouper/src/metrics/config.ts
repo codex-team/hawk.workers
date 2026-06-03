@@ -24,6 +24,16 @@ export interface GrouperMemoryConfig {
 }
 
 /**
+ * Parsed config for slow handle diagnostics.
+ */
+export interface GrouperDiagnosticsConfig {
+  /**
+   * Log handle step breakdown when total handle duration is greater than this value.
+   */
+  slowHandleWarnMs: number;
+}
+
+/**
  * Default memory checkpoint interval in tasks.
  */
 const DEFAULT_MEMORY_LOG_INTERVAL_TASKS = 50;
@@ -42,6 +52,11 @@ const DEFAULT_MEMORY_GROWTH_WARN_MB = 64;
  * Default single-handle growth warning threshold in MB.
  */
 const DEFAULT_MEMORY_HANDLE_GROWTH_WARN_MB = 16;
+
+/**
+ * Default slow handle warning threshold in ms.
+ */
+const DEFAULT_SLOW_HANDLE_WARN_MS = 5000;
 
 /**
  * Histogram buckets for payload and delta sizes (bytes).
@@ -69,4 +84,11 @@ export const grouperMemoryConfig: GrouperMemoryConfig = {
   growthWindowTasks: asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WINDOW_TASKS, DEFAULT_MEMORY_GROWTH_WINDOW_TASKS),
   growthWarnMb: asPositiveNumber(process.env.GROUPER_MEMORY_GROWTH_WARN_MB, DEFAULT_MEMORY_GROWTH_WARN_MB),
   handleGrowthWarnMb: asPositiveNumber(process.env.GROUPER_MEMORY_HANDLE_GROWTH_WARN_MB, DEFAULT_MEMORY_HANDLE_GROWTH_WARN_MB),
+};
+
+/**
+ * Slow handle diagnostics config from environment.
+ */
+export const grouperDiagnosticsConfig: GrouperDiagnosticsConfig = {
+  slowHandleWarnMs: asPositiveNumber(process.env.GROUPER_SLOW_HANDLE_WARN_MS, DEFAULT_SLOW_HANDLE_WARN_MS),
 };
