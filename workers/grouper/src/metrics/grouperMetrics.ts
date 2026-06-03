@@ -2,7 +2,39 @@ import { client, register } from '../../../../lib/metrics';
 import { GROUPER_METRICS_SIZE_BUCKETS } from './config';
 
 type EventType = 'new' | 'repeated';
-type MongoOperation = 'getEvent' | 'saveEvent' | 'saveRepetition' | 'incrementCounter' | 'saveDailyEvents';
+type MongoOperation =
+  'findDailyUserRepetition' |
+  'findFirstEventByPattern' |
+  'findUserRepetition' |
+  'getEvent' |
+  'getProjectPatterns' |
+  'incrementCounter' |
+  'saveDailyEvents' |
+  'saveEvent' |
+  'saveRepetition';
+
+export type GrouperStep =
+  'affectedUsers' |
+  'affectedUsersRedisLocks' |
+  'computeDelta' |
+  'decodeEvent' |
+  'enqueueNotifier' |
+  'findSimilarEvent' |
+  'getEvent' |
+  'hash' |
+  'incrementCounter' |
+  'payloadSize' |
+  'preprocess' |
+  'recordProjectMetrics' |
+  'saveDailyEvents' |
+  'saveNewEvent' |
+  'saveRepetition';
+
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const GROUPER_HANDLE_DURATION_BUCKETS = [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 7.5, 10, 15, 30, 60];
+
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const GROUPER_STEP_DURATION_BUCKETS = [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30];
 
 /**
  * Reuse already registered metric by name, or create one.
@@ -39,6 +71,18 @@ export default class GrouperMetrics {
     () => new client.Histogram({
       name: 'hawk_grouper_handle_duration_seconds',
       help: 'Duration of handle() call in seconds',
+      buckets: GROUPER_HANDLE_DURATION_BUCKETS,
+      registers: [ register ],
+    })
+  );
+
+  private readonly stepDuration = getOrCreateMetric(
+    'hawk_grouper_step_duration_seconds',
+    () => new client.Histogram({
+      name: 'hawk_grouper_step_duration_seconds',
+      help: 'Duration of Grouper handle step in seconds',
+      labelNames: [ 'step' ],
+      buckets: GROUPER_STEP_DURATION_BUCKETS,
       registers: [ register ],
     })
   );
@@ -98,6 +142,22 @@ export default class GrouperMetrics {
    */
   public async observeHandleDuration<T>(callback: () => Promise<T>): Promise<T> {
     const endTimer = this.handleDuration.startTimer();
+
+    try {
+      return await callback();
+    } finally {
+      endTimer();
+    }
+  }
+
+  /**
+   * Measure a single Grouper handle step duration.
+   *
+   * @param step - step label.
+   * @param callback - callback to execute under timer.
+   */
+  public async observeStepDuration<T>(step: GrouperStep, callback: () => Promise<T> | T): Promise<T> {
+    const endTimer = this.stepDuration.startTimer({ step });
 
     try {
       return await callback();
