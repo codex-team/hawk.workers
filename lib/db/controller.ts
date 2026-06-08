@@ -18,6 +18,23 @@ const DEFAULT_RECONNECT_INTERVAL_MS = 3000;
 const SERVER_SELECTION_TIMEOUT_MS = 10000;
 
 /**
+ * Parses a positive-integer env var, using `fallback` for missing, non-numeric,
+ * zero or negative values so retry tuning stays safe
+ *
+ * @param value - raw env var value
+ * @param fallback - default for an invalid value
+ */
+function positiveIntEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
+/**
  * Database connection singleton
  */
 export class DatabaseController {
@@ -77,8 +94,8 @@ export class DatabaseController {
       return this.db;
     }
 
-    const tries = Number(process.env.MONGO_RECONNECT_TRIES) || DEFAULT_RECONNECT_TRIES;
-    const intervalMs = Number(process.env.MONGO_RECONNECT_INTERVAL) || DEFAULT_RECONNECT_INTERVAL_MS;
+    const tries = positiveIntEnv(process.env.MONGO_RECONNECT_TRIES, DEFAULT_RECONNECT_TRIES);
+    const intervalMs = positiveIntEnv(process.env.MONGO_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL_MS);
 
     for (let attempt = 1; attempt <= tries; attempt++) {
       try {
@@ -88,7 +105,7 @@ export class DatabaseController {
           serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
           ...(this.appName ? { appName: this.appName } : {}),
         });
-        this.db = await this.connection.db();
+        this.db = this.connection.db();
 
         return this.db;
       } catch (err) {
