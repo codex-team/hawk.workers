@@ -106,7 +106,7 @@ export function formatIssueFromEvent(event: GroupedEventDBScheme, project: Proje
 
   const projectId = project._id.toString();
   const garageUrl = process.env.GARAGE_URL || 'https://garage.hawk.so';
-  const eventUrl = `${garageUrl}/project/${projectId}/event/${event.groupHash}`;
+  const eventUrl = `${garageUrl}/project/${projectId}/event/${event._id}`;
 
   /**
    * Format title: [Hawk] ${event.payload.title}
