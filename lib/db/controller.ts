@@ -1,5 +1,6 @@
 import { GridFSBucket, MongoClient, Db, connect } from 'mongodb';
 import { DatabaseConnectionError } from '../workerErrors';
+import { positiveIntEnv } from '../utils/positiveIntEnv';
 
 /**
  * How many times to retry the initial Mongo handshake before giving up
@@ -16,23 +17,6 @@ const DEFAULT_RECONNECT_INTERVAL_MS = 3000;
  * fails fast during an outage instead of hanging on the 30s driver default
  */
 const SERVER_SELECTION_TIMEOUT_MS = 10000;
-
-/**
- * Parses a positive-integer env var, using `fallback` for missing, non-numeric,
- * zero or negative values so retry tuning stays safe
- *
- * @param value - raw env var value
- * @param fallback - default for an invalid value
- */
-function positiveIntEnv(value: string | undefined, fallback: number): number {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return fallback;
-  }
-
-  return Math.floor(parsed);
-}
 
 /**
  * Database connection singleton
