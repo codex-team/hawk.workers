@@ -203,6 +203,13 @@ export class DbHelper {
    * @param planId - id of the plan to find
    */
   private async resolvePlan(planId: WorkspaceDBScheme['tariffPlanId']): Promise<PlanDBScheme | null> {
+    /**
+     * Workspace may have no tariff plan assigned
+     */
+    if (!planId) {
+      return null;
+    }
+
     let plan = this.findPlanById(planId);
 
     if (plan) {

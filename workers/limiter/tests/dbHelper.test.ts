@@ -363,6 +363,60 @@ describe('DbHelper', () => {
       ).rejects.toThrow(NonCriticalError);
     });
 
+    test('Should skip and report a workspace that has no tariffPlanId', async () => {
+      /**
+       * Arrange — a workspace document with a missing tariffPlanId
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      delete (workspace as Partial<WorkspaceDBScheme>).tariffPlanId;
+
+      await workspaceCollection.insertOne(workspace);
+
+      const hawkCatcherSpy = jest.spyOn(HawkCatcher, 'send').mockImplementation(() => undefined);
+
+      /**
+       * Act
+       */
+      const workspaces = [];
+
+      for await (const resolved of dbHelper.getWorkspacesWithTariffPlans()) {
+        workspaces.push(resolved);
+      }
+
+      /**
+       * Assert — no crash, the workspace is skipped and reported
+       */
+      expect(workspaces).toHaveLength(0);
+      expect(hawkCatcherSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('Should throw NonCriticalError when a single workspace has no tariffPlanId', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+
+      delete (workspace as Partial<WorkspaceDBScheme>).tariffPlanId;
+
+      await workspaceCollection.insertOne(workspace);
+
+      /**
+       * Act & Assert
+       */
+      await expect(
+        dbHelper.getWorkspacesWithTariffPlans(workspace._id.toString())
+      ).rejects.toThrow(NonCriticalError);
+    });
+
     test('fetchPlans should throw CriticalError when the plans collection is empty', async () => {
       /**
        * Arrange — a helper pointed at an empty plans collection
