@@ -259,7 +259,7 @@ export class DbHelper {
     const plan = await this.resolvePlan(workspace.tariffPlanId);
 
     if (!plan) {
-      throw new NonCriticalError(`Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${id}`, {
+      throw new NonCriticalError(`Tariff plan ${workspace.tariffPlanId?.toString()} not found for workspace ${id}`, {
         workspaceId: id,
       });
     }
