@@ -203,6 +203,13 @@ export class DbHelper {
    * @param planId - id of the plan to find
    */
   private async resolvePlan(planId: WorkspaceDBScheme['tariffPlanId']): Promise<PlanDBScheme | null> {
+    /**
+     * Workspace may have no tariff plan assigned
+     */
+    if (!planId) {
+      return null;
+    }
+
     let plan = this.findPlanById(planId);
 
     if (plan) {
@@ -252,7 +259,7 @@ export class DbHelper {
     const plan = await this.resolvePlan(workspace.tariffPlanId);
 
     if (!plan) {
-      throw new NonCriticalError(`Tariff plan ${workspace.tariffPlanId.toString()} not found for workspace ${id}`, {
+      throw new NonCriticalError(`Tariff plan ${workspace.tariffPlanId?.toString()} not found for workspace ${id}`, {
         workspaceId: id,
       });
     }
