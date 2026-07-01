@@ -59,9 +59,14 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 const DAILY_METRICS_RETENTION_DAYS = 90;
 
 /**
- * Maximum length for backtrace code line or title
+ * Maximum length for backtrace code line
  */
 const MAX_CODE_LINE_LENGTH = 140;
+
+/**
+ * Maximum length for event title
+ */
+const MAX_TITLE_LENGTH = 1000;
 
 /**
  * Worker for handling Javascript events
@@ -207,6 +212,13 @@ export default class GrouperWorker extends Worker {
         ...task.payload,
         release: String(task.payload.release),
       };
+    }
+
+    /**
+     * Trim title before hashing so hash and stored title stay consistent
+     */
+    if (typeof task.payload.title === 'string') {
+      task.payload.title = rightTrim(task.payload.title, MAX_TITLE_LENGTH);
     }
 
     let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
