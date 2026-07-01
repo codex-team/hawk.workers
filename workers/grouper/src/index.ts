@@ -64,11 +64,6 @@ const DAILY_METRICS_RETENTION_DAYS = 90;
 const MAX_CODE_LINE_LENGTH = 140;
 
 /**
- * Maximum length for event title
- */
-const MAX_TITLE_LENGTH = 1000;
-
-/**
  * Worker for handling Javascript events
  */
 export default class GrouperWorker extends Worker {
@@ -217,9 +212,7 @@ export default class GrouperWorker extends Worker {
     /**
      * Trim title before hashing so hash and stored title stay consistent
      */
-    if (typeof task.payload.title === 'string') {
-      task.payload.title = rightTrim(task.payload.title, MAX_TITLE_LENGTH);
-    }
+    this.dataFilter.trimEventTitle(task.payload);
 
     let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
     let existedEvent: GroupedEventDBScheme;

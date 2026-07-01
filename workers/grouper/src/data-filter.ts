@@ -1,10 +1,16 @@
 import type { EventAddons, EventData } from '@hawk.so/types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
+import { rightTrim } from '../../../lib/utils/string';
 
 /**
  * Maximum depth for object traversal to prevent excessive memory allocations
  */
 const MAX_TRAVERSAL_DEPTH = 20;
+
+/**
+ * Maximum length for event title
+ */
+const MAX_TITLE_LENGTH = 1000;
 
 /**
  * Recursively iterate through object and call function on each key
@@ -140,6 +146,20 @@ export default class DataFilter {
         this.processField(event[field]);
       }
     });
+  }
+
+  /**
+   * Trim event title to the maximum allowed length.
+   * It mutates the original object.
+   *
+   * Should be called before hashing so the hash and the stored title stay consistent.
+   *
+   * @param event - event to process
+   */
+  public trimEventTitle(event: EventData<EventAddons>): void {
+    if (typeof event.title === 'string') {
+      event.title = rightTrim(event.title, MAX_TITLE_LENGTH);
+    }
   }
 
   /**
