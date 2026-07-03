@@ -9,8 +9,19 @@ import HawkCatcher from '@hawk.so/nodejs';
 
 /**
  * Constant of last charge date in all workspaces for tests
+ * 2020-04-01T12:00:00Z — intentionally not midnight-aligned
  */
 const LAST_CHARGE_DATE = new Date(1585742400 * 1000);
+
+/**
+ * Timestamp inside the boundary day of LAST_CHARGE_DATE (2020-04-01T16:00:00Z)
+ */
+const BOUNDARY_DAY_TIMESTAMP = 1585756800;
+
+/**
+ * UTC midnight right after LAST_CHARGE_DATE (2020-04-02T00:00:00Z)
+ */
+const NEXT_MIDNIGHT_AFTER_LAST_CHARGE = 1585785600;
 
 describe('DbHelper', () => {
   let connection: MongoClient;
@@ -66,8 +77,10 @@ describe('DbHelper', () => {
 
   /**
    * Returns mocked event for tests
+   *
+   * @param timestamp - event timestamp, defaults to the boundary day of LAST_CHARGE_DATE
    */
-  const createEventMock = (): GroupedEventDBScheme => {
+  const createEventMock = (timestamp: number = BOUNDARY_DAY_TIMESTAMP): GroupedEventDBScheme => {
     return {
       catcherType: '',
       totalCount: 0,
@@ -77,7 +90,7 @@ describe('DbHelper', () => {
       payload: {
         title: 'Mocked event',
       },
-      timestamp: 1586892935,
+      timestamp,
     };
   };
 
@@ -91,9 +104,11 @@ describe('DbHelper', () => {
     project: ProjectDBScheme,
     eventsToMock: number
     repetitionsToMock?: number,
+    dailyEventsToMock?: Array<{ groupingTimestamp: number; count: number }>,
   }): Promise<void> => {
     const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);
     const repetitionsCollection = db.collection(`repetitions:${parameters.project._id.toString()}`);
+    const dailyEventsCollection = db.collection(`dailyEvents:${parameters.project._id.toString()}`);
 
     if (parameters.workspace) {
       await workspaceCollection.insertOne(parameters.workspace);
@@ -113,6 +128,14 @@ describe('DbHelper', () => {
         mockedEvents.push(createEventMock());
       }
       await repetitionsCollection.insertMany(mockedEvents);
+    }
+
+    if (parameters.dailyEventsToMock?.length > 0) {
+      await dailyEventsCollection.insertMany(parameters.dailyEventsToMock.map(bucket => ({
+        groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+        groupingTimestamp: bucket.groupingTimestamp,
+        count: bucket.count,
+      })));
     }
   };
 
@@ -554,7 +577,7 @@ describe('DbHelper', () => {
   });
 
   describe('getEventsCountByProject', () => {
-    test('Should count events and repetitions for a project', async () => {
+    test('Should count boundary-day events and repetitions for a project', async () => {
       /**
        * Arrange
        */
@@ -584,10 +607,96 @@ describe('DbHelper', () => {
        */
       expect(count).toBe(10); // 5 events + 5 repetitions
     });
+
+    test('Should add per-day counters from dailyEvents for days after the boundary day', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 2,
+        repetitionsToMock: 3,
+        dailyEventsToMock: [
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
+            count: 7,
+          },
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE + 86400,
+            count: 3,
+          },
+        ],
+      });
+
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      /**
+       * Act
+       */
+      const count = await dbHelper.getEventsCountByProject(project, since);
+
+      /**
+       * Assert
+       */
+      expect(count).toBe(15); // 2 events + 3 repetitions on the boundary day + 7 + 3 from dailyEvents
+    });
+
+    test('Should ignore raw docs outside the boundary day and dailyEvents buckets before it', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 1,
+        dailyEventsToMock: [
+          /** bucket of the boundary day itself must not be counted */
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE - 86400,
+            count: 100,
+          },
+        ],
+      });
+
+      const eventsCollection = db.collection(`events:${project._id.toString()}`);
+
+      await eventsCollection.insertMany([
+        /** before lastChargeDate */
+        createEventMock(since - 100),
+        /** after the boundary day — counted via dailyEvents, not the raw scan */
+        createEventMock(NEXT_MIDNIGHT_AFTER_LAST_CHARGE + 100),
+      ]);
+
+      /**
+       * Act
+       */
+      const count = await dbHelper.getEventsCountByProject(project, since);
+
+      /**
+       * Assert
+       */
+      expect(count).toBe(1); // only the single boundary-day event
+    });
   });
 
   describe('getEventsCountByProjects', () => {
-    test('Should count events and repetitions for multiple projects', async () => {
+    test('Should count events, repetitions and dailyEvents for multiple projects', async () => {
       /**
        * Arrange
        */
@@ -604,6 +713,12 @@ describe('DbHelper', () => {
         project: project1,
         eventsToMock: 5,
         repetitionsToMock: 5,
+        dailyEventsToMock: [
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
+            count: 6,
+          },
+        ],
       });
       await fillDatabaseWithMockedData({
         project: project2,
@@ -621,7 +736,7 @@ describe('DbHelper', () => {
       /**
        * Assert
        */
-      expect(count).toBe(16); // (5 + 5) + (3 + 3) events and repetitions
+      expect(count).toBe(22); // (5 + 5 + 6) + (3 + 3)
     });
   });
 

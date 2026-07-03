@@ -3,6 +3,7 @@ import { PlanDBScheme, ProjectDBScheme, WorkspaceDBScheme } from '@hawk.so/types
 import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
 import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
 
 const WORKSPACE_PROJECTION = {
   _id: 1,
@@ -137,6 +138,11 @@ export class DbHelper {
   /**
    * Returns total event counts for last billing period
    *
+   * Full days are summed from dailyEvents per-day counters (grouper
+   * increments `count` for originals and repetitions alike); only the
+   * partial day containing `since` is counted from the raw collections,
+   * since dailyEvents buckets have day granularity and lastChargeDate does not.
+   *
    * @param project - project to check
    * @param since - timestamp of the time from which we count the events
    */
@@ -145,19 +151,34 @@ export class DbHelper {
     since: number
   ): Promise<number> {
     try {
-      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + project._id.toString());
-      const eventsCollection = this.eventsDbConnection.collection('events:' + project._id.toString());
+      const projectId = project._id.toString();
+      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + projectId);
+      const eventsCollection = this.eventsDbConnection.collection('events:' + projectId);
+      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
 
-      const query = {
+      const sinceNextMidnight = this.getNextUtcMidnight(since);
+
+      const boundaryDayQuery = {
         timestamp: {
           $gt: since,
+          $lt: sinceNextMidnight,
         },
       };
 
-      const repetitionsCount = await repetitionsCollection.countDocuments(query);
-      const originalEventCount = await eventsCollection.countDocuments(query);
+      const [repetitionsCount, originalEventCount, dailyCounters] = await Promise.all([
+        repetitionsCollection.countDocuments(boundaryDayQuery),
+        eventsCollection.countDocuments(boundaryDayQuery),
+        dailyEventsCollection
+          .aggregate<{ count: number }>([
+            { $match: { groupingTimestamp: { $gte: sinceNextMidnight } } },
+            { $group: { _id: null, count: { $sum: '$count' } } },
+          ])
+          .toArray(),
+      ]);
 
-      return repetitionsCount + originalEventCount;
+      const fullDaysCount = dailyCounters.length > 0 ? dailyCounters[0].count : 0;
+
+      return repetitionsCount + originalEventCount + fullDaysCount;
     } catch (e) {
       HawkCatcher.send(e);
       throw new CriticalError(e);
@@ -195,6 +216,21 @@ export class DbHelper {
       : {};
 
     return this.projectsCollection.find(query).toArray();
+  }
+
+  /**
+   * UTC midnight right after the given timestamp. Mirrors grouper's
+   * getMidnightByEventTimestamp, which fills the dailyEvents buckets.
+   *
+   * @param timestamp - unix timestamp in seconds
+   */
+  private getNextUtcMidnight(timestamp: number): number {
+    const date = new Date(timestamp * MS_IN_SEC);
+
+    date.setUTCDate(date.getUTCDate() + 1);
+    date.setUTCHours(0, 0, 0, 0);
+
+    return date.getTime() / MS_IN_SEC;
   }
 
   /**
