@@ -27,6 +27,12 @@ const REGULAR_WORKSPACES_CHECK_EVENT: RegularWorkspacesCheckEvent = {
  */
 const LAST_CHARGE_DATE = new Date(1585742400 * 1000);
 
+/**
+ * Timestamp inside the boundary day of LAST_CHARGE_DATE (2020-04-01T16:00:00Z):
+ * such events are counted from the raw collections, later ones — via dailyEvents
+ */
+const BOUNDARY_DAY_TIMESTAMP = 1585756800;
+
 describe('Limiter worker', () => {
   let connection: MongoClient;
   let db: Db;
@@ -89,7 +95,7 @@ describe('Limiter worker', () => {
       usersAffected: 0,
       visitedBy: [],
       groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
-      timestamp: 1586892935,
+      timestamp: BOUNDARY_DAY_TIMESTAMP,
       payload: {
         title: 'Mocked event',
       },
