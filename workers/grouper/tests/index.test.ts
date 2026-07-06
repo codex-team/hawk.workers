@@ -79,12 +79,14 @@ const projectMock = {
  *
  * @param event - allows to override some event properties in generated task
  * @param timestamp - timestamp of the event, defaults to current time
+ * @param count - number of occurrences this task represents
  */
-function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime()): GroupWorkerTask<ErrorsCatcherType> {
+function generateTask(event: Partial<EventData<EventAddons>> = undefined, timestamp: number = new Date().getTime(), count: number = undefined): GroupWorkerTask<ErrorsCatcherType> {
   return {
     projectId: projectIdMock,
     catcherType: 'errors/javascript',
     timestamp,
+    count,
     payload: Object.assign({
       title: 'Hawk client catcher test',
       backtrace: [],
@@ -180,6 +182,19 @@ describe('GrouperWorker', () => {
       await worker.handle(generateTask());
 
       expect((await eventsCollection.findOne({})).totalCount).toBe(4);
+    });
+
+    test('Should set total events count to repetition count on first occurrence when count is provided', async () => {
+      await worker.handle(generateTask(undefined, undefined, 5));
+
+      expect((await eventsCollection.findOne({})).totalCount).toBe(5);
+    });
+
+    test('Should increment total events count by repetition count on processing when count is provided', async () => {
+      await worker.handle(generateTask(undefined, undefined, 3));
+      await worker.handle(generateTask(undefined, undefined, 2));
+
+      expect((await eventsCollection.findOne({})).totalCount).toBe(5);
     });
 
     test('Should not increment total usersAffected count if it is event from first user', async () => {
@@ -351,6 +366,13 @@ describe('GrouperWorker', () => {
       expect((await dailyEventsCollection.findOne({})).count).toBe(4);
     });
 
+    test('Should update events count per day by repetition count', async () => {
+      await worker.handle(generateTask(undefined, undefined, 3));
+      await worker.handle(generateTask(undefined, undefined, 2));
+
+      expect((await dailyEventsCollection.findOne({})).count).toBe(5);
+    });
+
     test('Should update last repetition id', async () => {
       await worker.handle(generateTask());
       await worker.handle(generateTask());
@@ -372,6 +394,33 @@ describe('GrouperWorker', () => {
       expect((await repetitionsCollection.find({
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
+    });
+
+    test('Should save repetition count when count is greater than 1', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask(undefined, undefined, 7));
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(savedRepetition.count).toBe(7);
+    });
+
+    test('Should omit repetition count when count is absent', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(savedRepetition.count).toBeUndefined();
+    });
+
+    test('Should omit repetition count when count is exactly 1', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask(undefined, undefined, 1));
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(savedRepetition.count).toBeUndefined();
     });
 
     test('Should stringify delta', async () => {

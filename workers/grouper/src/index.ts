@@ -273,7 +273,7 @@ export default class GrouperWorker extends Worker {
         await session.measureStep('saveNewEvent', () => {
           return this.saveEvent(task.projectId, {
             groupHash: uniqueEventHash,
-            totalCount: 1,
+            totalCount: task.count ?? 1,
             catcherType: task.catcherType,
             payload: task.payload,
             timestamp: task.timestamp,
@@ -321,7 +321,7 @@ export default class GrouperWorker extends Worker {
       await session.measureStep('incrementCounter', () => {
         return this.incrementEventCounterAndAffectedUsers(task.projectId, {
           groupHash: uniqueEventHash,
-        }, incrementAffectedUsers);
+        }, incrementAffectedUsers, task.count ?? 1);
       });
 
       /**
@@ -363,6 +363,15 @@ export default class GrouperWorker extends Worker {
         timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
+      /**
+       * Store count only when it carries information (>1)
+       * Absent or 1 both mean "single occurrence",
+       * so omitting it keeps repetition documents lean.
+       */
+      if (task.count !== undefined && task.count > 1) {
+        newRepetition.count = task.count;
+      }
+
       repetitionId = await session.measureStep('saveRepetition', () => {
         return this.saveRepetition(task.projectId, newRepetition);
       });
@@ -388,7 +397,8 @@ export default class GrouperWorker extends Worker {
         uniqueEventHash,
         task.timestamp,
         repetitionId,
-        incrementDailyAffectedUsers
+        incrementDailyAffectedUsers,
+        task.count ?? 1
       );
     });
 
@@ -841,8 +851,9 @@ export default class GrouperWorker extends Worker {
    * @param projectId - project id to increment
    * @param query - query to get event
    * @param incrementAffected - if true, usersAffected counter will be incremented
+   * @param incrementBy - how many occurrences this repetition represents
    */
-  private async incrementEventCounterAndAffectedUsers(projectId, query, incrementAffected: boolean): Promise<number> {
+  private async incrementEventCounterAndAffectedUsers(projectId, query, incrementAffected: boolean, incrementBy = 1): Promise<number> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('Controller.saveEvent: Project ID is invalid or missed');
     }
@@ -852,13 +863,13 @@ export default class GrouperWorker extends Worker {
         const updateQuery = incrementAffected
           ? {
             $inc: {
-              totalCount: 1,
+              totalCount: incrementBy,
               usersAffected: 1,
             },
           }
           : {
             $inc: {
-              totalCount: 1,
+              totalCount: incrementBy,
             },
           };
 
@@ -879,6 +890,7 @@ export default class GrouperWorker extends Worker {
    * @param {string} eventTimestamp - timestamp of the last event
    * @param {string|null} repetitionId - event's last repetition id
    * @param {boolean} shouldIncrementAffectedUsers - whether to increment affected users
+   * @param {number} incrementBy - how many occurrences this task represents
    * @returns {Promise<void>}
    */
   private async saveDailyEvents(
@@ -886,7 +898,8 @@ export default class GrouperWorker extends Worker {
     eventHash: string,
     eventTimestamp: number,
     repetitionId: string | null,
-    shouldIncrementAffectedUsers: boolean
+    shouldIncrementAffectedUsers: boolean,
+    incrementBy = 1
   ): Promise<void> {
     if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
       throw new ValidationError('GrouperWorker.saveDailyEvents: Project ID is invalid or missed');
@@ -911,7 +924,7 @@ export default class GrouperWorker extends Worker {
                 lastRepetitionId: repetitionId,
               },
               $inc: {
-                count: 1,
+                count: incrementBy,
                 affectedUsers: shouldIncrementAffectedUsers ? 1 : 0,
               },
             },
