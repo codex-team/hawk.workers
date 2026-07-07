@@ -135,6 +135,15 @@ export default class GrouperMetrics {
     })
   );
 
+  private readonly rateLimitedTotal = getOrCreateMetric(
+    'hawk_grouper_events_rate_limited_total',
+    () => new client.Counter({
+      name: 'hawk_grouper_events_rate_limited_total',
+      help: 'Number of events dropped due to rate limiting',
+      registers: [ register ],
+    })
+  );
+
   /**
    * Measure top-level handle() duration.
    *
@@ -205,6 +214,13 @@ export default class GrouperMetrics {
    */
   public incrementDuplicateRetriesTotal(): void {
     this.duplicateRetriesTotal.inc();
+  }
+
+  /**
+   * Increment events dropped by rate limiting.
+   */
+  public incrementRateLimitedTotal(): void {
+    this.rateLimitedTotal.inc();
   }
 
   /**

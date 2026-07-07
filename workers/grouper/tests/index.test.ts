@@ -743,6 +743,23 @@ describe('GrouperWorker', () => {
     });
   });
 
+  describe('Rate limiting', () => {
+    test('drops events that exceed the project rate limit', async () => {
+      await projectsCollection.updateOne(
+        { _id: new mongodb.ObjectId(projectIdMock) },
+        { $set: { rateLimitSettings: { N: 2, T: 3600 } } },
+      );
+      await (worker as any).projectLimitsCache.refresh();
+      await redisClient.del('rate_limits');
+
+      await worker.handle(generateTask({ title: 'Rate limit event 1' }));
+      await worker.handle(generateTask({ title: 'Rate limit event 2' }));
+      await worker.handle(generateTask({ title: 'Rate limit event 3' }));
+
+      expect(await eventsCollection.countDocuments()).toBe(2);
+    });
+  });
+
   describe('Events-accepted metrics', () => {
     test('writes minutely, hourly, and daily samples after handling an event', async () => {
       const safeTsAddSpy = jest.spyOn((worker as any).redis, 'safeTsAdd');

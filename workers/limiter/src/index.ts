@@ -271,7 +271,7 @@ export default class LimiterWorker extends Worker {
     this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
 
     const usedQuota = workspaceEventsCount / workspace.tariffPlan.eventsLimit;
-    const quotaNotification = NOTIFY_ABOUT_LIMIT.reverse().find(quota => quota < usedQuota);
+    const quotaNotification = NOTIFY_ABOUT_LIMIT.find(quota => quota < usedQuota);
 
     const shouldBeBlockedByQuota = usedQuota >= 1;
     const isAlreadyBlocked = workspace.isBlocked;

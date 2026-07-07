@@ -2,6 +2,43 @@ import HawkCatcher from '@hawk.so/nodejs';
 import type { RedisClientType } from 'redis';
 import { createClient } from 'redis';
 import createLogger from '../../../lib/logger';
+import { MS_IN_SEC } from '../../../lib/utils/consts';
+
+const RATE_LIMITS_KEY = process.env.REDIS_RATE_LIMITS_KEY || 'rate_limits';
+
+const UPDATE_RATE_LIMIT_SCRIPT = `
+  local key = KEYS[1]
+  local field = ARGV[1]
+  local now = tonumber(ARGV[2])
+  local limit = tonumber(ARGV[3])
+  local period = tonumber(ARGV[4])
+
+  local current = redis.call('HGET', key, field)
+  if not current then
+    redis.call('HSET', key, field, now .. ':1')
+    return 1
+  end
+
+  local timestamp, count = string.match(current, '^(%d+):(%d+)$')
+  if not timestamp then
+    redis.call('HSET', key, field, now .. ':1')
+    return 1
+  end
+  timestamp = tonumber(timestamp)
+  count = tonumber(count)
+
+  if now - timestamp >= period then
+    redis.call('HSET', key, field, now .. ':1')
+    return 1
+  end
+
+  if count + 1 > limit then
+    return 0
+  end
+
+  redis.call('HSET', key, field, timestamp .. ':' .. (count + 1))
+  return 1
+`;
 
 /**
  * Class with helper functions for working with Redis
@@ -61,6 +98,38 @@ export default class RedisHelper {
     if (this.redisClient.isOpen) {
       await this.redisClient.quit();
     }
+  }
+
+  /**
+   * Atomically checks and updates the per-project rate limit counter.
+   *
+   * @param projectId - project id used as hash field
+   * @param eventsLimit - max events allowed in the period (0 = unlimited)
+   * @param eventsPeriod - window size in seconds
+   * @returns true when the event is within the limit
+   */
+  public async updateRateLimit(
+    projectId: string,
+    eventsLimit: number,
+    eventsPeriod: number,
+  ): Promise<boolean> {
+    if (eventsLimit === 0) {
+      return true;
+    }
+
+    const now = Math.floor(Date.now() / MS_IN_SEC);
+
+    const result = await this.redisClient.eval(UPDATE_RATE_LIMIT_SCRIPT, {
+      keys: [ RATE_LIMITS_KEY ],
+      arguments: [
+        projectId,
+        now.toString(),
+        eventsLimit.toString(),
+        eventsPeriod.toString(),
+      ],
+    });
+
+    return Number(result) === 1;
   }
 
   /**

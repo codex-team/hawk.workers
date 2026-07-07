@@ -22,10 +22,12 @@ import { MS_IN_SEC } from '../../../lib/utils/consts';
 import TimeMs from '../../../lib/utils/time';
 import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
+import ProjectLimitsCache from './projectLimitsCache';
 import { computeDelta } from './utils/repetitionDiff';
 import { bucketTimestampMs } from './utils/bucketTimestamp';
 import { rightTrim } from '../../../lib/utils/string';
 import { hasValue } from '../../../lib/utils/hasValue';
+import { positiveIntEnv } from '../../../lib/utils/positiveIntEnv';
 import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
 import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
@@ -64,6 +66,11 @@ const DAILY_METRICS_RETENTION_DAYS = 90;
 const MAX_CODE_LINE_LENGTH = 140;
 
 /**
+ * Default interval for refreshing project limits cache (in seconds)
+ */
+const DEFAULT_PROJECTS_LIMITS_UPDATE_PERIOD_SECONDS = 3600;
+
+/**
  * Worker for handling Javascript events
  */
 export default class GrouperWorker extends Worker {
@@ -93,6 +100,16 @@ export default class GrouperWorker extends Worker {
   private redis = new RedisHelper();
 
   /**
+   * Cached project rate limits loaded from accounts MongoDB
+   */
+  private projectLimitsCache: ProjectLimitsCache;
+
+  /**
+   * Interval for periodic project limits cache refresh
+   */
+  private projectLimitsRefreshInterval: NodeJS.Timeout | null = null;
+
+  /**
    * Prometheus metrics facade.
    */
   private grouperMetrics = new GrouperMetrics();
@@ -118,6 +135,14 @@ export default class GrouperWorker extends Worker {
   private handledTasksCount = 0;
 
   /**
+   * Create grouper worker instance
+   */
+  constructor() {
+    super();
+    this.projectLimitsCache = new ProjectLimitsCache(this.accountsDb);
+  }
+
+  /**
    * Start consuming messages
    */
   public async start(): Promise<void> {
@@ -130,6 +155,18 @@ export default class GrouperWorker extends Worker {
 
     await this.redis.initialize();
     console.log('redis initialized');
+
+    await this.projectLimitsCache.refresh();
+    const limitsUpdatePeriodSeconds = positiveIntEnv(
+      process.env.PROJECTS_LIMITS_UPDATE_PERIOD,
+      DEFAULT_PROJECTS_LIMITS_UPDATE_PERIOD_SECONDS,
+    );
+    this.projectLimitsRefreshInterval = setInterval(() => {
+      void this.projectLimitsCache.refresh()
+        .catch((error) => {
+          this.logger.error('Failed to refresh project limits cache', error);
+        });
+    }, limitsUpdatePeriodSeconds * MS_IN_SEC);
 
     /**
      * Start periodic cache cleanup to prevent memory leaks from unbounded cache growth
@@ -155,6 +192,11 @@ export default class GrouperWorker extends Worker {
       this.cacheCleanupInterval = null;
     }
 
+    if (this.projectLimitsRefreshInterval) {
+      clearInterval(this.projectLimitsRefreshInterval);
+      this.projectLimitsRefreshInterval = null;
+    }
+
     this.memoryMonitor.logShutdown(this.handledTasksCount);
     await super.finish();
     this.prepareCache();
@@ -170,6 +212,16 @@ export default class GrouperWorker extends Worker {
    */
   public async handle(task: GroupWorkerTask<ErrorsCatcherType>): Promise<void> {
     try {
+      const withinLimit = await this.checkRateLimit(task.projectId);
+
+      if (!withinLimit) {
+        this.grouperMetrics.incrementRateLimitedTotal();
+        await this.recordProjectMetrics(task.projectId, 'events-rate-limited');
+        this.logger.info(`[rate-limit] project=${task.projectId} title="${task.payload?.title}" dropped`);
+
+        return;
+      }
+
       await this.grouperMetrics.observeHandleDuration(async () => {
         await this.handleInternal(task);
       });
@@ -177,6 +229,30 @@ export default class GrouperWorker extends Worker {
       this.grouperMetrics.incrementErrorsTotal();
       this.memoryMonitor.logHandleError(this.handledTasksCount, task.payload?.title, task.projectId);
       throw error;
+    }
+  }
+
+  /**
+   * Check and update per-project rate limit in Redis.
+   *
+   * @param projectId - project id
+   */
+  private async checkRateLimit(projectId: string): Promise<boolean> {
+    const limits = this.projectLimitsCache.getProjectLimits(projectId);
+
+    if (!limits) {
+      this.logger.warn(`Project ${projectId} is not in the projects limits cache`);
+    }
+
+    const eventsLimit = limits?.eventsLimit ?? 0;
+    const eventsPeriod = limits?.eventsPeriod ?? 0;
+
+    try {
+      return await this.redis.updateRateLimit(projectId, eventsLimit, eventsPeriod);
+    } catch (error) {
+      this.logger.error(`Failed to update rate limit for project ${projectId}`, error);
+
+      return false;
     }
   }
 
@@ -301,7 +377,7 @@ export default class GrouperWorker extends Worker {
           this.grouperMetrics.incrementDuplicateRetriesTotal();
           this.logger.info(`[saveEvent] project=${task.projectId} title="${task.payload.title}" duplicate key, retrying as repetition`);
 
-          await this.handle(task);
+          await this.handleInternal(task);
 
           return;
         }
