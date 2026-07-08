@@ -8,9 +8,9 @@ import { rightTrim } from '../../../lib/utils/string';
 const MAX_TRAVERSAL_DEPTH = 20;
 
 /**
- * Maximum length for event title
+ * Maximum length for event title before appending ellipsis
  */
-const MAX_TITLE_LENGTH = 1000;
+const MAX_TITLE_LENGTH = 400;
 
 /**
  * Recursively iterate through object and call function on each key
@@ -141,6 +141,8 @@ export default class DataFilter {
    * @param event - event to process
    */
   public processEvent(event: EventData<EventAddons>): void {
+    this.trimEventTitle(event);
+
     unsafeFields.forEach(field => {
       if (event[field]) {
         this.processField(event[field]);
@@ -151,8 +153,6 @@ export default class DataFilter {
   /**
    * Trim event title to the maximum allowed length.
    * It mutates the original object.
-   *
-   * Should be called before hashing so the hash and the stored title stay consistent.
    *
    * @param event - event to process
    */

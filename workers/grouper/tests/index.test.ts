@@ -181,9 +181,9 @@ describe('GrouperWorker', () => {
       const savedEvent = await eventsCollection.findOne({});
 
       /**
-       * 1000 chars + ellipsis
+       * 400 chars + ellipsis
        */
-      expect(savedEvent.payload.title.length).toBe(1001);
+      expect(savedEvent.payload.title.length).toBe(401);
       expect(savedEvent.payload.title.endsWith('…')).toBe(true);
     });
 
