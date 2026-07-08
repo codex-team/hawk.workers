@@ -110,7 +110,7 @@ describe('Limiter worker', () => {
   const fillDatabaseWithMockedData = async (parameters: {
     workspace: WorkspaceDBScheme,
     project: ProjectDBScheme,
-    eventsToMock: number
+    eventsToMock: number,
     repetitionsToMock?: number,
   }): Promise<void> => {
     const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);

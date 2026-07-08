@@ -4,6 +4,9 @@ import { WorkspaceWithTariffPlan } from '../types';
 import HawkCatcher from '@hawk.so/nodejs';
 import { CriticalError, NonCriticalError } from '../../../lib/workerErrors';
 import { MS_IN_SEC } from '../../../lib/utils/consts';
+import TimeMs from '../../../lib/utils/time';
+
+const SEC_IN_DAY = TimeMs.DAY / TimeMs.SECOND;
 
 const WORKSPACE_PROJECTION = {
   _id: 1,
@@ -138,11 +141,6 @@ export class DbHelper {
   /**
    * Returns total event counts for last billing period
    *
-   * Full days are summed from dailyEvents per-day counters (grouper
-   * increments `count` for originals and repetitions alike); only the
-   * partial day containing `since` is counted from the raw collections,
-   * since dailyEvents buckets have day granularity and lastChargeDate does not.
-   *
    * @param project - project to check
    * @param since - timestamp of the time from which we count the events
    */
@@ -151,34 +149,13 @@ export class DbHelper {
     since: number
   ): Promise<number> {
     try {
-      const projectId = project._id.toString();
-      const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + projectId);
-      const eventsCollection = this.eventsDbConnection.collection('events:' + projectId);
-      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
-
-      const sinceNextMidnight = this.getNextUtcMidnight(since);
-
-      const boundaryDayQuery = {
+      const query = {
         timestamp: {
           $gt: since,
-          $lt: sinceNextMidnight,
         },
       };
 
-      const [repetitionsCount, originalEventCount, dailyCounters] = await Promise.all([
-        repetitionsCollection.countDocuments(boundaryDayQuery),
-        eventsCollection.countDocuments(boundaryDayQuery),
-        dailyEventsCollection
-          .aggregate<{ count: number }>([
-            { $match: { groupingTimestamp: { $gte: sinceNextMidnight } } },
-            { $group: { _id: null, count: { $sum: '$count' } } },
-          ])
-          .toArray(),
-      ]);
-
-      const fullDaysCount = dailyCounters.length > 0 ? dailyCounters[0].count : 0;
-
-      return repetitionsCount + originalEventCount + fullDaysCount;
+      return await this.getRawEventsCountByProject(project, query);
     } catch (e) {
       HawkCatcher.send(e);
       throw new CriticalError(e);
@@ -196,6 +173,75 @@ export class DbHelper {
 
     return Promise.all(projects.map(
       project => this.getEventsCountByProject(project, since)
+    ))
+      .then(sum);
+  }
+
+  /**
+   * Returns total event counts for last billing period using dailyEvents counters.
+   *
+   * Full days are summed from dailyEvents per-day counters (grouper
+   * increments `count` for originals and repetitions alike); only the
+   * partial day containing `since` is counted from the raw collections,
+   * since dailyEvents buckets have day granularity and lastChargeDate does not.
+   *
+   * @param project - project to check
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProjectUsingDailyEvents(
+    project: ProjectDBScheme,
+    since: number
+  ): Promise<number> {
+    try {
+      const projectId = project._id.toString();
+      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
+      const firstFullDayTimestamp = this.getFirstFullDailyEventsTimestamp(since);
+
+      const boundaryDayQuery = {
+        timestamp: {
+          $gt: since,
+          $lt: firstFullDayTimestamp,
+        },
+      };
+
+      const [boundaryDayCount, dailyCounters] = await Promise.all([
+        since < firstFullDayTimestamp
+          ? this.getRawEventsCountByProject(project, boundaryDayQuery)
+          : 0,
+        dailyEventsCollection
+          .aggregate<{ count: number }>([
+            { $match: { groupingTimestamp: { $gte: firstFullDayTimestamp } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: '$count' },
+              },
+            },
+          ])
+          .toArray(),
+      ]);
+
+      const fullDaysCount = dailyCounters.length > 0 ? dailyCounters[0].count : 0;
+
+      return boundaryDayCount + fullDaysCount;
+    } catch (e) {
+      HawkCatcher.send(e);
+      throw new CriticalError(e);
+    }
+  }
+
+  /**
+   * Calculates total events count for all provided projects since the specific date
+   * using dailyEvents counters for full days.
+   *
+   * @param projects - projects to calculate for
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProjectsUsingDailyEvents(projects: ProjectDBScheme[], since: number): Promise<number> {
+    const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
+
+    return Promise.all(projects.map(
+      project => this.getEventsCountByProjectUsingDailyEvents(project, since)
     ))
       .then(sum);
   }
@@ -231,6 +277,37 @@ export class DbHelper {
     date.setUTCHours(0, 0, 0, 0);
 
     return date.getTime() / MS_IN_SEC;
+  }
+
+  /**
+   * Returns first dailyEvents bucket that can be safely used without counting
+   * events before the requested timestamp.
+   *
+   * @param timestamp - unix timestamp in seconds
+   */
+  private getFirstFullDailyEventsTimestamp(timestamp: number): number {
+    const midnight = timestamp - (timestamp % SEC_IN_DAY);
+
+    return timestamp === midnight ? timestamp : this.getNextUtcMidnight(timestamp);
+  }
+
+  /**
+   * Counts raw original events and repetitions for the passed query.
+   *
+   * @param project - project to check
+   * @param query - MongoDB timestamp query
+   */
+  private async getRawEventsCountByProject(project: ProjectDBScheme, query: Record<string, unknown>): Promise<number> {
+    const projectId = project._id.toString();
+    const repetitionsCollection = this.eventsDbConnection.collection('repetitions:' + projectId);
+    const eventsCollection = this.eventsDbConnection.collection('events:' + projectId);
+
+    const [repetitionsCount, originalEventCount] = await Promise.all([
+      repetitionsCollection.countDocuments(query),
+      eventsCollection.countDocuments(query),
+    ]);
+
+    return repetitionsCount + originalEventCount;
   }
 
   /**

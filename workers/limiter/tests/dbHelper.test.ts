@@ -102,7 +102,7 @@ describe('DbHelper', () => {
   const fillDatabaseWithMockedData = async (parameters: {
     workspace?: WorkspaceDBScheme,
     project: ProjectDBScheme,
-    eventsToMock: number
+    eventsToMock: number,
     repetitionsToMock?: number,
     dailyEventsToMock?: Array<{ groupingTimestamp: number; count: number }>,
   }): Promise<void> => {
@@ -119,7 +119,9 @@ describe('DbHelper', () => {
     for (let i = 0; i < parameters.eventsToMock; i++) {
       mockedEvents.push(createEventMock());
     }
-    await eventsCollection.insertMany(mockedEvents);
+    if (mockedEvents.length > 0) {
+      await eventsCollection.insertMany(mockedEvents);
+    }
 
     mockedEvents.length = 0;
 
@@ -608,6 +610,47 @@ describe('DbHelper', () => {
       expect(count).toBe(10); // 5 events + 5 repetitions
     });
 
+    test('Should keep raw counting as default and include raw docs after the boundary day', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 1,
+        dailyEventsToMock: [
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
+            count: 100,
+          },
+        ],
+      });
+
+      await db.collection(`events:${project._id.toString()}`).insertOne(
+        createEventMock(NEXT_MIDNIGHT_AFTER_LAST_CHARGE + 100)
+      );
+
+      /**
+       * Act
+       */
+      const count = await dbHelper.getEventsCountByProject(project, since);
+
+      /**
+       * Assert
+       */
+      expect(count).toBe(2);
+    });
+  });
+
+  describe('getEventsCountByProjectUsingDailyEvents', () => {
     test('Should add per-day counters from dailyEvents for days after the boundary day', async () => {
       /**
        * Arrange
@@ -641,7 +684,7 @@ describe('DbHelper', () => {
       /**
        * Act
        */
-      const count = await dbHelper.getEventsCountByProject(project, since);
+      const count = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
 
       /**
        * Assert
@@ -686,16 +729,59 @@ describe('DbHelper', () => {
       /**
        * Act
        */
-      const count = await dbHelper.getEventsCountByProject(project, since);
+      const count = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
 
       /**
        * Assert
        */
       expect(count).toBe(1); // only the single boundary-day event
     });
+
+    test('Should count dailyEvents bucket at since when since is already UTC midnight', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+      const since = NEXT_MIDNIGHT_AFTER_LAST_CHARGE;
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 0,
+        dailyEventsToMock: [
+          {
+            groupingTimestamp: since,
+            count: 4,
+          },
+          {
+            groupingTimestamp: since + 86400,
+            count: 3,
+          },
+        ],
+      });
+
+      await db.collection(`events:${project._id.toString()}`).insertOne(
+        createEventMock(since + 100)
+      );
+
+      /**
+       * Act
+       */
+      const count = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
+
+      /**
+       * Assert
+       */
+      expect(count).toBe(7);
+    });
   });
 
-  describe('getEventsCountByProjects', () => {
+  describe('getEventsCountByProjectsUsingDailyEvents', () => {
     test('Should count events, repetitions and dailyEvents for multiple projects', async () => {
       /**
        * Arrange
@@ -731,7 +817,7 @@ describe('DbHelper', () => {
       /**
        * Act
        */
-      const count = await dbHelper.getEventsCountByProjects([project1, project2], since);
+      const count = await dbHelper.getEventsCountByProjectsUsingDailyEvents([project1, project2], since);
 
       /**
        * Assert
