@@ -12,7 +12,7 @@ interface RateLimitSettingsDocument {
 
 interface ProjectDocument {
   _id: { toString(): string };
-  workspaceId: { toString(): string };
+  workspaceId?: { toString(): string };
   rateLimitSettings?: RateLimitSettingsDocument;
 }
 
@@ -80,7 +80,8 @@ export default class ProjectLimitsCache {
         eventsPeriod: 0,
       };
 
-      const workspace = workspaceMap.get(project.workspaceId.toString());
+      const workspaceId = project.workspaceId?.toString();
+      const workspace = workspaceId ? workspaceMap.get(workspaceId) : undefined;
 
       if (workspace) {
         finalLimits = {

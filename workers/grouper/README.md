@@ -19,8 +19,23 @@ When the limit is exceeded, the event is dropped (message acked, no DB write) an
 ## How to run
 
 1. Make sure you are in Workers root directory
-3. `yarn install`
-4. `yarn run-grouper`
+2. `nvm use` (requires Node 24, see `.nvmrc`)
+3. Start dependencies: Redis and MongoDB (e.g. `docker compose up -d redis` from repo root)
+4. `yarn install`
+5. `yarn run-grouper`
+
+## Tests
+
+```bash
+nvm use
+yarn build
+yarn test:grouper
+```
+
+No external services are required for tests:
+
+- Redis — started automatically in `jest.setup.redis-mock.js` (uses `redis-server` from `PATH` when available, otherwise `redis-memory-server`). Set `REDIS_URL` in the environment to use an external Redis instead.
+- MongoDB — in-process via `@shelf/jest-mongodb`.
 
 
 
