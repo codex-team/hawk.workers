@@ -208,11 +208,9 @@ export default class GrouperWorker extends Worker {
     }
 
     /**
-     * Filter event data before logging and hashing so logs, hash and stored event stay consistent.
+     * Filter event data before hashing so hash and stored event stay consistent.
      */
     this.dataFilter.processEvent(task.payload);
-
-    this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
 
     let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
     let existedEvent: GroupedEventDBScheme;

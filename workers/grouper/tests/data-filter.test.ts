@@ -14,15 +14,23 @@ jest.mock('amqplib');
  * @param [options.context] - generated event context
  * @param [options.addons] - generated event addons
  */
-function generateEvent({ context, addons }: {context?: Json, addons?: EventAddons}): EventData<EventAddons> {
+function generateEvent({ context, addons, backtrace, breadcrumbs }: {
+  context?: Json,
+  addons?: EventAddons,
+  backtrace?: EventData<EventAddons>['backtrace'],
+  breadcrumbs?: EventData<EventAddons>['breadcrumbs'],
+}): EventData<EventAddons> {
   return {
     title: 'Event with sensitive data',
-    backtrace: [],
+    backtrace: backtrace ?? [],
     ...(context && {
       context,
     }),
     ...(addons && {
       addons,
+    }),
+    ...(breadcrumbs && {
+      breadcrumbs,
     }),
   };
 }
@@ -161,30 +169,52 @@ describe('GrouperWorker', () => {
     });
 
     test('should filter additional sensitive keys (authorization, token, payment, dsn, ssn, etc.) in context', async () => {
+      /**
+       * Split the mock into two groups to keep objects under the sanitizer keys limit
+       */
+      const entries = Object.entries(additionalSensitiveDataMock);
+      const half = Math.ceil(entries.length / 2);
       const event = generateEvent({
-        context: additionalSensitiveDataMock,
+        context: {
+          group1: Object.fromEntries(entries.slice(0, half)),
+          group2: Object.fromEntries(entries.slice(half)),
+        },
       });
 
       dataFilter.processEvent(event);
 
-      Object.keys(additionalSensitiveDataMock).forEach((key) => {
-        expect(event.context[key]).toBe('[filtered]');
+      entries.slice(0, half).forEach(([ key ]) => {
+        expect(event.context['group1'][key]).toBe('[filtered]');
+      });
+      entries.slice(half).forEach(([ key ]) => {
+        expect(event.context['group2'][key]).toBe('[filtered]');
       });
     });
 
     test('should filter additional sensitive keys in addons', async () => {
+      /**
+       * Split the mock into two groups to keep objects under the sanitizer keys limit
+       */
+      const entries = Object.entries(additionalSensitiveDataMock);
+      const half = Math.ceil(entries.length / 2);
       const event = generateEvent({
         addons: {
           vue: {
-            props: additionalSensitiveDataMock,
+            props: {
+              group1: Object.fromEntries(entries.slice(0, half)),
+              group2: Object.fromEntries(entries.slice(half)),
+            },
           },
         },
       });
 
       dataFilter.processEvent(event);
 
-      Object.keys(additionalSensitiveDataMock).forEach((key) => {
-        expect(event.addons['vue']['props'][key]).toBe('[filtered]');
+      entries.slice(0, half).forEach(([ key ]) => {
+        expect(event.addons['vue']['props']['group1'][key]).toBe('[filtered]');
+      });
+      entries.slice(half).forEach(([ key ]) => {
+        expect(event.addons['vue']['props']['group2'][key]).toBe('[filtered]');
       });
     });
 
@@ -328,9 +358,9 @@ describe('GrouperWorker', () => {
       expect(event.context['auth']).toBe('[filtered]');
     });
 
-    test('should handle deeply nested objects (>20 levels) without excessive memory allocations', () => {
-      // Create an object nested deeper than the cap (>20 levels)
-      let deeplyNested: any = { value: 'leaf', secret: 'should-be-filtered' };
+    test('should replace too deep objects with a placeholder and keep filtering reachable levels', () => {
+      // Create an object nested deeper than the sanitizer depth cap
+      let deeplyNested: any = { value: 'leaf', secret: 'should-be-cut-off' };
 
       for (let i = 0; i < 25; i++) {
         deeplyNested = { [`level${i}`]: deeplyNested, password: `sensitive${i}` };
@@ -343,23 +373,127 @@ describe('GrouperWorker', () => {
       // This should not throw or cause memory issues
       dataFilter.processEvent(event);
 
-      // Verify that filtering still works at various depths
+      // Filtering still works on the levels kept by the sanitizer
       expect(event.context['password']).toBe('[filtered]');
 
-      // Navigate to a mid-level and check filtering
-      let current = event.context['level24'] as any;
-      for (let i = 24; i > 15; i--) {
-        expect(current['password']).toBe('[filtered]');
-        current = current[`level${i - 1}`];
+      const deepestKeptLevel = event.context['level24']['level23']['level22']['level21'];
+
+      expect(deepestKeptLevel['password']).toBe('[filtered]');
+
+      // Everything deeper is replaced with a placeholder
+      expect(deepestKeptLevel['level20']).toBe('<deep object>');
+    });
+  });
+
+  describe('Sanitizer', () => {
+    test('should trim long strings in context', () => {
+      const longString = 'a'.repeat(5000);
+      const event = generateEvent({
+        context: {
+          longValue: longString,
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.context['longValue']).toBe('a'.repeat(200) + '…');
+    });
+
+    test('should replace objects with too many keys with a placeholder', () => {
+      const bigObject: Record<string, number> = {};
+
+      for (let i = 0; i < 25; i++) {
+        bigObject[`key${i}`] = i;
       }
 
-      // At the leaf level, the secret should still be filtered
-      // (though path tracking may be capped, filtering should still work)
-      let leaf = event.context;
-      for (let i = 24; i >= 0; i--) {
-        leaf = leaf[`level${i}`] as any;
-      }
-      expect(leaf['secret']).toBe('[filtered]');
+      const event = generateEvent({
+        context: {
+          bigObject,
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.context['bigObject']).toBe('<big object>');
+    });
+
+    test('should slice long arrays and add a placeholder', () => {
+      const event = generateEvent({
+        context: {
+          longArray: new Array(15).fill('item') as unknown as Json,
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      const sanitizedArray = event.context['longArray'];
+
+      expect(sanitizedArray).toHaveLength(11); // 10 items + placeholder
+      expect(sanitizedArray[10]).toBe('<5 more items...>');
+    });
+
+    test('should sanitize addons', () => {
+      const event = generateEvent({
+        addons: {
+          vue: {
+            props: {
+              longValue: 'b'.repeat(5000),
+            },
+          },
+        },
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.addons['vue']['props']['longValue']).toBe('b'.repeat(200) + '…');
+    });
+
+    test('should trim long backtrace frame arguments', () => {
+      const event = generateEvent({
+        backtrace: [ {
+          file: 'index.js',
+          line: 1,
+          arguments: [ 'c'.repeat(5000) ],
+        } ],
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.backtrace[0].arguments[0]).toBe('c'.repeat(200) + '…');
+    });
+
+    test('should sanitize breadcrumbs message and data', () => {
+      const event = generateEvent({
+        breadcrumbs: [ {
+          timestamp: 1701867896789,
+          message: 'd'.repeat(5000),
+          data: {
+            longValue: 'e'.repeat(5000),
+          },
+        } ],
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.breadcrumbs[0].message).toBe('d'.repeat(200) + '…');
+      expect(event.breadcrumbs[0].data['longValue']).toBe('e'.repeat(200) + '…');
+    });
+
+    test('should replace circular references with a placeholder', () => {
+      const circular: Record<string, unknown> = {
+        name: 'circular',
+      };
+
+      circular.self = circular;
+
+      const event = generateEvent({
+        context: circular as Json,
+      });
+
+      dataFilter.processEvent(event);
+
+      expect(event.context['name']).toBe('circular');
+      expect(event.context['self']).toBe('<circular>');
     });
   });
 });
