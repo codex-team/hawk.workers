@@ -31,11 +31,3 @@ nvm use
 yarn build
 yarn test:grouper
 ```
-
-No external services are required for tests:
-
-- Redis — started automatically in `jest.setup.redis-mock.js` (uses `redis-server` from `PATH` when available, otherwise `redis-memory-server`). Set `REDIS_URL` in the environment to use an external Redis instead.
-- MongoDB — in-process via `@shelf/jest-mongodb`.
-
-
-
