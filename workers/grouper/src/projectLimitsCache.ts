@@ -45,11 +45,14 @@ export default class ProjectLimitsCache {
   private projectLimits = new Map<string, ProjectRateLimits>();
 
   private readonly logger = createLogger();
+  private readonly accountsDb: DatabaseController;
 
   /**
    * @param accountsDb - accounts database controller
    */
-  constructor(private readonly accountsDb: DatabaseController) {}
+  constructor(accountsDb: DatabaseController) {
+    this.accountsDb = accountsDb;
+  }
 
   /**
    * Returns cached rate limits for a project.

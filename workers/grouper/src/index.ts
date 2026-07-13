@@ -157,11 +157,14 @@ export default class GrouperWorker extends Worker {
     console.log('redis initialized');
 
     await this.projectLimitsCache.refresh();
+
     const limitsUpdatePeriodSeconds = positiveIntEnv(
       process.env.PROJECTS_LIMITS_UPDATE_PERIOD,
       DEFAULT_PROJECTS_LIMITS_UPDATE_PERIOD_SECONDS,
     );
+
     this.projectLimitsRefreshInterval = setInterval(() => {
+      /* eslint-disable-next-line no-void */
       void this.projectLimitsCache.refresh()
         .catch((error) => {
           this.logger.error('Failed to refresh project limits cache', error);
