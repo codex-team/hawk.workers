@@ -479,6 +479,26 @@ describe('GrouperWorker', () => {
       expect(event.breadcrumbs[0].data['longValue']).toBe('e'.repeat(200) + '…');
     });
 
+    test('should wrap string placeholder in an object when the whole context is replaced', () => {
+      const bigContext: Record<string, number> = {};
+
+      for (let i = 0; i < 25; i++) {
+        bigContext[`key${i}`] = i;
+      }
+
+      const event = generateEvent({
+        context: bigContext,
+      });
+
+      dataFilter.processEvent(event);
+
+      /**
+       * Raw string would be dropped by encodeUnsafeFields, so it must stay wrapped in an object
+       */
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      expect(event.context).toEqual({ __placeholder: '<big object>' });
+    });
+
     test('should replace circular references with a placeholder', () => {
       const circular: Record<string, unknown> = {
         name: 'circular',

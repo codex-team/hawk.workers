@@ -173,7 +173,12 @@ export default class DataFilter {
   public sanitizeEvent(event: EventData<EventAddons>): void {
     unsafeFields.forEach(field => {
       if (event[field] !== undefined) {
-        (event as unknown as Record<string, unknown>)[field] = Sanitizer.sanitize(event[field]);
+        const sanitized = Sanitizer.sanitize(event[field]);
+
+        (event as unknown as Record<string, unknown>)[field] = typeof sanitized === 'string'
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ? { __placeholder: sanitized }
+          : sanitized;
       }
     });
 
