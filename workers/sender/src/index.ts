@@ -192,7 +192,7 @@ export default abstract class SenderWorker extends Worker {
 
     this.logger.info(`Sending ${notificationType} notification to ${channel.endpoint}`);
 
-    this.provider.send(channel.endpoint, {
+    await this.provider.send(channel.endpoint, {
       type: notificationType,
       payload: {
         host: process.env.GARAGE_URL,
@@ -245,7 +245,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'assignee',
       payload: {
         host: process.env.GARAGE_URL,
@@ -506,7 +506,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'payment-failed',
       payload: {
         host: process.env.GARAGE_URL,
@@ -541,7 +541,7 @@ export default abstract class SenderWorker extends Worker {
       return;
     }
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'payment-success',
       payload: {
         host: process.env.GARAGE_URL,
@@ -560,7 +560,7 @@ export default abstract class SenderWorker extends Worker {
   private async handlePasswordResetTask(task: SenderWorkerPasswordResetTask): Promise<void> {
     const { newPassword, endpoint } = task.payload;
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'password-reset',
       payload: {
         host: process.env.GARAGE_URL,
@@ -578,7 +578,7 @@ export default abstract class SenderWorker extends Worker {
   private async handleWorkspaceInviteTask(task: SenderWorkerWorkspaceInviteTask): Promise<void> {
     const { workspaceName, inviteLink, endpoint } = task.payload;
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'workspace-invite',
       payload: {
         host: process.env.GARAGE_URL,
@@ -597,7 +597,7 @@ export default abstract class SenderWorker extends Worker {
   private async handleSignUpTask(task: SenderWorkerSignUpTask): Promise<void> {
     const { password, endpoint } = task.payload;
 
-    this.provider.send(endpoint, {
+    await this.provider.send(endpoint, {
       type: 'sign-up',
       payload: {
         host: process.env.GARAGE_URL,
