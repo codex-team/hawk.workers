@@ -343,7 +343,11 @@ describe('GrouperWorker', () => {
       task.payload.context = 'string context';
       await worker.handle(task);
 
-      expect((await eventsCollection.findOne({})).payload.context).toBe(null);
+      /**
+       * String context is wrapped in a placeholder object by Sanitizer and stringified on save
+       */
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      expect((await eventsCollection.findOne({})).payload.context).toBe(JSON.stringify({ __placeholder: 'string context' }));
     });
   });
 
