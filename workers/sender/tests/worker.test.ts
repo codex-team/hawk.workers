@@ -249,4 +249,33 @@ describe('Sender Worker', () => {
       expect(dailyEventsQueryMock).toBeCalledWith({ groupHash: 'groupHash' });
     });
   });
+
+  describe('provider.send awaiting', () => {
+    /**
+     * Without await, handle() resolves even if send() rejects —
+     * message would be acked and the error lost.
+     * The .catch on the rejected promise only prevents an unhandledRejection
+     * crash in the fire-and-forget case; await still observes the rejection.
+     */
+    it('should reject handle when provider.send fails', async () => {
+      const worker = new ExampleSenderWorker();
+      const sendError = new Error('provider send failed');
+
+      (worker as any).provider.send = jest.fn(() => {
+        const sendPromise = Promise.reject(sendError);
+
+        sendPromise.catch(() => undefined);
+
+        return sendPromise;
+      });
+
+      await expect(worker.handle({
+        type: 'sign-up',
+        payload: {
+          password: 'secret',
+          endpoint: 'user@example.com',
+        },
+      })).rejects.toThrow('provider send failed');
+    });
+  });
 });
