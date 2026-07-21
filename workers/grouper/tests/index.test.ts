@@ -173,6 +173,20 @@ describe('GrouperWorker', () => {
       expect(await eventsCollection.find().count()).toBe(1);
     });
 
+    test('Should trim event title to the maximum length before saving', async () => {
+      const longTitle = 'A'.repeat(5000);
+
+      await worker.handle(generateTask({ title: longTitle }));
+
+      const savedEvent = await eventsCollection.findOne({});
+
+      /**
+       * 400 chars + ellipsis
+       */
+      expect(savedEvent.payload.title.length).toBe(401);
+      expect(savedEvent.payload.title.endsWith('…')).toBe(true);
+    });
+
     test('Should increment total events count on each processing', async () => {
       await worker.handle(generateTask());
       await worker.handle(generateTask());
@@ -323,6 +337,9 @@ describe('GrouperWorker', () => {
       expect(typeof savedEvent.payload.context).toBe('string');
     });
 
+    /**
+     * Catchers never send a string context per spec — this covers the defensive fallback.
+     */
     test('Should save event even if its context is type of string', async () => {
       const task = generateTask();
 

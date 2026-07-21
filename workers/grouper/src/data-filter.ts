@@ -1,10 +1,17 @@
 import type { EventAddons, EventData } from '@hawk.so/types';
 import { unsafeFields } from '../../../lib/utils/unsafeFields';
+import { rightTrim } from '../../../lib/utils/string';
+import { Sanitizer } from '../../../lib/utils/sanitizer';
 
 /**
  * Maximum depth for object traversal to prevent excessive memory allocations
  */
 const MAX_TRAVERSAL_DEPTH = 20;
+
+/**
+ * Maximum length for event title before appending ellipsis
+ */
+const MAX_TITLE_LENGTH = 400;
 
 /**
  * Recursively iterate through object and call function on each key
@@ -135,9 +142,54 @@ export default class DataFilter {
    * @param event - event to process
    */
   public processEvent(event: EventData<EventAddons>): void {
+    this.trimEventTitle(event);
+    this.sanitizeEvent(event);
+
     unsafeFields.forEach(field => {
       if (event[field]) {
         this.processField(event[field]);
+      }
+    });
+  }
+
+  /**
+   * Trim event title to the maximum allowed length.
+   * It mutates the original object.
+   *
+   * @param event - event to process
+   */
+  public trimEventTitle(event: EventData<EventAddons>): void {
+    if (typeof event.title === 'string') {
+      event.title = rightTrim(event.title, MAX_TITLE_LENGTH);
+    }
+  }
+
+  /**
+   * Sanitize event fields that can contain long strings, deep objects or long arrays.
+   * It mutates the original object.
+   *
+   * @param event - event to process
+   */
+  public sanitizeEvent(event: EventData<EventAddons>): void {
+    unsafeFields.forEach(field => {
+      if (event[field] !== undefined) {
+        (event as unknown as Record<string, unknown>)[field] = Sanitizer.sanitize(event[field]);
+      }
+    });
+
+    event.backtrace?.forEach(frame => {
+      if (frame.arguments !== undefined) {
+        frame.arguments = Sanitizer.sanitize(frame.arguments) as string[];
+      }
+    });
+
+    event.breadcrumbs?.forEach(breadcrumb => {
+      if (typeof breadcrumb.message === 'string') {
+        breadcrumb.message = Sanitizer.sanitize(breadcrumb.message) as string;
+      }
+
+      if (breadcrumb.data !== undefined) {
+        breadcrumb.data = Sanitizer.sanitize(breadcrumb.data) as typeof breadcrumb.data;
       }
     });
   }
