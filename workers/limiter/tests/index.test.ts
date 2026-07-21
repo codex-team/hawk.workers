@@ -27,6 +27,17 @@ const REGULAR_WORKSPACES_CHECK_EVENT: RegularWorkspacesCheckEvent = {
  */
 const LAST_CHARGE_DATE = new Date(1585742400 * 1000);
 
+/**
+ * Timestamp inside the boundary day of LAST_CHARGE_DATE (2020-04-01T16:00:00Z):
+ * such events are counted from the raw collections, later ones — via dailyEvents
+ */
+const BOUNDARY_DAY_TIMESTAMP = 1585756800;
+
+/**
+ * UTC midnight right after LAST_CHARGE_DATE (2020-04-02T00:00:00Z)
+ */
+const NEXT_MIDNIGHT_AFTER_LAST_CHARGE = 1585785600;
+
 describe('Limiter worker', () => {
   let connection: MongoClient;
   let db: Db;
@@ -89,7 +100,7 @@ describe('Limiter worker', () => {
       usersAffected: 0,
       visitedBy: [],
       groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
-      timestamp: 1586892935,
+      timestamp: BOUNDARY_DAY_TIMESTAMP,
       payload: {
         title: 'Mocked event',
       },
@@ -104,7 +115,7 @@ describe('Limiter worker', () => {
   const fillDatabaseWithMockedData = async (parameters: {
     workspace: WorkspaceDBScheme,
     project: ProjectDBScheme,
-    eventsToMock: number
+    eventsToMock: number,
     repetitionsToMock?: number,
   }): Promise<void> => {
     const eventsCollection = db.collection(`events:${parameters.project._id.toString()}`);
@@ -318,6 +329,65 @@ describe('Limiter worker', () => {
       expect(reportMessage).not.toContain(workspace2._id.toString());
 
       expect(reportMessage).toContain(`${project1.name} (id: <code>${project1._id}</code>)`);
+    });
+
+    test('Should compute both counters and report the comparison to Telegram when dailyEvents counter is enabled', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10000,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: LAST_CHARGE_DATE,
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 5,
+      });
+
+      /**
+       * Bucket for the day after the boundary day — counted only by the new algorithm
+       */
+      await db.collection(`dailyEvents:${project._id.toString()}`).insertOne({
+        groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+        groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
+        count: 7,
+      });
+
+      process.env.LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS = workspace._id.toString();
+
+      /**
+       * Act
+       */
+      try {
+        const worker = new LimiterWorker();
+
+        await worker.start();
+        await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+        await worker.finish();
+      } finally {
+        delete process.env.LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS;
+      }
+
+      /**
+       * Assert — the new counter result is saved, both results are reported with timings
+       */
+      const workspaceInDatabase = await workspaceCollection.findOne({
+        _id: workspace._id,
+      });
+
+      expect(workspaceInDatabase.billingPeriodEventsCount).toBe(12); // 5 boundary-day events + 7 from dailyEvents
+
+      const comparisonMessage = (telegram.sendMessage as jest.Mock).mock.calls
+        .map(call => call[0])
+        .find(message => message.includes('Old algo'));
+
+      expect(comparisonMessage).toContain(`Workspace <b>${workspace.name}</b> event count:`);
+      expect(comparisonMessage).toMatch(/Old algo: 5, took [\d.]+sec/);
+      expect(comparisonMessage).toMatch(/New algo: 12, took [\d.]+sec/);
     });
 
     test('Should not send a report when no projects are blocked or unblocked', async () => {
