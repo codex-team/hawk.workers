@@ -337,6 +337,9 @@ describe('GrouperWorker', () => {
       expect(typeof savedEvent.payload.context).toBe('string');
     });
 
+    /**
+     * Catchers never send a string context per spec — this covers the defensive fallback.
+     */
     test('Should save event even if its context is type of string', async () => {
       const task = generateTask();
 
