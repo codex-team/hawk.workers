@@ -173,16 +173,7 @@ export default class DataFilter {
   public sanitizeEvent(event: EventData<EventAddons>): void {
     unsafeFields.forEach(field => {
       if (event[field] !== undefined) {
-        const sanitized = Sanitizer.sanitize(event[field]);
-
-        /**
-         * Wrap string placeholders back into an object — encodeUnsafeFields()
-         * treats strings as already-encoded and would drop the field otherwise.
-         */
-        (event as unknown as Record<string, unknown>)[field] = typeof sanitized === 'string'
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          ? { __placeholder: sanitized }
-          : sanitized;
+        (event as unknown as Record<string, unknown>)[field] = Sanitizer.sanitize(event[field]);
       }
     });
 

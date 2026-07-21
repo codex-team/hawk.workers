@@ -6,9 +6,14 @@ import { rightTrim } from './string';
 const MAX_STRING_LENGTH = 200;
 
 /**
- * Objects with more keys are represented as "<big object>"
+ * Maximum number of object keys to keep, the rest are reported via META_FIELD
  */
 const MAX_OBJECT_KEYS_COUNT = 20;
+
+/**
+ * Key added to an object to report how many of its keys were skipped
+ */
+const META_FIELD = '__meta';
 
 /**
  * Maximum depth of sanitized objects
@@ -36,7 +41,8 @@ type ObjectLike = Record<string, unknown> | unknown[];
 
 /**
  * Prepares event data for storing: trims long strings, slices long arrays,
- * replaces too deep/big objects and circular references with placeholders.
+ * cuts off extra object keys and replaces too deep objects and circular
+ * references with placeholders.
  */
 export class Sanitizer {
   /**
@@ -100,21 +106,22 @@ export class Sanitizer {
     data: Record<string, unknown>,
     depth: number,
     seen: WeakSet<ObjectLike>
-  ): Record<string, unknown> | '<deep object>' | '<big object>' {
+  ): Record<string, unknown> | '<deep object>' {
     if (depth > MAX_DEPTH) {
       return '<deep object>';
     }
 
-    if (Object.keys(data).length > MAX_OBJECT_KEYS_COUNT) {
-      return '<big object>';
-    }
-
+    const keys = Object.keys(data);
     const result: Record<string, unknown> = {};
 
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        result[key] = Sanitizer.sanitize(data[key], depth, seen);
-      }
+    for (const key of keys.slice(0, MAX_OBJECT_KEYS_COUNT)) {
+      result[key] = Sanitizer.sanitize(data[key], depth, seen);
+    }
+
+    const skippedKeysCount = keys.length - MAX_OBJECT_KEYS_COUNT;
+
+    if (skippedKeysCount > 0) {
+      result[META_FIELD] = `${skippedKeysCount} more key(s) skipped`;
     }
 
     return result;

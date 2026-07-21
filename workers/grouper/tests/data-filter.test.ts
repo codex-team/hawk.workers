@@ -399,7 +399,7 @@ describe('GrouperWorker', () => {
       expect(event.context['longValue']).toBe('a'.repeat(200) + '…');
     });
 
-    test('should replace objects with too many keys with a placeholder', () => {
+    test('should cut off extra keys of nested objects with too many keys', () => {
       const bigObject: Record<string, number> = {};
 
       for (let i = 0; i < 25; i++) {
@@ -414,7 +414,8 @@ describe('GrouperWorker', () => {
 
       dataFilter.processEvent(event);
 
-      expect(event.context['bigObject']).toBe('<big object>');
+      expect(Object.keys(event.context['bigObject'])).toHaveLength(21);
+      expect(event.context['bigObject']['__meta']).toBe('5 more key(s) skipped');
     });
 
     test('should slice long arrays and add a placeholder', () => {
@@ -479,7 +480,7 @@ describe('GrouperWorker', () => {
       expect(event.breadcrumbs[0].data['longValue']).toBe('e'.repeat(200) + '…');
     });
 
-    test('should wrap string placeholder in an object when the whole context is replaced', () => {
+    test('should keep the first keys of a big object and report the skipped ones', () => {
       const bigContext: Record<string, number> = {};
 
       for (let i = 0; i < 25; i++) {
@@ -492,11 +493,11 @@ describe('GrouperWorker', () => {
 
       dataFilter.processEvent(event);
 
-      /**
-       * Raw string would be dropped by encodeUnsafeFields, so it must stay wrapped in an object
-       */
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      expect(event.context).toEqual({ __placeholder: '<big object>' });
+      expect(Object.keys(event.context)).toHaveLength(21);
+      expect(event.context['key0']).toBe(0);
+      expect(event.context['key19']).toBe(19);
+      expect(event.context['key20']).toBeUndefined();
+      expect(event.context['__meta']).toBe('5 more key(s) skipped');
     });
 
     test('should replace circular references with a placeholder', () => {
