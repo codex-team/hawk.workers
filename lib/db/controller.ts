@@ -87,7 +87,8 @@ export class DatabaseController {
           useNewUrlParser: true,
           useUnifiedTopology: true,
           serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
-          ...(this.appName ? { appName: this.appName } : {}),
+          /** driver 3.x only recognizes the lowercase `appname` option key */
+          ...(this.appName ? { appname: this.appName } : {}),
         });
         this.db = this.connection.db();
 

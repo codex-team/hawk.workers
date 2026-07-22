@@ -266,7 +266,7 @@ export default class LimiterWorker extends Worker {
 
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
-    const workspaceEventsCount = await this.dbHelper.getEventsCountByProjects(projects, since);
+    const workspaceEventsCount = await this.getWorkspaceEventsCount(workspace, projects, since);
 
     this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
 
@@ -326,6 +326,69 @@ export default class LimiterWorker extends Worker {
       updatedWorkspace,
       projectsToUpdate: projects,
     };
+  }
+
+  /**
+   * Returns workspace events count using the default raw counter or the
+   * dailyEvents-based counter when it is explicitly enabled for the workspace.
+   *
+   * For enabled workspaces both counters are computed and their results with
+   * timings are reported to Telegram to compare the algorithms during the
+   * testing period. The old counter is used as a fallback if the new one fails.
+   *
+   * @param workspace - workspace to count events for
+   * @param projects - workspace projects
+   * @param since - timestamp of the time from which we count the events
+   */
+  private async getWorkspaceEventsCount(
+    workspace: WorkspaceWithTariffPlan,
+    projects: ProjectDBScheme[],
+    since: number
+  ): Promise<number> {
+    if (!this.shouldUseDailyEventsCounter(workspace._id.toString())) {
+      return this.dbHelper.getEventsCountByProjects(projects, since);
+    }
+
+    const oldAlgoStartedAt = Date.now();
+    const oldAlgoCount = await this.dbHelper.getEventsCountByProjects(projects, since);
+    const oldAlgoTook = (Date.now() - oldAlgoStartedAt) / MS_IN_SEC;
+
+    try {
+      const newAlgoStartedAt = Date.now();
+      const newAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+      const newAlgoTook = (Date.now() - newAlgoStartedAt) / MS_IN_SEC;
+
+      telegram.sendMessage(
+        `Workspace <b>${workspace.name}</b> event count:\n` +
+        `Old algo: ${oldAlgoCount}, took ${oldAlgoTook}sec\n` +
+        `New algo: ${newAlgoCount}, took ${newAlgoTook}sec`,
+        telegram.TelegramBotURLs.Limiter
+      );
+
+      return newAlgoCount;
+    } catch (error) {
+      HawkCatcher.send(error, {
+        workspaceId: workspace._id.toString(),
+      });
+
+      return oldAlgoCount;
+    }
+  }
+
+  /**
+   * Checks whether dailyEvents-based quota counting is enabled for the workspace
+   * via LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS environment variable —
+   * comma-separated workspace ids or `*` to enable it for every workspace.
+   *
+   * @param workspaceId - workspace id
+   */
+  private shouldUseDailyEventsCounter(workspaceId: string): boolean {
+    const enabledWorkspaceIds = (process.env.LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS || '')
+      .split(',')
+      .map(id => id.trim())
+      .filter(Boolean);
+
+    return enabledWorkspaceIds.includes('*') || enabledWorkspaceIds.includes(workspaceId);
   }
 
   /**

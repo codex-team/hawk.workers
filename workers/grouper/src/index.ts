@@ -59,7 +59,7 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
 const DAILY_METRICS_RETENTION_DAYS = 90;
 
 /**
- * Maximum length for backtrace code line or title
+ * Maximum length for backtrace code line
  */
 const MAX_CODE_LINE_LENGTH = 140;
 
@@ -198,8 +198,6 @@ export default class GrouperWorker extends Worker {
     this.grouperMetrics.observePayloadSize(taskPayloadSize);
     this.memoryMonitor.logBeforeHandle(memoryBeforeHandle, handledTasksCount, taskPayloadSize, task.projectId);
 
-    this.logger.info(`[handle] project=${task.projectId} catcher=${task.catcherType} title="${task.payload.title}" payloadSize=${taskPayloadSize}b backtraceFrames=${task.payload.backtrace?.length ?? 0}`);
-
     // FIX RELEASE TYPE
     // TODO: REMOVE AFTER 01.01.2026, after the most of the users update to new js catcher
     if (task.payload && task.payload.release !== undefined) {
@@ -208,6 +206,11 @@ export default class GrouperWorker extends Worker {
         release: String(task.payload.release),
       };
     }
+
+    /**
+     * Filter event data before hashing so hash and stored event stay consistent.
+     */
+    this.dataFilter.processEvent(task.payload);
 
     let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
     let existedEvent: GroupedEventDBScheme;
@@ -219,11 +222,6 @@ export default class GrouperWorker extends Worker {
        * Trim source code lines to prevent memory leaks
        */
       this.trimSourceCodeLines(task.payload);
-
-      /**
-       * Filter sensitive information
-       */
-      this.dataFilter.processEvent(task.payload);
     });
 
     /**
