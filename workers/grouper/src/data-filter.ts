@@ -36,14 +36,14 @@ const MAX_CODE_LINE_LENGTH = 140;
  * @param callback - Function to call on each iteration
  */
 function forAll(obj: Record<string, unknown>, callback: (path: string[], key: string, obj: Record<string, unknown>) => void): void {
-  const visit = (current, path: string[]): void => {
+  const visit = (current: Record<string, unknown>, path: string[]): void => {
     for (const key in current) {
       if (!Object.prototype.hasOwnProperty.call(current, key)) {
         continue;
       }
       const value = current[key];
 
-      if (!(typeof value === 'object' && !Array.isArray(value))) {
+      if (!(typeof value === 'object' && value !== null && !Array.isArray(value))) {
         callback(path, key, current);
       } else {
         /**
@@ -51,7 +51,7 @@ function forAll(obj: Record<string, unknown>, callback: (path: string[], key: st
          * This reduces GC pressure and memory usage for deeply nested objects
          */
         const newPath = path.length < MAX_TRAVERSAL_DEPTH ? path.concat(key) : path;
-        visit(value, newPath);
+        visit(value as Record<string, unknown>, newPath);
       }
     }
   };
@@ -264,11 +264,12 @@ export default class DataFilter {
    *
    * @param field - any object to iterate
    */
-  private processField(field): void {
-    if (typeof field === 'string') {
+  private processField(field: unknown): void {
+    if (typeof field !== 'object' || field === null || Array.isArray(field)) {
       return;
     }
-    forAll(field, (_path, key, obj) => {
+
+    forAll(field as Record<string, unknown>, (_path, key, obj) => {
       obj[key] = this.filterPanNumbers(obj[key]);
       obj[key] = this.filterSensitiveData(key, obj[key]);
     });
