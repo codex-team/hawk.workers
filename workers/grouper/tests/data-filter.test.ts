@@ -517,4 +517,38 @@ describe('GrouperWorker', () => {
       expect(event.context['self']).toBe('<circular>');
     });
   });
+
+  describe('Backtrace trimming', () => {
+    test('should cap backtrace frames and sourceCode lines', () => {
+      const longLine = 'x'.repeat(300);
+      const backtrace = Array.from({ length: 80 }, (_, index) => {
+        return {
+          file: `frame-${index}.rb`,
+          line: index + 1,
+          sourceCode: Array.from({ length: 25 }, (__, lineIndex) => {
+            return {
+              line: lineIndex + 1,
+              content: longLine,
+            };
+          }),
+        };
+      });
+      const event = generateEvent({ backtrace });
+
+      dataFilter.processEvent(event);
+
+      expect(event.backtrace).toHaveLength(20);
+      expect(event.backtrace?.[0].sourceCode).toHaveLength(21);
+      expect(event.backtrace?.[0].sourceCode?.[0].content?.endsWith('…')).toBe(true);
+      expect(event.backtrace?.[0].sourceCode?.[0].content?.length).toBeLessThanOrEqual(141);
+    });
+
+    test('should normalize empty backtrace to undefined', () => {
+      const event = generateEvent({ backtrace: [] });
+
+      dataFilter.processEvent(event);
+
+      expect(event.backtrace).toBeUndefined();
+    });
+  });
 });

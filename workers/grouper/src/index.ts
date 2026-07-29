@@ -7,11 +7,7 @@ import * as WorkerNames from '../../../lib/workerNames';
 import * as pkg from '../package.json';
 import type { GroupWorkerTask, RepetitionDelta } from '../types/group-worker-task';
 import type {
-  EventAddons,
-  EventData,
   GroupedEventDBScheme,
-  BacktraceFrame,
-  SourceCodeLine,
   ProjectEventGroupingPatternsDBScheme,
   ErrorsCatcherType
 } from '@hawk.so/types';
@@ -24,8 +20,6 @@ import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
 import { bucketTimestampMs } from './utils/bucketTimestamp';
-import { rightTrim } from '../../../lib/utils/string';
-import { hasValue } from '../../../lib/utils/hasValue';
 import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
 import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
@@ -57,11 +51,6 @@ const DB_DUPLICATE_KEY_ERROR = '11000';
  * Retention period for daily Redis TimeSeries metrics in days
  */
 const DAILY_METRICS_RETENTION_DAYS = 90;
-
-/**
- * Maximum length for backtrace code line
- */
-const MAX_CODE_LINE_LENGTH = 140;
 
 /**
  * Worker for handling Javascript events
@@ -216,13 +205,6 @@ export default class GrouperWorker extends Worker {
     let existedEvent: GroupedEventDBScheme;
     let repetitionId = null;
     let incrementDailyAffectedUsers = false;
-
-    await session.measureStep('preprocess', () => {
-      /**
-       * Trim source code lines to prevent memory leaks
-       */
-      this.trimSourceCodeLines(task.payload);
-    });
 
     /**
      * Find similar events by grouping pattern
@@ -491,37 +473,6 @@ export default class GrouperWorker extends Worker {
       } catch (error) {
         this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
       }
-    }
-  }
-
-  /**
-   * Trims source code lines in event's backtrace to prevent memory leaks
-   *
-   * @param event - event to process
-   */
-  private trimSourceCodeLines(event: EventData<EventAddons>): void {
-    if (!event.backtrace) {
-      return;
-    }
-
-    event.backtrace.forEach((frame: BacktraceFrame) => {
-      if (!frame.sourceCode) {
-        return;
-      }
-
-      frame.sourceCode = frame.sourceCode.map((line: SourceCodeLine) => {
-        return {
-          line: line.line,
-          content: hasValue(line.content) ? rightTrim(line.content, MAX_CODE_LINE_LENGTH) : line.content,
-        };
-      });
-    });
-
-    /**
-     * Normalize backtrace, if backtrace equals to [] it leads to visual bugs
-     */
-    if (event.backtrace.length === 0) {
-      event.backtrace = null;
     }
   }
 
