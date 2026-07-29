@@ -14,6 +14,22 @@ const MAX_TRAVERSAL_DEPTH = 20;
 const MAX_TITLE_LENGTH = 400;
 
 /**
+ * Maximum number of backtrace frames to keep.
+ * Deep Rails stacks (200+ frames with sourceCode) inflate stored events and list API responses.
+ */
+const MAX_BACKTRACE_FRAMES = 20;
+
+/**
+ * Maximum sourceCode lines kept per backtrace frame
+ */
+const MAX_SOURCE_CODE_LINES = 21;
+
+/**
+ * Maximum length of a single source code line
+ */
+const MAX_CODE_LINE_LENGTH = 140;
+
+/**
  * Recursively iterate through object and call function on each key
  *
  * @param obj - Object to iterate
@@ -143,6 +159,7 @@ export default class DataFilter {
    */
   public processEvent(event: EventData<EventAddons>): void {
     this.trimEventTitle(event);
+    this.trimBacktrace(event);
     this.sanitizeEvent(event);
 
     unsafeFields.forEach(field => {
@@ -162,6 +179,54 @@ export default class DataFilter {
     if (typeof event.title === 'string') {
       event.title = rightTrim(event.title, MAX_TITLE_LENGTH);
     }
+  }
+
+  /**
+   * Cap backtrace frames and sourceCode size.
+   * It mutates the original object.
+   *
+   * @param event - event to process
+   */
+  public trimBacktrace(event: EventData<EventAddons>): void {
+    if (!Array.isArray(event.backtrace)) {
+      return;
+    }
+
+    if (event.backtrace.length === 0) {
+      /**
+       * Normalize empty backtrace — empty arrays lead to visual bugs
+       */
+      delete event.backtrace;
+
+      return;
+    }
+
+    if (event.backtrace.length > MAX_BACKTRACE_FRAMES) {
+      event.backtrace = event.backtrace.slice(0, MAX_BACKTRACE_FRAMES);
+    }
+
+    event.backtrace.forEach((frame) => {
+      if (!frame || !Array.isArray(frame.sourceCode)) {
+        return;
+      }
+
+      const sourceCode = frame.sourceCode.length > MAX_SOURCE_CODE_LINES
+        ? frame.sourceCode.slice(0, MAX_SOURCE_CODE_LINES)
+        : frame.sourceCode;
+
+      frame.sourceCode = sourceCode.map((line) => {
+        if (!line || typeof line !== 'object') {
+          return line;
+        }
+
+        return {
+          ...line,
+          content: typeof line.content === 'string'
+            ? rightTrim(line.content, MAX_CODE_LINE_LENGTH)
+            : line.content,
+        };
+      });
+    });
   }
 
   /**
@@ -275,3 +340,10 @@ export default class DataFilter {
     return value;
   }
 }
+
+export {
+  MAX_BACKTRACE_FRAMES,
+  MAX_SOURCE_CODE_LINES,
+  MAX_CODE_LINE_LENGTH,
+  MAX_TITLE_LENGTH,
+};
