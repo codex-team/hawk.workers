@@ -1,82 +1,70 @@
-# Sender worker / Abstract 🧰
+# Sender worker 📮
 
-This worker provides abstract classes for implementing notify-senders
-for different channels. For example, Email, Telegram, Slack notifiers.
+Multi-channel worker that delivers notifications to users. One process serves
+all notification channels: `email`, `telegram`, `slack`, `webhook`, `loop`.
 
-## How to implement a new worker for a specific channel
+Each enabled channel runs its own consumer on the `sender/<channel>` queue, so
+per-channel backpressure and retries are preserved, while MongoDB connections
+are shared between channels.
 
-1. Create a class that implements abstract sender.
+## Configuration
 
-```ts
-import * as pkg from '../package.json';
-import NewProvider from './provider';
-import SenderWorker from 'hawk-worker-sender/src';
-import { ChannelType } from 'hawk-worker-notifier/types/channel';
+Besides common worker variables (see the root `.env`), the sender uses:
 
-/**
- * Worker to send email notifications
- */
-export default class NewSenderWorker extends SenderWorker {
-  /**
-   * Worker type
-   */
-  public readonly type: string = pkg.workerType;
+| Variable | Description |
+| -- | -- |
+| `SENDER_CHANNELS` | Comma-separated list of channels to serve (e.g. `email,telegram`). All channels are enabled when not set. |
+| `GARAGE_URL` | Garage URL used in notification links |
+| `API_STATIC_URL` | API static files URL (icons etc.) |
+| `SMTP_*` | SMTP settings for the email channel (see `.env.sample`) |
 
-  /**
-   * Email channel type
-   */
-  protected channelType = ChannelType.NewType;
+## Run
 
-  /**
-   * Email provider
-   */
-  protected provider = new NewProvider();
-}
+```bash
+yarn run-sender
 ```
 
-2. Implement a provider that will render and send messages
+## Structure
+
+- `src/index.ts` — multi-channel worker: reads `SENDER_CHANNELS`, owns db connections, starts channel workers.
+- `src/channel-sender.ts` — worker of a single channel: consumes `sender/<channel>` queue, handles tasks, calls the provider.
+- `src/channels.ts` — registry of channels and their providers.
+- `src/providers/<channel>/` — provider (rendering + delivery) and templates of each channel.
+- `types/sender-task/` — task payload types (used by producers: notifier, paymaster, api).
+- `types/template-variables/` — notification template variables types.
+
+## How to add a new channel
+
+1. Add the channel to `ChannelType` (`workers/notifier/types/channel.ts`).
+2. Create `src/providers/<channel>/provider.ts` extending `NotificationsProvider` — it renders and sends messages:
 
 ```ts
-import { TemplateVariables } from 'hawk-worker-sender/types/template-variables';
-import templates, { Template } from './templates';
-import Templates from './templates/names';
+import NotificationsProvider from '../../provider';
+import { Notification } from '../../../types/template-variables';
 
-/**
- * Class to provide rendering and transport
- */
-export default class NewProvider extends TemplateVariables {
-  /**
-   * Send email to recipient
-   *
-   * @param {string} to - recipient endpoint
-   * @param {TemplateVariables} variables - variables for template
-   */
-  public async send(to: string, variables: Template): Promise<void> {
-    // logic for rendering and sending
+export default class NewProvider extends NotificationsProvider {
+  public async send(to: string, notification: Notification): Promise<void> {
+    // rendering and delivery logic
   }
 }
 ```
 
-## How to implement a new template
+3. Register it in `src/channels.ts`.
+4. Declare the `sender/<channel>` queue in hawk.registry definitions.
 
-1. Create a new type for task and payload in `workers/sender/src/types/sender-task`.
+## How to implement a new notification type
 
-2. Create a new type for notification in `workers/sender/src/types/template-variables`.
+1. Create a new type for task and payload in `types/sender-task`.
+2. Create a new type for notification in `types/template-variables`.
+3. Create a new case for switch in `ChannelSenderWorker.handle()` method.
+4. Create a new handler method in `ChannelSenderWorker` class.
+5. Add templates to the channels that should support it (e.g. for email:
+   create a directory in `src/providers/email/templates/emails` and run
+   `yarn generate-tpl-names`, then add a case to `EmailProvider.send`).
 
-3. Create a new case for switch in `SenderWorker.handle()` method.
+## Email templates preview
 
-4. Create a new handler method in `SenderWorker` class.
-
-Let's create a template for Email worker for example.
-
-5. Go to `workers/email/src/emails` and create a new directory for templates.
-
-6. Go to `workers/email` and update `names` file by the following command:
-
-`yarn generate-tpl-names`
-
-7. Then go provider's switch in `EmailProvider.send` method which resolves template and add a new one.
-
-Now you can test it by adding new tasks with a new name type.
-
-Good luck.
+```bash
+yarn email-overview
+# open http://localhost:4444/
+```

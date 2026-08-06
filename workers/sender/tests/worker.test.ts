@@ -145,22 +145,67 @@ describe('Sender Worker', () => {
   }));
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ExampleSenderWorker = require('./sender-example').default;
+  const SenderWorker = require('../src').default;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ChannelSenderWorker = require('../src/channel-sender').default;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ExampleProvider = require('./provider-example').default;
+
+  /**
+   * Creates a single-channel worker with mocked db controllers and example provider
+   */
+  const createChannelWorker = (): any => {
+    return new ChannelSenderWorker(
+      'console' as any,
+      new ExampleProvider(),
+      new MockDBController() as any,
+      new MockDBController() as any
+    );
+  };
 
   /**
    * Check worker type
    */
   it('should have correct worker type', () => {
-    const worker = new ExampleSenderWorker();
+    const worker = new SenderWorker();
 
-    expect(worker.type).toMatch(/^sender\/[-a-z]+$/);
+    expect(worker.type).toBe('sender');
+  });
+
+  /**
+   * Each channel worker should consume its own `sender/<channel>` queue
+   */
+  it('should create channel workers with correct types', () => {
+    const worker = new SenderWorker();
+
+    expect(worker.channelWorkers.length).toBeGreaterThan(0);
+    worker.channelWorkers.forEach((channelWorker: any) => {
+      expect(channelWorker.type).toMatch(/^sender\/[-a-z]+$/);
+    });
+  });
+
+  /**
+   * SENDER_CHANNELS controls the enabled channels
+   */
+  it('should respect SENDER_CHANNELS env variable', () => {
+    process.env.SENDER_CHANNELS = 'telegram, slack';
+
+    const worker = new SenderWorker();
+
+    expect(worker.channelWorkers.map((channelWorker: any) => channelWorker.type)).toEqual(['sender/telegram', 'sender/slack']);
+
+    process.env.SENDER_CHANNELS = 'smoke-signals';
+
+    expect(() => new SenderWorker()).toThrow(/Unknown channels/);
+
+    delete process.env.SENDER_CHANNELS;
   });
 
   /**
    * Check start and finish
    */
   it('should start and finish without errors', async () => {
-    const worker = new ExampleSenderWorker();
+    const worker = new SenderWorker();
 
     await worker.start();
     await worker.finish();
@@ -175,7 +220,7 @@ describe('Sender Worker', () => {
      */
     it('should connect to db on start', async () => {
       dbConnectMock.mockClear();
-      const worker = new ExampleSenderWorker();
+      const worker = new SenderWorker();
 
       await worker.start();
 
@@ -190,7 +235,7 @@ describe('Sender Worker', () => {
      * On 'handle' it should get Project from DB
      */
     it('should query project on handle', async () => {
-      const worker = new ExampleSenderWorker();
+      const worker = createChannelWorker();
 
       await worker.handle({
         type: 'event',
@@ -211,7 +256,7 @@ describe('Sender Worker', () => {
      * Then, it should get events
      */
     it('should query events on handle', async () => {
-      const worker = new ExampleSenderWorker();
+      const worker = createChannelWorker();
 
       await worker.handle({
         type: 'event',
@@ -232,7 +277,7 @@ describe('Sender Worker', () => {
      * Then, compute events count
      */
     it('should query daily events count on handle', async () => {
-      const worker = new ExampleSenderWorker();
+      const worker = createChannelWorker();
 
       await worker.handle({
         type: 'event',
@@ -258,7 +303,7 @@ describe('Sender Worker', () => {
      * crash in the fire-and-forget case; await still observes the rejection.
      */
     it('should reject handle when provider.send fails', async () => {
-      const worker = new ExampleSenderWorker();
+      const worker = createChannelWorker();
       const sendError = new Error('provider send failed');
 
       (worker as any).provider.send = jest.fn(() => {
