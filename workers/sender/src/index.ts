@@ -51,25 +51,39 @@ export default class SenderWorker {
   }
 
   /**
-   * Connect to databases and start consuming channel queues
+   * Connect to databases and start consuming channel queues.
+   * Waits for every start attempt to settle so that a failure of one channel
+   * cannot race with the runner cleanup while other channels are still connecting.
    */
   public async start(): Promise<void> {
     await this.eventsDb.connect();
     await this.accountsDb.connect();
 
-    await Promise.all(this.channelWorkers.map((worker) => worker.start()));
+    const results = await Promise.allSettled(this.channelWorkers.map((worker) => worker.start()));
+    const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+    if (failed) {
+      throw failed.reason;
+    }
 
     this.logger.info(`Sender started with channels: ${this.channelWorkers.map((worker) => worker.type).join(', ')}`);
   }
 
   /**
-   * Finish channel workers and close database connections
+   * Finish channel workers and close database connections.
+   * Databases are closed only after every channel finish attempt settles
    */
   public async finish(): Promise<void> {
-    await Promise.all(this.channelWorkers.map((worker) => worker.finish()));
+    const results = await Promise.allSettled(this.channelWorkers.map((worker) => worker.finish()));
 
     await this.eventsDb.close();
     await this.accountsDb.close();
+
+    const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+    if (failed) {
+      throw failed.reason;
+    }
   }
 
   /**
