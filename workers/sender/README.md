@@ -4,8 +4,8 @@ Multi-channel worker that delivers notifications to users. One process serves
 all notification channels: `email`, `telegram`, `slack`, `webhook`, `loop`.
 
 Each enabled channel runs its own consumer on the `sender/<channel>` queue, so
-per-channel backpressure and retries are preserved, while MongoDB connections
-are shared between channels.
+per-channel backpressure and retries are preserved. Connections are shared: one
+connection to Registry (a channel per queue inside it) and two to MongoDB.
 
 ## Configuration
 
@@ -26,7 +26,7 @@ yarn run-sender
 
 ## Structure
 
-- `src/index.ts` — multi-channel worker: reads `SENDER_CHANNELS`, owns db connections, starts channel workers.
+- `src/index.ts` — multi-channel worker: reads `SENDER_CHANNELS`, owns Registry and db connections, starts channel workers.
 - `src/channel-sender.ts` — worker of a single channel: consumes `sender/<channel>` queue, handles tasks, calls the provider.
 - `src/channels.ts` — registry of channels and their providers.
 - `src/providers/<channel>/` — provider (rendering + delivery) and templates of each channel.

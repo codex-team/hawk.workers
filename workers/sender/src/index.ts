@@ -1,4 +1,6 @@
 import { ChannelType } from 'hawk-worker-notifier/types/channel';
+import * as amqp from 'amqplib';
+import HawkCatcher from '@hawk.so/nodejs';
 import { DatabaseController } from '../../../lib/db/controller';
 import createLogger from '../../../lib/logger';
 import * as pkg from '../package.json';
@@ -9,7 +11,8 @@ import channelProviders from './channels';
 /**
  * Multi-channel sender worker: starts a ChannelSenderWorker per enabled channel.
  * Channels are set by SENDER_CHANNELS (comma-separated, all by default),
- * each consumes its own `sender/<channel>` queue, MongoDB connections are shared.
+ * each consumes its own `sender/<channel>` queue through its own channel of the shared
+ * Registry connection. MongoDB connections are shared too.
  */
 export default class SenderWorker {
   /**
@@ -34,6 +37,11 @@ export default class SenderWorker {
   private channelWorkers: ChannelSenderWorker[];
 
   /**
+   * Connection to Registry shared between channel workers
+   */
+  private registryConnection: amqp.Connection;
+
+  /**
    * Checks required ENV params and creates channel workers
    */
   constructor() {
@@ -51,13 +59,15 @@ export default class SenderWorker {
   }
 
   /**
-   * Connect to databases and start consuming channel queues.
+   * Connect to databases and Registry and start consuming channel queues.
    * Waits for every start attempt to settle so that a failure of one channel
-   * cannot race with the runner cleanup while other channels are still connecting.
+   * cannot race with the runner cleanup while other channels are still connecting
    */
   public async start(): Promise<void> {
     await this.eventsDb.connect();
     await this.accountsDb.connect();
+
+    await this.connectToRegistry();
 
     const results = await Promise.allSettled(this.channelWorkers.map((worker) => worker.start()));
     const failed = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
@@ -70,11 +80,15 @@ export default class SenderWorker {
   }
 
   /**
-   * Finish channel workers and close database connections.
-   * Databases are closed only after every channel finish attempt settles
+   * Finish channel workers and close Registry and database connections.
+   * Connections are closed only after every channel finish attempt settles
    */
   public async finish(): Promise<void> {
     const results = await Promise.allSettled(this.channelWorkers.map((worker) => worker.finish()));
+
+    if (this.registryConnection) {
+      await this.registryConnection.close();
+    }
 
     await this.eventsDb.close();
     await this.accountsDb.close();
@@ -84,6 +98,28 @@ export default class SenderWorker {
     if (failed) {
       throw failed.reason;
     }
+  }
+
+  /**
+   * Open one Registry connection for all channel workers.
+   * Each of them opens its own channel inside it, so prefetch stays per channel
+   */
+  private async connectToRegistry(): Promise<void> {
+    this.registryConnection = await amqp.connect(process.env.REGISTRY_URL);
+
+    this.registryConnection.on('error', (error: Error) => {
+      this.logger.error('Error in RabbitMQ has been occurred', error);
+      HawkCatcher.send(error, {
+        workerType: this.type,
+      });
+
+      /**
+       * Exit process on RabbitMQ connection error to restart worker
+       */
+      process.exit(1);
+    });
+
+    this.channelWorkers.forEach((worker) => worker.useRegistryConnection(this.registryConnection));
   }
 
   /**

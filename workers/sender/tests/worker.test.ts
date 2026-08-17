@@ -212,6 +212,24 @@ describe('Sender Worker', () => {
   });
 
   /**
+   * All channels work through a single connection to Registry
+   */
+  it('should open one Registry connection for all channels', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const amqp = require('amqplib');
+
+    amqp.connect.mockClear();
+
+    const worker = new SenderWorker();
+
+    await worker.start();
+
+    expect(amqp.connect).toHaveBeenCalledTimes(1);
+
+    await worker.finish();
+  });
+
+  /**
    * Check DB connect
    */
   describe('db calls', () => {
