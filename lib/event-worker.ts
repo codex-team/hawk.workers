@@ -27,6 +27,7 @@ export abstract class EventWorker extends Worker {
       catcherType: this.type as CatcherMessageType,
       payload: task.payload as CatcherMessagePayload<ErrorsCatcherType>,
       timestamp: task.timestamp,
+      count: task.count,
     } as GroupWorkerTask<ErrorsCatcherType>);
   }
 
