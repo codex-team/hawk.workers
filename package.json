@@ -1,7 +1,7 @@
 {
     "name": "hawk.workers",
     "private": true,
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "Hawk workers",
     "repository": "git@github.com:codex-team/hawk.workers.git",
     "license": "BUSL-1.1",
@@ -57,7 +57,7 @@
         "@babel/parser": "^7.26.9",
         "@babel/traverse": "7.26.9",
         "@hawk.so/nodejs": "^3.1.1",
-        "@hawk.so/types": "^0.5.9",
+        "@hawk.so/types": "^0.7.1",
         "@types/amqplib": "^0.8.2",
         "@types/jest": "^29.5.14",
         "@types/mongodb": "^3.5.15",

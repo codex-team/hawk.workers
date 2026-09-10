@@ -9,7 +9,7 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { Collection, MongoClient, MongoError } from 'mongodb';
+import { Collection, FindAndModifyWriteOpResultObject, MongoClient, MongoError, UpdateQuery } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
 
 /**
@@ -17,6 +17,14 @@ import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollect
  */
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 const DB_DUPLICATE_KEY_ERROR = '11000';
+
+/**
+ * Counter used to assign the first-seen sequence to a project release.
+ */
+interface ReleaseSequenceCounter {
+  _id: string;
+  nextSequence: number;
+}
 
 /**
  * Worker to save releases
@@ -44,6 +52,11 @@ export default class ReleaseWorker extends Worker {
   private releasesCollection: Collection<ReleaseDBScheme>;
 
   /**
+   * Collection with per-project release sequence counters.
+   */
+  private releaseSequencesCollection: Collection<ReleaseSequenceCounter>;
+
+  /**
    * Mongo client for events database, used for transactions
    */
   private client: MongoClient = new MongoClient(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -56,6 +69,7 @@ export default class ReleaseWorker extends Worker {
     await this.db.connect();
     this.db.createGridFsBucket(this.dbCollectionName);
     this.releasesCollection = this.db.getConnection().collection(this.dbCollectionName);
+    this.releaseSequencesCollection = this.db.getConnection().collection<ReleaseSequenceCounter>('releaseSequenceCounters');
     await super.start();
   }
 
@@ -89,11 +103,19 @@ export default class ReleaseWorker extends Worker {
     this.logger.info(`saveRelease: save release for project: ${projectId}, release: ${payload.release}`);
     try {
       const commits = payload.commits;
+      const validCommits = !!commits && this.areCommitsValid(commits);
+      const hasFiles = Array.isArray(payload.files) && payload.files.length > 0;
+
+      if (!validCommits && !hasFiles) {
+        return;
+      }
+
+      await this.ensureRelease(projectId, payload.release);
 
       /**
        * Save commits
        */
-      if (commits && this.areCommitsValid(commits)) {
+      if (validCommits) {
         const commitsWithParsedDate: CommitData[] = commits.map(commit => ({
           ...commit,
           date: new Date(commit.date),
@@ -106,19 +128,63 @@ export default class ReleaseWorker extends Worker {
           $set: {
             commits: commitsWithParsedDate,
           },
-        }, {
-          upsert: true,
         });
       }
 
       // save source maps
-      if (payload.files) {
+      if (hasFiles) {
         await this.saveSourceMap(projectId, payload);
       }
     } catch (err) {
       this.logger.error(`Couldn't save the release due to: ${err}`);
 
       throw new DatabaseReadWriteError(err);
+    }
+  }
+
+  /**
+   * Ensure that a release gets one stable first-seen sequence.
+   *
+   * Sequence gaps are acceptable when concurrent requests race: only the
+   * request that wins the unique release insert owns the assigned sequence.
+   *
+   * @param projectId - project id to bind the corresponding release.
+   * @param release - release name
+   */
+  private async ensureRelease(projectId: string, release: string): Promise<void> {
+    const existingRelease = await this.releasesCollection.findOne({
+      projectId,
+      release,
+    });
+
+    if (existingRelease) {
+      return;
+    }
+
+    const counter = await this.releaseSequencesCollection.findOneAndUpdate({
+      _id: projectId,
+    }, {
+      $inc: {
+        nextSequence: 1,
+      },
+    } as unknown as UpdateQuery<ReleaseSequenceCounter>, {
+      upsert: true,
+      returnOriginal: false,
+    }) as FindAndModifyWriteOpResultObject<ReleaseSequenceCounter>;
+
+    const releaseSequence = counter.value.nextSequence;
+
+    try {
+      await this.releasesCollection.insertOne({
+        projectId,
+        release,
+        releaseSequence,
+        commits: [],
+      } as unknown as ReleaseDBScheme);
+    } catch (error) {
+      if (error.code?.toString() !== DB_DUPLICATE_KEY_ERROR) {
+        throw error;
+      }
     }
   }
 
@@ -220,7 +286,7 @@ export default class ReleaseWorker extends Worker {
             projectId: projectId,
             release: payload.release,
             files: savedFilesWithoutContent,
-          } as ReleaseDBScheme);
+          } as unknown as ReleaseDBScheme);
           this.logger.info('inserted new release');
         } catch (err) {
           if ((err as MongoError).code.toString() === DB_DUPLICATE_KEY_ERROR) {
