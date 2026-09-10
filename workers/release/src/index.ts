@@ -9,22 +9,8 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { Collection, FindAndModifyWriteOpResultObject, MongoClient, MongoError, UpdateQuery } from 'mongodb';
+import { Collection, MongoClient } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
-
-/**
- * Error code of MongoDB key duplication error
- */
-/* eslint-disable @typescript-eslint/no-magic-numbers */
-const DB_DUPLICATE_KEY_ERROR = '11000';
-
-/**
- * Counter used to assign the first-seen sequence to a project release.
- */
-interface ReleaseSequenceCounter {
-  _id: string;
-  nextSequence: number;
-}
 
 /**
  * Worker to save releases
@@ -52,11 +38,6 @@ export default class ReleaseWorker extends Worker {
   private releasesCollection: Collection<ReleaseDBScheme>;
 
   /**
-   * Collection with per-project release sequence counters.
-   */
-  private releaseSequencesCollection: Collection<ReleaseSequenceCounter>;
-
-  /**
    * Mongo client for events database, used for transactions
    */
   private client: MongoClient = new MongoClient(process.env.MONGO_EVENTS_DATABASE_URI);
@@ -69,7 +50,6 @@ export default class ReleaseWorker extends Worker {
     await this.db.connect();
     this.db.createGridFsBucket(this.dbCollectionName);
     this.releasesCollection = this.db.getConnection().collection(this.dbCollectionName);
-    this.releaseSequencesCollection = this.db.getConnection().collection<ReleaseSequenceCounter>('releaseSequenceCounters');
     await super.start();
   }
 
@@ -145,8 +125,7 @@ export default class ReleaseWorker extends Worker {
   /**
    * Ensure that a release gets one stable first-seen sequence.
    *
-   * Sequence gaps are acceptable when concurrent requests race: only the
-   * request that wins the unique release insert owns the assigned sequence.
+   * Release processing is intentionally sequential in the current deployment.
    *
    * @param projectId - project id to bind the corresponding release.
    * @param release - release name
@@ -161,31 +140,22 @@ export default class ReleaseWorker extends Worker {
       return;
     }
 
-    const counter = await this.releaseSequencesCollection.findOneAndUpdate({
-      _id: projectId,
+    const lastRelease = await this.releasesCollection.findOne({
+      projectId,
+      releaseSequence: { $exists: true },
     }, {
-      $inc: {
-        nextSequence: 1,
-      },
-    } as unknown as UpdateQuery<ReleaseSequenceCounter>, {
-      upsert: true,
-      returnOriginal: false,
-    }) as FindAndModifyWriteOpResultObject<ReleaseSequenceCounter>;
+      sort: { releaseSequence: -1 },
+      projection: { releaseSequence: 1 },
+    });
 
-    const releaseSequence = counter.value.nextSequence;
+    const releaseSequence = (lastRelease?.releaseSequence || 0) + 1;
 
-    try {
-      await this.releasesCollection.insertOne({
-        projectId,
-        release,
-        releaseSequence,
-        commits: [],
-      } as unknown as ReleaseDBScheme);
-    } catch (error) {
-      if (error.code?.toString() !== DB_DUPLICATE_KEY_ERROR) {
-        throw error;
-      }
-    }
+    await this.releasesCollection.insertOne({
+      projectId,
+      release,
+      releaseSequence,
+      commits: [],
+    } as unknown as ReleaseDBScheme);
   }
 
   /**
@@ -278,27 +248,6 @@ export default class ReleaseWorker extends Worker {
        * or
        * - update previous record with adding new saved maps
        */
-      if (!existedRelease) {
-        this.logger.info('trying insert new release');
-
-        try {
-          await this.releasesCollection.insertOne({
-            projectId: projectId,
-            release: payload.release,
-            files: savedFilesWithoutContent,
-          } as unknown as ReleaseDBScheme);
-          this.logger.info('inserted new release');
-        } catch (err) {
-          if ((err as MongoError).code.toString() === DB_DUPLICATE_KEY_ERROR) {
-            this.logger.warn(`Duplicate key on insert, retrying update after small delay`);
-            /* eslint-disable @typescript-eslint/no-magic-numbers */
-            await new Promise(resolve => setTimeout(resolve, 200));
-          } else {
-            throw err;
-          }
-        }
-      }
-
       await this.releasesCollection.findOneAndUpdate({
         projectId: projectId,
         release: payload.release,

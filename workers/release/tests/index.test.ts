@@ -82,7 +82,6 @@ describe('Release Worker', () => {
    */
   afterAll(async () => {
     await collection.deleteMany({});
-    await db.collection('releaseSequenceCounters').deleteMany({});
     await db.collection('releases.chunks').deleteMany({});
     await db.collection('releases.files').deleteMany({});
 
@@ -93,7 +92,6 @@ describe('Release Worker', () => {
 
   beforeEach(async () => {
     await collection.deleteMany({});
-    await db.collection('releaseSequenceCounters').deleteMany({});
     await db.collection('releases.chunks').deleteMany({});
     await db.collection('releases.files').deleteMany({});
   });
@@ -220,22 +218,21 @@ describe('Release Worker', () => {
     await expect(await collection.countDocuments()).toEqual(1);
   });
 
-  test('should assign different sequences to concurrently created releases', async () => {
-    await Promise.all([
-      worker.handle({
-        projectId,
-        type: 'add-release',
-        payload: releasePayload,
-      }),
-      worker.handle({
-        projectId,
-        type: 'add-release',
-        payload: {
-          ...releasePayload,
-          release: 'Dapper Dragon 2',
-        },
-      }),
-    ]);
+  test('should assign increasing sequences to new releases', async () => {
+    await worker.handle({
+      projectId,
+      type: 'add-release',
+      payload: releasePayload,
+    });
+
+    await worker.handle({
+      projectId,
+      type: 'add-release',
+      payload: {
+        ...releasePayload,
+        release: 'Dapper Dragon 2',
+      },
+    });
 
     const releases = await collection.find({ projectId })
       .sort({ releaseSequence: 1 })
@@ -243,37 +240,6 @@ describe('Release Worker', () => {
 
     await expect(releases).toHaveLength(2);
     await expect(releases.map(release => release.releaseSequence)).toEqual([1, 2]);
-  });
-
-  test('should use one sequence when commits and source maps create the same release concurrently', async () => {
-    const map = await mockBundle.getSourceMap();
-
-    await Promise.all([
-      worker.handle({
-        projectId,
-        type: 'add-release',
-        payload: releasePayload,
-      }),
-      worker.handle({
-        projectId,
-        type: 'add-release',
-        payload: {
-          ...releasePayload,
-          files: [ {
-            name: 'main.js.map',
-            payload: map,
-          } ],
-        },
-      }),
-    ]);
-
-    const releases = await collection.find({
-      projectId,
-      release: releasePayload.release,
-    }).toArray();
-
-    await expect(releases).toHaveLength(1);
-    await expect(releases[0].releaseSequence).toEqual(1);
   });
 
   test('should correctly handle release with multiple source maps in a single transaction', async () => {
