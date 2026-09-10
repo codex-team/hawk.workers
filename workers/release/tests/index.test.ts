@@ -69,10 +69,16 @@ describe('Release Worker', () => {
     });
     db = connection.db();
     collection = await db.collection<ReleaseDBScheme>('releases');
-    await collection.createIndex({ projectId: 1, release: 1 }, {
-      name: 'projectId_release_unique_idx',
-      unique: true,
-    });
+    await collection.createIndex(
+      {
+        projectId: 1,
+        release: 1,
+      },
+      {
+        name: 'projectId_release_unique_idx',
+        unique: true,
+      }
+    );
 
     await mockBundle.build();
   });
