@@ -331,7 +331,7 @@ describe('Limiter worker', () => {
       expect(reportMessage).toContain(`${project1.name} (id: <code>${project1._id}</code>)`);
     });
 
-    test('Should compute both counters and report the comparison to Telegram when dailyEvents counter is enabled', async () => {
+    test('Should count events via dailyEvents counters for every workspace', async () => {
       /**
        * Arrange
        */
@@ -349,7 +349,7 @@ describe('Limiter worker', () => {
       });
 
       /**
-       * Bucket for the day after the boundary day — counted only by the new algorithm
+       * Bucket for the day after the boundary day — counted via dailyEvents
        */
       await db.collection(`dailyEvents:${project._id.toString()}`).insertOne({
         groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
@@ -357,23 +357,17 @@ describe('Limiter worker', () => {
         count: 7,
       });
 
-      process.env.LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS = workspace._id.toString();
-
       /**
        * Act
        */
-      try {
-        const worker = new LimiterWorker();
+      const worker = new LimiterWorker();
 
-        await worker.start();
-        await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
-        await worker.finish();
-      } finally {
-        delete process.env.LIMITER_DAILY_EVENTS_COUNTER_WORKSPACE_IDS;
-      }
+      await worker.start();
+      await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+      await worker.finish();
 
       /**
-       * Assert — the new counter result is saved, both results are reported with timings
+       * Assert
        */
       const workspaceInDatabase = await workspaceCollection.findOne({
         _id: workspace._id,
@@ -381,13 +375,10 @@ describe('Limiter worker', () => {
 
       expect(workspaceInDatabase.billingPeriodEventsCount).toBe(12); // 5 boundary-day events + 7 from dailyEvents
 
-      const comparisonMessage = (telegram.sendMessage as jest.Mock).mock.calls
-        .map(call => call[0])
-        .find(message => message.includes('Old algo'));
-
-      expect(comparisonMessage).toContain(`Workspace <b>${workspace.name}</b> event count:`);
-      expect(comparisonMessage).toMatch(/Old algo: 5, took [\d.]+sec/);
-      expect(comparisonMessage).toMatch(/New algo: 12, took [\d.]+sec/);
+      /**
+       * Counters comparison is not reported to Telegram anymore
+       */
+      expect(telegram.sendMessage).not.toHaveBeenCalled();
     });
 
     test('Should not send a report when no projects are blocked or unblocked', async () => {
