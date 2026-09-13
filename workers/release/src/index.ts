@@ -125,9 +125,11 @@ export default class ReleaseWorker extends Worker {
   }
 
   /**
-   * Ensure that a release gets one stable first-seen sequence.
+   * Create a release once and assign its first-registration sequence.
    *
-   * Release processing is intentionally sequential in the current deployment.
+   * The sequence starts at 1 for each project and is based on the order in
+   * which new releases are received by this sequential worker. Repeated
+   * commits or source-map uploads keep the existing sequence.
    *
    * @param projectId - project id to bind the corresponding release.
    * @param release - release name
@@ -246,9 +248,7 @@ export default class ReleaseWorker extends Worker {
 
     try {
       /**
-       * - insert new record with saved maps
-       * or
-       * - update previous record with adding new saved maps
+       * Add new source maps to the release created by saveRelease.
        */
       await this.releasesCollection.findOneAndUpdate({
         projectId: projectId,
