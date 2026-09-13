@@ -9,8 +9,14 @@ import { Worker } from '../../../lib/worker';
 import { DatabaseReadWriteError, NonCriticalError } from '../../../lib/workerErrors';
 import * as pkg from '../package.json';
 import { ReleaseWorkerTask, ReleaseWorkerAddReleasePayload, CommitDataUnparsed } from '../types';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, MongoClient, MongoError } from 'mongodb';
 import { SourceMapDataExtended, SourceMapFileChunk, CommitData, SourcemapCollectedData, ReleaseDBScheme } from '@hawk.so/types';
+
+/**
+ * Error code of MongoDB key duplication error
+ */
+/* eslint-disable @typescript-eslint/no-magic-numbers */
+const DB_DUPLICATE_KEY_ERROR = '11000';
 
 /**
  * Worker to save releases
@@ -154,12 +160,22 @@ export default class ReleaseWorker extends Worker {
 
     const releaseSequence = (lastRelease?.releaseSequence || 0) + 1;
 
-    await this.releasesCollection.insertOne({
-      projectId,
-      release,
-      releaseSequence,
-      commits: [],
-    } as unknown as ReleaseDBScheme);
+    try {
+      await this.releasesCollection.insertOne({
+        projectId,
+        release,
+        releaseSequence,
+        commits: [],
+      } as unknown as ReleaseDBScheme);
+    } catch (error) {
+      if ((error as MongoError).code?.toString() === DB_DUPLICATE_KEY_ERROR) {
+        this.logger.debug(`Release ${release} for project ${projectId} was created by another worker`);
+
+        return;
+      }
+
+      throw error;
+    }
   }
 
   /**
