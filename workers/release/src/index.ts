@@ -87,10 +87,12 @@ export default class ReleaseWorker extends Worker {
       const hasFiles = Array.isArray(payload.files) && payload.files.length > 0;
 
       if (!validCommits && !hasFiles) {
+        this.logger.debug(`Skipping release ${payload.release} for project ${projectId}: no valid commits or source maps`);
+
         return;
       }
 
-      await this.ensureRelease(projectId, payload.release);
+      await this.createReleaseIfMissing(projectId, payload.release);
 
       /**
        * Save commits
@@ -130,7 +132,7 @@ export default class ReleaseWorker extends Worker {
    * @param projectId - project id to bind the corresponding release.
    * @param release - release name
    */
-  private async ensureRelease(projectId: string, release: string): Promise<void> {
+  private async createReleaseIfMissing(projectId: string, release: string): Promise<void> {
     const existingRelease = await this.releasesCollection.findOne({
       projectId,
       release,
