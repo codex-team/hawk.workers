@@ -138,6 +138,13 @@ describe('Limiter worker', () => {
       }
       await repetitionsCollection.insertMany(mockedEvents);
     }
+
+    /** as grouper does */
+    await db.collection(`dailyEvents:${parameters.project._id.toString()}`).insertOne({
+      groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+      groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE - 86400,
+      count: parameters.eventsToMock + (parameters.repetitionsToMock ?? 0),
+    });
   };
 
   beforeAll(async () => {

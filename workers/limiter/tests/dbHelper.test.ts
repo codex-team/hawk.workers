@@ -23,6 +23,9 @@ const BOUNDARY_DAY_TIMESTAMP = 1585756800;
  */
 const NEXT_MIDNIGHT_AFTER_LAST_CHARGE = 1585785600;
 
+/** 2020-04-01T00:00:00Z */
+const BOUNDARY_DAY_MIDNIGHT = NEXT_MIDNIGHT_AFTER_LAST_CHARGE - 86400;
+
 describe('DbHelper', () => {
   let connection: MongoClient;
   let db: Db;
@@ -130,6 +133,17 @@ describe('DbHelper', () => {
         mockedEvents.push(createEventMock());
       }
       await repetitionsCollection.insertMany(mockedEvents);
+    }
+
+    /** as grouper does */
+    const boundaryDayEventsCount = parameters.eventsToMock + (parameters.repetitionsToMock ?? 0);
+
+    if (boundaryDayEventsCount > 0) {
+      await dailyEventsCollection.insertOne({
+        groupHash: 'ade987831d0d0d167aeea685b49db164eb4e113fd027858eef7f69d049357f62',
+        groupingTimestamp: BOUNDARY_DAY_MIDNIGHT,
+        count: boundaryDayEventsCount,
+      });
     }
 
     if (parameters.dailyEventsToMock?.length > 0) {
@@ -711,7 +725,7 @@ describe('DbHelper', () => {
         dailyEventsToMock: [
           /** bucket of the boundary day itself must not be counted */
           {
-            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE - 86400,
+            groupingTimestamp: BOUNDARY_DAY_MIDNIGHT,
             count: 100,
           },
         ],
@@ -778,6 +792,55 @@ describe('DbHelper', () => {
        * Assert
        */
       expect(count).toBe(7);
+    });
+
+    test('Should not query raw collections when the boundary day bucket is empty', async () => {
+      /**
+       * Arrange
+       */
+      const workspace = createWorkspaceMock({
+        plan: mockedPlans.eventsLimit10,
+        billingPeriodEventsCount: 0,
+        lastChargeDate: new Date(),
+      });
+      const project = createProjectMock({ workspaceId: workspace._id });
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      await fillDatabaseWithMockedData({
+        workspace,
+        project,
+        eventsToMock: 0,
+        dailyEventsToMock: [
+          {
+            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
+            count: 4,
+          },
+        ],
+      });
+
+      const collectionSpy = jest.spyOn(db, 'collection');
+
+      /**
+       * Act
+       */
+      const count = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
+
+      /**
+       * Assert
+       */
+      expect(count).toBe(4);
+      expect(collectionSpy.mock.calls.map(([ name ]) => name)).toEqual([ `dailyEvents:${project._id.toString()}` ]);
+
+      collectionSpy.mockRestore();
+    });
+
+    test('Should return zero for a project without dailyEvents collection', async () => {
+      const project = createProjectMock({ workspaceId: new ObjectId() });
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      const count = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
+
+      expect(count).toBe(0);
     });
   });
 
