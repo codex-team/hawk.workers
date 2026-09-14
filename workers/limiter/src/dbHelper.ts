@@ -184,6 +184,7 @@ export class DbHelper {
    * increments `count` for originals and repetitions alike); only the
    * partial day containing `since` is counted from the raw collections,
    * since dailyEvents buckets have day granularity and lastChargeDate does not.
+   * Raw collections are skipped if that day's bucket is empty.
    *
    * @param project - project to check
    * @param since - timestamp of the time from which we count the events
@@ -195,35 +196,43 @@ export class DbHelper {
     try {
       const projectId = project._id.toString();
       const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
+      const boundaryDayTimestamp = since - (since % SEC_IN_DAY);
       const firstFullDayTimestamp = this.getFirstFullDailyEventsTimestamp(since);
 
-      const boundaryDayQuery = {
-        timestamp: {
-          $gt: since,
-          $lt: firstFullDayTimestamp,
-        },
-      };
-
-      const [boundaryDayCount, dailyCounters] = await Promise.all([
-        since < firstFullDayTimestamp
-          ? this.getRawEventsCountByProject(project, boundaryDayQuery)
-          : 0,
-        dailyEventsCollection
-          .aggregate<{ count: number }>([
-            { $match: { groupingTimestamp: { $gte: firstFullDayTimestamp } } },
-            {
-              $group: {
-                _id: null,
-                count: { $sum: '$count' },
+      const [ counters ] = await dailyEventsCollection
+        .aggregate<{ boundaryDay: number; fullDays: number }>([
+          { $match: { groupingTimestamp: { $gte: boundaryDayTimestamp } } },
+          {
+            $group: {
+              _id: null,
+              boundaryDay: {
+                $sum: { $cond: [ { $lt: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
+              },
+              fullDays: {
+                $sum: { $cond: [ { $gte: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
               },
             },
-          ])
-          .toArray(),
-      ]);
+          },
+        ], {
+          /** one table per project instead of racing all groupingTimestamp indexes */
+          hint: { $natural: 1 },
+        })
+        .toArray();
 
-      const fullDaysCount = dailyCounters.length > 0 ? dailyCounters[0].count : 0;
+      if (!counters) {
+        return 0;
+      }
 
-      return boundaryDayCount + fullDaysCount;
+      const boundaryDayCount = counters.boundaryDay > 0
+        ? await this.getRawEventsCountByProject(project, {
+          timestamp: {
+            $gt: since,
+            $lt: firstFullDayTimestamp,
+          },
+        })
+        : 0;
+
+      return boundaryDayCount + counters.fullDays;
     } catch (e) {
       HawkCatcher.send(e);
       throw new CriticalError(e);
