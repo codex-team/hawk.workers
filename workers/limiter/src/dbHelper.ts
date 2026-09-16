@@ -201,13 +201,16 @@ export class DbHelper {
 
       const [ counters ] = await dailyEventsCollection
         .aggregate<{ boundaryDay: number; fullDays: number }>([
+          /** buckets from the day containing `since` onwards */
           { $match: { groupingTimestamp: { $gte: boundaryDayTimestamp } } },
           {
             $group: {
               _id: null,
+              /** whole boundary day, only gates the raw count below */
               boundaryDay: {
                 $sum: { $cond: [ { $lt: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
               },
+              /** days after the boundary day */
               fullDays: {
                 $sum: { $cond: [ { $gte: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
               },
@@ -219,10 +222,12 @@ export class DbHelper {
         })
         .toArray();
 
+      /** no buckets in the billing period */
       if (!counters) {
         return 0;
       }
 
+      /** the bucket spans the whole day, so the part after `since` is counted from raw events */
       const boundaryDayCount = counters.boundaryDay > 0
         ? await this.getRawEventsCountByProject(project, {
           timestamp: {
