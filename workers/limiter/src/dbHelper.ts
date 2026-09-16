@@ -188,10 +188,12 @@ export class DbHelper {
    *
    * @param project - project to check
    * @param since - timestamp of the time from which we count the events
+   * @param alwaysCountBoundaryDay - count the boundary day from raw collections even if its bucket is empty
    */
   public async getEventsCountByProjectUsingDailyEvents(
     project: ProjectDBScheme,
-    since: number
+    since: number,
+    alwaysCountBoundaryDay = false
   ): Promise<number> {
     try {
       const projectId = project._id.toString();
@@ -223,12 +225,16 @@ export class DbHelper {
         .toArray();
 
       /** no buckets in the billing period */
-      if (!counters) {
+      if (!counters && !alwaysCountBoundaryDay) {
         return 0;
       }
 
+      const shouldCountBoundaryDay = alwaysCountBoundaryDay
+        ? since < firstFullDayTimestamp
+        : counters.boundaryDay > 0;
+
       /** the bucket spans the whole day, so the part after `since` is counted from raw events */
-      const boundaryDayCount = counters.boundaryDay > 0
+      const boundaryDayCount = shouldCountBoundaryDay
         ? await this.getRawEventsCountByProject(project, {
           timestamp: {
             $gt: since,
@@ -237,7 +243,7 @@ export class DbHelper {
         })
         : 0;
 
-      return boundaryDayCount + counters.fullDays;
+      return boundaryDayCount + (counters?.fullDays ?? 0);
     } catch (e) {
       HawkCatcher.send(e);
       throw new CriticalError(e);
@@ -250,12 +256,17 @@ export class DbHelper {
    *
    * @param projects - projects to calculate for
    * @param since - timestamp of the time from which we count the events
+   * @param alwaysCountBoundaryDay - count the boundary day from raw collections even if its bucket is empty
    */
-  public async getEventsCountByProjectsUsingDailyEvents(projects: ProjectDBScheme[], since: number): Promise<number> {
+  public async getEventsCountByProjectsUsingDailyEvents(
+    projects: ProjectDBScheme[],
+    since: number,
+    alwaysCountBoundaryDay = false
+  ): Promise<number> {
     const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
 
     return Promise.all(projects.map(
-      project => this.getEventsCountByProjectUsingDailyEvents(project, since)
+      project => this.getEventsCountByProjectUsingDailyEvents(project, since, alwaysCountBoundaryDay)
     ))
       .then(sum);
   }

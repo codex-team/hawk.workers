@@ -168,6 +168,7 @@ describe('Limiter worker', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    process.env.LIMITER_COUNTER_VALIDATION_RATE = '0';
     await redisClient.flushAll();
     await projectCollection.deleteMany({});
     await workspaceCollection.deleteMany({});
@@ -386,6 +387,87 @@ describe('Limiter worker', () => {
        * Counters comparison is not reported to Telegram anymore
        */
       expect(telegram.sendMessage).not.toHaveBeenCalled();
+    });
+
+    describe('counter validation', () => {
+      test('Should report workspaces counted lower than with the raw boundary day count', async () => {
+        /**
+         * Arrange
+         */
+        process.env.LIMITER_COUNTER_VALIDATION_RATE = '1';
+
+        const workspace = createWorkspaceMock({
+          plan: mockedPlans.eventsLimit10000,
+          billingPeriodEventsCount: 0,
+          lastChargeDate: LAST_CHARGE_DATE,
+        });
+        const project = createProjectMock({ workspaceId: workspace._id });
+
+        await fillDatabaseWithMockedData({
+          workspace,
+          project,
+          eventsToMock: 5,
+        });
+
+        /**
+         * Without a bucket the regular count skips boundary-day events
+         */
+        await db.collection(`dailyEvents:${project._id.toString()}`).deleteMany({});
+
+        /**
+         * Act
+         */
+        const worker = new LimiterWorker();
+
+        await worker.start();
+        await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+        await worker.finish();
+
+        /**
+         * Assert
+         */
+        expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
+
+        const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
+
+        expect(reportMessage).toContain('Checked 1 workspaces (1 projects)');
+        expect(reportMessage).toContain(`<code>${workspace._id}</code>): 0 instead of 5`);
+      });
+
+      test('Should report no undercount when counts match', async () => {
+        /**
+         * Arrange
+         */
+        process.env.LIMITER_COUNTER_VALIDATION_RATE = '1';
+
+        const workspace = createWorkspaceMock({
+          plan: mockedPlans.eventsLimit10000,
+          billingPeriodEventsCount: 0,
+          lastChargeDate: LAST_CHARGE_DATE,
+        });
+        const project = createProjectMock({ workspaceId: workspace._id });
+
+        await fillDatabaseWithMockedData({
+          workspace,
+          project,
+          eventsToMock: 5,
+        });
+
+        /**
+         * Act
+         */
+        const worker = new LimiterWorker();
+
+        await worker.start();
+        await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
+        await worker.finish();
+
+        /**
+         * Assert
+         */
+        expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
+        expect((telegram.sendMessage as jest.Mock).mock.calls[0][0]).toContain('Undercounted: none');
+      });
     });
 
     test('Should not send a report when no projects are blocked or unblocked', async () => {

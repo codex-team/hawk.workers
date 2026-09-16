@@ -842,6 +842,32 @@ describe('DbHelper', () => {
 
       expect(count).toBe(0);
     });
+
+    test('Should count raw boundary-day events without a bucket when alwaysCountBoundaryDay is set', async () => {
+      /**
+       * Arrange
+       */
+      const project = createProjectMock({ workspaceId: new ObjectId() });
+      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
+
+      await fillDatabaseWithMockedData({
+        project,
+        eventsToMock: 0,
+      });
+      await db.collection(`events:${project._id.toString()}`).insertMany([createEventMock(), createEventMock()]);
+
+      /**
+       * Act
+       */
+      const gatedCount = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
+      const referenceCount = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since, true);
+
+      /**
+       * Assert
+       */
+      expect(gatedCount).toBe(0);
+      expect(referenceCount).toBe(2);
+    });
   });
 
   describe('getEventsCountByProjectsUsingDailyEvents', () => {
