@@ -31,21 +31,6 @@ const NOTIFY_ABOUT_LIMIT = [
 ];
 
 /**
- * Share of workspaces recounted with raw boundary day if LIMITER_COUNTER_VALIDATION_RATE is not set
- */
-const DEFAULT_COUNTER_VALIDATION_RATE = 0.05;
-
-/**
- * Sampled comparison with the raw boundary day count
- */
-interface CounterValidation {
-  workspaces: number;
-  projects: number;
-  /** report lines for undercounted workspaces */
-  undercounted: string[];
-}
-
-/**
  * Worker for checking current total events count in workspaces and limits events receiving if workspace exceed the limit
  */
 export default class LimiterWorker extends Worker {
@@ -211,14 +196,6 @@ export default class LimiterWorker extends Worker {
 
     const updatedWorkspaces: WorkspaceWithTariffPlan[] = [];
 
-    /** share of workspaces recounted with raw boundary day, 0 disables */
-    const validationRate = Number(process.env.LIMITER_COUNTER_VALIDATION_RATE ?? DEFAULT_COUNTER_VALIDATION_RATE);
-    const validation: CounterValidation = {
-      workspaces: 0,
-      projects: 0,
-      undercounted: [],
-    };
-
     for await (const workspace of workspaces) {
       /**
        * If workspace is already blocked - do nothing
@@ -229,29 +206,9 @@ export default class LimiterWorker extends Worker {
 
       const workspaceProjects = await this.dbHelper.getProjects(workspace._id.toString());
 
-      /** before the regular count, so new events can't look like an undercount */
-      const referenceCount = workspace.lastChargeDate && Math.random() < validationRate
-        ? await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(
-          workspaceProjects,
-          Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC),
-          true
-        )
-        : null;
-
       const { shouldBeBlockedByQuota, updatedWorkspace, projectsToUpdate } = await this.prepareWorkspaceUsageUpdate(workspace, workspaceProjects);
 
       updatedWorkspaces.push(updatedWorkspace);
-
-      if (referenceCount !== null) {
-        validation.workspaces++;
-        validation.projects += workspaceProjects.length;
-
-        if (updatedWorkspace.billingPeriodEventsCount < referenceCount) {
-          validation.undercounted.push(
-            `• ${workspace.name} (id: <code>${workspace._id}</code>): ${updatedWorkspace.billingPeriodEventsCount} instead of ${referenceCount}`
-          );
-        }
-      }
 
       /**
        * If there are no projects to update - move on to next workspace
@@ -277,7 +234,6 @@ export default class LimiterWorker extends Worker {
     await this.dbHelper.updateWorkspacesEventsCountAndIsBlocked(updatedWorkspaces);
 
     this.sendRegularReport(message);
-    this.sendCounterValidationReport(validation);
   }
 
   /**
@@ -310,7 +266,7 @@ export default class LimiterWorker extends Worker {
 
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
-    const workspaceEventsCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    const workspaceEventsCount = await this.getWorkspaceEventsCount(workspace, projects, since);
 
     this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
 
@@ -370,6 +326,44 @@ export default class LimiterWorker extends Worker {
       updatedWorkspace,
       projectsToUpdate: projects,
     };
+  }
+
+  /**
+   * Returns workspace events count. For workspaces listed in LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS
+   * it also counts them the old way, with raw boundary day for every project, and reports both to Telegram
+   *
+   * @param workspace - workspace to count events for
+   * @param projects - workspace projects
+   * @param since - timestamp of the time from which we count the events
+   */
+  private async getWorkspaceEventsCount(
+    workspace: WorkspaceWithTariffPlan,
+    projects: ProjectDBScheme[],
+    since: number
+  ): Promise<number> {
+    const compareWorkspaceIds = (process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS || '').split(',').map(id => id.trim());
+
+    if (!compareWorkspaceIds.includes(workspace._id.toString())) {
+      return this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    }
+
+    /** old algo goes first, so events arriving in between can only raise the new count */
+    const oldAlgoStartedAt = Date.now();
+    const oldAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since, true);
+    const oldAlgoTook = (Date.now() - oldAlgoStartedAt) / MS_IN_SEC;
+
+    const newAlgoStartedAt = Date.now();
+    const newAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    const newAlgoTook = (Date.now() - newAlgoStartedAt) / MS_IN_SEC;
+
+    telegram.sendMessage(
+      `Workspace <b>${workspace.name}</b> event count:\n` +
+      `Old algo: ${oldAlgoCount}, took ${oldAlgoTook}sec\n` +
+      `New algo: ${newAlgoCount}, took ${newAlgoTook}sec`,
+      telegram.TelegramBotURLs.Limiter
+    );
+
+    return newAlgoCount;
   }
 
   // Old raw counter with the opt-in switch, kept in case we need to roll back
@@ -473,26 +467,6 @@ export default class LimiterWorker extends Worker {
     const message = this.formSingleWorkspaceMessage(workspace, projects, type);
 
     telegram.sendMessage(`${message}`, telegram.TelegramBotURLs.Limiter);
-  }
-
-  /**
-   * Sends counter validation result to Telegram
-   *
-   * @param validation - validation result of the regular check
-   */
-  private sendCounterValidationReport(validation: CounterValidation): void {
-    if (validation.workspaces === 0) {
-      return;
-    }
-
-    const undercounted = validation.undercounted.length > 0 ? `\n${validation.undercounted.join('\n')}` : ' none';
-
-    telegram.sendMessage(
-      `<b>[ Limiter / Validation ]</b>\n` +
-      `Checked ${validation.workspaces} workspaces (${validation.projects} projects)\n` +
-      `Undercounted:${undercounted}`,
-      telegram.TelegramBotURLs.Limiter
-    );
   }
 
   /**
