@@ -266,7 +266,7 @@ export default class LimiterWorker extends Worker {
 
     const since = Math.floor(new Date(workspace.lastChargeDate).getTime() / MS_IN_SEC);
 
-    const workspaceEventsCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    const workspaceEventsCount = await this.getWorkspaceEventsCount(workspace, projects, since);
 
     this.logger.info(`workspace ${workspace._id} events count since last charge date: ${workspaceEventsCount}`);
 
@@ -326,6 +326,42 @@ export default class LimiterWorker extends Worker {
       updatedWorkspace,
       projectsToUpdate: projects,
     };
+  }
+
+  /**
+   * Counts workspace events, comparing with the previous query for LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS
+   *
+   * @param workspace - workspace to count events for
+   * @param projects - workspace projects
+   * @param since - timestamp of the time from which we count the events
+   */
+  private async getWorkspaceEventsCount(
+    workspace: WorkspaceWithTariffPlan,
+    projects: ProjectDBScheme[],
+    since: number
+  ): Promise<number> {
+    const compareWorkspaceIds = (process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS || '').split(',').map(id => id.trim());
+
+    if (!compareWorkspaceIds.includes(workspace._id.toString())) {
+      return this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    }
+
+    const oldAlgoStartedAt = Date.now();
+    const oldAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEventsOld(projects, since);
+    const oldAlgoTook = (Date.now() - oldAlgoStartedAt) / MS_IN_SEC;
+
+    const newAlgoStartedAt = Date.now();
+    const newAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
+    const newAlgoTook = (Date.now() - newAlgoStartedAt) / MS_IN_SEC;
+
+    telegram.sendMessage(
+      `Workspace <b>${workspace.name}</b> event count:\n` +
+      `Old algo: ${oldAlgoCount}, took ${oldAlgoTook}sec\n` +
+      `New algo: ${newAlgoCount}, took ${newAlgoTook}sec`,
+      telegram.TelegramBotURLs.Limiter
+    );
+
+    return newAlgoCount;
   }
 
   // Old raw counter with the opt-in switch, kept in case we need to roll back
