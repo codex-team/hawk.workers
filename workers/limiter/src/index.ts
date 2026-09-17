@@ -329,8 +329,7 @@ export default class LimiterWorker extends Worker {
   }
 
   /**
-   * Returns workspace events count. For workspaces listed in LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS
-   * it also counts them the old way, with raw boundary day for every project, and reports both to Telegram
+   * Counts workspace events, comparing with the previous query for LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS
    *
    * @param workspace - workspace to count events for
    * @param projects - workspace projects
@@ -347,9 +346,8 @@ export default class LimiterWorker extends Worker {
       return this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since);
     }
 
-    /** old algo goes first, so events arriving in between can only raise the new count */
     const oldAlgoStartedAt = Date.now();
-    const oldAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEvents(projects, since, true);
+    const oldAlgoCount = await this.dbHelper.getEventsCountByProjectsUsingDailyEventsOld(projects, since);
     const oldAlgoTook = (Date.now() - oldAlgoStartedAt) / MS_IN_SEC;
 
     const newAlgoStartedAt = Date.now();

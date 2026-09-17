@@ -389,9 +389,6 @@ describe('Limiter worker', () => {
     });
 
     test('Should report old and new algo counts for workspaces listed for comparison', async () => {
-      /**
-       * Arrange
-       */
       const workspace = createWorkspaceMock({
         plan: mockedPlans.eventsLimit10000,
         billingPeriodEventsCount: 0,
@@ -405,16 +402,10 @@ describe('Limiter worker', () => {
         eventsToMock: 5,
       });
 
-      /**
-       * Without a bucket the new algo skips boundary-day events
-       */
       await db.collection(`dailyEvents:${project._id.toString()}`).deleteMany({});
 
       process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS = workspace._id.toString();
 
-      /**
-       * Act
-       */
       const worker = new LimiterWorker();
 
       try {
@@ -425,9 +416,6 @@ describe('Limiter worker', () => {
         delete process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS;
       }
 
-      /**
-       * Assert
-       */
       const workspaceInDatabase = await workspaceCollection.findOne({
         _id: workspace._id,
       });
