@@ -844,31 +844,6 @@ describe('DbHelper', () => {
     });
   });
 
-  describe('getEventsCountByProjectUsingDailyEventsOld', () => {
-    test('Should count raw boundary-day events even without a dailyEvents bucket', async () => {
-      const project = createProjectMock({ workspaceId: new ObjectId() });
-      const since = Math.floor(LAST_CHARGE_DATE.getTime() / MS_IN_SEC);
-
-      await fillDatabaseWithMockedData({
-        project,
-        eventsToMock: 0,
-        dailyEventsToMock: [
-          {
-            groupingTimestamp: NEXT_MIDNIGHT_AFTER_LAST_CHARGE,
-            count: 3,
-          },
-        ],
-      });
-      await db.collection(`events:${project._id.toString()}`).insertMany([createEventMock(), createEventMock()]);
-
-      const oldCount = await dbHelper.getEventsCountByProjectUsingDailyEventsOld(project, since);
-      const newCount = await dbHelper.getEventsCountByProjectUsingDailyEvents(project, since);
-
-      expect(oldCount).toBe(5);
-      expect(newCount).toBe(3);
-    });
-  });
-
   describe('getEventsCountByProjectsUsingDailyEvents', () => {
     test('Should count events, repetitions and dailyEvents for multiple projects', async () => {
       /**
