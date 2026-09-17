@@ -261,69 +261,6 @@ export class DbHelper {
   }
 
   /**
-   * Previous query, kept for rollout comparison
-   *
-   * @param project - project to check
-   * @param since - timestamp of the time from which we count the events
-   */
-  public async getEventsCountByProjectUsingDailyEventsOld(
-    project: ProjectDBScheme,
-    since: number
-  ): Promise<number> {
-    try {
-      const projectId = project._id.toString();
-      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
-      const firstFullDayTimestamp = this.getFirstFullDailyEventsTimestamp(since);
-
-      const boundaryDayQuery = {
-        timestamp: {
-          $gt: since,
-          $lt: firstFullDayTimestamp,
-        },
-      };
-
-      const [boundaryDayCount, dailyCounters] = await Promise.all([
-        since < firstFullDayTimestamp
-          ? this.getRawEventsCountByProject(project, boundaryDayQuery)
-          : 0,
-        dailyEventsCollection
-          .aggregate<{ count: number }>([
-            { $match: { groupingTimestamp: { $gte: firstFullDayTimestamp } } },
-            {
-              $group: {
-                _id: null,
-                count: { $sum: '$count' },
-              },
-            },
-          ])
-          .toArray(),
-      ]);
-
-      const fullDaysCount = dailyCounters.length > 0 ? dailyCounters[0].count : 0;
-
-      return boundaryDayCount + fullDaysCount;
-    } catch (e) {
-      HawkCatcher.send(e);
-      throw new CriticalError(e);
-    }
-  }
-
-  /**
-   * Previous query, kept for rollout comparison
-   *
-   * @param projects - projects to calculate for
-   * @param since - timestamp of the time from which we count the events
-   */
-  public async getEventsCountByProjectsUsingDailyEventsOld(projects: ProjectDBScheme[], since: number): Promise<number> {
-    const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
-
-    return Promise.all(projects.map(
-      project => this.getEventsCountByProjectUsingDailyEventsOld(project, since)
-    ))
-      .then(sum);
-  }
-
-  /**
    * Returns all projects from Database or projects of the specified workspace
    *
    * @param [workspaceId] - workspace ids to fetch projects that belongs that workspace
