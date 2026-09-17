@@ -184,11 +184,89 @@ export class DbHelper {
    * increments `count` for originals and repetitions alike); only the
    * partial day containing `since` is counted from the raw collections,
    * since dailyEvents buckets have day granularity and lastChargeDate does not.
+   * Raw collections are skipped if that day's bucket is empty.
    *
    * @param project - project to check
    * @param since - timestamp of the time from which we count the events
    */
   public async getEventsCountByProjectUsingDailyEvents(
+    project: ProjectDBScheme,
+    since: number
+  ): Promise<number> {
+    try {
+      const projectId = project._id.toString();
+      const dailyEventsCollection = this.eventsDbConnection.collection('dailyEvents:' + projectId);
+      const boundaryDayTimestamp = since - (since % SEC_IN_DAY);
+      const firstFullDayTimestamp = this.getFirstFullDailyEventsTimestamp(since);
+
+      const [ counters ] = await dailyEventsCollection
+        .aggregate<{ boundaryDay: number; fullDays: number }>([
+          /** buckets from the day containing `since` onwards */
+          { $match: { groupingTimestamp: { $gte: boundaryDayTimestamp } } },
+          {
+            $group: {
+              _id: null,
+              /** whole boundary day, only gates the raw count below */
+              boundaryDay: {
+                $sum: { $cond: [ { $lt: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
+              },
+              /** days after the boundary day */
+              fullDays: {
+                $sum: { $cond: [ { $gte: ['$groupingTimestamp', firstFullDayTimestamp] }, '$count', 0] },
+              },
+            },
+          },
+        ], {
+          /** one table per project instead of racing all groupingTimestamp indexes */
+          hint: { $natural: 1 },
+        })
+        .toArray();
+
+      /** no buckets in the billing period */
+      if (!counters) {
+        return 0;
+      }
+
+      /** the bucket spans the whole day, so the part after `since` is counted from raw events */
+      const boundaryDayCount = counters.boundaryDay > 0
+        ? await this.getRawEventsCountByProject(project, {
+          timestamp: {
+            $gt: since,
+            $lt: firstFullDayTimestamp,
+          },
+        })
+        : 0;
+
+      return boundaryDayCount + counters.fullDays;
+    } catch (e) {
+      HawkCatcher.send(e);
+      throw new CriticalError(e);
+    }
+  }
+
+  /**
+   * Calculates total events count for all provided projects since the specific date
+   * using dailyEvents counters for full days.
+   *
+   * @param projects - projects to calculate for
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProjectsUsingDailyEvents(projects: ProjectDBScheme[], since: number): Promise<number> {
+    const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
+
+    return Promise.all(projects.map(
+      project => this.getEventsCountByProjectUsingDailyEvents(project, since)
+    ))
+      .then(sum);
+  }
+
+  /**
+   * Previous query, kept for rollout comparison
+   *
+   * @param project - project to check
+   * @param since - timestamp of the time from which we count the events
+   */
+  public async getEventsCountByProjectUsingDailyEventsOld(
     project: ProjectDBScheme,
     since: number
   ): Promise<number> {
@@ -231,17 +309,16 @@ export class DbHelper {
   }
 
   /**
-   * Calculates total events count for all provided projects since the specific date
-   * using dailyEvents counters for full days.
+   * Previous query, kept for rollout comparison
    *
    * @param projects - projects to calculate for
    * @param since - timestamp of the time from which we count the events
    */
-  public async getEventsCountByProjectsUsingDailyEvents(projects: ProjectDBScheme[], since: number): Promise<number> {
+  public async getEventsCountByProjectsUsingDailyEventsOld(projects: ProjectDBScheme[], since: number): Promise<number> {
     const sum = (array: number[]): number => array.reduce((acc, val) => acc + val, 0);
 
     return Promise.all(projects.map(
-      project => this.getEventsCountByProjectUsingDailyEvents(project, since)
+      project => this.getEventsCountByProjectUsingDailyEventsOld(project, since)
     ))
       .then(sum);
   }
