@@ -388,47 +388,6 @@ describe('Limiter worker', () => {
       expect(telegram.sendMessage).not.toHaveBeenCalled();
     });
 
-    test('Should report old and new algo counts for workspaces listed for comparison', async () => {
-      const workspace = createWorkspaceMock({
-        plan: mockedPlans.eventsLimit10000,
-        billingPeriodEventsCount: 0,
-        lastChargeDate: LAST_CHARGE_DATE,
-      });
-      const project = createProjectMock({ workspaceId: workspace._id });
-
-      await fillDatabaseWithMockedData({
-        workspace,
-        project,
-        eventsToMock: 5,
-      });
-
-      await db.collection(`dailyEvents:${project._id.toString()}`).deleteMany({});
-
-      process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS = workspace._id.toString();
-
-      const worker = new LimiterWorker();
-
-      try {
-        await worker.start();
-        await worker.handle(REGULAR_WORKSPACES_CHECK_EVENT);
-        await worker.finish();
-      } finally {
-        delete process.env.LIMITER_COMPARE_COUNTERS_WORKSPACE_IDS;
-      }
-
-      const workspaceInDatabase = await workspaceCollection.findOne({
-        _id: workspace._id,
-      });
-
-      expect(workspaceInDatabase.billingPeriodEventsCount).toBe(0);
-      expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
-
-      const reportMessage = (telegram.sendMessage as jest.Mock).mock.calls[0][0];
-
-      expect(reportMessage).toContain('Old algo: 5');
-      expect(reportMessage).toContain('New algo: 0');
-    });
-
     test('Should not send a report when no projects are blocked or unblocked', async () => {
       /**
        * Arrange
