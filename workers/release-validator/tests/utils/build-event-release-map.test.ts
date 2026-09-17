@@ -1,0 +1,88 @@
+import { ObjectID } from 'mongodb';
+import { EventRecord, RepetitionRecord } from '../../src/types';
+import { buildEventReleaseMap } from '../../src/utils/build-event-release-map';
+
+/**
+ * Create an original event.
+ *
+ * @param groupHash - event group hash
+ * @param release - release in which the event first occurred
+ */
+function createEvent(groupHash: string, release?: string): EventRecord {
+  return {
+    _id: new ObjectID(),
+    groupHash,
+    payload: release ? { release } : {},
+  };
+}
+
+/**
+ * Create an event repetition.
+ *
+ * @param groupHash - event group hash
+ * @param release - release in which the event occurred
+ */
+function createRepetition(groupHash: string, release?: string): RepetitionRecord {
+  return {
+    groupHash,
+    release,
+  };
+}
+
+describe('buildEventReleaseMap', () => {
+  test('should build the release map from original events and repetitions', () => {
+    // Arrange
+    const events = [
+      createEvent('error-1', 'a'),
+      createEvent('error-2', 'a'),
+      createEvent('error-3', 'a'),
+    ];
+    const repetitions = [
+      createRepetition('error-1', 'b'),
+      createRepetition('error-1', 'c'),
+      createRepetition('error-2', 'b'),
+      createRepetition('error-3', 'b'),
+      createRepetition('error-3', 'c'),
+      createRepetition('error-3', 'd'),
+      createRepetition('error-3', 'e'),
+    ];
+
+    // Act
+    const result = buildEventReleaseMap(events, repetitions);
+
+    // Assert
+    expect(Array.from(result.entries()).map(([groupHash, releases]) => {
+      return [groupHash, Array.from(releases)];
+    })).toEqual([
+      ['error-1', ['a', 'b', 'c'] ],
+      ['error-2', ['a', 'b'] ],
+      ['error-3', ['a', 'b', 'c', 'd', 'e'] ],
+    ]);
+  });
+
+  test('should ignore duplicate releases and repetitions without matching events', () => {
+    // Arrange
+    const events = [
+      createEvent('error-1', 'a'),
+      createEvent('error-without-release'),
+    ];
+    const repetitions = [
+      createRepetition('error-1', 'a'),
+      createRepetition('error-1', 'b'),
+      createRepetition('error-1', 'b'),
+      createRepetition('error-1'),
+      createRepetition('unknown-error', 'c'),
+    ];
+
+    // Act
+    const result = buildEventReleaseMap(events, repetitions);
+
+    // Assert
+    expect(Array.from(result.entries()).map(([groupHash, releases]) => {
+      return [groupHash, Array.from(releases)];
+    })).toEqual([
+      ['error-1', ['a', 'b'] ],
+      ['error-without-release', [] ],
+    ]);
+  });
+});
