@@ -67,20 +67,11 @@ services:
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-notifier
 
-  hawk-worker-email:
+  hawk-worker-sender:
     image: "codexteamuser/hawk-workers:prod"
     network_mode: host
     env_file:
       - .env
-      - workers/email/.env
+      - workers/sender/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-email
-
-  hawk-worker-telegram:
-    image: "codexteamuser/hawk-workers:prod"
-    network_mode: host
-    env_file:
-      - .env
-      - workers/telegram/.env
-    restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-sender

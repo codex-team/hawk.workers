@@ -88,6 +88,11 @@ export abstract class Worker {
   private registryConnection: amqp.Connection;
 
   /**
+   * Connection to Registry owned by another module: not opened and not closed by the worker
+   */
+  private sharedRegistryConnection: amqp.Connection;
+
+  /**
    * Channel is a "transport-way" between Consumer and Registry inside the connection
    * One connection can has several channels.
    */
@@ -120,6 +125,16 @@ export abstract class Worker {
   // public getMetrics(): client.Counter<string>[] {
   //   return [ this.metricSuccessfullyProcessedMessages ];
   // }
+
+  /**
+   * Share an existing Registry connection instead of opening a new one.
+   * Call before start(); the worker still opens its own channel, but does not close the connection
+   *
+   * @param connection - connection to Registry to use
+   */
+  public useRegistryConnection(connection: amqp.Connection): void {
+    this.sharedRegistryConnection = connection;
+  }
 
   /**
    * Start consuming messages
@@ -214,11 +229,6 @@ export abstract class Worker {
    * Connect to RabbitMQ server
    */
   private async connect(): Promise<void> {
-    /**
-     * Connect to RabbitMQ
-     */
-    this.registryConnection = await amqp.connect(this.registryUrl);
-
     const errorHandler = (error: Error): void => {
       this.logger.error('Error in RabbitMQ has been occurred', error);
       HawkCatcher.send(error, {
@@ -231,7 +241,19 @@ export abstract class Worker {
       process.exit(1);
     };
 
-    this.registryConnection.on('error', errorHandler);
+    if (this.sharedRegistryConnection) {
+      /**
+       * Shared connection is opened and observed by its owner
+       */
+      this.registryConnection = this.sharedRegistryConnection;
+    } else {
+      /**
+       * Connect to RabbitMQ
+       */
+      this.registryConnection = await amqp.connect(this.registryUrl);
+
+      this.registryConnection.on('error', errorHandler);
+    }
 
     /**
      * Open channel inside the connection
@@ -397,7 +419,10 @@ export abstract class Worker {
       await this.channelWithRegistry.close();
     }
 
-    if (this.registryConnection) {
+    /**
+     * Shared connection is closed by its owner
+     */
+    if (this.registryConnection && !this.sharedRegistryConnection) {
       await this.registryConnection.close();
     }
 
