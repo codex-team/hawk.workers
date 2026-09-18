@@ -158,6 +158,7 @@ describe('GrouperWorker', () => {
     await eventsCollection.deleteMany({});
     await dailyEventsCollection.deleteMany({});
     await repetitionsCollection.deleteMany({});
+    await connection.db().collection('releases').deleteMany({ projectId: projectIdMock });
   });
 
   afterEach(async () => {
@@ -389,6 +390,106 @@ describe('GrouperWorker', () => {
       expect((await repetitionsCollection.find({
         groupHash: originalEvent.groupHash,
       }).toArray()).length).toBe(2);
+    });
+
+    test('Should save repetition release as a separate field', async () => {
+      await worker.handle(generateTask({ release: 'release-a' }));
+      await worker.handle(generateTask({ release: 'release-b' }));
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(savedRepetition.release).toBe('release-b');
+    });
+
+    test('Should not save repetition release when event has no release', async () => {
+      await worker.handle(generateTask());
+      await worker.handle(generateTask());
+
+      const savedRepetition = await repetitionsCollection.findOne({});
+
+      expect(savedRepetition.release).toBeUndefined();
+    });
+
+    test('Should mark a resolved event as regressed in a newer repetition release', async () => {
+      await connection.db().collection('releases').insertMany([
+        {
+          _id: mongodb.ObjectID.createFromTime(1),
+          projectId: projectIdMock,
+          release: 'release-b',
+        },
+        {
+          _id: mongodb.ObjectID.createFromTime(2),
+          projectId: projectIdMock,
+          release: 'release-c',
+        },
+      ]);
+      await worker.handle(generateTask({ release: 'release-a' }));
+      await eventsCollection.updateOne({}, {
+        $set: {
+          resolvedInRelease: 'release-b',
+        },
+      });
+
+      await worker.handle(generateTask({ release: 'release-c' }));
+
+      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
+    });
+
+    test('Should mark a resolved event as regressed in the resolved release', async () => {
+      await connection.db().collection('releases').insertOne({
+        _id: mongodb.ObjectID.createFromTime(1),
+        projectId: projectIdMock,
+        release: 'release-b',
+      });
+      await worker.handle(generateTask({ release: 'release-a' }));
+      await eventsCollection.updateOne({}, {
+        $set: {
+          resolvedInRelease: 'release-b',
+        },
+      });
+
+      await worker.handle(generateTask({ release: 'release-b' }));
+
+      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-b');
+    });
+
+    test('Should not mark regression in an older release', async () => {
+      await connection.db().collection('releases').insertMany([
+        {
+          _id: mongodb.ObjectID.createFromTime(1),
+          projectId: projectIdMock,
+          release: 'release-a',
+        },
+        {
+          _id: mongodb.ObjectID.createFromTime(2),
+          projectId: projectIdMock,
+          release: 'release-b',
+        },
+      ]);
+      await worker.handle(generateTask({ release: 'release-b' }));
+      await eventsCollection.updateOne({}, {
+        $set: {
+          resolvedInRelease: 'release-b',
+        },
+      });
+
+      await worker.handle(generateTask({ release: 'release-a' }));
+
+      expect((await eventsCollection.findOne({})).regressionInRelease).toBeUndefined();
+    });
+
+    test('Should not overwrite the first regression release', async () => {
+      await worker.handle(generateTask({ release: 'release-a' }));
+      await eventsCollection.updateOne({}, {
+        $set: {
+          resolvedInRelease: 'release-b',
+          regressionInRelease: 'release-c',
+        },
+      });
+
+      await worker.handle(generateTask({ release: 'release-d' }));
+
+      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
     });
 
     test('Should stringify delta', async () => {

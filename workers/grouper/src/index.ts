@@ -24,6 +24,7 @@ import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
 import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
 import { grouperDiagnosticsConfig, grouperMemoryConfig } from './metrics/config';
+import { markRegression } from './mark-regression';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -343,9 +344,30 @@ export default class GrouperWorker extends Worker {
         timestamp: task.timestamp,
       } as RepetitionDBScheme;
 
+      if (task.payload.release) {
+        newRepetition.release = task.payload.release;
+      }
+
       repetitionId = await session.measureStep('saveRepetition', () => {
         return this.saveRepetition(task.projectId, newRepetition);
       });
+
+      if (task.payload.release && existedEvent.resolvedInRelease && !existedEvent.regressionInRelease) {
+        try {
+          await markRegression(
+            this.eventsDb.getConnection(),
+            task.projectId,
+            uniqueEventHash,
+            task.payload.release,
+            existedEvent.resolvedInRelease
+          );
+        } catch (error) {
+          this.logger.error(
+            `[markRegression] project=${task.projectId} groupHash=${uniqueEventHash} release=${task.payload.release}`,
+            error
+          );
+        }
+      }
 
       /**
        * Clear the large event payload references to allow garbage collection
