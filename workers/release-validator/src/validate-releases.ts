@@ -78,6 +78,16 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
     $or: [
       { resolvedInRelease: { $exists: false } },
       { resolvedInRelease: null },
+      {
+        resolvedInRelease: {
+          $type: 'string',
+          $ne: '',
+        },
+        regressionInRelease: {
+          $type: 'string',
+          $ne: '',
+        },
+      },
     ],
   }).toArray();
   const eventGroupHashes = events.map(event => event.groupHash);
@@ -91,10 +101,27 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
   const eventReleases = buildEventReleaseMap(events, repetitions);
 
   for (const event of events) {
-    const originalReleaseName = event.payload.release;
-    const originalRelease = releasesByName.get(originalReleaseName);
+    const originalRelease = releasesByName.get(event.payload.release);
+    let lastOccurrenceRelease = originalRelease;
 
-    if (!originalRelease) {
+    if (event.resolvedInRelease && event.regressionInRelease) {
+      const resolvedRelease = releasesByName.get(event.resolvedInRelease);
+      const regressionRelease = releasesByName.get(event.regressionInRelease);
+
+      if (!resolvedRelease || !regressionRelease) {
+        continue;
+      }
+
+      const isCurrentlyRegressed = regressionRelease._id.toHexString() >= resolvedRelease._id.toHexString();
+
+      if (!isCurrentlyRegressed) {
+        continue;
+      }
+
+      lastOccurrenceRelease = regressionRelease;
+    }
+
+    if (!lastOccurrenceRelease) {
       continue;
     }
 
@@ -102,22 +129,31 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
 
     for (const release of releasesToCheck) {
       const releaseId = release._id.toHexString();
-      const isNewerThanOriginal = releaseId > originalRelease._id.toHexString();
+      const isNewerThanLastOccurrence = releaseId > lastOccurrenceRelease._id.toHexString();
       const occurredInRelease = releasesWithEvent.has(release.release);
       const occurredInNewerRelease = allProjectReleases.some(projectRelease => {
         return projectRelease._id.toHexString() > releaseId && releasesWithEvent.has(projectRelease.release);
       });
 
-      if (!isNewerThanOriginal || occurredInRelease || occurredInNewerRelease) {
+      if (!isNewerThanLastOccurrence || occurredInRelease || occurredInNewerRelease) {
         continue;
       }
 
+      const eventState = event.regressionInRelease
+        ? {
+          resolvedInRelease: event.resolvedInRelease,
+          regressionInRelease: event.regressionInRelease,
+        }
+        : {
+          $or: [
+            { resolvedInRelease: { $exists: false } },
+            { resolvedInRelease: null },
+          ],
+        };
+
       await eventsCollection.updateOne({
         _id: event._id,
-        $or: [
-          { resolvedInRelease: { $exists: false } },
-          { resolvedInRelease: null },
-        ],
+        ...eventState,
       }, {
         $set: {
           resolvedInRelease: release.release,

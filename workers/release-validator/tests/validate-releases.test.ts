@@ -290,6 +290,44 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-11' })).resolvedInRelease).toBe('b');
   });
 
+  test('should resolve an event again after its regression stops occurring', async () => {
+    await releases.insertMany([
+      createRelease('a', 120, true),
+      createRelease('b', 96, true),
+      createRelease('c', 72, true),
+      createRelease('d', 48),
+    ]);
+    const event = createEvent('error-cycle', 'a', 'b');
+
+    event.regressionInRelease = 'c';
+    await events.insertOne(event);
+    await repetitions.insertOne(createRepetition('error-cycle', 'c'));
+
+    await validateReleases(db, NOW);
+
+    const updatedEvent = await events.findOne({ groupHash: 'error-cycle' });
+
+    expect(updatedEvent.resolvedInRelease).toBe('d');
+    expect(updatedEvent.regressionInRelease).toBe('c');
+  });
+
+  test('should not resolve an event again before a release newer than its regression', async () => {
+    await releases.insertMany([
+      createRelease('a', 96, true),
+      createRelease('b', 72, true),
+      createRelease('c', 48),
+    ]);
+    const event = createEvent('error-active-regression', 'a', 'b');
+
+    event.regressionInRelease = 'c';
+    await events.insertOne(event);
+    await repetitions.insertOne(createRepetition('error-active-regression', 'c'));
+
+    await validateReleases(db, NOW);
+
+    expect((await events.findOne({ groupHash: 'error-active-regression' })).resolvedInRelease).toBe('b');
+  });
+
   test('should not select a release older than 30 days as a candidate', async () => {
     await releases.insertMany([
       createRelease('a', 960, true),

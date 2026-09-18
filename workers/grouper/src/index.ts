@@ -352,14 +352,15 @@ export default class GrouperWorker extends Worker {
         return this.saveRepetition(task.projectId, newRepetition);
       });
 
-      if (task.payload.release && existedEvent.resolvedInRelease && !existedEvent.regressionInRelease) {
+      if (task.payload.release && existedEvent.resolvedInRelease) {
         try {
           await markRegression(
             this.eventsDb.getConnection(),
             task.projectId,
             uniqueEventHash,
             task.payload.release,
-            existedEvent.resolvedInRelease
+            existedEvent.resolvedInRelease,
+            existedEvent.regressionInRelease
           );
         } catch (error) {
           this.logger.error(
