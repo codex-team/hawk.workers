@@ -1,6 +1,6 @@
 import { Db, ObjectID } from 'mongodb';
+import type { GroupedEventDBScheme, ReleaseDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
-import { EventRecord, ReleaseRecord, RepetitionRecord } from './types';
 import { buildEventReleaseMap } from './utils/build-event-release-map';
 import { groupReleasesByProject } from './utils/group-releases-by-project';
 
@@ -14,12 +14,12 @@ const RELEASE_MAX_AGE_SECONDS = RELEASE_MAX_AGE_DAYS * RELEASE_OBSERVATION_PERIO
  * @param db - events database connection
  * @param now - current time
  */
-async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseRecord[]> {
+async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]> {
   const nowSeconds = Math.floor(now.getTime() / MS_IN_SEC);
   const oldestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_MAX_AGE_SECONDS);
   const newestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_OBSERVATION_PERIOD_SECONDS);
 
-  return db.collection<ReleaseRecord>('releases')
+  return db.collection<ReleaseDBScheme>('releases')
     .find({
       _id: {
         $gte: oldestReleaseId,
@@ -46,10 +46,10 @@ async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseRecord[]> 
  * @param projectId - project identifier
  * @param releasesToCheck - ready releases ordered from oldest to newest
  */
-async function validateProject(db: Db, projectId: string, releasesToCheck: ReleaseRecord[]): Promise<void> {
-  const releasesCollection = db.collection<ReleaseRecord>('releases');
-  const eventsCollection = db.collection<EventRecord>(`events:${projectId}`);
-  const repetitionsCollection = db.collection<RepetitionRecord>(`repetitions:${projectId}`);
+async function validateProject(db: Db, projectId: string, releasesToCheck: ReleaseDBScheme[]): Promise<void> {
+  const releasesCollection = db.collection<ReleaseDBScheme>('releases');
+  const eventsCollection = db.collection<GroupedEventDBScheme>(`events:${projectId}`);
+  const repetitionsCollection = db.collection<RepetitionDBScheme>(`repetitions:${projectId}`);
   const allProjectReleases = await releasesCollection
     .find({
       projectId,
@@ -60,7 +60,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
     })
     .sort({ _id: 1 })
     .toArray();
-  const releasesByName = new Map<string, ReleaseRecord>();
+  const releasesByName = new Map<string, ReleaseDBScheme>();
 
   for (const release of allProjectReleases) {
     releasesByName.set(release.release, release);

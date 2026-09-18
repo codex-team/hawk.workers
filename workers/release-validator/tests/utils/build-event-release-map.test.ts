@@ -1,5 +1,5 @@
 import { ObjectID } from 'mongodb';
-import { EventRecord, RepetitionRecord } from '../../src/types';
+import type { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { buildEventReleaseMap } from '../../src/utils/build-event-release-map';
 
 /**
@@ -8,11 +8,19 @@ import { buildEventReleaseMap } from '../../src/utils/build-event-release-map';
  * @param groupHash - event group hash
  * @param release - release in which the event first occurred
  */
-function createEvent(groupHash: string, release?: string): EventRecord {
+function createEvent(groupHash: string, release?: string): GroupedEventDBScheme {
   return {
     _id: new ObjectID(),
     groupHash,
-    payload: release ? { release } : {},
+    payload: {
+      title: groupHash,
+      ...(release ? { release } : {}),
+    },
+    totalCount: 1,
+    catcherType: 'errors/default',
+    usersAffected: 0,
+    visitedBy: [],
+    timestamp: 1,
   };
 }
 
@@ -22,10 +30,11 @@ function createEvent(groupHash: string, release?: string): EventRecord {
  * @param groupHash - event group hash
  * @param release - release in which the event occurred
  */
-function createRepetition(groupHash: string, release?: string): RepetitionRecord {
+function createRepetition(groupHash: string, release?: string): RepetitionDBScheme {
   return {
     groupHash,
-    release,
+    timestamp: 1,
+    ...(release ? { release } : {}),
   };
 }
 

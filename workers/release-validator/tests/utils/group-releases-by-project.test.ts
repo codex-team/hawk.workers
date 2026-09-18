@@ -1,5 +1,5 @@
 import { ObjectID } from 'mongodb';
-import { ReleaseRecord } from '../../src/types';
+import type { ReleaseDBScheme } from '@hawk.so/types';
 import { groupReleasesByProject } from '../../src/utils/group-releases-by-project';
 
 /**
@@ -9,11 +9,12 @@ import { groupReleasesByProject } from '../../src/utils/group-releases-by-projec
  * @param release - release name
  * @param createdAtSeconds - release creation time
  */
-function createRelease(projectId: string, release: string, createdAtSeconds: number): ReleaseRecord {
+function createRelease(projectId: string, release: string, createdAtSeconds: number): ReleaseDBScheme {
   return {
     _id: ObjectID.createFromTime(createdAtSeconds),
     projectId,
     release,
+    commits: [],
   };
 }
 
@@ -42,7 +43,7 @@ describe('groupReleasesByProject', () => {
 
   test('should return an empty map for an empty release list', () => {
     // Arrange
-    const releases: ReleaseRecord[] = [];
+    const releases: ReleaseDBScheme[] = [];
 
     // Act
     const result = groupReleasesByProject(releases);

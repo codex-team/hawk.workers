@@ -1,4 +1,4 @@
-import { EventRecord, RepetitionRecord } from '../types';
+import type { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 
 /**
  * Build a map of releases in which each event occurred.
@@ -7,8 +7,8 @@ import { EventRecord, RepetitionRecord } from '../types';
  * @param repetitions - event repetitions
  */
 export function buildEventReleaseMap(
-  events: EventRecord[],
-  repetitions: RepetitionRecord[]
+  events: GroupedEventDBScheme[],
+  repetitions: RepetitionDBScheme[]
 ): Map<string, Set<string>> {
   const releasesByGroupHash = new Map<string, Set<string>>();
 

@@ -1,7 +1,7 @@
 import '../../../env-test';
 import { Collection, Db, MongoClient, ObjectID } from 'mongodb';
+import type { GroupedEventDBScheme, ReleaseDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { validateReleases } from '../src/validate-releases';
-import { EventRecord, ReleaseRecord, RepetitionRecord } from '../src/types';
 
 const PROJECT_ID = 'release-validator-project';
 const HOUR_IN_SECONDS = 60 * 60;
@@ -24,11 +24,12 @@ function releaseId(hoursBeforeNow: number): ObjectID {
  * @param hoursBeforeNow - release age in hours
  * @param fixChecked - whether the release has already been checked
  */
-function createRelease(release: string, hoursBeforeNow: number, fixChecked = false): ReleaseRecord {
+function createRelease(release: string, hoursBeforeNow: number, fixChecked = false): ReleaseDBScheme {
   return {
     _id: releaseId(hoursBeforeNow),
     projectId: PROJECT_ID,
     release,
+    commits: [],
     fixChecked,
   };
 }
@@ -40,11 +41,19 @@ function createRelease(release: string, hoursBeforeNow: number, fixChecked = fal
  * @param release - release in which the event first occurred
  * @param resolvedInRelease - existing resolved release
  */
-function createEvent(groupHash: string, release: string, resolvedInRelease?: string): EventRecord {
-  const event: EventRecord = {
+function createEvent(groupHash: string, release: string, resolvedInRelease?: string): GroupedEventDBScheme {
+  const event: GroupedEventDBScheme = {
     _id: new ObjectID(),
     groupHash,
-    payload: { release },
+    payload: {
+      title: groupHash,
+      release,
+    },
+    totalCount: 1,
+    catcherType: 'errors/default',
+    usersAffected: 0,
+    visitedBy: [],
+    timestamp: NOW_SECONDS,
   };
 
   if (resolvedInRelease !== undefined) {
@@ -60,19 +69,20 @@ function createEvent(groupHash: string, release: string, resolvedInRelease?: str
  * @param groupHash - event group hash
  * @param release - release in which the event occurred
  */
-function createRepetition(groupHash: string, release: string): RepetitionRecord {
+function createRepetition(groupHash: string, release: string): RepetitionDBScheme {
   return {
     groupHash,
     release,
+    timestamp: NOW_SECONDS,
   };
 }
 
 describe('validateReleases', () => {
   let connection: MongoClient;
   let db: Db;
-  let releases: Collection<ReleaseRecord>;
-  let events: Collection<EventRecord>;
-  let repetitions: Collection<RepetitionRecord>;
+  let releases: Collection<ReleaseDBScheme>;
+  let events: Collection<GroupedEventDBScheme>;
+  let repetitions: Collection<RepetitionDBScheme>;
 
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_EVENTS_DATABASE_URI, {
@@ -80,9 +90,9 @@ describe('validateReleases', () => {
       useUnifiedTopology: true,
     });
     db = connection.db();
-    releases = db.collection<ReleaseRecord>('releases');
-    events = db.collection<EventRecord>(`events:${PROJECT_ID}`);
-    repetitions = db.collection<RepetitionRecord>(`repetitions:${PROJECT_ID}`);
+    releases = db.collection<ReleaseDBScheme>('releases');
+    events = db.collection<GroupedEventDBScheme>(`events:${PROJECT_ID}`);
+    repetitions = db.collection<RepetitionDBScheme>(`repetitions:${PROJECT_ID}`);
   });
 
   beforeEach(async () => {
@@ -211,6 +221,7 @@ describe('validateReleases', () => {
         _id: releaseId(72),
         projectId: PROJECT_ID,
         release: 123 as unknown as string,
+        commits: [],
       },
       createRelease('d', 48),
     ]);
@@ -232,7 +243,14 @@ describe('validateReleases', () => {
       {
         _id: new ObjectID(),
         groupHash: 'broken-event',
-        payload: {},
+        payload: {
+          title: 'broken-event',
+        },
+        totalCount: 1,
+        catcherType: 'errors/default',
+        usersAffected: 0,
+        visitedBy: [],
+        timestamp: NOW_SECONDS,
       },
       createEvent('valid-event', 'a'),
     ]);
@@ -251,6 +269,7 @@ describe('validateReleases', () => {
     await events.insertOne(createEvent('error-10', 'a'));
     await repetitions.insertOne({
       groupHash: 'error-10',
+      timestamp: NOW_SECONDS,
     });
 
     await expect(validateReleases(db, NOW)).resolves.toBeUndefined();

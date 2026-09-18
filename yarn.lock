@@ -402,10 +402,10 @@
   dependencies:
     "@types/mongodb" "^3.5.34"
 
-"@hawk.so/types@^0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@hawk.so/types/-/types-0.8.0.tgz#4d682f0c8df1e857d08a2af1a5ecb0ec8a5fcbcd"
-  integrity sha512-nfpu40G6Gj7woGktAronNAXfTA8k940R5gUqk2NIpNH9hb8oRB/HJRselRdeVxTnBb+3XT7TBC52TviaEis+0w==
+"@hawk.so/types@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@hawk.so/types/-/types-0.9.0.tgz#19b68065e9bafa0f4ee14f22a71cbb946f502cbc"
+  integrity sha512-zY9yw83Dzw3RcbTtMR9AKj8yNEPwD1sZZCeLlw5onZr1+GdjfnR1AhLvoPeZXBbRPRLx3MzyeuM85lAl0do+DA==
   dependencies:
     bson "^7.0.0"
 
