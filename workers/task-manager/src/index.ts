@@ -6,9 +6,9 @@ import * as pkg from '../package.json';
 import type { TaskManagerWorkerTask } from '../types/task-manager-worker-task';
 import type {
   ProjectDBScheme,
-  GroupedEventDBScheme,
-  ProjectTaskManagerConfig
+  GroupedEventDBScheme
 } from '@hawk.so/types';
+import type { ProjectTaskManagerConfig } from '../types/project-task-manager-config';
 import type { TaskManagerItem } from '@hawk.so/types/src/base/event/taskManagerItem';
 import HawkCatcher from '@hawk.so/nodejs';
 import { decodeUnsafeFields } from '../../../lib/utils/unsafeFields';

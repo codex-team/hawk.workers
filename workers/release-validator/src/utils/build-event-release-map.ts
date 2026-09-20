@@ -1,7 +1,8 @@
 import type { GroupedEventDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 
 /**
- * Build a map of releases in which each event occurred.
+ * Build a lookup set of releases in which each event occurred.
+ * Release ordering is handled separately by the validation flow.
  *
  * @param events - original events
  * @param repetitions - event repetitions
