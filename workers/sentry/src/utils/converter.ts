@@ -1,5 +1,5 @@
-import { BacktraceFrame, DefaultAddons, EventContext, EventData, Json, SentryAddons } from '@hawk.so/types';
-import { Event as SentryEvent } from '@sentry/core';
+import { BacktraceFrame, Breadcrumb, DefaultAddons, EventContext, EventData, Json, JsonNode, SentryAddons } from '@hawk.so/types';
+import { Breadcrumb as SentryBreadcrumb, Event as SentryEvent } from '@sentry/core';
 
 /**
  * Flattens a nested object into an array of strings using dot notation
@@ -209,4 +209,102 @@ export function composeUserData(eventPayload: SentryEvent): EventData<DefaultAdd
   }
 
   return undefined;
+}
+
+/**
+ * Sentry breadcrumb types mapped to the types Hawk renders.
+ * Types missing here are passed as is and displayed as 'default'.
+ *
+ * @see https://develop.sentry.dev/sdk/data-model/event-payloads/breadcrumbs/#breadcrumb-types
+ */
+const SENTRY_TO_HAWK_BREADCRUMB_TYPES: Record<string, string> = {
+  default: 'default',
+  debug: 'default',
+  info: 'default',
+  http: 'request',
+  query: 'request',
+  navigation: 'navigation',
+  ui: 'ui',
+  user: 'ui',
+  error: 'error',
+  transaction: 'logic',
+};
+
+/**
+ * Converts a Sentry timestamp to Unix milliseconds used by Hawk breadcrumbs.
+ * Sentry sends either Unix seconds (with a fraction) or an RFC 3339 string.
+ *
+ * @param timestamp - Sentry timestamp
+ */
+function toMilliseconds(timestamp: unknown): number | undefined {
+  const msInSecond = 1000;
+
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+    return Math.round(timestamp * msInSecond);
+  }
+
+  if (typeof timestamp === 'string') {
+    const parsed = Date.parse(timestamp);
+
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+
+  return undefined;
+}
+
+/**
+ * Compose breadcrumbs from Sentry event payload.
+ * SDKs send them either as an array or wrapped into { values: [...] } (Python, PHP).
+ * A breadcrumb without its own timestamp gets the event timestamp.
+ *
+ * @param eventPayload - Sentry event payload
+ */
+export function composeBreadcrumbs(eventPayload: SentryEvent): Breadcrumb[] | undefined {
+  const raw: unknown = eventPayload.breadcrumbs;
+  const items: unknown = Array.isArray(raw) ? raw : (raw as { values?: unknown } | undefined)?.values;
+
+  if (!Array.isArray(items)) {
+    return undefined;
+  }
+
+  const eventTimestamp = toMilliseconds(eventPayload.timestamp);
+  const breadcrumbs: Breadcrumb[] = [];
+
+  (items as SentryBreadcrumb[]).forEach((item) => {
+    if (typeof item !== 'object' || item === null) {
+      return;
+    }
+
+    const timestamp = toMilliseconds(item.timestamp) ?? eventTimestamp;
+
+    if (timestamp === undefined) {
+      return;
+    }
+
+    const breadcrumb: Breadcrumb = { timestamp };
+
+    if (typeof item.type === 'string') {
+      breadcrumb.type = SENTRY_TO_HAWK_BREADCRUMB_TYPES[item.type] ?? item.type;
+    }
+
+    if (typeof item.category === 'string') {
+      breadcrumb.category = item.category;
+    }
+
+    if (typeof item.message === 'string') {
+      breadcrumb.message = item.message;
+    }
+
+    if (typeof item.level === 'string') {
+      breadcrumb.level = item.level;
+    }
+
+    if (typeof item.data === 'object' && item.data !== null && !Array.isArray(item.data)) {
+      breadcrumb.data = item.data as Record<string, JsonNode>;
+    }
+
+    breadcrumbs.push(breadcrumb);
+  });
+
+  return breadcrumbs.length > 0 ? breadcrumbs : undefined;
 }
