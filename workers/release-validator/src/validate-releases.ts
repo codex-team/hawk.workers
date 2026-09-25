@@ -126,8 +126,9 @@ async function validateEventsBatch(
     let lastOccurrenceRelease = originalRelease;
 
     /**
-     * For a regressed event, continue validation from the regression release
-     * instead of its original release. This enables repeated resolve cycles.
+     * An event can be resolved, reappear in a later release, and then stop
+     * occurring again. In that case, search for the next resolving release
+     * after the regression rather than after the event's original occurrence.
      */
     if (event.resolvedInRelease && event.regressionInRelease) {
       const resolvedRelease = releasesByName.get(event.resolvedInRelease);
@@ -177,13 +178,21 @@ async function validateEventsBatch(
         return projectRelease._id.toHexString() > releaseId && releasesWithEvent.has(projectRelease.release);
       });
 
+      /**
+       * A candidate resolves the event only if it was deployed after the latest
+       * occurrence and the event appears neither in that candidate nor in any
+       * newer release. Otherwise, continue with the next candidate.
+       */
       if (!isNewerThanLastOccurrence || occurredInRelease || occurredInNewerRelease) {
         continue;
       }
 
       /**
-       * Keep the state transition atomic. A concurrent Grouper update must make
-       * this conditional update miss instead of overwriting newer state.
+       * Resolve only the state that was evaluated in this batch: an unresolved
+       * event must still be unresolved, while a regressed event must retain the
+       * same resolution and regression releases. Including that state in the
+       * update also makes the transition atomic, so a concurrent Grouper update
+       * cannot be overwritten.
        */
       const eventState = event.regressionInRelease
         ? {
