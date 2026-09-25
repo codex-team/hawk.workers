@@ -154,7 +154,9 @@ class WorkerRunner {
 
           utils.sendReport(worker.constructor.name + ' failed to start');
 
-          await this.stopWorker(worker);
+          await this.finishAll();
+
+          process.exit(1);
         }
       })
     );
