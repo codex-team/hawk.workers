@@ -1,13 +1,10 @@
-import { Db, ObjectID } from 'mongodb';
+import { Db } from 'mongodb';
+import type { ReleaseDBScheme } from '@hawk.so/types';
 
-interface ReleaseRecord {
-  _id: ObjectID;
-  projectId: string;
-  release: string;
-}
+type ReleaseRecordPart = Pick<ReleaseDBScheme, '_id' | 'projectId' | 'release'>;
 
 /**
- * Mark a resolved event as regressed in the resolved or a newer release.
+ * Mark an event as regressed if it reoccurs in the resolved or a newer release.
  *
  * The update is atomic: only the first repetition after resolution sets the
  * regression release, and later repetitions do not overwrite it.
@@ -19,7 +16,7 @@ interface ReleaseRecord {
  * @param resolvedInRelease - release in which the event was resolved
  * @param regressionInRelease - regression from a previous resolution cycle
  */
-export async function markRegression(
+export async function checkAndMarkRegression(
   db: Db,
   projectId: string,
   groupHash: string,
@@ -27,7 +24,7 @@ export async function markRegression(
   resolvedInRelease: string,
   regressionInRelease?: string
 ): Promise<void> {
-  const releases = await db.collection<ReleaseRecord>('releases').find({
+  const releases = await db.collection<ReleaseRecordPart>('releases').find({
     projectId,
     release: {
       $in: [resolvedInRelease, release, regressionInRelease].filter(Boolean),
@@ -46,6 +43,10 @@ export async function markRegression(
 
   const resolvedReleaseId = resolvedRelease._id.toHexString();
   const isResolvedOrNewerRelease = repetitionRelease._id.toHexString() >= resolvedReleaseId;
+  /**
+   * A regression in or after the resolved release belongs to the current
+   * resolution cycle and must not be overwritten by later repetitions.
+   */
   const hasRegressionForCurrentCycle = previousRegressionRelease &&
     previousRegressionRelease._id.toHexString() >= resolvedReleaseId;
 

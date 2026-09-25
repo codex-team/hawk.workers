@@ -24,7 +24,7 @@ import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
 import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
 import { grouperDiagnosticsConfig, grouperMemoryConfig } from './metrics/config';
-import { markRegression } from './mark-regression';
+import { checkAndMarkRegression } from './check-and-mark-regression';
 
 /**
  * eslint does not count decorators as a variable usage
@@ -354,7 +354,7 @@ export default class GrouperWorker extends Worker {
 
       if (task.payload.release && existedEvent.resolvedInRelease) {
         try {
-          await markRegression(
+          await checkAndMarkRegression(
             this.eventsDb.getConnection(),
             task.projectId,
             uniqueEventHash,
@@ -364,7 +364,7 @@ export default class GrouperWorker extends Worker {
           );
         } catch (error) {
           this.logger.error(
-            `[markRegression] project=${task.projectId} groupHash=${uniqueEventHash} release=${task.payload.release}`,
+            `[checkAndMarkRegression] project=${task.projectId} groupHash=${uniqueEventHash} release=${task.payload.release}`,
             error
           );
         }

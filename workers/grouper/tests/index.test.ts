@@ -435,7 +435,7 @@ describe('GrouperWorker', () => {
       expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
     });
 
-    test('Should mark a resolved event as regressed in the resolved release', async () => {
+    test('Should mark as regressed if we later encounter this event with a release that is considered a resolving release', async () => {
       await connection.db().collection('releases').insertOne({
         _id: mongodb.ObjectID.createFromTime(1),
         projectId: projectIdMock,
