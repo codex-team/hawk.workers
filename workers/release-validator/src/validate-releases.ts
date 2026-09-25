@@ -4,6 +4,8 @@ import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../
 import { buildEventReleaseMap } from './utils/build-event-release-map';
 import { groupReleasesByProject } from './utils/group-releases-by-project';
 
+type ReleaseHistoryEntry = Pick<ReleaseDBScheme, '_id' | 'release'>;
+
 /**
  * Time allowed for repetitions to arrive before a release is checked for
  * resolved events.
@@ -80,8 +82,8 @@ async function validateEventsBatch(
   eventsCollection: Collection<GroupedEventDBScheme>,
   repetitionsCollection: Collection<RepetitionDBScheme>,
   releasesToCheck: ReleaseDBScheme[],
-  allProjectReleases: ReleaseDBScheme[],
-  releasesByName: Map<string, ReleaseDBScheme>
+  allProjectReleases: ReleaseHistoryEntry[],
+  releasesByName: Map<string, ReleaseHistoryEntry>
 ): Promise<void> {
   const eventGroupHashes = events.map(event => event.groupHash);
   const repetitions = await repetitionsCollection.aggregate<Pick<RepetitionDBScheme, 'groupHash' | 'release'>>([
@@ -226,8 +228,10 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
   const repetitionsCollection = db.collection<RepetitionDBScheme>(`repetitions:${projectId}`);
 
   /**
-   * Load the complete release history. Releases outside the validation window
-   * still define occurrence order and can block an incorrect resolution.
+   * Load the project's release timeline once. Releases outside the validation
+   * window are required because an old original release or a newer occurrence
+   * can change whether a candidate release resolved an event. Only identifiers
+   * and names are loaded; source maps and commit data are not used here.
    */
   const allProjectReleases = await releasesCollection
     .find({
@@ -237,23 +241,31 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
         $ne: '',
       },
     })
+    .project<ReleaseHistoryEntry>({
+      _id: 1,
+      release: 1,
+    })
     .sort({ _id: 1 })
     .toArray();
 
   /**
-   * Resolve release names to their Mongo records so ObjectIds can be used as
-   * the chronological source of truth instead of comparing version strings.
+   * Index the timeline by release name for event-field lookups. The map key is
+   * only a lookup key; chronology is still determined by each value's ObjectId.
    */
-  const releasesByName = new Map<string, ReleaseDBScheme>();
+  const releasesByName = new Map<string, ReleaseHistoryEntry>();
 
   for (const release of allProjectReleases) {
     releasesByName.set(release.release, release);
   }
 
   /**
-   * Stream eligible events from MongoDB instead of materializing the complete
-   * project result. The cursor and application batch use the same limit so the
-   * worker holds at most one bounded portion of event documents in memory.
+   * Find events whose resolution state needs evaluation. An event must have a
+   * group hash and an original release, and must either be unresolved or have
+   * both resolution and regression releases for a subsequent resolution cycle.
+   *
+   * Stream the result instead of materializing all project events. The cursor
+   * and application batch use the same limit so the worker holds at most one
+   * bounded portion of event documents in memory.
    */
   const eventsCursor = eventsCollection.find({
     groupHash: {
