@@ -4,8 +4,20 @@ import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../
 import { buildEventReleaseMap } from './utils/build-event-release-map';
 import { groupReleasesByProject } from './utils/group-releases-by-project';
 
+/**
+ * Time allowed for repetitions to arrive before a release is checked for
+ * resolved events.
+ */
 const RELEASE_OBSERVATION_PERIOD_SECONDS = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+
+/**
+ * Maximum age of a release eligible for validation, in days.
+ */
 const RELEASE_MAX_AGE_DAYS = 30;
+
+/**
+ * Maximum candidate release age expressed in seconds for ObjectId boundaries.
+ */
 const RELEASE_MAX_AGE_SECONDS = RELEASE_MAX_AGE_DAYS * RELEASE_OBSERVATION_PERIOD_SECONDS;
 
 /**
@@ -38,10 +50,6 @@ async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]
       _id: {
         $gte: oldestReleaseId,
         $lt: newestReleaseId,
-      },
-      projectId: {
-        $type: 'string',
-        $ne: '',
       },
       release: {
         $type: 'string',
@@ -76,19 +84,32 @@ async function validateEventsBatch(
   releasesByName: Map<string, ReleaseDBScheme>
 ): Promise<void> {
   const eventGroupHashes = events.map(event => event.groupHash);
-  const repetitions = await repetitionsCollection.find({
-    groupHash: { $in: eventGroupHashes },
-    release: {
-      $type: 'string',
-      $ne: '',
+  const repetitions = await repetitionsCollection.aggregate<Pick<RepetitionDBScheme, 'groupHash' | 'release'>>([
+    {
+      $match: {
+        groupHash: { $in: eventGroupHashes },
+        release: {
+          $type: 'string',
+          $ne: '',
+        },
+      },
     },
-  }, {
-    projection: {
-      _id: 0,
-      groupHash: 1,
-      release: 1,
+    {
+      $group: {
+        _id: {
+          groupHash: '$groupHash',
+          release: '$release',
+        },
+      },
     },
-  }).toArray();
+    {
+      $project: {
+        _id: 0,
+        groupHash: '$_id.groupHash',
+        release: '$_id.release',
+      },
+    },
+  ]).toArray();
   const eventReleases = buildEventReleaseMap(events, repetitions);
 
   /**

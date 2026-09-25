@@ -410,134 +410,136 @@ describe('GrouperWorker', () => {
       expect(savedRepetition.release).toBeUndefined();
     });
 
-    test('Should mark a resolved event as regressed in a newer repetition release', async () => {
-      await connection.db().collection('releases').insertMany([
-        {
+    describe('Regression marking', () => {
+      test('Should mark a resolved event as regressed in a newer repetition release', async () => {
+        await connection.db().collection('releases').insertMany([
+          {
+            _id: mongodb.ObjectID.createFromTime(1),
+            projectId: projectIdMock,
+            release: 'release-b',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(2),
+            projectId: projectIdMock,
+            release: 'release-c',
+          },
+        ]);
+        await worker.handle(generateTask({ release: 'release-a' }));
+        await eventsCollection.updateOne({}, {
+          $set: {
+            resolvedInRelease: 'release-b',
+          },
+        });
+
+        await worker.handle(generateTask({ release: 'release-c' }));
+
+        expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
+      });
+
+      test('Should mark as regressed if we later encounter this event with a release that is considered a resolving release', async () => {
+        await connection.db().collection('releases').insertOne({
           _id: mongodb.ObjectID.createFromTime(1),
           projectId: projectIdMock,
           release: 'release-b',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(2),
-          projectId: projectIdMock,
-          release: 'release-c',
-        },
-      ]);
-      await worker.handle(generateTask({ release: 'release-a' }));
-      await eventsCollection.updateOne({}, {
-        $set: {
-          resolvedInRelease: 'release-b',
-        },
+        });
+        await worker.handle(generateTask({ release: 'release-a' }));
+        await eventsCollection.updateOne({}, {
+          $set: {
+            resolvedInRelease: 'release-b',
+          },
+        });
+
+        await worker.handle(generateTask({ release: 'release-b' }));
+
+        expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-b');
       });
 
-      await worker.handle(generateTask({ release: 'release-c' }));
+      test('Should not mark regression if we encounter an event from one of the old releases', async () => {
+        await connection.db().collection('releases').insertMany([
+          {
+            _id: mongodb.ObjectID.createFromTime(1),
+            projectId: projectIdMock,
+            release: 'release-a',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(2),
+            projectId: projectIdMock,
+            release: 'release-b',
+          },
+        ]);
+        await worker.handle(generateTask({ release: 'release-b' }));
+        await eventsCollection.updateOne({}, {
+          $set: {
+            resolvedInRelease: 'release-b',
+          },
+        });
 
-      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
-    });
+        await worker.handle(generateTask({ release: 'release-a' }));
 
-    test('Should mark as regressed if we later encounter this event with a release that is considered a resolving release', async () => {
-      await connection.db().collection('releases').insertOne({
-        _id: mongodb.ObjectID.createFromTime(1),
-        projectId: projectIdMock,
-        release: 'release-b',
-      });
-      await worker.handle(generateTask({ release: 'release-a' }));
-      await eventsCollection.updateOne({}, {
-        $set: {
-          resolvedInRelease: 'release-b',
-        },
-      });
-
-      await worker.handle(generateTask({ release: 'release-b' }));
-
-      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-b');
-    });
-
-    test('Should not mark regression in an older release', async () => {
-      await connection.db().collection('releases').insertMany([
-        {
-          _id: mongodb.ObjectID.createFromTime(1),
-          projectId: projectIdMock,
-          release: 'release-a',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(2),
-          projectId: projectIdMock,
-          release: 'release-b',
-        },
-      ]);
-      await worker.handle(generateTask({ release: 'release-b' }));
-      await eventsCollection.updateOne({}, {
-        $set: {
-          resolvedInRelease: 'release-b',
-        },
+        expect((await eventsCollection.findOne({})).regressionInRelease).toBeUndefined();
       });
 
-      await worker.handle(generateTask({ release: 'release-a' }));
+      test('Should replace an old regression after a newer resolution', async () => {
+        await connection.db().collection('releases').insertMany([
+          {
+            _id: mongodb.ObjectID.createFromTime(1),
+            projectId: projectIdMock,
+            release: 'release-b',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(2),
+            projectId: projectIdMock,
+            release: 'release-c',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(3),
+            projectId: projectIdMock,
+            release: 'release-d',
+          },
+        ]);
+        await worker.handle(generateTask({ release: 'release-a' }));
+        await eventsCollection.updateOne({}, {
+          $set: {
+            resolvedInRelease: 'release-c',
+            regressionInRelease: 'release-b',
+          },
+        });
 
-      expect((await eventsCollection.findOne({})).regressionInRelease).toBeUndefined();
-    });
+        await worker.handle(generateTask({ release: 'release-d' }));
 
-    test('Should replace an old regression after a newer resolution', async () => {
-      await connection.db().collection('releases').insertMany([
-        {
-          _id: mongodb.ObjectID.createFromTime(1),
-          projectId: projectIdMock,
-          release: 'release-b',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(2),
-          projectId: projectIdMock,
-          release: 'release-c',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(3),
-          projectId: projectIdMock,
-          release: 'release-d',
-        },
-      ]);
-      await worker.handle(generateTask({ release: 'release-a' }));
-      await eventsCollection.updateOne({}, {
-        $set: {
-          resolvedInRelease: 'release-c',
-          regressionInRelease: 'release-b',
-        },
+        expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-d');
       });
 
-      await worker.handle(generateTask({ release: 'release-d' }));
+      test('Should not overwrite the first marked regression if we continue receiving this event in newer releases', async () => {
+        await connection.db().collection('releases').insertMany([
+          {
+            _id: mongodb.ObjectID.createFromTime(1),
+            projectId: projectIdMock,
+            release: 'release-b',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(2),
+            projectId: projectIdMock,
+            release: 'release-c',
+          },
+          {
+            _id: mongodb.ObjectID.createFromTime(3),
+            projectId: projectIdMock,
+            release: 'release-d',
+          },
+        ]);
+        await worker.handle(generateTask({ release: 'release-a' }));
+        await eventsCollection.updateOne({}, {
+          $set: {
+            resolvedInRelease: 'release-b',
+            regressionInRelease: 'release-c',
+          },
+        });
 
-      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-d');
-    });
+        await worker.handle(generateTask({ release: 'release-d' }));
 
-    test('Should not overwrite the regression from the current resolution cycle', async () => {
-      await connection.db().collection('releases').insertMany([
-        {
-          _id: mongodb.ObjectID.createFromTime(1),
-          projectId: projectIdMock,
-          release: 'release-b',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(2),
-          projectId: projectIdMock,
-          release: 'release-c',
-        },
-        {
-          _id: mongodb.ObjectID.createFromTime(3),
-          projectId: projectIdMock,
-          release: 'release-d',
-        },
-      ]);
-      await worker.handle(generateTask({ release: 'release-a' }));
-      await eventsCollection.updateOne({}, {
-        $set: {
-          resolvedInRelease: 'release-b',
-          regressionInRelease: 'release-c',
-        },
+        expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
       });
-
-      await worker.handle(generateTask({ release: 'release-d' }));
-
-      expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-c');
     });
 
     test('Should stringify delta', async () => {
