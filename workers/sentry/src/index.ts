@@ -4,7 +4,7 @@ import { DefaultEventWorkerTask } from '../../default/types/default-event-worker
 import WorkerNames from '../../../lib/workerNames.js';
 import { Envelope, EnvelopeItem, EventEnvelope, EventItem, parseEnvelope } from '@sentry/core';
 import { Worker } from '../../../lib/worker';
-import { composeAddons, composeBacktrace, composeContext, composeTitle, composeUserData } from './utils/converter';
+import { composeAddons, composeBacktrace, composeBreadcrumbs, composeContext, composeTitle, composeUserData } from './utils/converter';
 import { b64decode } from './utils/base64';
 import { CatcherMessagePayload } from '@hawk.so/types';
 import { TextDecoder } from 'util';
@@ -325,6 +325,7 @@ export default class SentryEventWorker extends Worker {
     const backtrace = composeBacktrace(eventPayload);
     const context = composeContext(eventPayload);
     const user = composeUserData(eventPayload);
+    const breadcrumbs = composeBreadcrumbs(eventPayload);
     const addons = composeAddons(eventPayload);
 
     const event: CatcherMessagePayload<'errors/default' | 'errors/javascript'> = {
@@ -343,6 +344,10 @@ export default class SentryEventWorker extends Worker {
 
     if (user) {
       event.user = user;
+    }
+
+    if (breadcrumbs) {
+      event.breadcrumbs = breadcrumbs;
     }
 
     if (addons) {
