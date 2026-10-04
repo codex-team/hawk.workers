@@ -323,7 +323,7 @@ describe('validateReleases', () => {
     const updatedEvent = await events.findOne({ groupHash: 'error-cycle' });
 
     expect(updatedEvent.resolvedInRelease).toBe('d');
-    expect(updatedEvent.regressionInRelease).toBe('c');
+    expect(updatedEvent.regressionInRelease).toBeUndefined();
   });
 
   test('should not resolve an event again before a release newer than its regression', async () => {

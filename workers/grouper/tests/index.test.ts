@@ -479,37 +479,6 @@ describe('GrouperWorker', () => {
         expect((await eventsCollection.findOne({})).regressionInRelease).toBeUndefined();
       });
 
-      test('Should replace an old regression after a newer resolution', async () => {
-        await connection.db().collection('releases').insertMany([
-          {
-            _id: mongodb.ObjectID.createFromTime(1),
-            projectId: projectIdMock,
-            release: 'release-b',
-          },
-          {
-            _id: mongodb.ObjectID.createFromTime(2),
-            projectId: projectIdMock,
-            release: 'release-c',
-          },
-          {
-            _id: mongodb.ObjectID.createFromTime(3),
-            projectId: projectIdMock,
-            release: 'release-d',
-          },
-        ]);
-        await worker.handle(generateTask({ release: 'release-a' }));
-        await eventsCollection.updateOne({}, {
-          $set: {
-            resolvedInRelease: 'release-c',
-            regressionInRelease: 'release-b',
-          },
-        });
-
-        await worker.handle(generateTask({ release: 'release-d' }));
-
-        expect((await eventsCollection.findOne({})).regressionInRelease).toBe('release-d');
-      });
-
       test('Should not overwrite the first marked regression if we continue receiving this event in newer releases', async () => {
         await connection.db().collection('releases').insertMany([
           {

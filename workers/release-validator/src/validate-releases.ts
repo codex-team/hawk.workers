@@ -219,6 +219,9 @@ async function validateEventsBatch(
         $set: {
           resolvedInRelease: release.release,
         },
+        ...(event.regressionInRelease
+          ? { $unset: { regressionInRelease: '' } }
+          : {}),
       });
 
       /**
