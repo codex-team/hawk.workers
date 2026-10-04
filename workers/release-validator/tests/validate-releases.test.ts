@@ -191,14 +191,29 @@ describe('validateReleases', () => {
     expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(false);
   });
 
-  test('should skip an event when its original release is unknown', async () => {
+  test('should use the original event timestamp when its release record was archived', async () => {
     await releases.insertOne(createRelease('b', 48));
-    await events.insertOne(createEvent('error-7', 'unknown'));
+    const event = createEvent('error-7', 'archived-release');
+
+    event.timestamp = NOW_SECONDS - 72 * HOUR_IN_SECONDS;
+    await events.insertOne(event);
 
     await validateReleases(db, NOW);
 
-    expect((await events.findOne({ groupHash: 'error-7' })).resolvedInRelease).toBeUndefined();
+    expect((await events.findOne({ groupHash: 'error-7' })).resolvedInRelease).toBe('b');
     expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(true);
+  });
+
+  test('should not resolve an event before its timestamp when its release record is missing', async () => {
+    await releases.insertOne(createRelease('b', 48));
+    const event = createEvent('error-after-release', 'missing-release');
+
+    event.timestamp = NOW_SECONDS - 24 * HOUR_IN_SECONDS;
+    await events.insertOne(event);
+
+    await validateReleases(db, NOW);
+
+    expect((await events.findOne({ groupHash: 'error-after-release' })).resolvedInRelease).toBeUndefined();
   });
 
   test('should not overwrite an existing resolved release on repeated validation', async () => {
@@ -328,28 +343,44 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-active-regression' })).resolvedInRelease).toBe('b');
   });
 
-  test('should not select a release older than 30 days as a candidate', async () => {
-    await releases.insertMany([
-      createRelease('a', 960, true),
-      createRelease('b', 744),
-    ]);
-    await events.insertOne(createEvent('error-12', 'a'));
+  test('should not select a release older than the configured retention period as a candidate', async () => {
+    const originalMaxDaysNumber = process.env.MAX_DAYS_NUMBER;
 
-    await validateReleases(db, NOW);
+    process.env.MAX_DAYS_NUMBER = '10';
 
-    expect((await events.findOne({ groupHash: 'error-12' })).resolvedInRelease).toBeUndefined();
-    expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(false);
+    try {
+      await releases.insertMany([
+        createRelease('a', 480, true),
+        createRelease('b', 264),
+      ]);
+      await events.insertOne(createEvent('error-12', 'a'));
+
+      await validateReleases(db, NOW);
+
+      expect((await events.findOne({ groupHash: 'error-12' })).resolvedInRelease).toBeUndefined();
+      expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(false);
+    } finally {
+      process.env.MAX_DAYS_NUMBER = originalMaxDaysNumber;
+    }
   });
 
-  test('should use a release older than 30 days as event history', async () => {
-    await releases.insertMany([
-      createRelease('a', 960, true),
-      createRelease('b', 48),
-    ]);
-    await events.insertOne(createEvent('error-13', 'a'));
+  test('should use a release older than the retention period as event history', async () => {
+    const originalMaxDaysNumber = process.env.MAX_DAYS_NUMBER;
 
-    await validateReleases(db, NOW);
+    process.env.MAX_DAYS_NUMBER = '10';
 
-    expect((await events.findOne({ groupHash: 'error-13' })).resolvedInRelease).toBe('b');
+    try {
+      await releases.insertMany([
+        createRelease('a', 480, true),
+        createRelease('b', 48),
+      ]);
+      await events.insertOne(createEvent('error-13', 'a'));
+
+      await validateReleases(db, NOW);
+
+      expect((await events.findOne({ groupHash: 'error-13' })).resolvedInRelease).toBe('b');
+    } finally {
+      process.env.MAX_DAYS_NUMBER = originalMaxDaysNumber;
+    }
   });
 });

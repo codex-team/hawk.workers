@@ -13,16 +13,6 @@ type ReleaseHistoryEntry = Pick<ReleaseDBScheme, '_id' | 'release'>;
 const RELEASE_OBSERVATION_PERIOD_SECONDS = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
 
 /**
- * Maximum age of a release eligible for validation, in days.
- */
-const RELEASE_MAX_AGE_DAYS = 30;
-
-/**
- * Maximum candidate release age expressed in seconds for ObjectId boundaries.
- */
-const RELEASE_MAX_AGE_SECONDS = RELEASE_MAX_AGE_DAYS * RELEASE_OBSERVATION_PERIOD_SECONDS;
-
-/**
  * Maximum number of events processed in one validation batch.
  *
  * A bounded batch keeps the repetitions `$in` query below MongoDB document
@@ -39,12 +29,18 @@ const EVENTS_BATCH_SIZE = 500;
  */
 async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]> {
   const nowSeconds = Math.floor(now.getTime() / MS_IN_SEC);
+  const releaseMaxAgeDays = Number(process.env.MAX_DAYS_NUMBER);
+
+  if (!Number.isFinite(releaseMaxAgeDays) || releaseMaxAgeDays <= 0) {
+    throw new Error('MAX_DAYS_NUMBER must be a positive number');
+  }
 
   /**
-   * Limit candidates to the rollout window: releases must be old enough to
-   * observe for 24 hours, but recent enough to contain release-aware repetitions.
+   * Use the archiver retention period as the candidate window so releases are
+   * validated only while their records are expected to remain available.
    */
-  const oldestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_MAX_AGE_SECONDS);
+  const releaseMaxAgeSeconds = releaseMaxAgeDays * RELEASE_OBSERVATION_PERIOD_SECONDS;
+  const oldestReleaseId = ObjectID.createFromTime(nowSeconds - releaseMaxAgeSeconds);
   const newestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_OBSERVATION_PERIOD_SECONDS);
 
   return db.collection<ReleaseDBScheme>('releases')
@@ -156,18 +152,25 @@ async function validateEventsBatch(
     }
 
     /**
-     * Skip events whose original or latest occurrence release is missing from
-     * the project release history.
+     * The archiver can remove the original release while its event is still
+     * active. In that case, use the original event occurrence time as the
+     * chronological boundary instead of skipping the event forever.
      */
-    if (!lastOccurrenceRelease) {
-      continue;
+    let lastOccurrenceId = lastOccurrenceRelease?._id;
+
+    if (!lastOccurrenceId) {
+      if (!Number.isFinite(event.timestamp)) {
+        continue;
+      }
+
+      lastOccurrenceId = ObjectID.createFromTime(Math.floor(event.timestamp));
     }
 
     const releasesWithEvent = eventReleases.get(event.groupHash) || new Set<string>();
 
     for (const release of releasesToCheck) {
       const releaseId = release._id.toHexString();
-      const isNewerThanLastOccurrence = releaseId > lastOccurrenceRelease._id.toHexString();
+      const isNewerThanLastOccurrence = releaseId > lastOccurrenceId.toHexString();
       const occurredInRelease = releasesWithEvent.has(release.release);
 
       /**
@@ -304,6 +307,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
       _id: 1,
       groupHash: 1,
       'payload.release': 1,
+      timestamp: 1,
       resolvedInRelease: 1,
       regressionInRelease: 1,
     },
