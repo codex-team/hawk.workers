@@ -1,10 +1,13 @@
 import { Collection, Db, ObjectID } from 'mongodb';
 import type { GroupedEventDBScheme, ReleaseDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MS_IN_SEC, SECONDS_IN_MINUTE } from '../../../lib/utils/consts';
+import createLogger from '../../../lib/logger';
 import { buildEventReleaseMap } from './utils/build-event-release-map';
 import { groupReleasesByProject } from './utils/group-releases-by-project';
 
 type ReleaseHistoryEntry = Pick<ReleaseDBScheme, '_id' | 'release'>;
+
+const logger = createLogger();
 
 /**
  * Time allowed for repetitions to arrive before a release is checked for
@@ -381,6 +384,10 @@ export async function validateReleases(db: Db, now = new Date()): Promise<void> 
   const releasesByProject = groupReleasesByProject(releasesToCheck);
 
   for (const [projectId, projectReleases] of releasesByProject) {
-    await validateProject(db, projectId, projectReleases);
+    try {
+      await validateProject(db, projectId, projectReleases);
+    } catch (error) {
+      logger.error(`Failed to validate releases for project ${projectId}`, error);
+    }
   }
 }

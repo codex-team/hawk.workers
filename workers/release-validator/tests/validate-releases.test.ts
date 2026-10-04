@@ -343,6 +343,64 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-active-regression' })).resolvedInRelease).toBe('b');
   });
 
+  test('should continue validating other projects when one project fails', async () => {
+    const failedProjectId = 'failed-release-validator-project';
+
+    await releases.insertMany([
+      createRelease('a', 72, true),
+      {
+        ...createRelease('b', 49),
+        projectId: failedProjectId,
+      },
+      createRelease('c', 48),
+    ]);
+    await db.createCollection(`events:${failedProjectId}`, {
+      validator: {
+        $jsonSchema: {
+          properties: {
+            resolvedInRelease: {
+              bsonType: 'int',
+            },
+          },
+        },
+      },
+      validationLevel: 'strict',
+      validationAction: 'error',
+    });
+    await db.collection(`events:${failedProjectId}`).insertOne({
+      _id: new ObjectID(),
+      groupHash: 'failed-project-event',
+      payload: {
+        title: 'failed-project-event',
+        release: 'a',
+      },
+      totalCount: 1,
+      catcherType: 'errors/default',
+      usersAffected: 0,
+      visitedBy: [],
+      timestamp: NOW_SECONDS - 96 * HOUR_IN_SECONDS,
+    });
+    await events.insertOne(createEvent('successful-project-event', 'a'));
+
+    try {
+      await expect(validateReleases(db, NOW)).resolves.toBeUndefined();
+
+      expect((await releases.findOne({
+        projectId: failedProjectId,
+        release: 'b',
+      })).fixChecked).toBeUndefined();
+      expect((await events.findOne({ groupHash: 'successful-project-event' })).resolvedInRelease).toBe('c');
+      expect((await releases.findOne({
+        projectId: PROJECT_ID,
+        release: 'c',
+      })).fixChecked).toBe(true);
+    } finally {
+      await db.dropCollection(`events:${failedProjectId}`).catch(() => undefined);
+      await db.dropCollection(`repetitions:${failedProjectId}`).catch(() => undefined);
+      await releases.deleteMany({ projectId: failedProjectId });
+    }
+  });
+
   test('should not select a release older than the configured retention period as a candidate', async () => {
     const originalMaxDaysNumber = process.env.MAX_DAYS_NUMBER;
 
