@@ -5,6 +5,7 @@ import { validateReleases } from '../src/validate-releases';
 
 const PROJECT_ID = 'release-validator-project';
 const HOUR_IN_SECONDS = 60 * 60;
+const DEFAULT_MAX_DAYS_NUMBER = '30';
 const NOW_SECONDS = Math.floor(new Date('2026-09-17T12:00:00.000Z').getTime() / 1000);
 const NOW = new Date(NOW_SECONDS * 1000);
 
@@ -96,6 +97,7 @@ describe('validateReleases', () => {
   });
 
   beforeEach(async () => {
+    process.env.MAX_DAYS_NUMBER = DEFAULT_MAX_DAYS_NUMBER;
     await releases.deleteMany({ projectId: PROJECT_ID });
     await events.deleteMany({});
     await repetitions.deleteMany({});
