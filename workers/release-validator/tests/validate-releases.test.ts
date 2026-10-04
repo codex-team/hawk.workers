@@ -388,7 +388,7 @@ describe('validateReleases', () => {
       expect((await releases.findOne({
         projectId: failedProjectId,
         release: 'b',
-      })).fixChecked).toBeUndefined();
+      })).fixChecked).toBe(false);
       expect((await events.findOne({ groupHash: 'successful-project-event' })).resolvedInRelease).toBe('c');
       expect((await releases.findOne({
         projectId: PROJECT_ID,

@@ -25,7 +25,7 @@
         "test:sentry": "jest workers/sentry --config workers/sentry/jest.config.js",
         "test:javascript": "jest workers/javascript",
         "test:release": "jest workers/release",
-        "test:release-validator": "jest workers/release-validator",
+        "test:release-validator": "jest --config workers/release-validator/jest.config.js",
         "test:slack": "jest workers/slack",
         "test:loop": "jest workers/loop",
         "test:limiter": "jest workers/limiter --runInBand",
