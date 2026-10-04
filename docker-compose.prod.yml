@@ -43,7 +43,7 @@ services:
     entrypoint: /usr/local/bin/node runner.js hawk-worker-grouper
 
   #
-  # System workers: archiver
+  # System workers: archiver, release-validator
   #
 
   hawk-worker-archiver:
@@ -54,6 +54,16 @@ services:
       - workers/archiver/.env
     restart: unless-stopped
     entrypoint: /usr/local/bin/node runner.js hawk-worker-archiver
+
+  hawk-worker-release-validator:
+    image: "codexteamuser/hawk-workers:prod"
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      - SIMULTANEOUS_TASKS=1
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-release-validator
 
   #
   # Notification workers: notifier, email, telegram
