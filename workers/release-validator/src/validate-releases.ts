@@ -171,25 +171,24 @@ async function validateEventsBatch(
 
     const releasesWithEvent = eventReleases.get(event.groupHash) || new Set<string>();
 
+    /**
+     * Find the latest known release in which the event occurred once per event.
+     * This includes releases younger than 24 hours, which must still prevent an
+     * older candidate from resolving the event.
+     */
+    for (const projectRelease of allProjectReleases) {
+      if (
+        projectRelease._id.toHexString() > lastOccurrenceId.toHexString() &&
+        releasesWithEvent.has(projectRelease.release)
+      ) {
+        lastOccurrenceId = projectRelease._id;
+      }
+    }
+
     for (const release of releasesToCheck) {
-      const releaseId = release._id.toHexString();
-      const isNewerThanLastOccurrence = releaseId > lastOccurrenceId.toHexString();
-      const occurredInRelease = releasesWithEvent.has(release.release);
+      const isNewerThanLastOccurrence = release._id.toHexString() > lastOccurrenceId.toHexString();
 
-      /**
-       * A repetition in any later release, including one younger than 24 hours,
-       * proves that this candidate did not fix the event.
-       */
-      const occurredInNewerRelease = allProjectReleases.some(projectRelease => {
-        return projectRelease._id.toHexString() > releaseId && releasesWithEvent.has(projectRelease.release);
-      });
-
-      /**
-       * A candidate resolves the event only if it was deployed after the latest
-       * occurrence and the event appears neither in that candidate nor in any
-       * newer release. Otherwise, continue with the next candidate.
-       */
-      if (!isNewerThanLastOccurrence || occurredInRelease || occurredInNewerRelease) {
+      if (!isNewerThanLastOccurrence) {
         continue;
       }
 
