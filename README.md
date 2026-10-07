@@ -95,13 +95,13 @@ Make sure that your `.env` configurations exists.
 Add new section to the `docker-compose.{dev,prod}.yml` files.
 
 ```
- hawk-worker-telegram:
+ hawk-worker-sender:
     image: "codexteamuser/hawk-workers:prod"
     env_file:
       - .env
-      - workers/telegram/.env
+      - workers/sender/.env
     restart: unless-stopped
-    entrypoint: /usr/local/bin/node runner.js hawk-worker-telegram
+    entrypoint: /usr/local/bin/node runner.js hawk-worker-sender
 ```
 
 ## Error handling
