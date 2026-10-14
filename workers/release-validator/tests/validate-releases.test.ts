@@ -94,6 +94,12 @@ describe('validateReleases', () => {
     releases = db.collection<ReleaseDBScheme>('releases');
     events = db.collection<GroupedEventDBScheme>(`events:${PROJECT_ID}`);
     repetitions = db.collection<RepetitionDBScheme>(`repetitions:${PROJECT_ID}`);
+    await repetitions.createIndex({
+      groupHash: 1,
+      release: 1,
+    }, {
+      name: 'groupHashAndRelease',
+    });
   });
 
   beforeEach(async () => {

@@ -22,7 +22,7 @@ const RELEASE_OBSERVATION_PERIOD_SECONDS = HOURS_IN_DAY * MINUTES_IN_HOUR * SECO
  * limits and prevents large projects from loading all events and repetitions
  * into worker memory at once.
  */
-const EVENTS_BATCH_SIZE = 500;
+const EVENTS_BATCH_SIZE = 50;
 
 /**
  * Find unchecked releases older than the observation period.
@@ -110,7 +110,9 @@ async function validateEventsBatch(
         release: '$_id.release',
       },
     },
-  ]).toArray();
+  ], {
+    hint: 'groupHashAndRelease',
+  }).toArray();
   const eventReleases = buildEventReleaseMap(events, repetitions);
 
   /**
