@@ -13,6 +13,8 @@ globalConfig.json
 !jest.setup.mongo-repl-set.js
 !jest.setup.redis-mock.js
 !jest-mongodb-config.js
+!workers/release-validator/jest.config.js
+!workers/release-validator/jest.setup.js
 !migrate-mongo-config.js
 !/env.js
 !convertors/**/*.js
