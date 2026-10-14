@@ -62,6 +62,7 @@ services:
   #
   # System workers:
   # - archiver
+  # - release-validator
   # - limiter
   # - paymaster
   #
@@ -75,6 +76,20 @@ services:
       - workers/archiver/.env
     restart: unless-stopped
     entrypoint: yarn run-archiver
+    volumes:
+      - ./:/usr/src/app
+      - workers-deps:/usr/src/app/node_modules
+
+  hawk-worker-release-validator:
+    build:
+      dockerfile: "dev.Dockerfile"
+      context: .
+    env_file:
+      - .env
+    environment:
+      - SIMULTANEOUS_TASKS=1
+    restart: unless-stopped
+    entrypoint: yarn run-release-validator
     volumes:
       - ./:/usr/src/app
       - workers-deps:/usr/src/app/node_modules
