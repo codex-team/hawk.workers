@@ -1,5 +1,5 @@
-import { Event as SentryEvent } from '@sentry/core';
-import { composeTitle, composeBacktrace, composeContext, composeAddons, composeUserData } from '../src/utils/converter';
+import { Breadcrumb as SentryBreadcrumb, Event as SentryEvent } from '@sentry/core';
+import { composeTitle, composeBacktrace, composeBreadcrumbs, composeContext, composeAddons, composeUserData } from '../src/utils/converter';
 
 describe('converter utils', () => {
   describe('composeTitle()', () => {
@@ -428,6 +428,128 @@ describe('converter utils', () => {
         name: 'testuser',
         url: 'test@example.com',
       });
+    });
+  });
+  describe('composeBreadcrumbs()', () => {
+    it('should convert breadcrumbs to Hawk format', () => {
+      const event: SentryEvent = {
+        breadcrumbs: [
+          {
+            type: 'http',
+            category: 'fetch',
+            message: 'GET /api/profile',
+            level: 'info',
+            timestamp: 1718851200.123,
+            data: {
+              url: '/api/profile',
+              // eslint-disable-next-line @typescript-eslint/naming-convention
+              status_code: 200,
+            },
+          },
+          {
+            type: 'navigation',
+            category: 'navigation',
+            timestamp: 1718851201,
+          },
+        ],
+      };
+
+      expect(composeBreadcrumbs(event)).toEqual([
+        {
+          type: 'request',
+          category: 'fetch',
+          message: 'GET /api/profile',
+          level: 'info',
+          timestamp: 1718851200123,
+          data: {
+            url: '/api/profile',
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            status_code: 200,
+          },
+        },
+        {
+          type: 'navigation',
+          category: 'navigation',
+          timestamp: 1718851201000,
+        },
+      ]);
+    });
+
+    it('should read breadcrumbs wrapped into "values" (Python, PHP SDKs)', () => {
+      const event: SentryEvent = {
+        breadcrumbs: {
+          values: [ {
+            type: 'default',
+            category: 'log',
+            message: 'User logged in',
+            timestamp: 1718851200,
+          } ],
+        } as unknown as SentryBreadcrumb[],
+      };
+
+      expect(composeBreadcrumbs(event)).toEqual([ {
+        type: 'default',
+        category: 'log',
+        message: 'User logged in',
+        timestamp: 1718851200000,
+      } ]);
+    });
+
+    it('should parse RFC 3339 timestamps', () => {
+      const event: SentryEvent = {
+        breadcrumbs: [ {
+          message: 'test',
+          timestamp: '2024-06-20T02:40:00.500Z' as unknown as number,
+        } ],
+      };
+
+      expect(composeBreadcrumbs(event)).toEqual([ {
+        message: 'test',
+        timestamp: 1718851200500,
+      } ]);
+    });
+
+    it('should use event timestamp for breadcrumbs without their own', () => {
+      const event: SentryEvent = {
+        timestamp: 1718851200,
+        breadcrumbs: [ {
+          message: 'test',
+        } ],
+      };
+
+      expect(composeBreadcrumbs(event)).toEqual([ {
+        message: 'test',
+        timestamp: 1718851200000,
+      } ]);
+    });
+
+    it('should skip breadcrumbs without any timestamp', () => {
+      const event: SentryEvent = {
+        breadcrumbs: [ {
+          message: 'test',
+        } ],
+      };
+
+      expect(composeBreadcrumbs(event)).toBeUndefined();
+    });
+
+    it('should keep unknown types as is', () => {
+      const event: SentryEvent = {
+        breadcrumbs: [ {
+          type: 'custom',
+          timestamp: 1718851200,
+        } ],
+      };
+
+      expect(composeBreadcrumbs(event)).toEqual([ {
+        type: 'custom',
+        timestamp: 1718851200000,
+      } ]);
+    });
+
+    it('should handle missing breadcrumbs', () => {
+      expect(composeBreadcrumbs({})).toBeUndefined();
+      expect(composeBreadcrumbs({ breadcrumbs: [] })).toBeUndefined();
     });
   });
 });
