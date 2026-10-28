@@ -46,6 +46,8 @@ async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]
   const oldestReleaseId = ObjectID.createFromTime(nowSeconds - releaseMaxAgeSeconds);
   const newestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_OBSERVATION_PERIOD_SECONDS);
 
+  logger.info(`Searching unchecked releases: from=${oldestReleaseId.getTimestamp().toISOString()} to=${newestReleaseId.getTimestamp().toISOString()}`);
+
   return db.collection<ReleaseDBScheme>('releases')
     .find({
       _id: {
@@ -75,6 +77,7 @@ async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]
  * @param releasesToCheck - ready releases ordered from oldest to newest
  * @param allProjectReleases - complete project release history
  * @param releasesByName - project releases indexed by release name
+ * @returns {number} number of events actually updated
  */
 async function validateEventsBatch(
   events: GroupedEventDBScheme[],
@@ -83,7 +86,12 @@ async function validateEventsBatch(
   releasesToCheck: ReleaseDBScheme[],
   allProjectReleases: ReleaseHistoryEntry[],
   releasesByName: Map<string, ReleaseHistoryEntry>
-): Promise<void> {
+): Promise<number> {
+  const startedAt = Date.now();
+  let resolvedEvents = 0;
+
+  logger.info(`Batch started: collection=${eventsCollection.collectionName} events=${events.length}`);
+
   const eventGroupHashes = events.map(event => event.groupHash);
   const repetitions = await repetitionsCollection.aggregate<Pick<RepetitionDBScheme, 'groupHash' | 'release'>>([
     {
@@ -114,6 +122,8 @@ async function validateEventsBatch(
     hint: 'groupHashAndRelease',
   }).toArray();
   const eventReleases = buildEventReleaseMap(events, repetitions);
+
+  logger.debug(`Repetition lookup loaded: collection=${eventsCollection.collectionName} releasePairs=${repetitions.length}`);
 
   /**
    * Resolve each event in the first eligible release after its latest known
@@ -213,7 +223,7 @@ async function validateEventsBatch(
           ],
         };
 
-      await eventsCollection.updateOne({
+      const result = await eventsCollection.updateOne({
         _id: event._id,
         ...eventState,
       }, {
@@ -225,6 +235,10 @@ async function validateEventsBatch(
           : {}),
       });
 
+      resolvedEvents += result.modifiedCount;
+
+      logger.debug(`Event resolution evaluated: eventId=${event._id} release=${release.release} modified=${result.modifiedCount}`);
+
       /**
        * Releases are ordered from oldest to newest, so the first matching
        * candidate is the release in which the event became likely fixed.
@@ -232,6 +246,10 @@ async function validateEventsBatch(
       break;
     }
   }
+
+  logger.info(`Batch finished: collection=${eventsCollection.collectionName} events=${events.length} resolvedEvents=${resolvedEvents} durationMs=${Date.now() - startedAt}`);
+
+  return resolvedEvents;
 }
 
 /**
@@ -242,6 +260,12 @@ async function validateEventsBatch(
  * @param releasesToCheck - ready releases ordered from oldest to newest
  */
 async function validateProject(db: Db, projectId: string, releasesToCheck: ReleaseDBScheme[]): Promise<void> {
+  const startedAt = Date.now();
+  let processedEvents = 0;
+  let resolvedEvents = 0;
+
+  logger.info(`Project validation started: projectId=${projectId} releases=${releasesToCheck.length}`);
+
   const releasesCollection = db.collection<ReleaseDBScheme>('releases');
   const eventsCollection = db.collection<GroupedEventDBScheme>(`events:${projectId}`);
   const repetitionsCollection = db.collection<RepetitionDBScheme>(`repetitions:${projectId}`);
@@ -266,6 +290,8 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
     })
     .sort({ _id: 1 })
     .toArray();
+
+  logger.info(`Release history loaded: projectId=${projectId} releases=${allProjectReleases.length}`);
 
   /**
    * Index the timeline by release name for event-field lookups. The map key is
@@ -334,7 +360,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
       continue;
     }
 
-    await validateEventsBatch(
+    resolvedEvents += await validateEventsBatch(
       eventsBatch,
       eventsCollection,
       repetitionsCollection,
@@ -342,6 +368,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
       allProjectReleases,
       releasesByName
     );
+    processedEvents += eventsBatch.length;
     eventsBatch = [];
   }
 
@@ -349,7 +376,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
    * Process the final partial portion left after the cursor is exhausted.
    */
   if (eventsBatch.length > 0) {
-    await validateEventsBatch(
+    resolvedEvents += await validateEventsBatch(
       eventsBatch,
       eventsCollection,
       repetitionsCollection,
@@ -357,7 +384,10 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
       allProjectReleases,
       releasesByName
     );
+    processedEvents += eventsBatch.length;
   }
+
+  logger.info(`Marking releases as checked: projectId=${projectId} releases=${releasesToCheck.length}`);
 
   /**
    * Mark releases only after every project batch finishes successfully.
@@ -371,6 +401,8 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
       fixChecked: true,
     },
   });
+
+  logger.info(`Project validation finished: projectId=${projectId} releases=${releasesToCheck.length} processedEvents=${processedEvents} resolvedEvents=${resolvedEvents} durationMs=${Date.now() - startedAt}`);
 }
 
 /**
@@ -380,6 +412,11 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
  * @param now - current time
  */
 export async function validateReleases(db: Db, now = new Date()): Promise<void> {
+  const startedAt = Date.now();
+  let failedProjects = 0;
+
+  logger.info('Release validation started');
+
   /**
    * Candidate releases are globally ordered and then grouped so each project's
    * release history, events, and repetitions are loaded only once per run.
@@ -387,11 +424,22 @@ export async function validateReleases(db: Db, now = new Date()): Promise<void> 
   const releasesToCheck = await findReleasesToCheck(db, now);
   const releasesByProject = groupReleasesByProject(releasesToCheck);
 
+  logger.info(`Candidates loaded: releases=${releasesToCheck.length} projects=${releasesByProject.size}`);
+
   for (const [projectId, projectReleases] of releasesByProject) {
     try {
       await validateProject(db, projectId, projectReleases);
     } catch (error) {
-      logger.error(`Failed to validate releases for project ${projectId}`, error);
+      failedProjects++;
+      logger.error(`Project validation failed: projectId=${projectId}`, error);
     }
+  }
+
+  const summary = `Release validation finished: projects=${releasesByProject.size} failedProjects=${failedProjects} durationMs=${Date.now() - startedAt}`;
+
+  if (failedProjects > 0) {
+    logger.warn(summary);
+  } else {
+    logger.info(summary);
   }
 }

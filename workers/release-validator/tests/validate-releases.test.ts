@@ -2,6 +2,20 @@ import '../../../env-test';
 import { Collection, Db, MongoClient, ObjectID } from 'mongodb';
 import type { GroupedEventDBScheme, ReleaseDBScheme, RepetitionDBScheme } from '@hawk.so/types';
 import { validateReleases } from '../src/validate-releases';
+import createLogger from '../../../lib/logger';
+
+jest.mock('../../../lib/logger', () => {
+  const logger = {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
+
+  return jest.fn(() => logger);
+});
+
+const logger = createLogger();
 
 const PROJECT_ID = 'release-validator-project';
 const HOUR_IN_SECONDS = 60 * 60;
@@ -103,6 +117,7 @@ describe('validateReleases', () => {
   });
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     process.env.MAX_DAYS_NUMBER = DEFAULT_MAX_DAYS_NUMBER;
     await releases.deleteMany({ projectId: PROJECT_ID });
     await events.deleteMany({});
@@ -169,6 +184,29 @@ describe('validateReleases', () => {
     await validateReleases(db, NOW);
 
     expect((await events.findOne({ groupHash: 'error-4' })).resolvedInRelease).toBe('b');
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
+      `Project validation finished: projectId=${PROJECT_ID} releases=1 processedEvents=1 resolvedEvents=1`
+    ));
+  });
+
+  test('should log progress and actual resolved totals across event batches', async () => {
+    await releases.insertMany([
+      createRelease('a', 72, true),
+      createRelease('b', 48),
+    ]);
+    await events.insertMany(Array.from({ length: 51 }, (_, index) => createEvent(`batch-event-${index}`, 'a')));
+
+    await validateReleases(db, NOW);
+
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
+      `Batch finished: collection=events:${PROJECT_ID} events=50 resolvedEvents=50`
+    ));
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
+      `Batch finished: collection=events:${PROJECT_ID} events=1 resolvedEvents=1`
+    ));
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
+      `Project validation finished: projectId=${PROJECT_ID} releases=1 processedEvents=51 resolvedEvents=51`
+    ));
   });
 
   test('should resolve an event in the first checked release after its last occurrence', async () => {
@@ -197,6 +235,10 @@ describe('validateReleases', () => {
 
     expect((await events.findOne({ groupHash: 'error-6' })).resolvedInRelease).toBeUndefined();
     expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(false);
+    expect(logger.info).toHaveBeenCalledWith('Candidates loaded: releases=0 projects=0');
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
+      'Release validation finished: projects=0 failedProjects=0'
+    ));
   });
 
   test('should use the original event timestamp when its release record was archived', async () => {
@@ -402,6 +444,13 @@ describe('validateReleases', () => {
         projectId: PROJECT_ID,
         release: 'c',
       })).fixChecked).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith(
+        `Project validation failed: projectId=${failedProjectId}`,
+        expect.any(Error)
+      );
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(
+        'Release validation finished: projects=2 failedProjects=1'
+      ));
     } finally {
       await db.dropCollection(`events:${failedProjectId}`).catch(() => undefined);
       await db.dropCollection(`repetitions:${failedProjectId}`).catch(() => undefined);
