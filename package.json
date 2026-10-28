@@ -48,7 +48,7 @@
         "run-paymaster": "yarn worker hawk-worker-paymaster",
         "run-notifier": "yarn worker hawk-worker-notifier",
         "run-release": "yarn worker hawk-worker-release",
-        "run-release-validator": "yarn worker hawk-worker-release-validator",
+        "run-release-validator": "ts-node -T --prefer-ts-exts ./workers/release-validator/src/index.ts",
         "run-email": "yarn worker hawk-worker-email",
         "run-telegram": "yarn worker hawk-worker-telegram",
         "run-limiter": "yarn worker hawk-worker-limiter",

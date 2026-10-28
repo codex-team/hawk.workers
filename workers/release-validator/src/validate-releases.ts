@@ -378,6 +378,7 @@ async function validateProject(db: Db, projectId: string, releasesToCheck: Relea
  *
  * @param db - events database connection
  * @param now - current time
+ * @throws when any project fails, after attempting the remaining projects
  */
 export async function validateReleases(db: Db, now = new Date()): Promise<void> {
   /**
@@ -386,12 +387,21 @@ export async function validateReleases(db: Db, now = new Date()): Promise<void> 
    */
   const releasesToCheck = await findReleasesToCheck(db, now);
   const releasesByProject = groupReleasesByProject(releasesToCheck);
+  const failedProjects: string[] = [];
+
+  logger.info(`Release validation: ${releasesToCheck.length} unchecked releases in ${releasesByProject.size} projects`);
 
   for (const [projectId, projectReleases] of releasesByProject) {
     try {
       await validateProject(db, projectId, projectReleases);
+      logger.info(`Checked ${projectReleases.length} releases for project ${projectId}`);
     } catch (error) {
+      failedProjects.push(projectId);
       logger.error(`Failed to validate releases for project ${projectId}`, error);
     }
+  }
+
+  if (failedProjects.length > 0) {
+    throw new Error(`Release validation failed for ${failedProjects.length} projects: ${failedProjects.join(', ')}`);
   }
 }

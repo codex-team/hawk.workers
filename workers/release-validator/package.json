@@ -1,10 +1,9 @@
 {
   "name": "hawk-worker-release-validator",
   "version": "0.0.1",
-  "description": "Detects events fixed by a release",
+  "description": "One-shot job that detects events fixed by a release",
   "main": "src/index.ts",
   "author": "CodeX",
   "license": "UNLICENSED",
-  "private": true,
-  "workerType": "cron-tasks/release-validator"
+  "private": true
 }

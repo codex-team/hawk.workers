@@ -1,46 +1,34 @@
+import 'dotenv/config';
 import { DatabaseController } from '../../../lib/db/controller';
-import { Worker } from '../../../lib/worker';
-import * as pkg from '../package.json';
+import createLogger from '../../../lib/logger';
 import { validateReleases } from './validate-releases';
 
+const logger = createLogger();
+
 /**
- * Worker that detects events fixed by a release.
+ * Run one release validation pass and close MongoDB before returning.
+ *
+ * @returns {Promise<void>} completion of the validation and connection cleanup
  */
-export default class ReleaseValidatorWorker extends Worker {
-  /**
-   * Worker type.
-   */
-  public readonly type: string = pkg.workerType;
+export async function runReleaseValidation(): Promise<void> {
+  logger.info('Release validation started');
 
-  /**
-   * Events database controller.
-   */
-  private eventsDb = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
+  const eventsDb = new DatabaseController(process.env.MONGO_EVENTS_DATABASE_URI);
 
-  /**
-   * Connect to the events database and start consuming tasks.
-   */
-  public async start(): Promise<void> {
-    await this.eventsDb.connect();
-    await super.start();
+  try {
+    const db = await eventsDb.connect();
+
+    await validateReleases(db);
+  } finally {
+    await eventsDb.close();
   }
 
-  /**
-   * Stop consuming tasks and close the database connection.
-   */
-  public async finish(): Promise<void> {
-    await super.finish();
-    await this.eventsDb.close();
-  }
+  logger.info('Release validation finished');
+}
 
-  /**
-   * Handle a scheduled release validation task.
-   */
-  public async handle(): Promise<void> {
-    this.logger.info('Release validation started');
-
-    await validateReleases(this.eventsDb.getConnection());
-
-    this.logger.info('Release validation finished');
-  }
+if (require.main === module) {
+  runReleaseValidation().catch(error => {
+    logger.error('Release validation failed', error);
+    process.exitCode = 1;
+  });
 }

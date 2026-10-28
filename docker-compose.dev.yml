@@ -86,9 +86,7 @@ services:
       context: .
     env_file:
       - .env
-    environment:
-      - SIMULTANEOUS_TASKS=1
-    restart: unless-stopped
+    restart: 'no'
     entrypoint: yarn run-release-validator
     volumes:
       - ./:/usr/src/app

@@ -351,7 +351,7 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-active-regression' })).resolvedInRelease).toBe('b');
   });
 
-  test('should continue validating other projects when one project fails', async () => {
+  test('should report failure after continuing to validate the remaining projects', async () => {
     const failedProjectId = 'failed-release-validator-project';
 
     await releases.insertMany([
@@ -391,7 +391,7 @@ describe('validateReleases', () => {
     await events.insertOne(createEvent('successful-project-event', 'a'));
 
     try {
-      await expect(validateReleases(db, NOW)).resolves.toBeUndefined();
+      await expect(validateReleases(db, NOW)).rejects.toThrow(failedProjectId);
 
       expect((await releases.findOne({
         projectId: failedProjectId,
