@@ -1,7 +1,7 @@
 import SentryEventWorker from '../src';
 import '../../../env-test';
 import { mockedAmqpChannel } from '../../../jest.setup.js';
-import { EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
+import { Breadcrumb, EventEnvelope, serializeEnvelope, SeverityLevel } from '@sentry/core';
 import { b64encode, base64toBuffer } from '../src/utils/base64';
 import { CatcherMessagePayload, CatcherMessageType } from '@hawk.so/types';
 import { SentryEventWorkerTask } from '../types/sentry-event-worker-task';
@@ -432,6 +432,61 @@ describe('SentryEventWorker', () => {
             url: 'test@test.com',
           },
         }),
+      });
+    });
+
+    it('should extract breadcrumbs from "breadcrumbs" field if it is present', async () => {
+      const eventEnvelope: EventEnvelope = [
+        {
+          /* eslint-disable @typescript-eslint/naming-convention */
+          event_id: '123e4567-e89b-12d3-a456-426614174000',
+          sent_at: '2024-01-01T00:00:00.000Z',
+          /* eslint-enable @typescript-eslint/naming-convention */
+        },
+        [
+          [ { type: 'event' }, {
+            level: 'error',
+            /**
+             * Python and PHP SDKs wrap breadcrumbs into { values: [...] }
+             */
+            breadcrumbs: {
+              values: [ {
+                type: 'query',
+                category: 'db.sql.query',
+                message: 'select * from users where id = ?',
+                level: 'info',
+                timestamp: 1704067199.5,
+              } ],
+            } as unknown as Breadcrumb[],
+          } ],
+        ],
+      ];
+
+      await worker.handle({
+        payload: {
+          envelope: b64encode(serializeEnvelope(eventEnvelope) as string),
+        },
+        projectId: '123',
+        catcherType: 'external/sentry',
+      });
+
+      const addedTaskPayload = getAddTaskPayloadFromLastCall();
+
+      expect(addedTaskPayload).toMatchObject({
+        payload: expect.objectContaining({
+          breadcrumbs: [ {
+            type: 'request',
+            category: 'db.sql.query',
+            message: 'select * from users where id = ?',
+            level: 'info',
+            timestamp: 1704067199500,
+          } ],
+        }),
+      });
+      expect(addedTaskPayload.payload.addons).toEqual({
+        sentry: {
+          level: 'error',
+        },
       });
     });
 
