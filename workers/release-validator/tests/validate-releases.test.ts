@@ -409,6 +409,29 @@ describe('validateReleases', () => {
     }
   });
 
+  test('should default to a 30-day retention period when MAX_DAYS_NUMBER is not set', async () => {
+    const originalMaxDaysNumber = process.env.MAX_DAYS_NUMBER;
+
+    delete process.env.MAX_DAYS_NUMBER;
+
+    try {
+      await releases.insertMany([
+        createRelease('outside-default-window', 31 * 24),
+        createRelease('a', 72, true),
+        createRelease('b', 48),
+      ]);
+      await events.insertOne(createEvent('default-retention-event', 'a'));
+
+      await validateReleases(db, NOW);
+
+      expect((await releases.findOne({ release: 'outside-default-window' })).fixChecked).toBe(false);
+      expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(true);
+      expect((await events.findOne({ groupHash: 'default-retention-event' })).resolvedInRelease).toBe('b');
+    } finally {
+      process.env.MAX_DAYS_NUMBER = originalMaxDaysNumber;
+    }
+  });
+
   test('should not select a release older than the configured retention period as a candidate', async () => {
     const originalMaxDaysNumber = process.env.MAX_DAYS_NUMBER;
 

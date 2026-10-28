@@ -12,7 +12,7 @@ From the workers repository root:
 yarn run-release-validator
 ```
 
-Requires the events database connection and retention period configured for the environment. The `repetitions:<projectId>` collections must have the `{ groupHash: 1, release: 1 }` index named `groupHashAndRelease`.
+Requires the events database connection. Retention defaults to 30 days; `MAX_DAYS_NUMBER` overrides it for the environment. The `repetitions:<projectId>` collections must have the `{ groupHash: 1, release: 1 }` index named `groupHashAndRelease`.
 
 The process exits with code `0` on success, including when there is nothing to check, or `1` on failure.
 

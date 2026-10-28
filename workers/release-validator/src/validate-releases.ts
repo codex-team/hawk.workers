@@ -25,6 +25,11 @@ const RELEASE_OBSERVATION_PERIOD_SECONDS = HOURS_IN_DAY * MINUTES_IN_HOUR * SECO
 const EVENTS_BATCH_SIZE = 50;
 
 /**
+ * Default retention period when no environment override is provided.
+ */
+const DEFAULT_MAX_DAYS_NUMBER = 30;
+
+/**
  * Find unchecked releases older than the observation period.
  *
  * @param db - events database connection
@@ -32,7 +37,7 @@ const EVENTS_BATCH_SIZE = 50;
  */
 async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]> {
   const nowSeconds = Math.floor(now.getTime() / MS_IN_SEC);
-  const releaseMaxAgeDays = Number(process.env.MAX_DAYS_NUMBER);
+  const releaseMaxAgeDays = Number(process.env.MAX_DAYS_NUMBER ?? DEFAULT_MAX_DAYS_NUMBER);
 
   if (!Number.isFinite(releaseMaxAgeDays) || releaseMaxAgeDays <= 0) {
     throw new Error('MAX_DAYS_NUMBER must be a positive number');
