@@ -1,4 +1,5 @@
 import type { EventsTemplateVariables } from 'hawk-worker-sender/types/template-variables';
+import { escapeMarkdown } from './event';
 
 /**
  * Return tpl with data substitutions
@@ -10,7 +11,7 @@ export default function render(tplData: EventsTemplateVariables): string {
   let message = tplData.events.length + ' new events\n\n';
 
   tplData.events.forEach(({ event, newCount }) => {
-    message += `(${newCount}) ${event.payload.title} \n`;
+    message += `(${newCount}) ${escapeMarkdown(event.payload.title)} \n`;
   });
 
   message += `\n[View all events](${projectUrl}) | *${tplData.project.name}*`;
