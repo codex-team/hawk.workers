@@ -2,7 +2,7 @@ import { EventNotification, SeveralEventsNotification } from 'hawk-worker-sender
 import { DecodedGroupedEvent, ProjectDBScheme } from '@hawk.so/types';
 import TelegramProvider from 'hawk-worker-telegram/src/provider';
 import templates from '../src/templates';
-import EventTpl from '../src/templates/event';
+import EventTpl, { escapeMarkdown } from '../src/templates/event';
 import { ObjectId } from 'mongodb';
 
 /**
@@ -13,6 +13,11 @@ describe('TelegramProvider', () => {
    * Check templates rendering
    */
   describe('templates', () => {
+    it('should escape Markdown entities in event titles', () => {
+      expect(escapeMarkdown('No such file: /home/market_static/*.csv [`x`]'))
+        .toBe('No such file: /home/market\\_static/\\*.csv \\[\\`x\\`]');
+    });
+
     /**
      * Check that rendering of a single event message works without errors
      */
