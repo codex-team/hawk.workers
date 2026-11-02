@@ -543,7 +543,7 @@ describe('PaymasterWorker', () => {
     /**
      * Arrange
      */
-    const currentDate = new Date();
+    const currentDate = new Date('2005-12-22');
     const paidUntil = new Date(currentDate.getTime());
 
     paidUntil.setMonth(paidUntil.getMonth() + 3);
@@ -590,7 +590,7 @@ describe('PaymasterWorker', () => {
     /**
      * Arrange
      */
-    const currentDate = new Date();
+    const currentDate = new Date('2005-12-22');
     const paidUntil = new Date(currentDate.getTime());
 
     paidUntil.setDate(paidUntil.getDate() + 1);
@@ -647,7 +647,7 @@ describe('PaymasterWorker', () => {
     /**
      * Arrange
      */
-    const currentDate = new Date();
+    const currentDate = new Date('2005-12-22');
     const lastChargeDate = new Date(currentDate.getTime());
 
     lastChargeDate.setMonth(lastChargeDate.getMonth() - 1); // Set last charge date to 1 month ago

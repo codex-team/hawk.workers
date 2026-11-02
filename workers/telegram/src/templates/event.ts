@@ -1,6 +1,15 @@
 import type { EventsTemplateVariables, TemplateEventData } from 'hawk-worker-sender/types/template-variables';
 
 /**
+ * Escape characters that break Telegram legacy Markdown parsing
+ *
+ * @param text - raw text
+ */
+export function escapeMarkdown(text: string): string {
+  return text.replace(/[_*`[]/g, '\\$&');
+}
+
+/**
  * Return tpl with data substitutions
  *
  * @param tplData - event template data
@@ -17,10 +26,10 @@ export default function render(tplData: EventsTemplateVariables): string {
     location = '\n' + '```\n' + location + '\n```'; // markdown code block
   }
 
-  return ''.concat(event.payload.title,
+  return ''.concat(escapeMarkdown(event.payload.title),
     '\n',
     location || '',
     '\n',
-    `[View details](${eventURL}) `, `| *${tplData.project.name}*`, ` | ${eventInfo.newCount} new (${eventInfo.event.totalCount} total)`
+    `[View details](${eventURL}) `, `| ${escapeMarkdown(tplData.project.name)}`, ` | ${eventInfo.newCount} new (${eventInfo.event.totalCount} total)`
   );
 }
