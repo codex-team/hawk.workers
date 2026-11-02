@@ -30,6 +30,6 @@ export default function render(tplData: EventsTemplateVariables): string {
     '\n',
     location || '',
     '\n',
-    `[View details](${eventURL}) `, `| *${tplData.project.name}*`, ` | ${eventInfo.newCount} new (${eventInfo.event.totalCount} total)`
+    `[View details](${eventURL}) `, `| ${escapeMarkdown(tplData.project.name)}`, ` | ${eventInfo.newCount} new (${eventInfo.event.totalCount} total)`
   );
 }

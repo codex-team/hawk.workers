@@ -14,7 +14,7 @@ export default function render(tplData: EventsTemplateVariables): string {
     message += `(${newCount}) ${escapeMarkdown(event.payload.title)} \n`;
   });
 
-  message += `\n[View all events](${projectUrl}) | *${tplData.project.name}*`;
+  message += `\n[View all events](${projectUrl}) | ${escapeMarkdown(tplData.project.name)}`;
 
   return message;
 }
