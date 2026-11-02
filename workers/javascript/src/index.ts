@@ -211,6 +211,16 @@ export default class JavascriptEventWorker extends EventWorker {
     });
 
     /**
+     * source-map-js returns nulls when the generated position is not in the map.
+     * Assigning them would wipe the catcher coordinates and set sourceCode to [].
+     *
+     * Fixes bug: https://github.com/codex-team/hawk.workers/issues/600
+     */
+    if (!originalLocation.source) {
+      return stackFrame;
+    }
+
+    /**
      * Source code lines
      */
     let lines = [];
