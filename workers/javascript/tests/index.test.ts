@@ -281,6 +281,56 @@ describe('JavaScript event worker', () => {
     await worker.finish();
   });
 
+  it('should keep the original frame when the source map has no mapping', async () => {
+    /**
+     * Arrange
+     */
+    const worker = new JavascriptEventWorker();
+
+    jest.spyOn(worker, 'addTask');
+    jest.spyOn(JavascriptEventWorker.prototype as any, 'loadSourceMapFile')
+      .mockResolvedValue(sourceMapFileContent);
+    await worker.start();
+
+    const workerEvent = createEventMock({ withBacktrace: true });
+    const originalFrame = {
+      file: 'file:///main.js',
+      line: 9999,
+      column: 1,
+      function: 'handler',
+    };
+
+    /**
+     * Copy the frame so a mutation inside the worker cannot hide a failed lookup
+     */
+    workerEvent.payload.backtrace = [ { ...originalFrame } ];
+
+    const release = createReleaseMock({
+      projectId: workerEvent.projectId,
+      release: workerEvent.payload.release,
+    });
+
+    await db.collection('releases').insertOne(release);
+
+    /**
+     * Act
+     */
+    await worker.handle(workerEvent);
+
+    /**
+     * Assert
+     */
+    expect(worker.addTask).toHaveBeenCalledWith(
+      WorkerNames.GROUPER,
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          backtrace: [ originalFrame ],
+        }),
+      })
+    );
+    await worker.finish();
+  });
+
   it('should use cache while processing source maps', async () => {
     /**
      * Arrange
