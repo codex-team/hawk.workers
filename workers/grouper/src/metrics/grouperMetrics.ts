@@ -19,6 +19,7 @@ export type GrouperStep =
   'computeDelta' |
   'decodeEvent' |
   'enqueueNotifier' |
+  'ensureEventIndexes' |
   'findSimilarEvent' |
   'getEvent' |
   'hash' |
