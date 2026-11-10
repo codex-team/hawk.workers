@@ -20,6 +20,7 @@ import DataFilter from './data-filter';
 import RedisHelper from './redisHelper';
 import { computeDelta } from './utils/repetitionDiff';
 import { bucketTimestampMs } from './utils/bucketTimestamp';
+import { ensureEventIndexes } from './utils/eventIndexes';
 import GrouperMetrics from './metrics/grouperMetrics';
 import GrouperMemoryMonitor from './metrics/memoryMonitor';
 import SlowHandleDiagnostics, { SlowHandleSession } from './metrics/slowHandleDiagnostics';
@@ -42,6 +43,11 @@ const MEMOIZATION_TTL = 60_000;
  * Cache cleanup interval in seconds
  */
 const CACHE_CLEANUP_INTERVAL_SECONDS = 30;
+
+/**
+ * How long a project's event collections are considered checked
+ */
+const EVENT_INDEXES_CHECK_TTL = TimeMs.HOUR;
 
 /**
  * Error code of MongoDB key duplication error
@@ -106,6 +112,11 @@ export default class GrouperWorker extends Worker {
    * Number of handled tasks in current worker process.
    */
   private handledTasksCount = 0;
+
+  /**
+   * Running or finished event collections checks by project id
+   */
+  private eventIndexesChecks: Map<string, { expiresAt: number; done: Promise<void> }> = new Map();
 
   /**
    * Start consuming messages
@@ -201,6 +212,8 @@ export default class GrouperWorker extends Worker {
      * Filter event data before hashing so hash and stored event stay consistent.
      */
     this.dataFilter.processEvent(task.payload);
+
+    await session.measureStep('ensureEventIndexes', () => this.ensureEventIndexes(task.projectId));
 
     let uniqueEventHash = await session.measureStep('hash', () => this.getUniqueEventHash(task));
     let existedEvent: GroupedEventDBScheme;
@@ -496,6 +509,46 @@ export default class GrouperWorker extends Worker {
         this.logger.error(`Failed to add ${label} TS for ${metricType}`, error);
       }
     }
+  }
+
+  /**
+   * Makes sure project's event collections have indexes before the first write, once per TTL.
+   * Failures are logged and do not stop event processing.
+   *
+   * @param projectId - project to check
+   */
+  private ensureEventIndexes(projectId: string): Promise<void> {
+    if (!projectId || !mongodb.ObjectID.isValid(projectId)) {
+      return Promise.resolve();
+    }
+
+    const cached = this.eventIndexesChecks.get(projectId);
+
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.done;
+    }
+
+    const done = ensureEventIndexes(this.eventsDb.getConnection(), projectId)
+      .then(({ created, missing }) => {
+        if (created.length > 0) {
+          this.logger.info(`[ensureEventIndexes] project=${projectId} created collections: ${created.join(', ')}`);
+        }
+
+        if (missing.length > 0) {
+          this.logger.warn(`[ensureEventIndexes] project=${projectId} missing indexes: ${missing.join(', ')}`);
+        }
+      })
+      .catch((error) => {
+        this.eventIndexesChecks.delete(projectId);
+        this.logger.error(`[ensureEventIndexes] project=${projectId} failed: ${error.message}`);
+      });
+
+    this.eventIndexesChecks.set(projectId, {
+      expiresAt: Date.now() + EVENT_INDEXES_CHECK_TTL,
+      done,
+    });
+
+    return done;
   }
 
   /**
