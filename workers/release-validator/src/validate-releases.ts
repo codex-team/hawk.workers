@@ -13,7 +13,9 @@ const logger = createLogger();
  * Time allowed for repetitions to arrive before a release is checked for
  * resolved events.
  */
-const RELEASE_OBSERVATION_PERIOD_SECONDS = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+export const RELEASE_OBSERVATION_PERIOD_DAYS = 3;
+const SECONDS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE;
+const RELEASE_OBSERVATION_PERIOD_SECONDS = RELEASE_OBSERVATION_PERIOD_DAYS * SECONDS_IN_DAY;
 
 /**
  * Maximum number of events processed in one validation batch.
@@ -42,7 +44,7 @@ async function findReleasesToCheck(db: Db, now: Date): Promise<ReleaseDBScheme[]
    * Use the archiver retention period as the candidate window so releases are
    * validated only while their records are expected to remain available.
    */
-  const releaseMaxAgeSeconds = releaseMaxAgeDays * RELEASE_OBSERVATION_PERIOD_SECONDS;
+  const releaseMaxAgeSeconds = releaseMaxAgeDays * SECONDS_IN_DAY;
   const oldestReleaseId = ObjectID.createFromTime(nowSeconds - releaseMaxAgeSeconds);
   const newestReleaseId = ObjectID.createFromTime(nowSeconds - RELEASE_OBSERVATION_PERIOD_SECONDS);
 
@@ -185,7 +187,7 @@ async function validateEventsBatch(
 
     /**
      * Find the latest known release in which the event occurred once per event.
-     * This includes releases younger than 24 hours, which must still prevent an
+     * This includes releases younger than the observation period, which must still prevent an
      * older candidate from resolving the event.
      */
     for (const projectRelease of allProjectReleases) {
