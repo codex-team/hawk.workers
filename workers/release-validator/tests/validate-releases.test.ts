@@ -1,7 +1,7 @@
 import '../../../env-test';
 import { Collection, Db, MongoClient, ObjectID } from 'mongodb';
 import type { GroupedEventDBScheme, ReleaseDBScheme, RepetitionDBScheme } from '@hawk.so/types';
-import { validateReleases } from '../src/validate-releases';
+import { RELEASE_OBSERVATION_PERIOD_DAYS, validateReleases } from '../src/validate-releases';
 import createLogger from '../../../lib/logger';
 
 jest.mock('../../../lib/logger', () => {
@@ -19,6 +19,7 @@ const logger = createLogger();
 
 const PROJECT_ID = 'release-validator-project';
 const HOUR_IN_SECONDS = 60 * 60;
+const OBSERVATION_PERIOD_HOURS = RELEASE_OBSERVATION_PERIOD_DAYS * 24;
 const DEFAULT_MAX_DAYS_NUMBER = '30';
 const NOW_SECONDS = Math.floor(new Date('2026-09-17T12:00:00.000Z').getTime() / 1000);
 const NOW = new Date(NOW_SECONDS * 1000);
@@ -133,8 +134,8 @@ describe('validateReleases', () => {
 
   test('should not resolve an event that first appeared in the checked release', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertOne(createEvent('error-1', 'b'));
 
@@ -146,8 +147,8 @@ describe('validateReleases', () => {
 
   test('should not resolve an event that occurred in the checked release', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertOne(createEvent('error-2', 'a'));
     await repetitions.insertOne(createRepetition('error-2', 'b'));
@@ -157,10 +158,10 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-2' })).resolvedInRelease).toBeUndefined();
   });
 
-  test('should not resolve an event that reappeared in a newer release within 24 hours', async () => {
+  test(`should not resolve an event that reappeared within ${OBSERVATION_PERIOD_HOURS} hours`, async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
       createRelease('c', 2),
     ]);
     await events.insertOne(createEvent('error-3', 'a'));
@@ -175,8 +176,8 @@ describe('validateReleases', () => {
 
   test('should resolve an event in the checked release when it never appears again', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
       createRelease('c', 2),
     ]);
     await events.insertOne(createEvent('error-4', 'a'));
@@ -191,8 +192,8 @@ describe('validateReleases', () => {
 
   test('should log progress and actual resolved totals across event batches', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertMany(Array.from({ length: 51 }, (_, index) => createEvent(`batch-event-${index}`, 'a')));
 
@@ -211,10 +212,10 @@ describe('validateReleases', () => {
 
   test('should resolve an event in the first checked release after its last occurrence', async () => {
     await releases.insertMany([
-      createRelease('a', 120, true),
-      createRelease('b', 96),
-      createRelease('c', 72),
-      createRelease('d', 48),
+      createRelease('a', 168, true),
+      createRelease('b', 144),
+      createRelease('c', 120),
+      createRelease('d', 96),
     ]);
     await events.insertOne(createEvent('error-5', 'a'));
     await repetitions.insertOne(createRepetition('error-5', 'c'));
@@ -224,28 +225,27 @@ describe('validateReleases', () => {
     expect((await events.findOne({ groupHash: 'error-5' })).resolvedInRelease).toBe('d');
   });
 
-  test('should not check a release until its 24-hour observation period has elapsed', async () => {
+  test(`should check releases only after ${OBSERVATION_PERIOD_HOURS} hours`, async () => {
     await releases.insertMany([
-      createRelease('a', 48, true),
-      createRelease('b', 23),
+      createRelease('a', OBSERVATION_PERIOD_HOURS * 2, true),
+      createRelease('b', OBSERVATION_PERIOD_HOURS - 1),
+      createRelease('c', OBSERVATION_PERIOD_HOURS + 1),
     ]);
     await events.insertOne(createEvent('error-6', 'a'));
 
     await validateReleases(db, NOW);
 
-    expect((await events.findOne({ groupHash: 'error-6' })).resolvedInRelease).toBeUndefined();
+    expect((await events.findOne({ groupHash: 'error-6' })).resolvedInRelease).toBe('c');
     expect((await releases.findOne({ release: 'b' })).fixChecked).toBe(false);
-    expect(logger.info).toHaveBeenCalledWith('Candidates loaded: releases=0 projects=0');
-    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(
-      'Release validation finished: projects=0 failedProjects=0'
-    ));
+    expect((await releases.findOne({ release: 'c' })).fixChecked).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith('Candidates loaded: releases=1 projects=1');
   });
 
   test('should use the original event timestamp when its release record was archived', async () => {
-    await releases.insertOne(createRelease('b', 48));
+    await releases.insertOne(createRelease('b', 96));
     const event = createEvent('error-7', 'archived-release');
 
-    event.timestamp = NOW_SECONDS - 72 * HOUR_IN_SECONDS;
+    event.timestamp = NOW_SECONDS - 120 * HOUR_IN_SECONDS;
     await events.insertOne(event);
 
     await validateReleases(db, NOW);
@@ -255,7 +255,7 @@ describe('validateReleases', () => {
   });
 
   test('should not resolve an event before its timestamp when its release record is missing', async () => {
-    await releases.insertOne(createRelease('b', 48));
+    await releases.insertOne(createRelease('b', 96));
     const event = createEvent('error-after-release', 'missing-release');
 
     event.timestamp = NOW_SECONDS - 24 * HOUR_IN_SECONDS;
@@ -268,8 +268,8 @@ describe('validateReleases', () => {
 
   test('should not overwrite an existing resolved release on repeated validation', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertOne(createEvent('error-8', 'a', 'previous-release'));
 
@@ -281,14 +281,14 @@ describe('validateReleases', () => {
 
   test('should skip a malformed release and continue with the next valid release', async () => {
     await releases.insertMany([
-      createRelease('a', 96, true),
+      createRelease('a', 168, true),
       {
-        _id: releaseId(72),
+        _id: releaseId(120),
         projectId: PROJECT_ID,
         release: 123 as unknown as string,
         commits: [],
       },
-      createRelease('d', 48),
+      createRelease('d', 96),
     ]);
     await events.insertOne(createEvent('error-9', 'a'));
 
@@ -301,8 +301,8 @@ describe('validateReleases', () => {
 
   test('should skip a malformed event without stopping valid events', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertMany([
       {
@@ -328,8 +328,8 @@ describe('validateReleases', () => {
 
   test('should ignore a repetition without a release', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertOne(createEvent('error-10', 'a'));
     await repetitions.insertOne({
@@ -344,8 +344,8 @@ describe('validateReleases', () => {
 
   test('should ignore a repetition from an unknown release', async () => {
     await releases.insertMany([
-      createRelease('a', 72, true),
-      createRelease('b', 48),
+      createRelease('a', 120, true),
+      createRelease('b', 96),
     ]);
     await events.insertOne(createEvent('error-11', 'a'));
     await repetitions.insertOne(createRepetition('error-11', 'unknown'));
@@ -357,10 +357,10 @@ describe('validateReleases', () => {
 
   test('should resolve an event again after its regression stops occurring', async () => {
     await releases.insertMany([
-      createRelease('a', 120, true),
-      createRelease('b', 96, true),
-      createRelease('c', 72, true),
-      createRelease('d', 48),
+      createRelease('a', 168, true),
+      createRelease('b', 144, true),
+      createRelease('c', 120, true),
+      createRelease('d', 96),
     ]);
     const event = createEvent('error-cycle', 'a', 'b');
 
@@ -378,9 +378,9 @@ describe('validateReleases', () => {
 
   test('should not resolve an event again before a release newer than its regression', async () => {
     await releases.insertMany([
-      createRelease('a', 96, true),
-      createRelease('b', 72, true),
-      createRelease('c', 48),
+      createRelease('a', 168, true),
+      createRelease('b', 144, true),
+      createRelease('c', 96),
     ]);
     const event = createEvent('error-active-regression', 'a', 'b');
 
@@ -397,12 +397,12 @@ describe('validateReleases', () => {
     const failedProjectId = 'failed-release-validator-project';
 
     await releases.insertMany([
-      createRelease('a', 72, true),
+      createRelease('a', 120, true),
       {
-        ...createRelease('b', 49),
+        ...createRelease('b', 97),
         projectId: failedProjectId,
       },
-      createRelease('c', 48),
+      createRelease('c', 96),
     ]);
     await db.createCollection(`events:${failedProjectId}`, {
       validator: {
@@ -428,7 +428,7 @@ describe('validateReleases', () => {
       catcherType: 'errors/default',
       usersAffected: 0,
       visitedBy: [],
-      timestamp: NOW_SECONDS - 96 * HOUR_IN_SECONDS,
+      timestamp: NOW_SECONDS - 120 * HOUR_IN_SECONDS,
     });
     await events.insertOne(createEvent('successful-project-event', 'a'));
 
@@ -487,7 +487,7 @@ describe('validateReleases', () => {
     try {
       await releases.insertMany([
         createRelease('a', 480, true),
-        createRelease('b', 48),
+        createRelease('b', 96),
       ]);
       await events.insertOne(createEvent('error-13', 'a'));
 
